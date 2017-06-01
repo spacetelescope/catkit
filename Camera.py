@@ -5,7 +5,6 @@ class Camera(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, config_id, *args, **kwargs):
-        print("_init_")
         self.config_id = config_id
         self.camera = self.initialize(self, *args, **kwargs)
 
@@ -14,7 +13,6 @@ class Camera(object):
         return self
 
     def __exit__(self, type, value, traceback):
-        print("_exit_")
         self.close()
 
     @abstractmethod
