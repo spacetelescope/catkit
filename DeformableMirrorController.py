@@ -12,6 +12,7 @@ class DeformableMirrorController(object):
         """Opens connection with the DM and sets class attributes for 'config_id' and 'dm'."""
         self.config_id = config_id
         self.dm_controller = self.initialize(self, *args, **kwargs)
+        return self
 
     # Implementing context manager.
     def __enter__(self, *args, **kwargs):
