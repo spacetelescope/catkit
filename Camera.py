@@ -10,6 +10,7 @@ class Camera(object):
         """Opens connection with camera sets class attributes for 'config_id' and 'camera'."""
         self.config_id = config_id
         self.camera = self.initialize(self, *args, **kwargs)
+        print("Opened connection to camera: " + self.config_id)
 
     # Implementing context manager.
     def __enter__(self, *args, **kwargs):
@@ -17,6 +18,7 @@ class Camera(object):
 
     def __exit__(self, type, value, traceback):
         self.close()
+        print("Closed camera: " + self.config_id)
 
     # Abstract Methods.
     @abstractmethod
