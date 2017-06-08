@@ -1,4 +1,6 @@
 from abc import *
+import numpy as np
+from ..config import CONFIG_INI
 
 """Interface for a deformable mirror controller that can control 2 DMs.  
    It does so by interpreting the first half of the command for DM1, and the second for DM2.
@@ -11,6 +13,10 @@ class DeformableMirrorController(object):
     def __init__(self, config_id, *args, **kwargs):
         """Opens connection with the DM and sets class attributes for 'config_id' and 'dm'."""
         self.config_id = config_id
+
+        # Create class attributes for storing individual DM commands.
+        self.dm1_command = None
+        self.dm2_command = None
         self.dm_controller = self.initialize(self, *args, **kwargs)
 
     # Implementing context manager.
