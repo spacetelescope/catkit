@@ -1,6 +1,4 @@
 from abc import *
-import numpy as np
-from ..config import CONFIG_INI
 
 """Interface for a deformable mirror controller that can control 2 DMs.  
    It does so by interpreting the first half of the command for DM1, and the second for DM2.
