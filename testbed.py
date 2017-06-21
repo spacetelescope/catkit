@@ -1,4 +1,5 @@
 import numpy as np
+from .. import units, quantity
 from ..newport.NewportMotorController import NewportMotorController
 from ..zwo.ZwoCamera import ZwoCamera
 from ..boston.BostonDmController import BostonDmController
@@ -148,7 +149,7 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, step, num_tri
                 exp_time -= step
                 print("\tAdjusted exposure time down to", exp_time)
 
-                if exp_time < 0:
+                if exp_time < quantity(0, units.seconds):
                     print("\tExposure time went negative, use a smaller step. Returning start time.")
                     return start_exp_time
 
