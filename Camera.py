@@ -18,7 +18,8 @@ class Camera(object):
 
     def __exit__(self, type, value, traceback):
         self.close()
-        print("Closed camera: " + self.config_id)
+        self.camera = None
+        print("Safely closed camera: " + self.config_id)
 
     # Abstract Methods.
     @abstractmethod

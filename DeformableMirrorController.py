@@ -16,6 +16,7 @@ class DeformableMirrorController(object):
         self.dm1_command = None
         self.dm2_command = None
         self.dm_controller = self.initialize(self, *args, **kwargs)
+        print("Opened connection to DM " + config_id)
 
     # Implementing context manager.
     def __enter__(self, *args, **kwargs):
@@ -23,6 +24,8 @@ class DeformableMirrorController(object):
 
     def __exit__(self, type, value, traceback):
         self.close()
+        self.dm_controller = None
+        print("Safely closed DM " + self.config_id)
 
     # Abstract Methods.
     @abstractmethod
