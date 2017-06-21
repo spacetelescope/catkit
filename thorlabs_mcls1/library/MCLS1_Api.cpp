@@ -26,9 +26,9 @@ fnUART_Get get;
 int init_MCLS1()
 {
     #ifdef UART_WIN32
-        HMODULE dll_handle=LoadLibrary(TEXT("C:/Users/jost/Desktop/SourceLaser/uart_library_win32.dll"));
+        HMODULE dll_handle=LoadLibrary(TEXT("C:/repos/hicat-package/hicat/hardware/thorlabs_mcls1/library/release/uart_library_win32.dll"));
     #else
-        HMODULE dll_handle=LoadLibrary(TEXT("C:/Users/jost/Desktop/SourceLaser/uart_library_win64.dll"));
+        HMODULE dll_handle=LoadLibrary(TEXT("C:/repos/hicat-package/hicat/hardware/thorlabs_mcls1/library/release/uart_library_win64.dll"));
     #endif
 
     if(!dll_handle)
