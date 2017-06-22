@@ -136,3 +136,58 @@ def auto_exp_time(dm_shape, dm_num, start_exp_time, min_counts, max_counts, step
 
     print("\tUnable to auto calibrate exposure time, Returning the best so far.")
     return best_exp_time
+
+def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, step, num_tries=10):
+    """
+    To be used when the dm shape is already applied. Uses the imaging camera to find the correct exposure time.
+    :param start_exp_time: The initial time to begin testing with.
+    :param min_counts: The minimum number of acceptable counts in the image.
+    :param max_counts: The maximum number of acceptable counts in the image.
+    :param step: The time increment to be used as a trial and error when the counts are out of range.
+    :param num_tries: Safety mechanism to prevent infinite loops, max tries before giving up.
+    :return: The correct exposure time to use, or in the failure case, the start exposure time passed in.
+    """
+
+    with imaging_camera() as img_cam:
+        last_best_exp_time = None
+        best_exp_time = start_exp_time
+        print("Starting exposure time calibration...")
+        for i in range(num_tries):
+
+            img_list = img_cam.take_exposures_data(best_exp_time, 1)
+            img_max = np.max(img_list[0])
+            print("\tExposure time " + str(best_exp_time) + " yields " + str(img_max) + " counts ")
+
+            if img_max < min_counts:
+
+                # Detect when it starts bouncing between two values.
+                if last_best_exp_time == (best_exp_time + step):
+
+                    # Reduce the step by 10%.
+                    step *= 0.9
+
+                last_best_exp_time = best_exp_time
+                best_exp_time += step
+                print("\tAdjusted exposure time up to" + str(best_exp_time))
+
+            elif img_max > max_counts:
+                # Detect when it starts bouncing between two values.
+                if last_best_exp_time == (best_exp_time - step):
+
+                    # Reduce the step by 10%.
+                    step *= 0.9
+
+                last_best_exp_time = best_exp_time
+                best_exp_time -= step
+                print("\tAdjusted exposure time down to" + str(best_exp_time))
+
+                if best_exp_time < quantity(0, units.millisecond):
+                    print("\tExposure time went negative, use a smaller step. Returning the best so far.")
+                    return best_exp_time
+
+            else:
+                print("\tReturning exposure time " + str(best_exp_time))
+                return best_exp_time
+
+    print("\tUnable to auto calibrate exposure time, Returning the best so far.")
+    return best_exp_time
