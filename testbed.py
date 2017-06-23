@@ -1,9 +1,11 @@
 import numpy as np
+import os
 from .. import units, quantity
 from ..newport.NewportMotorController import NewportMotorController
 from ..zwo.ZwoCamera import ZwoCamera
 from ..boston.BostonDmController import BostonDmController
 from ..config import CONFIG_INI
+from .. import util
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
@@ -44,6 +46,37 @@ def beam_dump():
 
 
 # Convenience functions.
+def take_exposures_and_background(exposure_time, num_exposures, path, filename, exposure_set_name="",
+                                 fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
+                                 gain=None, full_image=None, bins=None, resume=False, pipeline=False):
+    """
+    Standard way to take data on hicat.  This function takes exposures, background images, and then runs a data pipeline
+    to average the images and remove bad pixels.  It controls the beam dump for you, no need to initialize it prior.
+    """
+
+    # Create the standard directory structure.
+    path = os.path.join(path, exposure_set_name, "raw")
+    img_path = os.path.join(path, "images")
+    bg_path = os.path.join(path, "backgrounds")
+
+    with imaging_camera() as img_cam:
+
+        # First take images.
+        remove_beam_dump()
+        img_cam.take_exposures_fits(exposure_time, num_exposures, img_path, filename,fits_header_dict=fits_header_dict,
+                                    center_x=center_x, center_y=center_y, width=width, height=height, gain=gain,
+                                    full_image=full_image, bins=bins, resume=resume)
+
+        # Now move the beam dump in the path and take backgrounds.
+        apply_beam_dump()
+        img_cam.take_exposures_fits(exposure_time, num_exposures, bg_path, filename,fits_header_dict=fits_header_dict,
+                                    center_x=center_x, center_y=center_y, width=width, height=height, gain=gain,
+                                    full_image=full_image, bins=bins, resume=resume)
+
+        # Run data pipeline.
+        util.run_data_pipeline(path)
+
+
 def apply_beam_dump():
     """A safe method to move the beam dump into the light path."""
     with beam_dump() as bd:
@@ -59,7 +92,7 @@ def remove_beam_dump():
 def move_fpm_coron():
     """A safe method to move the focal plane mask into place."""
     motor_id = "motor_FPM_Y"
-    coron_position = CONFIG_INI.getfloat(motor_id, "coron")
+    coron_position = CONFIG_INI.getfloat(motor_id, "nominal")
 
     with motor_controller() as mc:
         current_position = mc.get_position(motor_id)
