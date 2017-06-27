@@ -69,6 +69,7 @@ def take_exposures_and_background(exposure_time, num_exposures, path, filename, 
 
         # Now move the beam dump in the path and take backgrounds.
         apply_beam_dump()
+        filename = 'bkg_{}'.format(filename)
         img_cam.take_exposures_fits(exposure_time, num_exposures, bg_path, filename,fits_header_dict=fits_header_dict,
                                     center_x=center_x, center_y=center_y, width=width, height=height, gain=gain,
                                     full_image=full_image, bins=bins, resume=resume)
@@ -201,7 +202,7 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, step, num_tri
 
                 last_best_exp_time = best_exp_time
                 best_exp_time += step
-                print("\tAdjusted exposure time up to" + str(best_exp_time))
+                print("\tAdjusted exposure time up to " + str(best_exp_time))
 
             elif img_max > max_counts:
                 # Detect when it starts bouncing between two values.
@@ -212,7 +213,7 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, step, num_tri
 
                 last_best_exp_time = best_exp_time
                 best_exp_time -= step
-                print("\tAdjusted exposure time down to" + str(best_exp_time))
+                print("\tAdjusted exposure time down to " + str(best_exp_time))
 
                 if best_exp_time < quantity(0, units.millisecond):
                     print("\tExposure time went negative, use a smaller step. Returning the best so far.")
