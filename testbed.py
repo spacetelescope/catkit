@@ -1,5 +1,8 @@
 import numpy as np
 import os
+
+from enum import Enum
+
 from .. import units, quantity
 from ..newport.NewportMotorController import NewportMotorController
 from ..zwo.ZwoCamera import ZwoCamera
@@ -46,13 +49,16 @@ def beam_dump():
 
 
 # Convenience functions.
-def take_exposures_and_background(exposure_time, num_exposures, path, filename, exposure_set_name="",
+def take_exposures_and_background(exposure_time, num_exposures, path, filename, fpm_position, exposure_set_name="",
                                   fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
-                                  gain=None, full_image=None, bins=None, resume=False, pipeline=False):
+                                  gain=None, full_image=None, bins=None, resume=False):
     """
     Standard way to take data on hicat.  This function takes exposures, background images, and then runs a data pipeline
     to average the images and remove bad pixels.  It controls the beam dump for you, no need to initialize it prior.
     """
+
+    # Move the FPM to the desired position.
+    move_fpm(fpm_position)
 
     # Create the standard directory structure.
     raw_path = os.path.join(path, exposure_set_name, "raw")
@@ -62,13 +68,13 @@ def take_exposures_and_background(exposure_time, num_exposures, path, filename, 
     with imaging_camera() as img_cam:
 
         # First take images.
-        remove_beam_dump()
+        move_beam_dump(BeamDumpPosition.out_of_beam)
         img_cam.take_exposures_fits(exposure_time, num_exposures, img_path, filename, fits_header_dict=fits_header_dict,
                                     center_x=center_x, center_y=center_y, width=width, height=height, gain=gain,
                                     full_image=full_image, bins=bins, resume=resume)
 
         # Now move the beam dump in the path and take backgrounds.
-        apply_beam_dump()
+        move_beam_dump(BeamDumpPosition.in_beam)
         bg_filename = 'bkg_{}'.format(filename)
         img_cam.take_exposures_fits(exposure_time, num_exposures, bg_path, bg_filename, fits_header_dict=fits_header_dict,
                                     center_x=center_x, center_y=center_y, width=width, height=height, gain=gain,
@@ -78,37 +84,28 @@ def take_exposures_and_background(exposure_time, num_exposures, path, filename, 
         util.run_data_pipeline(raw_path)
 
 
-def apply_beam_dump():
-    """A safe method to move the beam dump into the light path."""
+def move_beam_dump(beam_dump_position):
+    """A safe method to move the beam dump."""
     with beam_dump() as bd:
-        bd.move_to_position1()
+        if beam_dump_position is BeamDumpPosition.in_beam:
+            bd.move_to_position1()
+        elif beam_dump_position is BeamDumpPosition.out_of_beam:
+            bd.move_to_position2()
 
 
-def remove_beam_dump():
-    """A safe method to move the beam dump out of the light path."""
-    with beam_dump() as bd:
-        bd.move_to_position2()
-
-
-def move_fpm_coron():
-    """A safe method to move the focal plane mask into place."""
-    motor_id = "motor_FPM_Y"
-    coron_position = CONFIG_INI.getfloat(motor_id, "nominal")
-
+def move_fpm(fpm_position):
+    """A safe method to move the focal plane mask."""
     with motor_controller() as mc:
+        motor_id = "motor_FPM_Y"
+
+        if fpm_position is FpmPosition.coron:
+            new_position = CONFIG_INI.getfloat(motor_id, "nominal")
+        elif fpm_position is FpmPosition.direct:
+            new_position =  CONFIG_INI.getfloat(motor_id, "direct")
+
         current_position = mc.get_position(motor_id)
-        if coron_position != current_position:
-            mc.absolute_move(motor_id, coron_position)
-
-
-def move_fpm_direct():
-    motor_id = "motor_FPM_Y"
-    direct_position = CONFIG_INI.getfloat(motor_id, "direct")
-
-    with motor_controller() as mc:
-        current_position = mc.get_position(motor_id)
-        if direct_position != current_position:
-            mc.absolute_move(motor_id, direct_position)
+        if new_position != current_position:
+            mc.absolute_move(motor_id, new_position)
 
 
 def auto_exp_time(dm_shape, dm_num, start_exp_time, min_counts, max_counts, step, num_tries=10):
@@ -225,3 +222,13 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, step, num_tri
 
     print("\tUnable to auto calibrate exposure time, Returning the best so far.")
     return best_exp_time
+
+
+class BeamDumpPosition(Enum):
+    in_beam = 1
+    out_of_beam = 2
+
+
+class FpmPosition(Enum):
+    coron = 1
+    direct = 2
