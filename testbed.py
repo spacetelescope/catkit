@@ -49,6 +49,18 @@ def beam_dump():
 
 
 # Convenience functions.
+
+def run_hicat_imaging(dm_command_object, base_path, exposure_set_name, file_name, fpm_position, exposure_time, num_exposures,
+                      simulator=True):
+
+    full_filename = "{}_{}".format(exposure_set_name, file_name)
+    take_exposures_and_background(exposure_time, num_exposures, path, full_filename, fpm_position,
+                                  exposure_set_name=exposure_set_name)
+    dm_command_object.export_fits(os.path.join(path, exposure_set_name))
+
+    if simulator:
+        util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
+
 def take_exposures_and_background(exposure_time, num_exposures, path, filename, fpm_position, exposure_set_name="",
                                   fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
                                   gain=None, full_image=None, bins=None, resume=False):
