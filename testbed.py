@@ -50,12 +50,12 @@ def beam_dump():
 
 # Convenience functions.
 
-def run_hicat_imaging(dm_command_object, base_path, exposure_set_name, file_name, fpm_position, exposure_time, num_exposures,
-                      simulator=True):
+def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm_position, exposure_time, num_exposures,
+                      simulator=True, pipeline=True):
 
     full_filename = "{}_{}".format(exposure_set_name, file_name)
     take_exposures_and_background(exposure_time, num_exposures, path, full_filename, fpm_position,
-                                  exposure_set_name=exposure_set_name)
+                                  exposure_set_name=exposure_set_name, pipeline=pipeline)
     dm_command_object.export_fits(os.path.join(path, exposure_set_name))
 
     if simulator:
@@ -63,7 +63,7 @@ def run_hicat_imaging(dm_command_object, base_path, exposure_set_name, file_name
 
 def take_exposures_and_background(exposure_time, num_exposures, path, filename, fpm_position, exposure_set_name="",
                                   fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
-                                  gain=None, full_image=None, bins=None, resume=False):
+                                  gain=None, full_image=None, bins=None, resume=False, pipeline=True):
     """
     Standard way to take data on hicat.  This function takes exposures, background images, and then runs a data pipeline
     to average the images and remove bad pixels.  It controls the beam dump for you, no need to initialize it prior.
@@ -93,7 +93,8 @@ def take_exposures_and_background(exposure_time, num_exposures, path, filename, 
                                     full_image=full_image, bins=bins, resume=resume)
 
         # Run data pipeline.
-        util.run_data_pipeline(raw_path)
+        if pipeline:
+            util.run_data_pipeline(raw_path)
 
 
 def move_beam_dump(beam_dump_position):
