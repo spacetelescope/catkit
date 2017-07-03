@@ -58,6 +58,9 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
                                   exposure_set_name=exposure_set_name, pipeline=pipeline)
     dm_command_object.export_fits(os.path.join(path, exposure_set_name))
 
+    # Store config.ini.
+    util.save_ini(os.path.join(path,"config"))
+
     if simulator:
         util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
 
