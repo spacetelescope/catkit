@@ -11,7 +11,7 @@ class FlipMotor(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, config_id, *args, **kwargs):
-        """Opens connection with the DM and sets class attributes for 'config_id' and 'dm'."""
+        """Opens connection with the motor controller and sets class attributes for 'config_id' and 'motor'."""
         self.config_id = config_id
         self.serial = None
         self.motor = self.initialize(self, *args, **kwargs)
@@ -33,7 +33,7 @@ class FlipMotor(object):
 
     @abstractmethod
     def close(self):
-        """Close dm connection safely."""
+        """Close motor controller connection safely."""
 
     @abstractmethod
     def move_to_position1(self):
