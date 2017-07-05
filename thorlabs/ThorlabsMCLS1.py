@@ -63,7 +63,7 @@ class ThorlabsMLCS1(LaserSource):
             self.set_active_channel(self.channel)
             current_command_string = b"current={}\r".format(value)
             self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
-            time.sleep(3)
+            time.sleep(6)
 
     def get_current(self):
         """Returns the value of the laser's current."""
