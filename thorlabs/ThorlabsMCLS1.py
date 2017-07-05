@@ -63,7 +63,8 @@ class ThorlabsMLCS1(LaserSource):
             self.set_active_channel(self.channel)
             current_command_string = b"current={}\r".format(value)
             self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
-            time.sleep(6)
+            print("Laser is changing amplitude...")
+            time.sleep(3)
 
     def get_current(self):
         """Returns the value of the laser's current."""
@@ -95,10 +96,12 @@ class ThorlabsMLCS1(LaserSource):
         :param channel: Integer value for channel (1 - 4)
         :param value: Integer value, 1 is enabled, and 0 is disabled.
         """
-        if not self.is_channel_enabled(channel):
-            self.set_active_channel(channel)
-            enable_command_string = b"enable={}\r".format(value)
-            self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
+        self.set_active_channel(channel)
+        enable_command_string = b"enable={}\r".format(value)
+        self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
+        if value == 1:
+            print("Laser is turning on...")
+            time.sleep(3)
 
     def set_system_enable(self, value):
         """
@@ -107,6 +110,8 @@ class ThorlabsMLCS1(LaserSource):
         """
         enable_command_string = b"system={}\r".format(value)
         self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
+        if value == 1:
+            time.sleep(3)
 
     def set_active_channel(self, channel):
         # Set Active Channel.
