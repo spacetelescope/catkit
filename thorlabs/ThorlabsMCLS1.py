@@ -5,6 +5,7 @@ from builtins import *
 from ctypes import *
 import os
 import re
+import time
 
 from ...interfaces.LaserSource import LaserSource
 from ...config import CONFIG_INI
@@ -13,7 +14,6 @@ from ...config import CONFIG_INI
 
 
 class ThorlabsMLCS1(LaserSource):
-
     def __init__(self, config_id, *args, **kwargs):
         """
         Child constructor to add a few hardware specific class attributes. Still calls the super.
@@ -46,28 +46,31 @@ class ThorlabsMLCS1(LaserSource):
             self.set_channel_enable(self.channel, 0)
 
             # Check if the other channels are enabled before turning off system enable.
-            flag = False
-            for i in range(1,5):
+            turn_off_system_enable = True
+            for i in range(1, 5):
                 if self.is_channel_enabled(i) == 1:
-                    flag = True
+                    turn_off_system_enable = False
 
-            if not flag:
+            if turn_off_system_enable:
                 self.set_system_enable(0)
             self.laser.fnUART_LIBRARY_close(self.handle)
         self.handle = None
 
     def set_current(self, value):
         """Sets the current on a given channel."""
-        self.set_active_channel(self.channel)
-        current_command_string = b"current={}\r".format(value)
-        self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
+
+        if self.get_current() != value:
+            self.set_active_channel(self.channel)
+            current_command_string = b"current={}\r".format(value)
+            self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
+            time.sleep(3)
 
     def get_current(self):
         """Returns the value of the laser's current."""
         self.set_active_channel(self.channel)
         command = b"current?\r"
         buffer = b"0" * 255
-        response = self.laser.fnUART_LIBRARY_Get(self.handle, command, buffer)
+        self.laser.fnUART_LIBRARY_Get(self.handle, command, buffer)
 
         # Use regex to find the float value in the response.
         return float(re.findall("\d+\.\d+", buffer)[0])
@@ -77,11 +80,11 @@ class ThorlabsMLCS1(LaserSource):
         buffer = b"0" * 255
         self.laser.fnUART_LIBRARY_list(buffer, 255)
         split = buffer.split(",")
-        for i,thing in enumerate(split):
+        for i, thing in enumerate(split):
 
             # The list has a format of "Port, Device, Port, Device". Once we find device named VCPO, minus 1 for port.
             if thing == "\\Device\\VCP0":
-                return split[i-1]
+                return split[i - 1]
 
         # Return None keyword if not found.
         return None
@@ -92,9 +95,10 @@ class ThorlabsMLCS1(LaserSource):
         :param channel: Integer value for channel (1 - 4)
         :param value: Integer value, 1 is enabled, and 0 is disabled.
         """
-        self.set_active_channel(channel)
-        enable_command_string = b"enable={}\r".format(value)
-        self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
+        if not self.is_channel_enabled(channel):
+            self.set_active_channel(channel)
+            enable_command_string = b"enable={}\r".format(value)
+            self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
 
     def set_system_enable(self, value):
         """

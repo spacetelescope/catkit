@@ -10,6 +10,7 @@ from ..boston.BostonDmController import BostonDmController
 from ..config import CONFIG_INI
 from .. import util
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
+from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -47,6 +48,8 @@ def motor_controller():
 def beam_dump():
     return ThorlabsMFF101("thorlabs_mff101_1")
 
+def laser_source():
+    return ThorlabsMLCS1("thorlabs_source_mcls1")
 
 # Convenience functions.
 
