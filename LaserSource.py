@@ -36,10 +36,10 @@ class LaserSource(object):
         """Close laser source connection safely."""
 
     @abstractmethod
-    def set_current(self, channel, value):
-        """Sets the current on a given channel."""
+    def set_current(self, value):
+        """Sets the current"""
 
     @abstractmethod
-    def get_current(self, channel):
+    def get_current(self):
         """Returns the value of the laser's current."""
 
