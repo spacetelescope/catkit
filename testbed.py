@@ -20,18 +20,18 @@ def imaging_camera():
     """
     Proper way to control the imaging camera. Using this function keeps the scripts future-proof.  Use the "with"
     keyword to take advantage of the built-in context manager for safely closing the camera.
-    :return: An instance of the Camera.py interface. 
+    :return: An instance of the Camera.py interface.
     """
     return ZwoCamera("zwo_ASI1600MM")
 
 
 def dm_controller():
     """
-    Proper way to control the deformable mirror controller. Using this function keeps the scripts future-proof.  
+    Proper way to control the deformable mirror controller. Using this function keeps the scripts future-proof.
     Use the "with" keyword to take advantage of the built-in context manager for safely closing the connection.
-    The controller gives you the ability to send shapes to both DMs, or just to one.  If only sending to one DM, 
+    The controller gives you the ability to send shapes to both DMs, or just to one.  If only sending to one DM,
     the other DM will still get commanded to all zeros.
-    :return: An instance of the DeformableMirrorController.py interface. 
+    :return: An instance of the DeformableMirrorController.py interface.
     """
     return BostonDmController("boston_kilo952")
 
@@ -100,7 +100,7 @@ def take_exposures_and_background(exposure_time, num_exposures, path, filename, 
 
         # Run data pipeline.
         if pipeline:
-            util.run_data_pipeline(raw_path)
+            data_pipeline.run_data_pipeline(raw_path)
 
 
 def move_beam_dump(beam_dump_position):
