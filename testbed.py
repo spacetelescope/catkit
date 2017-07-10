@@ -11,6 +11,7 @@ from ..config import CONFIG_INI
 from .. import util
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
+from .. import data_pipeline
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
