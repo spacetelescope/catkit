@@ -9,6 +9,7 @@ import time
 
 from ...interfaces.LaserSource import LaserSource
 from ...config import CONFIG_INI
+from ...hardware.testbed import testbed_state
 
 """Interface for a laser source."""
 
@@ -65,6 +66,11 @@ class ThorlabsMLCS1(LaserSource):
             self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
             print("Laser is changing amplitude...")
             time.sleep(3)
+
+        # Update the testbed_state dictionary.
+        testbed_state["source"].value = self.config_id
+        testbed_state["source_value"].value = value
+
 
     def get_current(self):
         """Returns the value of the laser's current."""

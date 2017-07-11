@@ -12,6 +12,8 @@ from .. import util
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from .. import data_pipeline
+from .. import MetaDataEntry
+
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -49,8 +51,32 @@ def motor_controller():
 def beam_dump():
     return ThorlabsMFF101("thorlabs_mff101_1")
 
+
 def laser_source():
     return ThorlabsMLCS1("thorlabs_source_mcls1")
+
+
+# Testbed State variables stored as a small class called MetaDataEntry, accessible through testbed_state dictionary.
+testbed_state = {}
+
+background_key = "BG"
+speckle_key = "SPECKLE"
+lyot_key = "LYOTSTOP"
+fpm_key = "FPM"
+source_key = "SRC_TYPE"
+source_amps_key = "SRC_VAL"
+num_speckles_key = "NSPECKLE"
+speckle_angle_key_root = "ANGLE"
+speckle_phase_key_root = "PHASE"
+speckle_peak_to_valley_key_root = "P2V"
+num_cycles_key_root = "NCYCLES"
+
+testbed_state[background_key] = MetaDataEntry(background_key, False, "Background Image")
+testbed_state[speckle_key] = MetaDataEntry(speckle_key, False, "Sine wave induced speckle")
+testbed_state[lyot_key] = MetaDataEntry(lyot_key, True, "Lyot Stop")
+testbed_state[fpm_key] = MetaDataEntry(fpm_key, False, "Focal plane mask (coronograph)")
+testbed_state[source_key] = MetaDataEntry(source_key, None, "Model of the laser source")
+testbed_state[source_amps_key] = MetaDataEntry(source_amps_key, None, "Source module current in milliAmps")
 
 # Convenience functions.
 
@@ -184,11 +210,20 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, step, num_tri
     return best_exp_time
 
 
+
+
+
 class BeamDumpPosition(Enum):
+    """
+    Enum for the possible states of the Beam Dump.
+    """
     in_beam = 1
     out_of_beam = 2
 
 
 class FpmPosition(Enum):
+    """
+    Enum for the possible states for the focal plane mask.
+    """
     coron = 1
     direct = 2
