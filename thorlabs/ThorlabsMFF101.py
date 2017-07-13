@@ -9,7 +9,7 @@ import ftd2xx.defines as constants
 import time
 from ...interfaces.FlipMotor import FlipMotor
 from ...config import CONFIG_INI
-from ...hardware.testbed import testbed_state
+from ...hardware import testbed_state
 
 """Implementation of the FlipMotor interface for the Thorlabs MFF101 Flip Mount."""
 
@@ -40,13 +40,13 @@ class ThorlabsMFF101(FlipMotor):
         """Implements a move to the "up" position."""
         up_command = b"\x6A\x04\x00\x01\x21\x01"
         self.motor.write(up_command)
-        testbed_state["background"].value = True
+        testbed_state.background = True
 
     def move_to_position2(self):
         """Implements a move to "down" position """
         down_command = b"\x6A\x04\x00\x02\x21\x01"
         self.motor.write(down_command)
-        testbed_state["background"].value = False
+        testbed_state.background = False
 
     def blink_led(self):
         self.motor.write(b"\x23\x02\x00\x00\x21\x01")

@@ -22,6 +22,25 @@ bias_dm2 = False
 flat_map_dm2 = False
 
 
+def update_dm_state(dm_command):
+    if dm_command.dm_num == 1:
+        bias_dm1 = dm_command.bias
+        flat_map_dm1 = dm_command.flat_map
+        sine_wave_specifications_dm1 = dm_command.sin_specification
+    if dm_command.dm_num == 2:
+        bias_dm2 = dm_command.bias
+        flat_map_dm2 = dm_command.flat_map
+        sine_wave_specifications_dm2 = dm_command.sin_specification
+
+def close_dm_controller():
+    sine_wave_specifications_dm1 = []
+    bias_dm1 = False
+    flat_map_dm1 = False
+    sine_wave_specifications_dm2 = []
+    bias_dm2 = False
+    flat_map_dm2 = False
+
+
 def create_metadata():
     metadata = []
     metadata.append(MetaDataEntry("background", "bg", background, "Background Image"))
