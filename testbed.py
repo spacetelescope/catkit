@@ -12,7 +12,6 @@ from .. import util
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from .. import data_pipeline
-from .. import MetaDataEntry
 
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
@@ -56,36 +55,15 @@ def laser_source():
     return ThorlabsMLCS1("thorlabs_source_mcls1")
 
 
-# Testbed State variables stored as a small class called MetaDataEntry, accessible through testbed_state dictionary.
-testbed_state = {}
-
-background_key = "BG"
-speckle_key = "SPECKLE"
-lyot_key = "LYOTSTOP"
-fpm_key = "FPM"
-source_key = "SRC_TYPE"
-source_amps_key = "SRC_VAL"
-num_speckles_key = "NSPECKLE"
-speckle_angle_key_root = "ANGLE"
-speckle_phase_key_root = "PHASE"
-speckle_peak_to_valley_key_root = "P2V"
-num_cycles_key_root = "NCYCLES"
-
-testbed_state[background_key] = MetaDataEntry(background_key, False, "Background Image")
-testbed_state[speckle_key] = MetaDataEntry(speckle_key, False, "Sine wave induced speckle")
-testbed_state[lyot_key] = MetaDataEntry(lyot_key, True, "Lyot Stop")
-testbed_state[fpm_key] = MetaDataEntry(fpm_key, False, "Focal plane mask (coronograph)")
-testbed_state[source_key] = MetaDataEntry(source_key, None, "Model of the laser source")
-testbed_state[source_amps_key] = MetaDataEntry(source_amps_key, None, "Source module current in milliAmps")
-
 # Convenience functions.
-
 def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm_position, exposure_time, num_exposures,
-                      simulator=True, pipeline=True):
+                      simulator=True, pipeline=True, **kwargs):
 
     full_filename = "{}_{}".format(exposure_set_name, file_name)
     take_exposures_and_background(exposure_time, num_exposures, path, full_filename, fpm_position,
-                                  exposure_set_name=exposure_set_name, pipeline=pipeline)
+                                  exposure_set_name=exposure_set_name, pipeline=pipeline, **kwargs)
+
+    # Export the DM Command itself as a fits file.
     dm_command_object.export_fits(os.path.join(path, exposure_set_name))
 
     # Store config.ini.
@@ -93,6 +71,7 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
 
     if simulator:
         util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
+
 
 def take_exposures_and_background(exposure_time, num_exposures, path, filename, fpm_position, exposure_set_name="",
                                   fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
