@@ -46,16 +46,18 @@ def create_metadata():
     metadata.append(MetaDataEntry("background", "bg", background, "Background Image"))
     metadata.append(MetaDataEntry("lyot_stop", "lyotstop", lyot_stop, "Lyot Stop"))
     metadata.append(MetaDataEntry("coronograph", "coron", coronograph, "Focal Plane Mask (coronograph)"))
-    metadata.append(MetaDataEntry("laser_source", "source", laser_source, "Model of laser source"))
-    metadata.append(MetaDataEntry("laser_value", "src_val", laser_value, "Laser source value (milliAmps)"))
+
+    if laser_source:
+        metadata.append(MetaDataEntry("laser_source", "source", laser_source, "Model of laser source"))
+        metadata.append(MetaDataEntry("laser_value", "src_val", laser_value, "Laser source value (milliAmps)"))
 
 
     # Only write DM specific metadata if there is a shape applied.
     if sine_wave_specifications_dm1 or bias_dm1 or flat_map_dm1:
         metadata.append(MetaDataEntry("bias_dm1", "bias_dm1", bias_dm1,
-                                      "Constant voltage applied to all actuators on DM1"))
+                                      "Constant voltage applied to actuators on DM1"))
         metadata.append(MetaDataEntry("flat_map_dm1", "flatmap1", flat_map_dm1,
-                                      "Flat map applied to correct resting shape of DM1"))
+                                      "Flat map applied to correct shape of DM1"))
 
         sin_flag = True if sine_wave_specifications_dm1 else False
         metadata.append(MetaDataEntry("sine_wave_dm1", "sine_dm1", sin_flag,
@@ -92,7 +94,7 @@ def create_metadata():
             metadata.append(MetaDataEntry("peak_to_valley" + (str(i + 1) if size > 1 else "") + "_dm1",
                                           "p2v" + (str(i + 1) if size > 1 else "") + "_dm1",
                                           sine.peak_to_valley.to(units.nanometer).m,
-                                          "Number of sine wave cycles"))
+                                          "Peak to valley distance (nanometers)"))
 
             metadata.append(MetaDataEntry("phase" + (str(i + 1) if size > 1 else "") + "_dm1",
                                           "phase" + (str(i + 1) if size > 1 else "") + "_1",
