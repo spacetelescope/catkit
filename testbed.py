@@ -60,8 +60,8 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
                       simulator=True, pipeline=True, **kwargs):
 
     full_filename = "{}_{}".format(exposure_set_name, file_name)
-    take_exposures_and_background(exposure_time, num_exposures, path, full_filename, fpm_position,
-                                  exposure_set_name=exposure_set_name, pipeline=pipeline, **kwargs)
+    output = take_exposures_and_background(exposure_time, num_exposures, path, full_filename, fpm_position,
+                                           exposure_set_name=exposure_set_name, pipeline=pipeline, **kwargs)
 
     # Export the DM Command itself as a fits file.
     dm_command_object.export_fits(os.path.join(path, exposure_set_name))
@@ -71,6 +71,8 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
 
     if simulator:
         util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
+
+    return output
 
 
 def take_exposures_and_background(exposure_time, num_exposures, path, filename, fpm_position, exposure_set_name="",
@@ -106,7 +108,7 @@ def take_exposures_and_background(exposure_time, num_exposures, path, filename, 
 
         # Run data pipeline.
         if pipeline:
-            data_pipeline.run_data_pipeline(raw_path)
+            return data_pipeline.run_data_pipeline(raw_path)
 
 
 def move_beam_dump(beam_dump_position):
