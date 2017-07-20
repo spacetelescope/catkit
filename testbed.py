@@ -68,9 +68,10 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
     if simulator:
         util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
 
+
 def take_exposures_and_background(exposure_time, num_exposures, path, filename, fpm_position, exposure_set_name="",
                                   fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
-                                  gain=None, full_image=None, bins=None, resume=False, pipeline=True):
+                                  gain=None, full_image=None, bins=None, resume=False, pipeline=True, write_out_data=True):
     """
     Standard way to take data on hicat.  This function takes exposures, background images, and then runs a data pipeline
     to average the images and remove bad pixels.  It controls the beam dump for you, no need to initialize it prior.
@@ -80,28 +81,32 @@ def take_exposures_and_background(exposure_time, num_exposures, path, filename, 
     move_fpm(fpm_position)
 
     # Create the standard directory structure.
-    raw_path = os.path.join(path, exposure_set_name, "raw")
-    img_path = os.path.join(raw_path, "images")
-    bg_path = os.path.join(raw_path, "backgrounds")
+    if write_out_data:
+        raw_path = os.path.join(path, exposure_set_name, "raw")
+        img_path = os.path.join(raw_path, "images")
+        bg_path = os.path.join(raw_path, "backgrounds")
 
     with imaging_camera() as img_cam:
 
         # First take images.
         move_beam_dump(BeamDumpPosition.out_of_beam)
-        img_cam.take_exposures_fits(exposure_time, num_exposures, img_path, filename, fits_header_dict=fits_header_dict,
+        img_list = img_cam.take_exposures(write_out_data, exposure_time, num_exposures, img_path, filename, fits_header_dict=fits_header_dict,
                                     center_x=center_x, center_y=center_y, width=width, height=height, gain=gain,
                                     full_image=full_image, bins=bins, resume=resume)
 
         # Now move the beam dump in the path and take backgrounds.
         move_beam_dump(BeamDumpPosition.in_beam)
         bg_filename = 'bkg_{}'.format(filename)
-        img_cam.take_exposures_fits(exposure_time, num_exposures, bg_path, bg_filename, fits_header_dict=fits_header_dict,
+        bg_list = img_cam.take_exposures(write_out_data, exposure_time, num_exposures, bg_path, bg_filename, fits_header_dict=fits_header_dict,
                                     center_x=center_x, center_y=center_y, width=width, height=height, gain=gain,
                                     full_image=full_image, bins=bins, resume=resume)
 
         # Run data pipeline.
         if pipeline:
-            data_pipeline.run_data_pipeline(raw_path)
+            if write_out_data:
+                data_pipeline.run_data_pipeline(raw_path)
+            else:
+                data_pipeline.calibration_pipeline(img_list,bg_list)
 
 
 def move_beam_dump(beam_dump_position):
