@@ -86,20 +86,25 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
         img_path = os.path.join(raw_path, "images")
         bg_path = os.path.join(raw_path, "backgrounds")
 
+    else:
+        raw_path = ""
+        img_path = ""
+        bg_path = ""
+
     with imaging_camera() as img_cam:
 
         # First take images.
         move_beam_dump(BeamDumpPosition.out_of_beam)
-        img_list = img_cam.take_exposures(write_out_data, exposure_time, num_exposures, img_path, filename, fits_header_dict=fits_header_dict,
+        img_list = img_cam.take_exposures(exposure_time, num_exposures, img_path, filename, fits_header_dict=fits_header_dict,
                                     center_x=center_x, center_y=center_y, width=width, height=height, gain=gain,
-                                    full_image=full_image, bins=bins, resume=resume)
+                                    full_image=full_image, bins=bins, resume=resume, write_out_data=write_out_data)
 
         # Now move the beam dump in the path and take backgrounds.
         move_beam_dump(BeamDumpPosition.in_beam)
         bg_filename = 'bkg_{}'.format(filename)
-        bg_list = img_cam.take_exposures(write_out_data, exposure_time, num_exposures, bg_path, bg_filename, fits_header_dict=fits_header_dict,
+        bg_list = img_cam.take_exposures(exposure_time, num_exposures, bg_path, bg_filename, fits_header_dict=fits_header_dict,
                                     center_x=center_x, center_y=center_y, width=width, height=height, gain=gain,
-                                    full_image=full_image, bins=bins, resume=resume)
+                                    full_image=full_image, bins=bins, resume=resume, write_out_data=write_out_data)
 
         # Run data pipeline.
         if pipeline:
