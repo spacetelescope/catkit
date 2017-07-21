@@ -111,8 +111,8 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
             if write_out_data:
                 data_pipeline.run_data_pipeline(raw_path)
             else:
-                calibrated,centroid = data_pipeline.calibration_pipeline(img_list,bg_list,return_centroid=True)
-                return calibrated,centroid
+                calibrated = data_pipeline.calibration_pipeline(img_list,bg_list)
+                return calibrated
 
 
 def move_beam_dump(beam_dump_position):
