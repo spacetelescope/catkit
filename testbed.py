@@ -58,7 +58,7 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
                       simulator=True, pipeline=True):
 
     full_filename = "{}_{}".format(exposure_set_name, file_name)
-    take_exposures_and_background(exposure_time, num_exposures, path, full_filename, fpm_position,
+    take_exposures_and_background(exposure_time, num_exposures, fpm_position, path, full_filename,
                                   exposure_set_name=exposure_set_name, pipeline=pipeline)
     dm_command_object.export_fits(os.path.join(path, exposure_set_name))
 
@@ -69,7 +69,7 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
         util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
 
 
-def take_exposures_and_background(exposure_time, num_exposures, path, filename, fpm_position, exposure_set_name="",
+def take_exposures_and_background(exposure_time, num_exposures, fpm_position, path="", filename="", exposure_set_name="",
                                   fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
                                   gain=None, full_image=None, bins=None, resume=False, pipeline=True, write_out_data=True):
     """
