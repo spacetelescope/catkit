@@ -57,11 +57,12 @@ def laser_source():
 
 # Convenience functions.
 def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm_position, exposure_time, num_exposures,
-                      simulator=True, pipeline=True, **kwargs):
+                      simulator=True, pipeline=True, auto_exp_time=False, **kwargs):
 
     full_filename = "{}_{}".format(exposure_set_name, file_name)
     output = take_exposures_and_background(exposure_time, num_exposures, fpm_position, path, full_filename,
-                                  exposure_set_name=exposure_set_name, pipeline=pipeline, **kwargs)
+                                           exposure_set_name=exposure_set_name, pipeline=pipeline,
+                                           auto_exp_time=auto_exp_time, **kwargs)
                                   
     # Export the DM Command itself as a fits file.
     dm_command_object.export_fits(os.path.join(path, exposure_set_name))
@@ -77,7 +78,8 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
 
 def take_exposures_and_background(exposure_time, num_exposures, fpm_position, path="", filename="", exposure_set_name="",
                                   fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
-                                  gain=None, full_image=None, bins=None, resume=False, pipeline=True, write_out_data=True):
+                                  gain=None, full_image=None, bins=None, resume=False, pipeline=True,
+                                  write_out_data=True, auto_exp_time=False):
     """
     Standard way to take data on hicat.  This function takes exposures, background images, and then runs a data pipeline
     to average the images and remove bad pixels.  It controls the beam dump for you, no need to initialize it prior.
@@ -85,6 +87,12 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
 
     # Move the FPM to the desired position.
     move_fpm(fpm_position)
+
+    if auto_exp_time:
+        move_beam_dump(BeamDumpPosition.out_of_beam)
+        min_counts = CONFIG_INI.getint("zwo_ASI1600MM", "min_counts")
+        max_counts = CONFIG_INI.getint("zwo_ASI1600MM", "max_counts")
+        exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
 
     # Create the standard directory structure.
     if write_out_data:
@@ -119,7 +127,6 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
             else:
                 calibrated = data_pipeline.calibration_pipeline(img_list,bg_list)
                 return calibrated
-
 
 
 def move_beam_dump(beam_dump_position):
