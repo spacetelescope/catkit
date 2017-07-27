@@ -62,7 +62,7 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
     full_filename = "{}_{}".format(exposure_set_name, file_name)
     output = take_exposures_and_background(exposure_time, num_exposures, fpm_position, path, full_filename,
                                   exposure_set_name=exposure_set_name, pipeline=pipeline, **kwargs)
-                                  
+
     # Export the DM Command itself as a fits file.
     dm_command_object.export_fits(os.path.join(path, exposure_set_name))
 
@@ -112,7 +112,7 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
                                     center_x=center_x, center_y=center_y, width=width, height=height, gain=gain,
                                     full_image=full_image, bins=bins, resume=resume, write_out_data=write_out_data)
 
-        # Run data pipeline.
+        # Run data pipeline
         if pipeline:
             if write_out_data:
                 data_pipeline.run_data_pipeline(raw_path)
