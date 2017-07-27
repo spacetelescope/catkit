@@ -12,6 +12,7 @@ from .. import util
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from .. import data_pipeline
+from ..interfaces.DummyContextManager import DummyContextManager
 
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
@@ -52,7 +53,7 @@ def beam_dump():
 
 
 def laser_source():
-    return ThorlabsMLCS1("thorlabs_source_mcls1")
+    return DummyContextManager("laser_source")
 
 
 # Convenience functions.
