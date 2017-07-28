@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+# noinspection PyUnresolvedReferences
 from builtins import *
 
 from hicat.interfaces.Camera import Camera
@@ -22,6 +23,8 @@ class ZwoCamera(Camera):
         """Opens connection with camera and returns the camera manufacturer specific object.
            Uses the config_id to look up parameters in the config.ini."""
         env_filename = os.getenv('ZWO_ASI_LIB')
+
+        # noinspection PyBroadException
         try:
             zwoasi.init(env_filename)
         except Exception:
@@ -35,13 +38,10 @@ class ZwoCamera(Camera):
             sys.exit(0)
 
         cameras_found = zwoasi.list_cameras()  # Model names of the connected cameras.
+
         # Get camera id and name.
         camera_name = CONFIG_INI.get(self.config_id, 'camera_name')
-
-        camera_index = None
         camera_index = cameras_found.index(camera_name)
-        if camera_index is None:
-            raise Exception("Camera " + camera_name + " not found.")
 
         # Create a camera object using the zwoasi library.
         camera = zwoasi.Camera(camera_index)
@@ -56,6 +56,7 @@ class ZwoCamera(Camera):
         # Set bandwidth overload control to minvalue.
         camera.set_control_value(zwoasi.ASI_BANDWIDTHOVERLOAD, camera.get_controls()['BandWidth']['MinValue'])
 
+        # noinspection PyBroadException
         try:
             # Force any single exposure to be halted
             camera.stop_video_capture()
@@ -74,21 +75,19 @@ class ZwoCamera(Camera):
         self.camera.close()
 
     def take_exposures(self, exposure_time, num_exposures, path="", filename="",
-                            fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
-                            gain=None, full_image=None, bins=None, resume=False, write_out_data=True):#*args, **kwargs):
+                       fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
+                       gain=None, full_image=None, bins=None, resume=False, write_out_data=True):
         if write_out_data:
             self.take_exposures_fits(exposure_time, num_exposures, path, filename,
-                            fits_header_dict, center_x, center_y, width, height,
-                            gain, full_image, bins, resume)#*args, **kwargs)
+                                     fits_header_dict, center_x, center_y, width, height,
+                                     gain, full_image, bins, resume)
             return
 
         else:
             img_list = self.take_exposures_data(exposure_time, num_exposures,
-                            center_x, center_y, width, height,
-                            gain, full_image, bins)#*args, **kwargs)
+                                                center_x, center_y, width, height,
+                                                gain, full_image, bins)
             return img_list
-
-
 
     def take_exposures_fits(self, exposure_time, num_exposures, path, filename,
                             fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,

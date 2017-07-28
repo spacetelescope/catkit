@@ -1,8 +1,8 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+# noinspection PyUnresolvedReferences
 from builtins import *
-
 import numpy as np
 
 from hicat import config as hicat_config
@@ -17,9 +17,9 @@ num_actuators_pupil = config.getint(config_name, 'pupil_length_actuators')
 
 
 def flat_command(bias=False,
-                flat_map=False,
-                return_shortname=False,
-                dm_num=1):
+                 flat_map=False,
+                 return_shortname=False,
+                 dm_num=1):
 
     short_name = "flat"
 

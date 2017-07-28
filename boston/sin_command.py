@@ -1,21 +1,21 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-from collections import namedtuple
-
+# noinspection PyUnresolvedReferences
 from builtins import *
-
 import math
-import os
+from collections import namedtuple
 
 import numpy as np
 from astropy.io import fits
 from scipy.ndimage.interpolation import rotate
+
+# noinspection PyPackageRequirements
 from skimage.transform import resize
 
-from hicat.hardware.boston.DmCommand import DmCommand
-from hicat import config as hicat_config, util as hicat_util
 from hicat import *  # Pulls in the root hicat __init.py__ stuff.
+from hicat import config as hicat_config
+from hicat.hardware.boston.DmCommand import DmCommand
 
 # Read config file once here.
 config = hicat_config.load_config_ini()
@@ -49,9 +49,11 @@ def sin_command(sin_specification,
     Creates a 2D sine wave as a numpy array of the dimensions of the Boston DM with the DM pupil mask applied. Multiple
     sine waves can be applied by passing in a list of SinSpecifications, rather than a single instance.
     :param sin_specification: Can either be a list or a single specification (of type SinSpecification).
+    :param dm_num: Default is 1.
     :param bias: Boolean flag to use constant voltage to apply to all actuators. Value retrieved from ini "bias_volts".
     :param flat_map: Boolean flag to use the appropriate characterized flat map for the DM.
     :param return_shortname: Boolean flag to return a string representation of the sinewave (good for filenames).
+    :param initial_data: Pass in numpy array to start with, the new sin command will be added to it and returned.
     :return: Numpy array of the sine wave, (optional) metadata list, (optional) shortname.
     """
 
@@ -80,9 +82,9 @@ def sin_command(sin_specification,
     if return_shortname:
         # Create short_name.
         short_name = "sin{}_rot{}_p2v{}nm".format(
-            "_".join([str(round(x.ncycles,2)) for x in sin_specification]),
-            "_".join([str(round(x.angle,2)) for x in sin_specification]),
-            "_".join([str(round(x.peak_to_valley.to(units.nanometer).m,2)) for x in sin_specification]))
+            "_".join([str(round(x.ncycles, 2)) for x in sin_specification]),
+            "_".join([str(round(x.angle, 2)) for x in sin_specification]),
+            "_".join([str(round(x.peak_to_valley.to(units.nanometer).m, 2)) for x in sin_specification]))
         if flat_map:
             short_name += "_flat_map"
         if bias:
@@ -98,24 +100,24 @@ def __sin_wave_aj_matlab(rotate_deg, ncycles, amplitude_factor):
     Depricated - This function creates an imperfect sine wave due to numpy resize and rotate. Use __sin_wave().
     """
     # Create Sin Wave.
-    Ddms = num_actuators_pupil * float(300e-6)
-    Dapod = 1.025 * float(18e-3)
+    ddms = num_actuators_pupil * float(300e-6)
+    dapod = 1.025 * float(18e-3)
     apod_length = 256
-    Ndm = 2 * math.floor((fl6 / fl7) * Ddms / (Dapod / apod_length) / 2)
-    xs = (np.arange(-Ndm + 1, Ndm, step=1.0) - 1 / 2) / (2 * Ndm)
+    ndm = 2 * math.floor((fl6 / fl7) * ddms / (dapod / apod_length) / 2)
+    xs = (np.arange(-ndm + 1, ndm, step=1.0) - 1 / 2) / (2 * ndm)
 
-    XS, YS = np.meshgrid(xs, xs)
+    xs, ys = np.meshgrid(xs, xs)
     value = float(ncycles) * (num_actuators_pupil / 26.65) * 2.0 * np.pi
-    angle_grid = value * XS
-    sinWave = amplitude_factor * np.cos(angle_grid)
+    angle_grid = value * xs
+    sin_wave = amplitude_factor * np.cos(angle_grid)
 
-    sinWave = rotate(sinWave, rotate_deg, reshape=False)
-    sinWaveV = resize(sinWave, (num_actuators_pupil, num_actuators_pupil), order=1, preserve_range=True,
-                      mode="constant")
+    sin_wave = rotate(sin_wave, rotate_deg, reshape=False)
+    sin_wave_v = resize(sin_wave, (num_actuators_pupil, num_actuators_pupil), order=1, preserve_range=True,
+                        mode="constant")
 
     # Flip.
-    sinWaveV = np.flipud(sinWaveV)
-    return sinWaveV
+    sin_wave_v = np.flipud(sin_wave_v)
+    return sin_wave_v
 
 
 def __sin_wave(rotate_deg, ncycles, peak_to_valley, phase):
@@ -139,9 +141,9 @@ def __sin_wave(rotate_deg, ncycles, peak_to_valley, phase):
     x_mesh, y_mesh = np.meshgrid(linear_ramp, linear_ramp)
 
     # Put the ramps through sine.
-    Xt = x_mesh * np.cos(theta_rad)
-    Yt = y_mesh * np.sin(theta_rad)
-    XYt = Xt + Yt
-    XYf = XYt * float(ncycles) * 2.0 * np.pi
-    sine_wave = (float(peak_to_valley.to_base_units().m) / 2.0) * np.cos(XYf + phase_rad)
+    xt = x_mesh * np.cos(theta_rad)
+    yt = y_mesh * np.sin(theta_rad)
+    xyt = xt + yt
+    xyf = xyt * float(ncycles) * 2.0 * np.pi
+    sine_wave = (float(peak_to_valley.to_base_units().m) / 2.0) * np.cos(xyf + phase_rad)
     return sine_wave

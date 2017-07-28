@@ -1,6 +1,8 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+# noinspection PyUnresolvedReferences
+from builtins import *
 import numpy as np
 
 from hicat.config import CONFIG_INI
@@ -100,24 +102,24 @@ class NewportMotorController(MotorController):
             return current_position
 
     def __ensure_initialized(self, group):
-        error_code, currentStatus = self.motor_controller.GroupStatusGet(self.socket_id, group)
+        error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupStatusGet')
 
         # Kill motor if it is not in a known good state.
-        if currentStatus != 11 and currentStatus != 12 and currentStatus != 7 and currentStatus != 42:
+        if current_status != 11 and current_status != 12 and current_status != 7 and current_status != 42:
             error_code, return_string = self.motor_controller.GroupKill(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupKill')
             print("Killed group " + group + " because it was not in state 11, 12, or 7")
 
             # Update the status.
-            error_code, currentStatus = self.motor_controller.GroupStatusGet(self.socket_id, group)
+            error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupStatusGet')
 
         # Initialize from killed state.
-        if currentStatus == 7:
+        if current_status == 7:
             # Initialize the group
             error_code, return_string = self.motor_controller.GroupInitialize(self.socket_id, group)
             if error_code != 0:
@@ -125,12 +127,12 @@ class NewportMotorController(MotorController):
             print("Initialized group " + group)
 
             # Update the status
-            error_code, currentStatus = self.motor_controller.GroupStatusGet(self.socket_id, group)
+            error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupStatusGet')
 
         # Home search
-        if currentStatus == 42:
+        if current_status == 42:
             error_code, return_string = self.motor_controller.GroupHomeSearch(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupHomeSearch')
@@ -142,18 +144,18 @@ class NewportMotorController(MotorController):
         self.absolute_move(group_config_id, nominal)
 
     # Migrated from Newport demo code, now raises exceptions instead of print statements.
-    def __raise_exceptions(self, error_code, APIName):
+    def __raise_exceptions(self, error_code, api_name):
         if (error_code != -2) and (error_code != -108):
             error_code2, error_string = self.motor_controller.ErrorStringGet(self.socket_id, error_code)
             if error_code2 != 0:
-                raise Exception(APIName + ': ERROR ' + str(error_code))
+                raise Exception(api_name + ': ERROR ' + str(error_code))
             else:
-                raise Exception(APIName + ': ' + error_string)
+                raise Exception(api_name + ': ' + error_string)
         else:
             if error_code == -2:
-                raise Exception(APIName + ': TCP timeout')
+                raise Exception(api_name + ': TCP timeout')
             if error_code == -108:
-                raise Exception(APIName + ': The TCP/IP connection was closed by an administrator')
+                raise Exception(api_name + ': The TCP/IP connection was closed by an administrator')
         raise Exception("Unknown error_code returned from Newport Motor Controller.")
 
     # Only a few of the motor IDs have testbed state entries.  

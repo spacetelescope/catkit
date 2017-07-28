@@ -1,9 +1,9 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+# noinspection PyUnresolvedReferences
 from builtins import *
 from astropy.io import fits
-import warnings
 import os
 import numpy as np
 
@@ -26,7 +26,7 @@ class DmCommand(object):
         self.bias = bias
         self.as_voltage_percentage = as_voltage_percentage
 
-        if sin_specification == None:
+        if sin_specification is None:
             self.sin_specification = []
         else:
             self.sin_specification = sin_specification if isinstance(sin_specification, list) else [sin_specification]
@@ -45,8 +45,7 @@ class DmCommand(object):
         if flat_map and bias:
             raise ValueError("You can only apply flat_map or bias, not both.")
 
-        ########## Transform data to be a 2D array (ex: 34 x 34 for boston_kilo952) ##########
-
+        # Transform data to be a 2D array (ex: 34 x 34 for boston_kilo952).
         # Already 2D, store as-is.
         if data.shape == (self.pupil_length, self.pupil_length):
             self.data = data
@@ -65,7 +64,6 @@ class DmCommand(object):
 
     def get_data(self):
         return self.data
-
 
     def to_dm_command(self):
 
@@ -126,7 +124,7 @@ class DmCommand(object):
             - 2D representation of the command with no padding (34 x 34).
             - 2D command with the flat/bias removed (34 x 34).
         :param path: Path to a directory to create a folder named "dm_command" and save the 3 files.
-        :param keywords: Dictionary of keywords exported from sin_command and flat_command.
+        :param folder_name: Optional parameter to specify a folder to store the fits file to.
         """
 
         # Add dm_command folder and join the path back up.
@@ -134,7 +132,7 @@ class DmCommand(object):
 
         # Save 1D representation of the command with no padding (1 x 952).
         dm_command_1d = self.to_dm_command()[0:self.total_actuators] if self.dm_num == 1 \
-            else self.to_dm_command()[1024:1024+self.total_actuators]
+            else self.to_dm_command()[1024:1024 + self.total_actuators]
 
         hicat_util.write_fits(self.to_dm_command(), os.path.join(dir_path, "dm_command_1d"))
 
@@ -142,22 +140,5 @@ class DmCommand(object):
         hicat_util.write_fits(hicat_util.convert_dm_command_to_image(dm_command_1d),
                               os.path.join(dir_path, "dm_command_2d"))
 
-
         # Save raw data as input to the simulator.
         hicat_util.write_fits(self.data, os.path.join(dir_path, "dm_command_2d_noflat"))
-
-    def save_as_labview_fits(self, filepath):
-        """Deprecated. Labview now uses python interface under the hood, making this format unnecessary."""
-        warnings.warn("save_as_labview_fits is deprecated, use save_as_fits instead.", DeprecationWarning)
-
-        data_as_voltage_percent = self.to_voltage_percentage(self.data)
-        if self.dm_num == 1:
-            dm_command = np.append(data_as_voltage_percent, np.zeros(4096 - data_as_voltage_percent.size))
-            hicat_util.write_fits(dm_command, filepath)
-            return dm_command
-        elif self.dm_num == 2:
-            zero_buffer = np.zeros(int(4096 / 2))
-            dm_command = np.append(zero_buffer, data_as_voltage_percent)
-            dm_command = np.append(dm_command, np.zeros(4096 - dm_command.size))
-            hicat_util.write_fits(dm_command, filepath)
-            return dm_command

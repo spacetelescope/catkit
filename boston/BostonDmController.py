@@ -1,8 +1,13 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+# noinspection PyUnresolvedReferences
+from builtins import *
+
 from hicat.hardware import testbed_state
 from hicat.interfaces.DeformableMirrorController import DeformableMirrorController
 from .sdk import bmc
 from hicat.config import CONFIG_INI
-from DmCommand import DmCommand
 import numpy as np
 
 """Interface for Boston Micro-machines deformable mirror controller that can control 2 DMs.  
@@ -92,7 +97,8 @@ class BostonDmController(DeformableMirrorController):
         # Update the testbed_state.
         self.__update_dm_state(dm_command_object)
 
-    def __update_dm_state(self, dm_command_object):
+    @staticmethod
+    def __update_dm_state(dm_command_object):
         if dm_command_object.dm_num == 1:
             testbed_state.bias_dm1 = dm_command_object.bias
             testbed_state.flat_map_dm1 = dm_command_object.flat_map
@@ -102,7 +108,8 @@ class BostonDmController(DeformableMirrorController):
             testbed_state.flat_map_dm2 = dm_command_object.flat_map
             testbed_state.sine_wave_specifications_dm2 = dm_command_object.sin_specification
 
-    def __close_dm_controller_testbed_state(self):
+    @staticmethod
+    def __close_dm_controller_testbed_state():
         testbed_state.sine_wave_specifications_dm1 = []
         testbed_state.bias_dm1 = False
         testbed_state.flat_map_dm1 = False
