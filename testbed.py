@@ -1,19 +1,17 @@
-import numpy as np
 import os
 
+import numpy as np
 from enum import Enum
 
-from .. import quantity
-from ..newport.NewportMotorController import NewportMotorController
-from ..zwo.ZwoCamera import ZwoCamera
-from ..hardware.boston.BostonDmController import BostonDmController
-from ..config import CONFIG_INI
-from .. import util
+from ..hardware.newport.NewportMotorController import NewportMotorController
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
-from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from .. import data_pipeline
+from .. import quantity
+from .. import util
+from ..config import CONFIG_INI
+from ..hardware.boston.BostonDmController import BostonDmController
 from ..interfaces.DummyContextManager import DummyContextManager
-
+from ..zwo.ZwoCamera import ZwoCamera
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
