@@ -22,10 +22,10 @@ config = hicat_config.load_config_ini()
 config_name = "boston_kilo952"
 
 # Load values from config.ini into variables.
-num_actuators_pupil = config.getint(config_name, 'pupil_length_actuators')
+num_actuators_pupil = config.getint(config_name, 'dm_length_actuators')
 total_actuators = config.getint(config_name, 'number_of_actuators')
-fl6 = config.getfloat(config_name, 'focal_length6')
-fl7 = config.getfloat(config_name, 'focal_length7')
+fl6 = config.getfloat('optical_design', 'focal_length6')
+fl7 = config.getfloat('optical_design', 'focal_length7')
 command_length = config.getint(config_name, 'command_length')
 
 # Get Script directory once here.
@@ -127,7 +127,7 @@ def __sin_wave(rotate_deg, ncycles, peak_to_valley, phase):
     :param ncycles: Frequency in number of cycles.
     :param peak_to_valley: Amplitude multiplier pint quantity with base units of meters.
     :param phase: Phase in degrees.
-    :return: 2D numpy array sized by the "pupil_length_actuators" parameter in config.ini file.
+    :return: 2D numpy array sized by the "dm_length_actuators" parameter in config.ini file.
     """
 
     # Make a linear ramp.

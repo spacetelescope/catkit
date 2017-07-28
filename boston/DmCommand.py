@@ -34,7 +34,7 @@ class DmCommand(object):
         # Load config values once and store as class attributes.
         self.total_actuators = CONFIG_INI.getint('boston_kilo952', 'number_of_actuators')
         self.command_length = CONFIG_INI.getint('boston_kilo952', 'command_length')
-        self.pupil_length = CONFIG_INI.getint('boston_kilo952', 'pupil_length_actuators')
+        self.pupil_length = CONFIG_INI.getint('boston_kilo952', 'dm_length_actuators')
         self.max_volts = CONFIG_INI.getint('boston_kilo952', 'max_volts')
         self.bias_volts = CONFIG_INI.getint('boston_kilo952', 'bias_volts')
 

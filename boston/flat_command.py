@@ -13,7 +13,7 @@ config = hicat_config.load_config_ini()
 config_name = "boston_kilo952"
 
 # Load values from config.ini into variables.
-num_actuators_pupil = config.getint(config_name, 'pupil_length_actuators')
+num_actuators_pupil = config.getint(config_name, 'dm_length_actuators')
 
 
 def flat_command(bias=False,
