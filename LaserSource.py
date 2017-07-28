@@ -1,9 +1,9 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+# noinspection PyUnresolvedReferences
 from builtins import *
 from abc import *
-from ..config import CONFIG_INI
 
 """Interface for a laser source."""
 
@@ -21,7 +21,7 @@ class LaserSource(object):
     def __enter__(self, *args, **kwargs):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
         self.laser = None
         print("Safely closed connection to laser source " + self.config_id)
@@ -42,4 +42,3 @@ class LaserSource(object):
     @abstractmethod
     def get_current(self):
         """Returns the value of the laser's current."""
-

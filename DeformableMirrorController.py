@@ -1,3 +1,9 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+# noinspection PyUnresolvedReferences
+from builtins import *
+
 from abc import *
 
 """Interface for a deformable mirror controller that can control 2 DMs.  
@@ -22,7 +28,7 @@ class DeformableMirrorController(object):
     def __enter__(self, *args, **kwargs):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
         self.dm_controller = None
         print("Safely closed DM " + self.config_id)

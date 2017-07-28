@@ -1,3 +1,9 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+# noinspection PyUnresolvedReferences
+from builtins import *
+
 from abc import *
 
 """Abstract base class for all cameras. Implementations of this class also become context managers."""
@@ -16,7 +22,7 @@ class Camera(object):
     def __enter__(self, *args, **kwargs):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
         self.camera = None
         print("Safely closed camera: " + self.config_id)
