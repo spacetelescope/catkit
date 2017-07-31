@@ -32,9 +32,12 @@ background_cache = {}
 def add_background_to_cache(time_quantity, num_exps, path):
     background_cache[(time_quantity.to(units.microsecond).m, num_exps)] = path
 
-def check_background_cache(time_quantity, num_exps, path):
-    return background_cache[(time_quantity.to(units.microsecond).m, num_exps)]
-
+def check_background_cache(time_quantity, num_exps):
+    key = (time_quantity.to(units.microsecond).m, num_exps)
+    if key in background_cache:
+        return background_cache[(time_quantity.to(units.microsecond).m, num_exps)]
+    else:
+        return None
 
 def create_metadata():
     metadata = [MetaDataEntry("background", "bg", background, "Background Image"),

@@ -63,12 +63,12 @@ def laser_source():
 
 # Convenience functions.
 def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm_position, exposure_time, num_exposures,
-                      simulator=True, pipeline=True, auto_exp_time=False, **kwargs):
+                      simulator=True, pipeline=True, auto_exp_time=False, bg_cache=False, **kwargs):
 
     full_filename = "{}_{}".format(exposure_set_name, file_name)
     output = take_exposures_and_background(exposure_time, num_exposures, fpm_position, path, full_filename,
                                            exposure_set_name=exposure_set_name, pipeline=pipeline,
-                                           auto_exp_time=auto_exp_time, **kwargs)
+                                           auto_exp_time=auto_exp_time, bg_cache=bg_cache, **kwargs)
                                   
     # Export the DM Command itself as a fits file.
     dm_command_object.export_fits(os.path.join(path, exposure_set_name))
@@ -127,6 +127,7 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
 
             # Cache hit - populate the bg_list with the path to
             if bg_cache_path is not None:
+                print("Using cached background exposures: " + bg_cache_path)
                 bg_list = glob(os.path.join(bg_cache_path, "*.fits"))
 
                 # Leave a small text file in background directory that points to real exposures.
