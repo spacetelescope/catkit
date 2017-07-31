@@ -150,7 +150,7 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
         # Run data pipeline.
         if pipeline:
             if write_out_data:
-                data_pipeline.run_data_pipeline(raw_path)
+                data_pipeline.run_data_pipeline(raw_path, bg_list=bg_list)
             else:
                 calibrated = data_pipeline.calibration_pipeline(img_list, bg_list)
                 return calibrated
