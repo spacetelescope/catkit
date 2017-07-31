@@ -1,7 +1,13 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+# noinspection PyUnresolvedReferences
+from builtins import *
+
 import os
 
 import numpy as np
 from enum import Enum
+from glob import glob
 
 from ..hardware.zwo.ZwoCamera import ZwoCamera
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
@@ -12,6 +18,7 @@ from ..config import CONFIG_INI
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
 from ..interfaces.DummyContextManager import DummyContextManager
+from . import testbed_state
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -78,7 +85,7 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
 def take_exposures_and_background(exposure_time, num_exposures, fpm_position, path="", filename="",
                                   exposure_set_name="", fits_header_dict=None, center_x=None, center_y=None, width=None,
                                   height=None, gain=None, full_image=None, bins=None, resume=False, pipeline=True,
-                                  write_out_data=True, auto_exp_time=False):
+                                  write_out_data=True, auto_exp_time=False, bg_cache=False):
     """
     Standard way to take data on hicat.  This function takes exposures, background images, and then runs a data pipeline
     to average the images and remove bad pixels.  It controls the beam dump for you, no need to initialize it prior.
@@ -113,13 +120,31 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
                                           width=width, height=height, gain=gain, full_image=full_image, bins=bins,
                                           resume=resume, write_out_data=write_out_data)
 
+        # Check background cache.
+        bg_list = []
+        if bg_cache and write_out_data:
+            bg_cache_path = testbed_state.check_background_cache(exposure_time, num_exposures)
+
+            # Cache hit - populate the bg_list with the path to
+            if bg_cache_path is not None:
+                bg_list = glob(os.path.join(bg_cache_path, "*.fits"))
+
+                # Leave a small text file in background directory that points to real exposures.
+                os.makedirs(bg_path)
+                with open(os.path.join(bg_path, "cache_directory.txt"), mode='w') as cache_file:
+                    cache_file.write(bg_cache_path)
+
         # Now move the beam dump in the path and take backgrounds.
-        move_beam_dump(BeamDumpPosition.in_beam)
-        bg_filename = 'bkg_{}'.format(filename)
-        bg_list = img_cam.take_exposures(exposure_time, num_exposures, bg_path, bg_filename,
-                                         fits_header_dict=fits_header_dict, center_x=center_x, center_y=center_y,
-                                         width=width, height=height, gain=gain, full_image=full_image, bins=bins,
-                                         resume=resume, write_out_data=write_out_data)
+        if not bg_list:
+            move_beam_dump(BeamDumpPosition.in_beam)
+            bg_filename = 'bkg_{}'.format(filename)
+            bg_list = img_cam.take_exposures(exposure_time, num_exposures, bg_path, bg_filename,
+                                             fits_header_dict=fits_header_dict, center_x=center_x, center_y=center_y,
+                                             width=width, height=height, gain=gain, full_image=full_image, bins=bins,
+                                             resume=resume, write_out_data=write_out_data)
+            if bg_cache and write_out_data:
+                testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
+
 
         # Run data pipeline.
         if pipeline:

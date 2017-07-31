@@ -1,3 +1,8 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+# noinspection PyUnresolvedReferences
+from builtins import *
+
 from collections import namedtuple
 from .. import units
 
@@ -20,6 +25,15 @@ flat_map_dm1 = False
 sine_wave_specifications_dm2 = []
 bias_dm2 = False
 flat_map_dm2 = False
+
+# Initialize exposure background cache table.
+background_cache = {}
+
+def add_background_to_cache(time_quantity, num_exps, path):
+    background_cache[(time_quantity.to(units.microsecond).m, num_exps)] = path
+
+def check_background_cache(time_quantity, num_exps, path):
+    return background_cache[(time_quantity.to(units.microsecond).m, num_exps)]
 
 
 def create_metadata():
