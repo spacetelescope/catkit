@@ -15,6 +15,7 @@ from skimage.transform import resize
 
 from hicat import *  # Pulls in the root hicat __init.py__ stuff.
 from hicat import config as hicat_config
+from hicat import util
 from hicat.hardware.boston.DmCommand import DmCommand
 
 # Read config file once here.
@@ -28,11 +29,8 @@ fl6 = config.getfloat('optical_design', 'focal_length6')
 fl7 = config.getfloat('optical_design', 'focal_length7')
 command_length = config.getint(config_name, 'command_length')
 
-# Get Script directory once here.
-script_dir = os.path.dirname(__file__)
-
 # Create the index952 from mask once here.
-mask = fits.open(script_dir + '/kiloCdm_2Dmask.fits')[0].data
+mask = util.get_hicat_dm_mask()
 index952 = np.flatnonzero(mask)
 
 # Named Tuple as a container for sine wave specifications. peak_to_valley must be a pint quantity.
