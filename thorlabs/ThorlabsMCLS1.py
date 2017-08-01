@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+# noinspection PyUnresolvedReferences
 from builtins import *
 from ctypes import *
 import os
@@ -30,7 +31,9 @@ class ThorlabsMLCS1(LaserSource):
         self.channel = CONFIG_INI.getint(self.config_id, "channel")
         self.nominal_current = CONFIG_INI.getint(self.config_id, "nominal_current")
         path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "lib", "uart_library_win64.dll")
-        self.laser = cdll.LoadLibrary(bytes(path, "utf-8"))
+
+        # noinspection PyArgumentList
+        self.laser = cdll.LoadLibrary(bytes(path, 'utf-8'))
         self.port = self.find_com_port()
         self.handle = self.laser.fnUART_LIBRARY_open(b"{}".format(self.port), 115200, 3)
 
@@ -75,22 +78,21 @@ class ThorlabsMLCS1(LaserSource):
         testbed_state.laser_source = self.config_id
         testbed_state.laser_value = value
 
-
     def get_current(self):
         """Returns the value of the laser's current."""
         self.set_active_channel(self.channel)
         command = b"current?\r"
-        buffer = b"0" * 255
-        self.laser.fnUART_LIBRARY_Get(self.handle, command, buffer)
+        response_buffer = b"0" * 255
+        self.laser.fnUART_LIBRARY_Get(self.handle, command, response_buffer)
 
         # Use regex to find the float value in the response.
-        return float(re.findall("\d+\.\d+", buffer)[0])
+        return float(re.findall("\d+\.\d+", response_buffer)[0])
 
     def find_com_port(self):
         """Queries the dll for the com port it is using."""
-        buffer = b"0" * 255
-        self.laser.fnUART_LIBRARY_list(buffer, 255)
-        split = buffer.split(",")
+        response_buffer = b"0" * 255
+        self.laser.fnUART_LIBRARY_list(response_buffer, 255)
+        split = response_buffer.split(",")
         for i, thing in enumerate(split):
 
             # The list has a format of "Port, Device, Port, Device". Once we find device named VCPO, minus 1 for port.
@@ -131,7 +133,7 @@ class ThorlabsMLCS1(LaserSource):
     def is_channel_enabled(self, channel):
         self.set_active_channel(channel)
         command = b"enable?\r"
-        buffer = b"0" * 255
-        response = self.laser.fnUART_LIBRARY_Get(self.handle, command, buffer)
-        result = int(re.findall("\d+", buffer)[0])
+        response_buffer = b"0" * 255
+        self.laser.fnUART_LIBRARY_Get(self.handle, command, response_buffer)
+        result = int(re.findall("\d+", response_buffer)[0])
         return result
