@@ -146,11 +146,10 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
             if bg_cache and write_out_data:
                 testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
 
-
         # Run data pipeline.
         if pipeline:
             if write_out_data:
-                data_pipeline.run_data_pipeline(raw_path, bg_list=bg_list)
+                return data_pipeline.run_data_pipeline(raw_path, bg_list=bg_list)
             else:
                 calibrated = data_pipeline.calibration_pipeline(img_list, bg_list)
                 return calibrated
@@ -181,20 +180,26 @@ def move_fpm(fpm_position):
             mc.absolute_move(motor_id, new_position)
 
 
-def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50):
+def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50, mask=None):
     """
     To be used when the dm shape is already applied. Uses the imaging camera to find the correct exposure time.
     :param start_exp_time: The initial time to begin testing with.
     :param min_counts: The minimum number of acceptable counts in the image.
     :param max_counts: The maximum number of acceptable counts in the image.
     :param num_tries: Safety mechanism to prevent infinite loops, max tries before giving up.
+    :param mask: A mask for which to search for the max pixel (ie dark zone).
     :return: The correct exposure time to use, or in the failure case, the start exposure time passed in.
     """
 
     with imaging_camera() as img_cam:
 
         img_list = img_cam.take_exposures_data(start_exp_time, 1)
-        img_max = np.max(img_list[0])
+
+        if mask is not None:
+            img_max = np.max(img_list[0][np.nonzero(mask)])
+        else:
+            img_max = np.max(img_list[0])
+
         upper_bound = start_exp_time
         lower_bound = quantity(0, start_exp_time.u)
         print("Starting exposure time calibration...")
