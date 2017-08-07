@@ -194,7 +194,7 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
     :param mask: A mask for which to search for the max pixel (ie dark zone).
     :return: The correct exposure time to use, or in the failure case, the start exposure time passed in.
     """
-
+    move_beam_dump(BeamDumpPosition.out_of_beam)
     with imaging_camera() as img_cam:
 
         img_list = img_cam.take_exposures_data(start_exp_time, 1)
