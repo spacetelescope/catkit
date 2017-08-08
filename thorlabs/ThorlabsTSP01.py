@@ -15,7 +15,7 @@ def get_temp_humidity():
     """
     # Set up the paths.
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    full_path = os.path.join(current_dir, "bin", "thorlabs_sensor_cs.exe")
+    full_path = os.path.join(current_dir, "tsp01_resources", "thorlabs_sensor_cs.exe")
     output = subprocess.check_output(full_path)
 
     # Remove newlines.
