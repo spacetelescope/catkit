@@ -9,13 +9,16 @@ import subprocess
 
 
 def get_temp_humidity():
+    """
+    Connects to Thorlabs TSP01 sensor and reads the external temperature and humidity.
+    :return: Temperature, Humidity as floats.
+    """
     # Set up the paths.
     current_dir = os.path.dirname(os.path.realpath(__file__))
     full_path = os.path.join(current_dir, "bin", "thorlabs_sensor_cs.exe")
-
-    # Create an args list and pass it into a subprocess.
     output = subprocess.check_output(full_path)
-    # Remove curly brackets, spaces, and newlines.
+
+    # Remove newlines.
     for remove_me in ["\r", "\n"]:
         output = output.replace(remove_me, "")
 
