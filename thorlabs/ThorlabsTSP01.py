@@ -11,7 +11,7 @@ import subprocess
 def get_temp_humidity():
     """
     Connects to Thorlabs TSP01 sensor and reads the external temperature and humidity.
-    :return: Temperature, Humidity as floats.
+    :return: Temperature, Humidity as floats. 
     """
     # Set up the paths.
     current_dir = os.path.dirname(os.path.realpath(__file__))
