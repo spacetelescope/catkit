@@ -85,7 +85,7 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
 def take_exposures_and_background(exposure_time, num_exposures, fpm_position, path="", filename="",
                                   exposure_set_name="", fits_header_dict=None, center_x=None, center_y=None, width=None,
                                   height=None, gain=None, full_image=None, bins=None, resume=False, pipeline=True,
-                                  write_out_data=True, auto_exp_time=False, bg_cache=False):
+                                  write_out_data=True, auto_exp_time=False, bg_cache=False, plot=False):
     """
     Standard way to take data on hicat.  This function takes exposures, background images, and then runs a data pipeline
     to average the images and remove bad pixels.  It controls the beam dump for you, no need to initialize it prior.
@@ -151,7 +151,7 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
             if write_out_data:
                 return data_pipeline.run_data_pipeline(raw_path, bg_list=bg_list)
             else:
-                calibrated = data_pipeline.calibration_pipeline(img_list, bg_list)
+                calibrated = data_pipeline.calibration_pipeline(img_list, bg_list,plot=plot)
                 return calibrated
 
 
