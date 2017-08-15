@@ -7,6 +7,7 @@ from builtins import *
 from hicat.interfaces.Camera import Camera
 from hicat.config import CONFIG_INI
 from hicat import units, quantity
+from hicat import util
 from hicat.hardware import testbed_state
 from astropy.io import fits
 import numpy as np
@@ -299,13 +300,9 @@ class ZwoCamera(Camera):
         poll = quantity(0.1, units.second)
         image = self.camera.capture(initial_sleep=exposure_time.to(units.second).magnitude, poll=poll.magnitude)
 
-        # Apply flips to the image based on config.ini file
-        flip_x = CONFIG_INI.getboolean(self.config_id, 'flip_x')
-        flip_y = CONFIG_INI.getboolean(self.config_id, 'flip_y')
-
-        if flip_x:
-            image = np.flipud(image)
-        if flip_y:
-            image = np.fliplr(image)
+        # Apply rotation and flip to the image based on config.ini file.
+        theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
+        fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
+        image = util.rotate_and_flip_image(image, theta, fliplr)
 
         return image.astype(np.dtype(np.int))
