@@ -83,7 +83,7 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
 
 
 def take_exposures_and_background(exposure_time, num_exposures, fpm_position, path="", filename="",
-                                  exposure_set_name="", fits_header_dict=None, center_x=None, center_y=None, width=None,
+                                  exposure_set_name="", fits_header_dict=None, subarray_x=None, subarray_y=None, width=None,
                                   height=None, gain=None, full_image=None, bins=None, resume=False, pipeline=True,
                                   write_out_data=True, auto_exp_time=False, bg_cache=False, plot=False):
     """
@@ -116,7 +116,7 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
         # First take images.
         move_beam_dump(BeamDumpPosition.out_of_beam)
         img_list = img_cam.take_exposures(exposure_time, num_exposures, img_path, filename,
-                                          fits_header_dict=fits_header_dict, center_x=center_x, center_y=center_y,
+                                          fits_header_dict=fits_header_dict, subarray_x=subarray_x, subarray_y=subarray_y,
                                           width=width, height=height, gain=gain, full_image=full_image, bins=bins,
                                           resume=resume, write_out_data=write_out_data)
 
@@ -140,7 +140,7 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
             move_beam_dump(BeamDumpPosition.in_beam)
             bg_filename = 'bkg_{}'.format(filename)
             bg_list = img_cam.take_exposures(exposure_time, num_exposures, bg_path, bg_filename,
-                                             fits_header_dict=fits_header_dict, center_x=center_x, center_y=center_y,
+                                             fits_header_dict=fits_header_dict, subarray_x=subarray_x, subarray_y=subarray_y,
                                              width=width, height=height, gain=gain, full_image=full_image, bins=bins,
                                              resume=resume, write_out_data=write_out_data)
             if bg_cache and write_out_data:

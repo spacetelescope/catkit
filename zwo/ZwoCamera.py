@@ -7,6 +7,7 @@ from builtins import *
 from hicat.interfaces.Camera import Camera
 from hicat.config import CONFIG_INI
 from hicat import units, quantity
+from hicat import util
 from hicat.hardware import testbed_state
 from astropy.io import fits
 import numpy as np
@@ -75,22 +76,22 @@ class ZwoCamera(Camera):
         self.camera.close()
 
     def take_exposures(self, exposure_time, num_exposures, path="", filename="",
-                       fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
+                       fits_header_dict=None, subarray_x=None, subarray_y=None, width=None, height=None,
                        gain=None, full_image=None, bins=None, resume=False, write_out_data=True):
         if write_out_data:
             self.take_exposures_fits(exposure_time, num_exposures, path, filename,
-                                     fits_header_dict, center_x, center_y, width, height,
+                                     fits_header_dict, subarray_x, subarray_y, width, height,
                                      gain, full_image, bins, resume)
             return
 
         else:
             img_list = self.take_exposures_data(exposure_time, num_exposures,
-                                                center_x, center_y, width, height,
+                                                subarray_x, subarray_y, width, height,
                                                 gain, full_image, bins)
             return img_list
 
     def take_exposures_fits(self, exposure_time, num_exposures, path, filename,
-                            fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
+                            fits_header_dict=None, subarray_x=None, subarray_y=None, width=None, height=None,
                             gain=None, full_image=None, bins=None, resume=False):
         """
         Takes exposures, saves as FITS files and returns list of file paths. The keyword arguments
@@ -100,8 +101,8 @@ class ZwoCamera(Camera):
         :param path: Path of the directory to save fits file to.
         :param filename: Name for file.
         :param fits_header_dict: Dictionary of extra attributes to stuff into fits header.
-        :param center_x: X coordinate of center pixel.
-        :param center_y: Y coordinate of center pixel.
+        :param subarray_x: X coordinate of center pixel of the subarray.
+        :param subarray_y: Y coordinate of center pixel of the subarray.
         :param width: Desired width of image.
         :param height: Desired height of image.
         :param gain: Gain of ZWO camera (volts).
@@ -115,7 +116,7 @@ class ZwoCamera(Camera):
         if type(exposure_time) is not quantity:
             exposure_time = quantity(exposure_time, units.microsecond)
 
-        self.__setup_control_values(exposure_time, center_x=center_x, center_y=center_y, width=width,
+        self.__setup_control_values(exposure_time, subarray_x=subarray_x, subarray_y=subarray_y, width=width,
                                     height=height, gain=gain, full_image=full_image, bins=bins)
 
         # Check for fits extension.
@@ -186,7 +187,7 @@ class ZwoCamera(Camera):
         return filepath_list
 
     def take_exposures_data(self, exposure_time, num_exposures,
-                            center_x=None, center_y=None, width=None, height=None,
+                            subarray_x=None, subarray_y=None, width=None, height=None,
                             gain=None, full_image=None, bins=None):
         """Takes exposures and returns list of numpy arrays."""
 
@@ -194,7 +195,7 @@ class ZwoCamera(Camera):
         if type(exposure_time) is not quantity:
             exposure_time = quantity(exposure_time, units.microsecond)
 
-        self.__setup_control_values(exposure_time, center_x=center_x, center_y=center_y, width=width,
+        self.__setup_control_values(exposure_time, subarray_x=subarray_x, subarray_y=subarray_y, width=width,
                                     height=height, gain=gain, full_image=full_image, bins=bins)
         img_list = []
 
@@ -205,13 +206,13 @@ class ZwoCamera(Camera):
 
         return img_list
 
-    def __setup_control_values(self, exposure_time, center_x=None, center_y=None, width=None, height=None,
+    def __setup_control_values(self, exposure_time, subarray_x=None, subarray_y=None, width=None, height=None,
                                gain=None, full_image=None, bins=None):
         """Applies control values found in the config.ini unless overrides are passed in, and does error checking."""
 
         # Load values from config.ini into variables, and override with keyword args when applicable.
-        center_x = center_x if center_x is not None else CONFIG_INI.getint(self.config_id, 'center_x')
-        center_y = center_y if center_y is not None else CONFIG_INI.getint(self.config_id, 'center_y')
+        subarray_x = subarray_x if subarray_x is not None else CONFIG_INI.getint(self.config_id, 'subarray_x')
+        subarray_y = subarray_y if subarray_y is not None else CONFIG_INI.getint(self.config_id, 'subarray_y')
         width = width if width is not None else CONFIG_INI.getint(self.config_id, 'width')
         height = height if height is not None else CONFIG_INI.getint(self.config_id, 'height')
         gain = gain if gain is not None else CONFIG_INI.getint(self.config_id, 'gain')
@@ -251,16 +252,16 @@ class ZwoCamera(Camera):
             # For debugging
             # print("Converting to binned units: bins =", bins)
 
-            center_x //= bins
-            center_y //= bins
+            subarray_x //= bins
+            subarray_y //= bins
             width //= bins
             height //= bins
 
         # Derive the start x/y position of the region of interest, and check that it falls on the detector.
-        derived_start_x = center_x - (width // 2)
-        derived_start_y = center_y - (height // 2)
-        derived_end_x = center_x + (width // 2)
-        derived_end_y = center_y + (height // 2)
+        derived_start_x = subarray_x - (width // 2)
+        derived_start_y = subarray_y - (height // 2)
+        derived_end_x = subarray_x + (width // 2)
+        derived_end_y = subarray_y + (height // 2)
 
         if derived_start_x > detector_max_x or derived_start_x < 0:
             print("Derived start x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_start_x)
@@ -299,13 +300,9 @@ class ZwoCamera(Camera):
         poll = quantity(0.1, units.second)
         image = self.camera.capture(initial_sleep=exposure_time.to(units.second).magnitude, poll=poll.magnitude)
 
-        # Apply flips to the image based on config.ini file
-        flip_x = CONFIG_INI.getboolean(self.config_id, 'flip_x')
-        flip_y = CONFIG_INI.getboolean(self.config_id, 'flip_y')
-
-        if flip_x:
-            image = np.flipud(image)
-        if flip_y:
-            image = np.fliplr(image)
+        # Apply rotation and flip to the image based on config.ini file.
+        theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
+        fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
+        image = util.rotate_and_flip_image(image, theta, fliplr)
 
         return image.astype(np.dtype(np.int))
