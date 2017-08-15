@@ -11,13 +11,7 @@ from ..config import CONFIG_INI
 """Implementation of the White UPS using the BackupPower interface."""
 
 
-class WhiteUps(BackupPower):
-    # noinspection PyUnusedLocal
-    def __init__(self, config_id, *args, **kwargs):
-        """
-        Child constructor to hardcode white_ups config_id.
-        """
-        super(WhiteUps, self).__init__("white_ups", *args, **kwargs)
+class SnmpUps(BackupPower):
 
     def get_status(self):
 

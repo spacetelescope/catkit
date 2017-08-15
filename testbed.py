@@ -9,7 +9,7 @@ import numpy as np
 from enum import Enum
 from glob import glob
 
-from .WhiteUps import WhiteUps
+from .SnmpUps import SnmpUps
 from ..hardware.zwo.ZwoCamera import ZwoCamera
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
@@ -63,7 +63,7 @@ def laser_source():
 
 
 def backup_power():
-    return WhiteUps()
+    return SnmpUps("white_ups")
 
 
 # Convenience functions.
