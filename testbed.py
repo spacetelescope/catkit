@@ -17,7 +17,7 @@ from .. import util
 from ..config import CONFIG_INI
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
-from ..interfaces.DummyContextManager import DummyContextManager
+from ..hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from . import testbed_state
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
@@ -58,7 +58,7 @@ def beam_dump():
 
 
 def laser_source():
-    return DummyContextManager("laser_source")
+    return ThorlabsMLCS1("thorlabs_source_mcls1")
 
 
 # Convenience functions.
