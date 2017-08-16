@@ -209,6 +209,7 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
             print("\tReturning exposure time " + str(start_exp_time))
             return start_exp_time
 
+        best = start_exp_time
         while img_max < max_counts:
             upper_bound *= 2
             img_list = img_cam.take_exposures_data(upper_bound, 1)
@@ -231,6 +232,9 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
             elif img_max > max_counts:
                 print("\tNew upper bound " + str(test))
                 upper_bound = test
+            best = test
+        # If we run out of tries, return the best so far.
+        return best
 
 
 class BeamDumpPosition(Enum):
