@@ -18,7 +18,7 @@ from .. import util
 from ..config import CONFIG_INI
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
-from ..interfaces.DummyContextManager import DummyContextManager
+from ..hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from . import testbed_state
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
@@ -59,7 +59,7 @@ def beam_dump():
 
 
 def laser_source():
-    return DummyContextManager("laser_source")
+    return ThorlabsMLCS1("thorlabs_source_mcls1")
 
 
 def backup_power():
@@ -88,7 +88,7 @@ def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm
 
 
 def take_exposures_and_background(exposure_time, num_exposures, fpm_position, path="", filename="",
-                                  exposure_set_name="", fits_header_dict=None, center_x=None, center_y=None, width=None,
+                                  exposure_set_name="", fits_header_dict=None, subarray_x=None, subarray_y=None, width=None,
                                   height=None, gain=None, full_image=None, bins=None, resume=False, pipeline=True,
                                   write_out_data=True, auto_exp_time=False, bg_cache=False, plot=False):
     """
@@ -121,7 +121,7 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
         # First take images.
         move_beam_dump(BeamDumpPosition.out_of_beam)
         img_list = img_cam.take_exposures(exposure_time, num_exposures, img_path, filename,
-                                          fits_header_dict=fits_header_dict, center_x=center_x, center_y=center_y,
+                                          fits_header_dict=fits_header_dict, subarray_x=subarray_x, subarray_y=subarray_y,
                                           width=width, height=height, gain=gain, full_image=full_image, bins=bins,
                                           resume=resume, write_out_data=write_out_data)
 
@@ -145,17 +145,16 @@ def take_exposures_and_background(exposure_time, num_exposures, fpm_position, pa
             move_beam_dump(BeamDumpPosition.in_beam)
             bg_filename = 'bkg_{}'.format(filename)
             bg_list = img_cam.take_exposures(exposure_time, num_exposures, bg_path, bg_filename,
-                                             fits_header_dict=fits_header_dict, center_x=center_x, center_y=center_y,
+                                             fits_header_dict=fits_header_dict, subarray_x=subarray_x, subarray_y=subarray_y,
                                              width=width, height=height, gain=gain, full_image=full_image, bins=bins,
                                              resume=resume, write_out_data=write_out_data)
             if bg_cache and write_out_data:
                 testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
 
-
-        # Run data pipeline
+        # Run data pipeline.
         if pipeline:
             if write_out_data:
-                data_pipeline.run_data_pipeline(raw_path, bg_list=bg_list)
+                return data_pipeline.run_data_pipeline(raw_path, bg_list=bg_list)
             else:
                 calibrated = data_pipeline.calibration_pipeline(img_list, bg_list,plot=plot)
                 return calibrated
@@ -186,20 +185,26 @@ def move_fpm(fpm_position):
             mc.absolute_move(motor_id, new_position)
 
 
-def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50):
+def __get_max_pixel_count(data, mask=None):
+    return np.max(data) if mask is None else np.max(data[np.nonzero(mask)])
+
+
+def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50, mask=None):
     """
     To be used when the dm shape is already applied. Uses the imaging camera to find the correct exposure time.
     :param start_exp_time: The initial time to begin testing with.
     :param min_counts: The minimum number of acceptable counts in the image.
     :param max_counts: The maximum number of acceptable counts in the image.
     :param num_tries: Safety mechanism to prevent infinite loops, max tries before giving up.
+    :param mask: A mask for which to search for the max pixel (ie dark zone).
     :return: The correct exposure time to use, or in the failure case, the start exposure time passed in.
     """
-
+    move_beam_dump(BeamDumpPosition.out_of_beam)
     with imaging_camera() as img_cam:
 
         img_list = img_cam.take_exposures_data(start_exp_time, 1)
-        img_max = np.max(img_list[0])
+        img_max = __get_max_pixel_count(img_list[0], mask=mask)
+
         upper_bound = start_exp_time
         lower_bound = quantity(0, start_exp_time.u)
         print("Starting exposure time calibration...")
@@ -209,16 +214,17 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50)
             print("\tReturning exposure time " + str(start_exp_time))
             return start_exp_time
 
+        best = start_exp_time
         while img_max < max_counts:
             upper_bound *= 2
             img_list = img_cam.take_exposures_data(upper_bound, 1)
-            img_max = np.max(img_list[0])
+            img_max = __get_max_pixel_count(img_list[0], mask=mask)
             print("\tExposure time " + str(upper_bound) + " yields " + str(img_max) + " counts ")
 
         for i in range(num_tries):
             test = .5 * (upper_bound + lower_bound)
             img_list = img_cam.take_exposures_data(test, 1)
-            img_max = np.max(img_list[0])
+            img_max = __get_max_pixel_count(img_list[0], mask=mask)
             print("\tExposure time " + str(test) + " yields " + str(img_max) + " counts ")
 
             if min_counts <= img_max <= max_counts:
@@ -231,6 +237,9 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50)
             elif img_max > max_counts:
                 print("\tNew upper bound " + str(test))
                 upper_bound = test
+            best = test
+        # If we run out of tries, return the best so far.
+        return best
 
 
 class BeamDumpPosition(Enum):
