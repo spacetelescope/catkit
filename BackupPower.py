@@ -12,7 +12,6 @@ class BackupPower(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, config_id, *args, **kwargs):
-        """Opens connection with the motor controller and sets class attributes for 'config_id' and 'motor'."""
         self.config_id = config_id
 
     # Abstract Methods.
