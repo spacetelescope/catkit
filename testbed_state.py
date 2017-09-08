@@ -16,21 +16,19 @@ coronograph = False
 laser_source = None
 laser_value = None
 
-# DM1 specific state Varibales.
-sine_wave_specifications_dm1 = []
-bias_dm1 = False
-flat_map_dm1 = False
+# DM1 command object currently being applied.
+dm1_command_object = None
 
-# DM2 specific state Varibales.
-sine_wave_specifications_dm2 = []
-bias_dm2 = False
-flat_map_dm2 = False
+# DM2 command object currently being applied.
+dm2_command_object = None
 
 # Initialize exposure background cache table.
 background_cache = {}
 
+
 def add_background_to_cache(time_quantity, num_exps, path):
     background_cache[(time_quantity.to(units.microsecond).m, num_exps)] = path
+
 
 def check_background_cache(time_quantity, num_exps):
     key = (time_quantity.to(units.microsecond).m, num_exps)
@@ -38,6 +36,7 @@ def check_background_cache(time_quantity, num_exps):
         return background_cache[(time_quantity.to(units.microsecond).m, num_exps)]
     else:
         return None
+
 
 def create_metadata():
     metadata = [MetaDataEntry("background", "bg", background, "Background Image"),
@@ -49,33 +48,33 @@ def create_metadata():
         metadata.append(MetaDataEntry("laser_value", "src_val", laser_value, "Laser source value (milliAmps)"))
 
     # Only write DM specific metadata if there is a shape applied.
-    if sine_wave_specifications_dm1 or bias_dm1 or flat_map_dm1:
-        metadata.append(MetaDataEntry("bias_dm1", "bias_dm1", bias_dm1,
+    if dm1_command_object.sin_specification or dm1_command_object.bias or dm1_command_object.flat_map:
+        metadata.append(MetaDataEntry("bias_dm1", "bias_dm1", dm1_command_object.bias,
                                       "Constant voltage applied to actuators on DM1"))
-        metadata.append(MetaDataEntry("flat_map_dm1", "flatmap1", flat_map_dm1,
+        metadata.append(MetaDataEntry("flat_map_dm1", "flatmap1", dm1_command_object.flat_map,
                                       "Flat map applied to correct shape of DM1"))
 
-        sin_flag = True if sine_wave_specifications_dm1 else False
+        sin_flag = True if dm1_command_object.sin_specification else False
         metadata.append(MetaDataEntry("sine_wave_dm1", "sine_dm1", sin_flag,
                                       "Sine wave(s) applied to DM1 to inject speckles"))
 
-    if sine_wave_specifications_dm2 or bias_dm2 or flat_map_dm2:
-        metadata.append(MetaDataEntry("bias_dm2", "bias_dm2", bias_dm2,
+    if dm2_command_object.sin_specification or dm2_command_object.bias or dm2_command_object.flat_map:
+        metadata.append(MetaDataEntry("bias_dm2", "bias_dm2", dm2_command_object.bias,
                                       "Constant voltage applied to all actuators on DM2"))
-        metadata.append(MetaDataEntry("flat_map_dm2", "flatmap1", flat_map_dm2,
+        metadata.append(MetaDataEntry("flat_map_dm2", "flatmap1", dm2_command_object.flat_map,
                                       "Flat map applied to correct resting shape of DM2"))
 
-        sin_flag = True if sine_wave_specifications_dm2 else False
+        sin_flag = True if dm2_command_object.sin_specification else False
         metadata.append(MetaDataEntry("sine_wave_dm2", "sine_dm2", sin_flag,
                                       "Sine wave(s) applied to DM2 to inject speckles"))
 
     # Write the sine wave meta data for DM1.
-    if sine_wave_specifications_dm1:
-        metadata.append(MetaDataEntry("num_sine_waves_dm1", "nsin_dm1", len(sine_wave_specifications_dm1),
+    if dm1_command_object.sin_specification:
+        metadata.append(MetaDataEntry("num_sine_waves_dm1", "nsin_dm1", len(dm1_command_object.sin_specification),
                                       "Number of sine waves on DM1"))
 
-        size = len(sine_wave_specifications_dm1)
-        for i, sine in enumerate(sine_wave_specifications_dm1):
+        size = len(dm1_command_object.sin_specification)
+        for i, sine in enumerate(dm1_command_object.sin_specification):
             metadata.append(MetaDataEntry("angle" + (str(i + 1) if size > 1 else "") + "_dm1",
                                           "rot" + (str(i + 1) if size > 1 else "") + "_dm1",
                                           sine.angle,
@@ -97,12 +96,12 @@ def create_metadata():
                                           "Phase of sinewave (degrees) on DM1"))
 
     # Write the sine wave meta data for DM2.
-    if sine_wave_specifications_dm2:
-        metadata.append(MetaDataEntry("num_sine_waves_dm2", "nsin_dm2", len(sine_wave_specifications_dm2),
+    if dm2_command_object.sin_specification:
+        metadata.append(MetaDataEntry("num_sine_waves_dm2", "nsin_dm2", len(dm2_command_object.sin_specification),
                                       "Number of sine waves on DM2"))
 
-        size = len(sine_wave_specifications_dm2)
-        for i, sine in enumerate(sine_wave_specifications_dm2):
+        size = len(dm2_command_object.sin_specification)
+        for i, sine in enumerate(dm2_command_object.sin_specification):
             metadata.append(MetaDataEntry("angle" + (str(i + 1) if size > 1 else "") + "_dm2",
                                           "rot" + (str(i + 1) if size > 1 else "") + "_dm2",
                                           sine.angle,

@@ -100,19 +100,11 @@ class BostonDmController(DeformableMirrorController):
     @staticmethod
     def __update_dm_state(dm_command_object):
         if dm_command_object.dm_num == 1:
-            testbed_state.bias_dm1 = dm_command_object.bias
-            testbed_state.flat_map_dm1 = dm_command_object.flat_map
-            testbed_state.sine_wave_specifications_dm1 = dm_command_object.sin_specification
+            testbed_state.dm1_command_object = dm_command_object
         if dm_command_object.dm_num == 2:
-            testbed_state.bias_dm2 = dm_command_object.bias
-            testbed_state.flat_map_dm2 = dm_command_object.flat_map
-            testbed_state.sine_wave_specifications_dm2 = dm_command_object.sin_specification
+            testbed_state.dm2_command_object = dm_command_object
 
     @staticmethod
     def __close_dm_controller_testbed_state():
-        testbed_state.sine_wave_specifications_dm1 = []
-        testbed_state.bias_dm1 = False
-        testbed_state.flat_map_dm1 = False
-        testbed_state.sine_wave_specifications_dm2 = []
-        testbed_state.bias_dm2 = False
-        testbed_state.flat_map_dm2 = False
+        testbed_state.dm1_command_object = None
+        testbed_state.dm2_command_object = None
