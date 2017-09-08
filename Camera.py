@@ -37,9 +37,5 @@ class Camera(object):
         """Close camera connection."""
 
     @abstractmethod
-    def take_exposures_fits(self, exposure_length, num_exposures, path, filename, *args, **kwargs):
-        """Takes exposures and saves as FITS files, and returns list of file paths."""
-
-    @abstractmethod
-    def take_exposures_data(self, exposure_length, num_exposures, *args, **kwargs):
-        """Takes exposures and returns list of numpy arrays."""
+    def take_exposures(self, exposure_length, num_exposures, path=None, filename=None, *args, **kwargs):
+        """Takes exposures and should be able to save fits and simply return the image data."""
