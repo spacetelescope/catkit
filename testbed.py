@@ -68,7 +68,7 @@ def backup_power():
 
 
 # Convenience functions.
-def run_hicat_imaging_new(exposure_time, num_exposures, fpm_position, lyot_stop_position=LyotStopPosition.in_beam,
+def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_position=LyotStopPosition.in_beam,
                           write_raw_fits=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
                           take_background_exposures=True, use_background_cache=True,
                           pipeline_mode=PipeLineMode.output_fits,
@@ -79,7 +79,7 @@ def run_hicat_imaging_new(exposure_time, num_exposures, fpm_position, lyot_stop_
                           resume=False,
                           **camera_kwargs):
     """
-    Standard function for taking imaging data with HiCAT.  For writing fits files, 'path', 'exp_set_name' and
+    Standard function for taking imaging data with HiCAT.  For writing fits files, 'path', 'exposure_set_name' and
     'filename' parameters are required.
     :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
     :param num_exposures: Number of exposures.
@@ -177,25 +177,6 @@ def run_hicat_imaging_new(exposure_time, num_exposures, fpm_position, lyot_stop_
 
         if simulator:
             util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
-
-
-def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm_position, exposure_time, num_exposures,
-                      simulator=True, pipeline=True, auto_exp_time=False, bg_cache=False, **kwargs):
-    full_filename = "{}_{}".format(exposure_set_name, file_name)
-    output = take_exposures_and_background(exposure_time, num_exposures, fpm_position, path, full_filename,
-                                           exposure_set_name=exposure_set_name, pipeline=pipeline,
-                                           auto_exp_time=auto_exp_time, bg_cache=bg_cache, **kwargs)
-
-    # Export the DM Command itself as a fits file.
-    dm_command_object.export_fits(os.path.join(path, exposure_set_name))
-
-    # Store config.ini.
-    util.save_ini(os.path.join(path, "config"))
-
-    if simulator:
-        util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
-
-    return output
 
 
 def take_exposures_and_background(exposure_time, num_exposures, fpm_position, path="", filename="",
