@@ -18,7 +18,7 @@ from .. import util
 from ..config import CONFIG_INI
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
-from . enums import *
+from . hicat_types import *
 from ..hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from ..hardware.zwo.ZwoCamera import ZwoCamera
 
@@ -69,15 +69,15 @@ def backup_power():
 
 # Convenience functions.
 def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_position=LyotStopPosition.in_beam,
-                          write_raw_fits=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
-                          take_background_exposures=True, use_background_cache=True,
-                          pipeline_mode=PipeLineMode.output_fits,
-                          auto_exposure_time=True,
-                          simulator=True,
-                          extra_metadata=None,
-                          store_dm_command=True,
-                          resume=False,
-                          **camera_kwargs):
+                      write_raw_fits=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
+                      take_background_exposures=True, use_background_cache=True,
+                      pipeline_mode=PipeLineMode.output_fits,
+                      auto_exposure_time=True,
+                      simulator=True,
+                      extra_metadata=None,
+                      store_dm_command=True,
+                      resume=False,
+                      **camera_kwargs):
     """
     Standard function for taking imaging data with HiCAT.  For writing fits files, 'path', 'exposure_set_name' and
     'filename' parameters are required.
@@ -99,7 +99,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :param store_dm_command:
     :param resume:
     :param camera_kwargs:
-    :return:
+    :return: hicat_types.HicatImagingProducts object.
     """
 
     # Move Focal Plane Mask and Lyot Stop(will skip if already in correct place).
@@ -118,21 +118,42 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     img_path = os.path.join(raw_path, "images")
     bg_path = os.path.join(raw_path, "backgrounds")
 
+    # Output container.
+    hicat_imaging_products = HicatImagingProducts()
+
+    # Move beam dump out of beam and take images.
+    move_beam_dump(BeamDumpPosition.out_of_beam)
     with imaging_camera() as img_cam:
 
-        # Move beam dump out of beam and take images.
-        full_filename = "{}_{}".format(exposure_set_name, filename)
-        move_beam_dump(BeamDumpPosition.out_of_beam)
-        img_list = img_cam.take_exposures(exposure_time, num_exposures, write_raw_fits=write_raw_fits,
-                                          raw_skip=raw_skip, path=img_path, filename=full_filename,
-                                          extra_metadata=extra_metadata,
-                                          resume=resume,
-                                          **camera_kwargs)
+        # Add exposure set name into the filename.
+        if filename is not None and exposure_set_name is not None:
+            full_filename = "{}_{}".format(exposure_set_name, filename)
 
-        # Check background cache.
+        # Take images.
+        img_list, metadata = img_cam.take_exposures(exposure_time, num_exposures, write_raw_fits=write_raw_fits,
+                                                     raw_skip=raw_skip, path=img_path, filename=full_filename,
+                                                     extra_metadata=extra_metadata,
+                                                     resume=resume,
+                                                     **camera_kwargs)
+        # Add images to output products.
+        if write_raw_fits and raw_skip == 0:
+            hicat_imaging_products.img_data = img_list
+        else:
+            hicat_imaging_products.img_paths = img_list
+
+        # Background images.
         bg_list = []
+        write_raw_fits_bg = write_raw_fits
+        raw_skip_bg = raw_skip
         if take_background_exposures:
-            if use_background_cache and write_raw_fits:
+            if use_background_cache and not write_raw_fits:
+                print("Warning: Setting write_raw_fits=True only for bg exposures to use background cache feature.")
+                write_raw_fits_bg = True
+            if use_background_cache and raw_skip != 0:
+                print("Warning: Setting raw_skip=0 only for bg exposures to use background cache feature.")
+                raw_skip_bg = 0
+
+            if use_background_cache:
                 bg_cache_path = testbed_state.check_background_cache(exposure_time, num_exposures)
 
                 # Cache hit - populate the bg_list with the path to
@@ -146,27 +167,36 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
                     with open(cache_file_path, mode=b'w') as cache_file:
                         cache_file.write(bg_cache_path)
-            else:
+            if not bg_list:
                 # Move the beam dump in the path and take background exposures.
                 move_beam_dump(BeamDumpPosition.in_beam)
                 bg_filename = "bkg_" + filename
-                bg_list = img_cam.take_exposures(exposure_time, num_exposures,
-                                                 write_raw_fits=write_raw_fits, path=bg_path, filename=bg_filename,
-                                                 extra_metadata=extra_metadata,
-                                                 resume=resume,
-                                                 **camera_kwargs)
-                if use_background_cache and write_raw_fits:
+
+                bg_list, bg_metadata = img_cam.take_exposures(exposure_time, num_exposures,
+                                                              write_raw_fits=write_raw_fits_bg,
+                                                              path=bg_path, filename=bg_filename, raw_skip=raw_skip_bg,
+                                                              extra_metadata=extra_metadata,
+                                                              resume=resume,
+                                                              **camera_kwargs)
+                hicat_imaging_products.bg_metadata = bg_metadata
+                if use_background_cache:
                     testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
 
-        # Run data pipeline.
+            # Add bg_list to output products as either bg_paths or bg_data.
+            if write_raw_fits:
+                hicat_imaging_products.bg_paths = bg_list
+            else:
+                hicat_imaging_products.bg_data = bg_list
+
+        # Run data pipeline TODO: Incorporate additional metadata from pipeline into metadata output product.
         if pipeline_mode == PipeLineMode.output_fits:
-            return data_pipeline.run_data_pipeline(raw_path, bg_list=bg_list)
+            hicat_imaging_products.cal_path = data_pipeline.run_data_pipeline(raw_path, bg_list=bg_list)
         elif pipeline_mode == PipeLineMode.output_data:
-            calibrated = data_pipeline.calibration_pipeline(img_list, bg_list)
-            return calibrated
+            hicat_imaging_products.cal_data = data_pipeline.calibration_pipeline(img_list, bg_list)
         elif pipeline_mode == PipeLineMode.output_data_and_plot:
-            calibrated = data_pipeline.calibration_pipeline(img_list, bg_list, plot=True)
-            return calibrated
+            hicat_imaging_products.cal_data = data_pipeline.calibration_pipeline(img_list, bg_list, plot=True)
+
+        hicat_imaging_products.img_metadata = metadata
 
         # Export the DM Command itself as a fits file.
         if store_dm_command:
@@ -178,81 +208,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         if simulator:
             util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
 
-
-def take_exposures_and_background(exposure_time, num_exposures, fpm_position, path="", filename="",
-                                  exposure_set_name="", fits_header_dict=None, subarray_x=None, subarray_y=None,
-                                  width=None,
-                                  height=None, gain=None, full_image=None, bins=None, resume=False, pipeline=True,
-                                  write_out_data=True, auto_exp_time=False, bg_cache=False, plot=False):
-    """
-    Standard way to take data on hicat.  This function takes exposures, background images, and then runs a data pipeline
-    to average the images and remove bad pixels.  It controls the beam dump for you, no need to initialize it prior.
-    """
-
-    # Move the FPM to the desired position.
-    move_fpm(fpm_position)
-
-    if auto_exp_time:
-        move_beam_dump(BeamDumpPosition.out_of_beam)
-        min_counts = CONFIG_INI.getint("zwo_ASI1600MM", "min_counts")
-        max_counts = CONFIG_INI.getint("zwo_ASI1600MM", "max_counts")
-        exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
-
-    # Create the standard directory structure.
-    if write_out_data:
-        raw_path = os.path.join(path, exposure_set_name, "raw")
-        img_path = os.path.join(raw_path, "images")
-        bg_path = os.path.join(raw_path, "backgrounds")
-
-    else:
-        raw_path = ""
-        img_path = ""
-        bg_path = ""
-
-    with imaging_camera() as img_cam:
-
-        # First take images.
-        move_beam_dump(BeamDumpPosition.out_of_beam)
-        img_list = img_cam.take_exposures(exposure_time, num_exposures, img_path, filename,
-                                          fits_header_dict=fits_header_dict, subarray_x=subarray_x,
-                                          subarray_y=subarray_y,
-                                          width=width, height=height, gain=gain, full_image=full_image, bins=bins,
-                                          resume=resume, write_out_data=write_out_data)
-
-        # Check background cache.
-        bg_list = []
-        if bg_cache and write_out_data:
-            bg_cache_path = testbed_state.check_background_cache(exposure_time, num_exposures)
-
-            # Cache hit - populate the bg_list with the path to
-            if bg_cache_path is not None:
-                print("Using cached background exposures: " + bg_cache_path)
-                bg_list = glob(os.path.join(bg_cache_path, "*.fits"))
-
-                # Leave a small text file in background directory that points to real exposures.
-                os.makedirs(bg_path)
-                with open(os.path.join(bg_path, "cache_directory.txt"), mode='w') as cache_file:
-                    cache_file.write(bg_cache_path)
-
-        # Now move the beam dump in the path and take backgrounds.
-        if not bg_list:
-            move_beam_dump(BeamDumpPosition.in_beam)
-            bg_filename = 'bkg_{}'.format(filename)
-            bg_list = img_cam.take_exposures(exposure_time, num_exposures, bg_path, bg_filename,
-                                             fits_header_dict=fits_header_dict, subarray_x=subarray_x,
-                                             subarray_y=subarray_y,
-                                             width=width, height=height, gain=gain, full_image=full_image, bins=bins,
-                                             resume=resume, write_out_data=write_out_data)
-            if bg_cache and write_out_data:
-                testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
-
-        # Run data pipeline.
-        if pipeline:
-            if write_out_data:
-                return data_pipeline.run_data_pipeline(raw_path, bg_list=bg_list)
-            else:
-                calibrated = data_pipeline.calibration_pipeline(img_list, bg_list, plot=plot)
-                return calibrated
+        return hicat_imaging_products
 
 
 def move_beam_dump(beam_dump_position):

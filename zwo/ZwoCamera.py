@@ -79,15 +79,13 @@ class ZwoCamera(Camera):
                        write_raw_fits=True, raw_skip=0, path=None, filename=None,
                        extra_metadata=None,
                        resume=False,
-                       return_metadata=False,
                        subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
                        bins=None):
         """
-        When write_raw_fits=True saves exposure as FITS files and returns list of file paths. Otherwise, the images
-        remain in memory are returned as a list of numpy image arrays.
+        Low level method to take exposures using a Zwo camera.
         :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
         :param num_exposures: Number of exposures.
-        :param write_raw_fits: If true fits file will be written to disk, otherwise the numpy data will be returned.
+        :param write_raw_fits: If true fits file will be written to disk
         :param raw_skip: Skips x images for every one taken, when used images will be stored in memory and returned.
         :param path: Path of the directory to save fits file to, required if write_raw_fits is true.
         :param filename: Name for file, required if write_raw_fits is true.
@@ -101,7 +99,7 @@ class ZwoCamera(Camera):
         :param gain: Gain of ZWO camera (volts).
         :param full_image: Boolean for whether to take a full image.
         :param bins: Integer value for number of bins.
-        :return: List of filepaths, or list of numpy image data. Also second parameter if return_metadata=True.
+        :return: Two parameters: Image list (numpy data or paths), Metadata list of MetaDataEntry objects.
         """
 
         # Convert exposure time to contain units if not already a Pint quantity.
@@ -119,7 +117,10 @@ class ZwoCamera(Camera):
         meta_data.append(MetaDataEntry("Gain", "GAIN", self.gain, "Gain for camera"))
         meta_data.append(MetaDataEntry("Bins", "BINS", self.bins, "Binning for camera"))
         if extra_metadata is not None:
-            meta_data.extend(extra_metadata)
+            if isinstance(extra_metadata, list):
+                meta_data.extend(extra_metadata)
+            else:
+                meta_data.append(extra_metadata)
 
         # Take images and return data and metadata (does not write anything to disk).
         img_list = []
@@ -129,7 +130,7 @@ class ZwoCamera(Camera):
                 img = self.__capture(exposure_time)
                 img_list.append(img)
 
-            return img_list, meta_data if return_metadata else img_list
+            return img_list, meta_data
         else:
             # Check that path and filename are specified.
             if path is None or filename is None:
@@ -204,7 +205,7 @@ class ZwoCamera(Camera):
             if raw_skip == 0:
                 img_list.append(full_path)
 
-        return img_list, meta_data if return_metadata else img_list
+        return img_list, meta_data
 
     def __setup_control_values(self, exposure_time, subarray_x=None, subarray_y=None, width=None, height=None,
                                gain=None, full_image=None, bins=None):
