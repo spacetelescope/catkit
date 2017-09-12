@@ -9,7 +9,7 @@ from glob import glob
 import numpy as np
 
 from . import testbed_state
-from .SnmpUps import SnmpUps
+# from ..hardware.SnmpUps import SnmpUps
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
 from .. import quantity
@@ -61,9 +61,9 @@ def beam_dump():
 def laser_source():
     return ThorlabsMLCS1("thorlabs_source_mcls1")
 
-
-def backup_power():
-    return SnmpUps("white_ups")
+# TODO: Implement seperate processes for safety monitoring and experiments.
+# def backup_power():
+#     return SnmpUps("white_ups")
 
 
 # Convenience functions.
