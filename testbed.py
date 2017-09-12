@@ -192,7 +192,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         # Run data pipeline TODO: Incorporate additional metadata from pipeline into metadata output product.
         if pipeline_mode == PipeLineMode.output_fits:
-            hicat_imaging_products.cal_path = data_pipeline.file_pipeline(raw_path, bg_list=bg_list)
+            hicat_imaging_products.cal_path = data_pipeline.file_pipeline(raw_path)
         elif pipeline_mode == PipeLineMode.output_data:
             hicat_imaging_products.cal_data = data_pipeline.data_pipeline(img_list, bg_list)
         elif pipeline_mode == PipeLineMode.output_data_and_plot:
