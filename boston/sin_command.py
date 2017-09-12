@@ -7,7 +7,6 @@ import math
 from collections import namedtuple
 
 import numpy as np
-from astropy.io import fits
 from scipy.ndimage.interpolation import rotate
 
 # noinspection PyPackageRequirements

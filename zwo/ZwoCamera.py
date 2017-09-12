@@ -122,7 +122,7 @@ class ZwoCamera(Camera):
             else:
                 meta_data.append(extra_metadata)
 
-        # Take images and return data and metadata (does not write anything to disk).
+        # DATA MODE: Takes images and returns data and metadata (does not write anything to disk).
         img_list = []
         if not write_raw_fits:
             # Take exposures and add to list.
@@ -136,6 +136,7 @@ class ZwoCamera(Camera):
             if path is None or filename is None:
                 raise Exception("You need to specify path and filename when write_raw_fits=True.")
 
+        # FITS MODE:
         # Check for fits extension.
         if not (filename.endswith(".fit") or filename.endswith(".fits")):
             filename += ".fits"
