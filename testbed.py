@@ -12,13 +12,12 @@ from . import testbed_state
 from .SnmpUps import SnmpUps
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
-from ..data_pipeline import PipeLineMode
 from .. import quantity
 from .. import util
 from ..config import CONFIG_INI
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
-from . hicat_types import *
+from ..hicat_types import *
 from ..hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from ..hardware.zwo.ZwoCamera import ZwoCamera
 
@@ -113,10 +112,17 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         max_counts = CONFIG_INI.getint("zwo_ASI1600MM", "max_counts")
         exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
 
-    # Create the standard directory structure.
-    raw_path = os.path.join(path, exposure_set_name, "raw")
-    img_path = os.path.join(raw_path, "images")
-    bg_path = os.path.join(raw_path, "backgrounds")
+    # Fits directories and filenames.
+    raw_path, img_path, bg_path = None
+    if write_raw_fits:
+
+        # Combine exposure set into filename.
+        filename = "{}_{}".format(exposure_set_name, filename)
+
+        # Create the standard directory structure.
+        raw_path = os.path.join(path, exposure_set_name, "raw")
+        img_path = os.path.join(raw_path, "images")
+        bg_path = os.path.join(raw_path, "backgrounds")
 
     # Output container.
     hicat_imaging_products = HicatImagingProducts()
@@ -125,17 +131,13 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     move_beam_dump(BeamDumpPosition.out_of_beam)
     with imaging_camera() as img_cam:
 
-        # Add exposure set name into the filename.
-        if filename is not None and exposure_set_name is not None:
-            full_filename = "{}_{}".format(exposure_set_name, filename)
-
         # Take images.
         img_list, metadata = img_cam.take_exposures(exposure_time, num_exposures, write_raw_fits=write_raw_fits,
-                                                     raw_skip=raw_skip, path=img_path, filename=full_filename,
-                                                     extra_metadata=extra_metadata,
-                                                     resume=resume,
-                                                     **camera_kwargs)
-        # Add images to output products.
+                                                    raw_skip=raw_skip, path=img_path, filename=filename,
+                                                    extra_metadata=extra_metadata,
+                                                    resume=resume,
+                                                    **camera_kwargs)
+        # Add image paths or image data to output products.
         if write_raw_fits and raw_skip == 0:
             hicat_imaging_products.img_data = img_list
         else:
@@ -206,7 +208,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         util.save_ini(os.path.join(path, "config"))
 
         if simulator:
-            util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
+            util.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
 
         return hicat_imaging_products
 
