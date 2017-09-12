@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division,
 from builtins import *
 
 from pysnmp.hlapi import *
-from ..interfaces import BackupPower
+from ..interfaces.BackupPower import BackupPower
 from ..config import CONFIG_INI
 
 """Implementation of the White UPS using the BackupPower interface."""
