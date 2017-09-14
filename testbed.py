@@ -45,13 +45,13 @@ def dm_controller():
     return BostonDmController("boston_kilo952")
 
 
-def motor_controller():
+def motor_controller(initialize_to_nominal=True):
     """
     Proper way to control the motor controller. Using this function keeps the scripts future-proof.
     Use the "with" keyword to take advantage of the built-in context manager for safely closing the connection.
     :return: An instance of the MotorController.py interface.
     """
-    return NewportMotorController("newport_xps_q8")
+    return NewportMotorController("newport_xps_q8", initialize_to_nominal=initialize_to_nominal)
 
 
 def beam_dump():
@@ -114,12 +114,11 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     """
 
     # Move Focal Plane Mask and Lyot Stop(will skip if already in correct place).
-    move_fpm(fpm_position)
+    move_fpm(FpmPosition.direct)
     move_lyot_stop(lyot_stop_position)
 
     # Auto Exposure.
     if auto_exposure_time:
-        move_beam_dump(BeamDumpPosition.out_of_beam)
         min_counts = CONFIG_INI.getint("zwo_ASI1600MM", "min_counts")
         max_counts = CONFIG_INI.getint("zwo_ASI1600MM", "max_counts")
         exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
@@ -245,7 +244,7 @@ def move_beam_dump(beam_dump_position):
 
 def move_fpm(fpm_position):
     """A safe method to move the focal plane mask."""
-    with motor_controller() as mc:
+    with motor_controller(initialize_to_nominal=False) as mc:
         motor_id = "motor_FPM_Y"
         new_position = None
 
@@ -261,7 +260,7 @@ def move_fpm(fpm_position):
 
 def move_lyot_stop(lyot_stop_position):
     """A safe method to move the lyot stop."""
-    with motor_controller() as mc:
+    with motor_controller(initialize_to_nominal=False) as mc:
         motor_id = "motor_lyot_stop_x"
         new_position = None
 

@@ -35,9 +35,11 @@ class NewportMotorController(MotorController):
         self.motor_controller = myxps
 
         # Initialize and move to nominal positions.
-        motors = [s for s in CONFIG_INI.sections() if s.startswith('motor_')]
-        for motor_name in motors:
-            self.__move_to_nominal(motor_name)
+        initialize_to_nominal = kwargs.get("initialize_to_nominal", True)
+        if initialize_to_nominal:
+            motors = [s for s in CONFIG_INI.sections() if s.startswith('motor_')]
+            for motor_name in motors:
+                self.__move_to_nominal(motor_name)
 
         # Update the testbed_state for the FPM and Lyot Stop.
         self.__update_testbed_state("motor_lyot_stop_x", self.get_position("motor_lyot_stop_x"))
