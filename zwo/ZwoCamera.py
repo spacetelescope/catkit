@@ -130,14 +130,16 @@ class ZwoCamera(Camera):
             for i in range(num_exposures):
                 img = self.__capture(exposure_time)
                 img_list.append(img)
-
-            return img_list, meta_data
+            if return_metadata:
+                return img_list, meta_data
+            else:
+                return img_list
         else:
             # Check that path and filename are specified.
             if path is None or filename is None:
-                raise Exception("You need to specify path and filename when write_raw_fits=True.")
+                raise Exception("You need to specify path and filename when file_mode=True.")
 
-        # FITS MODE:
+        # FILE MODE:
         # Check for fits extension.
         if not (filename.endswith(".fit") or filename.endswith(".fits")):
             filename += ".fits"
