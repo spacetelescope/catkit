@@ -16,6 +16,8 @@ from ...hardware import testbed_state
 
 
 class ThorlabsMLCS1(LaserSource):
+    SLEEP_TIME = 2  # Number of seconds to sleep after turning on laser or changing current.
+
     def __init__(self, config_id, *args, **kwargs):
         """
         Child constructor to add a few hardware specific class attributes. Still calls the super.
@@ -72,7 +74,7 @@ class ThorlabsMLCS1(LaserSource):
             current_command_string = b"current={}\r".format(value)
             self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
             print("Laser is changing amplitude...")
-            time.sleep(3)
+            time.sleep(self.SLEEP_TIME)
 
         # Update the testbed_state.
         testbed_state.laser_source = self.config_id
@@ -112,8 +114,8 @@ class ThorlabsMLCS1(LaserSource):
         enable_command_string = b"enable={}\r".format(value)
         self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
         if value == 1:
-            print("Laser is turning on...")
-            time.sleep(3)
+            print("Laser is enabling channel " + str(channel) + "...")
+            time.sleep(self.SLEEP_TIME)
 
     def set_system_enable(self, value):
         """
@@ -123,7 +125,7 @@ class ThorlabsMLCS1(LaserSource):
         enable_command_string = b"system={}\r".format(value)
         self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
         if value == 1:
-            time.sleep(3)
+            time.sleep(self.SLEEP_TIME)
 
     def set_active_channel(self, channel):
         # Set Active Channel.
