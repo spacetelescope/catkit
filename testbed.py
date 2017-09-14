@@ -77,8 +77,20 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                       resume=False,
                       **camera_kwargs):
     """
-    Standard function for taking imaging data with HiCAT.  For writing fits files, 'path', 'exposure_set_name' and
-    'filename' parameters are required.
+    Standard function for taking imaging data with HiCAT.  For writing fits files (file_mode=True), 'path',
+    'exposure_set_name' and 'filename' parameters are required.
+
+    file_mode = True: (Default)
+        - Returns the output of the pipeline, which will be a path to final calibrated fits file.
+        - When pipeline=False, returns list of paths for images and  backgrounds (if take_background_exposures=True).
+        - Simulator expects the output from the pipeline, so it will not work if pipeline=False.
+
+    file_mode = False:
+        - Returns the output of the pipeline, which is the data for the final calibrated image.
+            - When return_pipeline_metadata=True, returns a second argument with metadata containing centroid info.
+        - When pipeline=False, returns list of data for images and  backgrounds (if take_background_exposures=True).
+        - Simulator, Background Cache, and Resume are not supported.
+
     :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
     :param num_exposures: Number of exposures.
     :param fpm_position: (hicat_types.FpmPosition) Position the focal plane mask will get moved to.
@@ -92,6 +104,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :param use_background_cache: Reuses backgrounds with the same exposure time. Supported when write_raw_fits=True.
     :param pipeline: True runs pipeline, False does not.  Inherits mode to determine whether to write final fits.
     :param pipeline_plot: Used for viewing the calibrated images as they are taken (usually for debugging).
+    :param return_pipeline_metadata: List of MetaDataEntry that includes additional pipeline info.
     :param auto_exposure_time: Flag to enable auto exposure time correction.
     :param simulator: Flag to enable Mathematica simulator.
     :param extra_metadata: List or single MetaDataEntry.
@@ -207,6 +220,14 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         if file_mode and simulator:
             util.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
 
+        # When the pipeline is off, return image lists (data or path depending on filemode).
+        if not pipeline:
+            if take_background_exposures:
+                return img_list, bg_list
+            else:
+                return img_list
+
+        # Return the output of the pipeline and metadata (if requested).
         if return_pipeline_metadata:
             return final_output, cal_metadata
         else:
