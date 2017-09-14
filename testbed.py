@@ -75,7 +75,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                       simulator=True,
                       extra_metadata=None,
                       resume=False,
-                      **camera_kwargs):
+                      **kwargs):
     """
     Standard function for taking imaging data with HiCAT.  For writing fits files (file_mode=True), 'path',
     'exposure_set_name' and 'filename' parameters are required.
@@ -125,7 +125,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
 
     # Fits directories and filenames.
-    exp_path, raw_path, img_path, bg_path = None
+    exp_path, raw_path, img_path, bg_path = None, None, None, None
     if file_mode:
 
         # Combine exposure set into filename.
@@ -146,7 +146,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                                                     raw_skip=raw_skip, path=img_path, filename=filename,
                                                     extra_metadata=extra_metadata,
                                                     resume=resume,
-                                                    **camera_kwargs)
+                                                    **kwargs)
 
         # Background images.
         bg_list = []
@@ -182,7 +182,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                                                               path=bg_path, filename=bg_filename, raw_skip=raw_skip_bg,
                                                               extra_metadata=extra_metadata,
                                                               resume=resume,
-                                                              **camera_kwargs)
+                                                              **kwargs)
                 if use_background_cache:
                     testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
 
@@ -250,12 +250,12 @@ def move_fpm(fpm_position):
         new_position = None
 
         if fpm_position is FpmPosition.coron:
-            new_position = CONFIG_INI.getfloat(motor_id, "nominal")
+            new_position = CONFIG_INI.getfloat(motor_id, "default_coron")
         elif fpm_position is FpmPosition.direct:
             new_position = CONFIG_INI.getfloat(motor_id, "direct")
 
         current_position = mc.get_position(motor_id)
-        if new_position != current_position:
+        if not __is_close(new_position, current_position):
             mc.absolute_move(motor_id, new_position)
 
 
@@ -271,9 +271,18 @@ def move_lyot_stop(lyot_stop_position):
             new_position = CONFIG_INI.getfloat(motor_id, "out_of_beam")
 
         current_position = mc.get_position(motor_id)
-        if new_position != current_position:
+        if not __is_close(new_position, current_position):
             mc.absolute_move(motor_id, new_position)
 
+def __is_close(motor_position1, motor_position2, atol=.001):
+    """
+    Helper function for comparing motor positions.  Sometimes the motor moves to 1.3 but reports 1.2999911341.
+    :param motor_position1: Motor position 1
+    :param motor_position2: Motor position 2
+    :param atol: The absolute tolerance parameter.
+    :return: True if the motor positions are equal or close enough.
+    """
+    return np.isclose(motor_position1, motor_position2, atol=atol)
 
 def __get_max_pixel_count(data, mask=None):
     return np.max(data) if mask is None else np.max(data[np.nonzero(mask)])
