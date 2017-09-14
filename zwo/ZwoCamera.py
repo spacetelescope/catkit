@@ -76,20 +76,21 @@ class ZwoCamera(Camera):
         self.camera.close()
 
     def take_exposures(self, exposure_time, num_exposures,
-                       write_raw_fits=True, raw_skip=0, path=None, filename=None,
+                       file_mode=False, raw_skip=0, path=None, filename=None,
                        extra_metadata=None,
                        resume=False,
+                       return_metadata=False,
                        subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
                        bins=None):
         """
         Low level method to take exposures using a Zwo camera.
         :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
         :param num_exposures: Number of exposures.
-        :param write_raw_fits: If true fits file will be written to disk
+        :param file_mode: If true fits file will be written to disk
         :param raw_skip: Skips x images for every one taken, when used images will be stored in memory and returned.
         :param path: Path of the directory to save fits file to, required if write_raw_fits is true.
         :param filename: Name for file, required if write_raw_fits is true.
-        :param extra_metadata: List of extra MetaDataEntry to add to the metadata returned by this function.
+        :param extra_metadata: Will be appended to metadata created and written to fits header.
         :param resume: If True, skips exposure if filename exists on disk already. Doesn't support data-only mode.
         :param return_metadata: If True, returns a list of meta data as a second return parameter.
         :param subarray_x: X coordinate of center pixel of the subarray.
@@ -124,7 +125,7 @@ class ZwoCamera(Camera):
 
         # DATA MODE: Takes images and returns data and metadata (does not write anything to disk).
         img_list = []
-        if not write_raw_fits:
+        if not file_mode:
             # Take exposures and add to list.
             for i in range(num_exposures):
                 img = self.__capture(exposure_time)
@@ -206,7 +207,11 @@ class ZwoCamera(Camera):
             if raw_skip == 0:
                 img_list.append(full_path)
 
-        return img_list, meta_data
+        # If data mode, return meta_data with data.
+        if return_metadata:
+            return img_list, meta_data
+        else:
+            return img_list
 
     def __setup_control_values(self, exposure_time, subarray_x=None, subarray_y=None, width=None, height=None,
                                gain=None, full_image=None, bins=None):

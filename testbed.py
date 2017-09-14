@@ -68,13 +68,12 @@ def laser_source():
 
 # Convenience functions.
 def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_position=LyotStopPosition.in_beam,
-                      write_raw_fits=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
+                      file_mode=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
                       take_background_exposures=True, use_background_cache=True,
-                      pipeline_mode=PipeLineMode.output_fits,
+                      pipeline=True, pipeline_plot=False, return_pipeline_metadata=False,
                       auto_exposure_time=True,
                       simulator=True,
                       extra_metadata=None,
-                      store_dm_command=True,
                       resume=False,
                       **camera_kwargs):
     """
@@ -82,22 +81,22 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     'filename' parameters are required.
     :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
     :param num_exposures: Number of exposures.
-    :param fpm_position:
-    :param lyot_stop_position:
-    :param write_raw_fits: If true fits file will be written to disk, otherwise the numpy data will be returned.
+    :param fpm_position: (hicat_types.FpmPosition) Position the focal plane mask will get moved to.
+    :param lyot_stop_position: (hicat_types.LyotStopPosition) Position the lyot stop will get moved to.
+    :param file_mode: If true fits file will be written to disk, otherwise the numpy data will be returned.
     :param raw_skip: Skips x images for every one taken, when used images will be stored in memory and returned.
     :param path: Path of the directory to save fits file to, required if write_raw_fits is true.
     :param exposure_set_name: Additional directory level (ex: coron, direct).
     :param filename: Name for file, required if write_raw_fits is true.
-    :param take_background_exposures:
+    :param take_background_exposures: Boolean flag for whether to take background exposures.
     :param use_background_cache: Reuses backgrounds with the same exposure time. Supported when write_raw_fits=True.
-    :param pipeline_mode:
-    :param auto_exposure_time:
-    :param simulator:
-    :param extra_metadata:
-    :param store_dm_command:
-    :param resume:
-    :param camera_kwargs:
+    :param pipeline: True runs pipeline, False does not.  Inherits mode to determine whether to write final fits.
+    :param pipeline_plot: Used for viewing the calibrated images as they are taken (usually for debugging).
+    :param auto_exposure_time: Flag to enable auto exposure time correction.
+    :param simulator: Flag to enable Mathematica simulator.
+    :param extra_metadata: List or single MetaDataEntry.
+    :param resume: Very primitive way to try and resume an experiment. Skips exposures that already exist on disk.
+    :param camera_kwargs: Extra keywords to be passed to the camera's take_exposures function.
     :return: hicat_types.HicatImagingProducts object.
     """
 
@@ -113,44 +112,36 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
 
     # Fits directories and filenames.
-    raw_path, img_path, bg_path = None
-    if write_raw_fits:
+    exp_path, raw_path, img_path, bg_path = None
+    if file_mode:
 
         # Combine exposure set into filename.
         filename = "{}_{}".format(exposure_set_name, filename)
 
         # Create the standard directory structure.
-        raw_path = os.path.join(path, exposure_set_name, "raw")
+        exp_path = os.path.join(path, exposure_set_name)
+        raw_path = os.path.join(exp_path, "raw")
         img_path = os.path.join(raw_path, "images")
         bg_path = os.path.join(raw_path, "backgrounds")
-
-    # Output container.
-    hicat_imaging_products = HicatImagingProducts()
 
     # Move beam dump out of beam and take images.
     move_beam_dump(BeamDumpPosition.out_of_beam)
     with imaging_camera() as img_cam:
 
         # Take images.
-        img_list, metadata = img_cam.take_exposures(exposure_time, num_exposures, write_raw_fits=write_raw_fits,
+        img_list, metadata = img_cam.take_exposures(exposure_time, num_exposures, file_mode=file_mode,
                                                     raw_skip=raw_skip, path=img_path, filename=filename,
                                                     extra_metadata=extra_metadata,
                                                     resume=resume,
                                                     **camera_kwargs)
-        # Add image paths or image data to output products.
-        if write_raw_fits and raw_skip == 0:
-            hicat_imaging_products.img_data = img_list
-        else:
-            hicat_imaging_products.img_paths = img_list
 
         # Background images.
         bg_list = []
-        write_raw_fits_bg = write_raw_fits
         raw_skip_bg = raw_skip
         if take_background_exposures:
-            if use_background_cache and not write_raw_fits:
-                print("Warning: Setting write_raw_fits=True only for bg exposures to use background cache feature.")
-                write_raw_fits_bg = True
+            if use_background_cache and not file_mode:
+                # print("Warning: Turning off exposure cache feature because it is only supported with file_mode=True")
+                use_background_cache = False
             if use_background_cache and raw_skip != 0:
                 print("Warning: Setting raw_skip=0 only for bg exposures to use background cache feature.")
                 raw_skip_bg = 0
@@ -173,44 +164,53 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                 # Move the beam dump in the path and take background exposures.
                 move_beam_dump(BeamDumpPosition.in_beam)
                 bg_filename = "bkg_" + filename
-
                 bg_list, bg_metadata = img_cam.take_exposures(exposure_time, num_exposures,
-                                                              write_raw_fits=write_raw_fits_bg,
+                                                              file_mode=file_mode,
                                                               path=bg_path, filename=bg_filename, raw_skip=raw_skip_bg,
                                                               extra_metadata=extra_metadata,
                                                               resume=resume,
                                                               **camera_kwargs)
-                hicat_imaging_products.bg_metadata = bg_metadata
                 if use_background_cache:
                     testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
 
-            # Add bg_list to output products as either bg_paths or bg_data.
-            if write_raw_fits:
-                hicat_imaging_products.bg_paths = bg_list
-            else:
-                hicat_imaging_products.bg_data = bg_list
+        # Run data pipeline
+        final_output = None
+        satellite_spots = True if fpm_position == FpmPosition.coron else False
+        cal_metadata = None
+        if pipeline and file_mode and raw_skip == 0:
 
-        # Run data pipeline TODO: Incorporate additional metadata from pipeline into metadata output product.
-        if pipeline_mode == PipeLineMode.output_fits:
-            hicat_imaging_products.cal_path = data_pipeline.file_pipeline(raw_path)
-        elif pipeline_mode == PipeLineMode.output_data:
-            hicat_imaging_products.cal_data = data_pipeline.data_pipeline(img_list, bg_list)
-        elif pipeline_mode == PipeLineMode.output_data_and_plot:
-            hicat_imaging_products.cal_data = data_pipeline.data_pipeline(img_list, bg_list, plot=True)
+            # Output is the path to the cal file.
+            final_output = data_pipeline.standard_file_pipeline(exp_path)
 
-        hicat_imaging_products.img_metadata = metadata
+        if pipeline and raw_skip > 0:
+
+            # Output is the path to the cal file.
+            final_output = data_pipeline.data_pipeline(img_list, bg_list, satellite_spots, output_path=exp_path,
+                                                       filename_root=filename, img_metadata=metadata,
+                                                       bg_metadata=bg_metadata)
+        elif pipeline and not file_mode:
+
+            # Output is the numpy data for the cal file, and our metadata updated with centroid information.
+            final_output, cal_metadata = data_pipeline.data_pipeline(img_list, bg_list, satellite_spots,
+                                                                     plot=pipeline_plot, img_metadata=metadata,
+                                                                     return_metadata=True)
 
         # Export the DM Command itself as a fits file.
-        if store_dm_command:
+        if file_mode:
             testbed_state.dm1_command_object.export_fits(os.path.join(path, exposure_set_name))
 
         # Store config.ini.
-        util.save_ini(os.path.join(path, "config"))
+        if file_mode:
+            util.save_ini(os.path.join(path, "config"))
 
-        if simulator:
+        # Simulator (file-based only).
+        if file_mode and simulator:
             util.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
 
-        return hicat_imaging_products
+        if return_pipeline_metadata:
+            return final_output, cal_metadata
+        else:
+            return final_output
 
 
 def move_beam_dump(beam_dump_position):
@@ -271,7 +271,7 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
     move_beam_dump(BeamDumpPosition.out_of_beam)
     with imaging_camera() as img_cam:
 
-        img_list = img_cam.take_exposures(start_exp_time, 1, write_raw_fits=False)
+        img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
         img_max = __get_max_pixel_count(img_list[0], mask=mask)
 
         upper_bound = start_exp_time
@@ -286,13 +286,13 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
         best = start_exp_time
         while img_max < max_counts:
             upper_bound *= 2
-            img_list = img_cam.take_exposures(upper_bound, 1, write_raw_fits=False)
+            img_list = img_cam.take_exposures(upper_bound, 1, file_mode=False)
             img_max = __get_max_pixel_count(img_list[0], mask=mask)
             print("\tExposure time " + str(upper_bound) + " yields " + str(img_max) + " counts ")
 
         for i in range(num_tries):
             test = .5 * (upper_bound + lower_bound)
-            img_list = img_cam.take_exposures(test, 1, write_raw_fits=False)
+            img_list = img_cam.take_exposures(test, 1, file_mode=False)
             img_max = __get_max_pixel_count(img_list[0], mask=mask)
             print("\tExposure time " + str(test) + " yields " + str(img_max) + " counts ")
 
