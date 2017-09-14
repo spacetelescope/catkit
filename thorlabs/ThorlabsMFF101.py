@@ -40,15 +40,17 @@ class ThorlabsMFF101(FlipMotor):
 
     def move_to_position1(self):
         """Implements a move to the "up" position."""
-        up_command = b"\x6A\x04\x00\x01\x21\x01"
-        self.motor.write(up_command)
-        testbed_state.background = True
+        if testbed_state.background is None or not testbed_state.background:
+            up_command = b"\x6A\x04\x00\x01\x21\x01"
+            self.motor.write(up_command)
+            testbed_state.background = True
 
     def move_to_position2(self):
         """Implements a move to "down" position """
-        down_command = b"\x6A\x04\x00\x02\x21\x01"
-        self.motor.write(down_command)
-        testbed_state.background = False
+        if testbed_state.background is None or testbed_state.background:
+            down_command = b"\x6A\x04\x00\x02\x21\x01"
+            self.motor.write(down_command)
+            testbed_state.background = False
 
     def blink_led(self):
         self.motor.write(b"\x23\x02\x00\x00\x21\x01")

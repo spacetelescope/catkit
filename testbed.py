@@ -175,7 +175,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
             if not bg_list:
                 # Move the beam dump in the path and take background exposures.
                 move_beam_dump(BeamDumpPosition.in_beam)
-                bg_filename = "bkg_" + filename
+                bg_filename = "bkg_" + filename if file_mode else None
                 bg_list, bg_metadata = img_cam.take_exposures(exposure_time, num_exposures,
                                                               file_mode=file_mode,
                                                               path=bg_path, filename=bg_filename, raw_skip=raw_skip_bg,

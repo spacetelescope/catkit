@@ -10,9 +10,9 @@ from .. import units
 MetaDataEntry = namedtuple("MetaDataEntry", "name, name_8chars, value, comment")
 
 # Initialize State Variables.
-background = False
-lyot_stop = False
-coronograph = False
+background = None
+lyot_stop = None
+coronograph = None
 laser_source = None
 laser_value = None
 
