@@ -52,7 +52,7 @@ class NewportMotorController(MotorController):
 
     def absolute_move(self, motor_id, position):
         """
-        Moves motor to specified position.
+        Moves motor to specified position.  Skips if already in position (or close enough).
         :param motor_id: String to match in the config ini (ex: motor_FPM_X).
         :param position: Target position to move to.
         """
@@ -60,13 +60,15 @@ class NewportMotorController(MotorController):
         positioner = CONFIG_INI.get(motor_id, "positioner_name")
         self.__ensure_initialized(group)
 
-        # Move.
-        error_code, return_string = self.motor_controller.GroupMoveAbsolute(self.socket_id, positioner, [position])
-        if error_code != 0:
-            self.__raise_exceptions(error_code, 'GroupMoveAbsolute')
-        else:
-            print("Moved positioner " + positioner + " to " + str(position))
-            self.__update_testbed_state(motor_id, position)
+        current_position = self.get_position(motor_id)
+        if not np.isclose(current_position, position, atol=.001):
+            # Move.
+            error_code, return_string = self.motor_controller.GroupMoveAbsolute(self.socket_id, positioner, [position])
+            if error_code != 0:
+                self.__raise_exceptions(error_code, 'GroupMoveAbsolute')
+            else:
+                print("Moved positioner " + positioner + " to " + str(position))
+                self.__update_testbed_state(motor_id, position)
 
     def relative_move(self, motor_id, distance):
         """
