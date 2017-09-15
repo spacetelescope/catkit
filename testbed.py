@@ -150,14 +150,13 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         # Background images.
         bg_list = []
         bg_metadata = None
-        raw_skip_bg = raw_skip
         if take_background_exposures:
             if use_background_cache and not file_mode:
-                # print("Warning: Turning off exposure cache feature because it is only supported with file_mode=True")
+                print("Warning: Turning off exposure cache feature because it is only supported with file_mode=True")
                 use_background_cache = False
             if use_background_cache and raw_skip != 0:
-                print("Warning: Setting raw_skip=0 only for bg exposures to use background cache feature.")
-                raw_skip_bg = 0
+                print("Warning: Setting use_background_cache=False, cannot be used with raw_skip")
+                use_background_cache = False
 
             if use_background_cache:
                 bg_cache_path = testbed_state.check_background_cache(exposure_time, num_exposures)
@@ -179,7 +178,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                 bg_filename = "bkg_" + filename if file_mode else None
                 bg_list, bg_metadata = img_cam.take_exposures(exposure_time, num_exposures,
                                                               file_mode=file_mode,
-                                                              path=bg_path, filename=bg_filename, raw_skip=raw_skip_bg,
+                                                              path=bg_path, filename=bg_filename, raw_skip=raw_skip,
                                                               extra_metadata=extra_metadata,
                                                               resume=resume,
                                                               return_metadata=True,

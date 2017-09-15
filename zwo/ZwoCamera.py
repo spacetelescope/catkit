@@ -176,13 +176,13 @@ class ZwoCamera(Camera):
                 img_list.append(img)
                 if skip_counter == (raw_skip + 1):
                     skip_counter = 0
-
                 if skip_counter == 0:
                     # Write fits.
                     skip_counter += 1
                 elif skip_counter > 0:
                     # Skip fits.
                     skip_counter += 1
+
                     continue
 
             # Create a PrimaryHDU object to encapsulate the data.
