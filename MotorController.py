@@ -16,7 +16,7 @@ class MotorController(object):
         self.config_id = config_id
         self.socket_id = None
         self.motor_controller = self.initialize(self, *args, **kwargs)
-        print("Opened connection to Motor Controller " + config_id)
+        print("Initialized Motor Controller " + config_id)
 
     # Implementing context manager.
     def __enter__(self, *args, **kwargs):
