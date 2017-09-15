@@ -33,6 +33,7 @@ class NewportMotorController(MotorController):
 
         self.socket_id = socket_id
         self.motor_controller = myxps
+        print("Initializing Newport XPS Motor Controller " + self.config_id + "...")
 
         # Initialize and move to nominal positions.
         initialize_to_nominal = kwargs.get("initialize_to_nominal", True)

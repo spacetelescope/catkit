@@ -317,13 +317,13 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
         best = start_exp_time
         while img_max < max_counts:
             upper_bound *= 2
-            img_list = img_cam.take_exposures(upper_bound, 1, file_mode=False)
+            img_list = img_cam.take_exposures(round(upper_bound, 3), 1, file_mode=False)
             img_max = __get_max_pixel_count(img_list[0], mask=mask)
             print("\tExposure time " + str(upper_bound) + " yields " + str(img_max) + " counts ")
 
         for i in range(num_tries):
             test = .5 * (upper_bound + lower_bound)
-            img_list = img_cam.take_exposures(test, 1, file_mode=False)
+            img_list = img_cam.take_exposures(round(test, 3), 1, file_mode=False)
             img_max = __get_max_pixel_count(img_list[0], mask=mask)
             print("\tExposure time " + str(test) + " yields " + str(img_max) + " counts ")
 

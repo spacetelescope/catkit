@@ -40,7 +40,7 @@ class ThorlabsMLCS1(LaserSource):
         self.handle = self.laser.fnUART_LIBRARY_open(b"{}".format(self.port), 115200, 3)
 
         # Set the initial current to nominal_current and enable the laser.
-        self.set_current(self.nominal_current)
+        self.set_current(self.nominal_current, sleep=False)
         self.set_channel_enable(self.channel, 1)
         self.set_system_enable(1)
 
@@ -66,15 +66,16 @@ class ThorlabsMLCS1(LaserSource):
         testbed_state.laser_source = None
         testbed_state.laser_value = None
 
-    def set_current(self, value):
+    def set_current(self, value, sleep=True):
         """Sets the current on a given channel."""
 
         if self.get_current() != value:
+            print("Laser is changing amplitude...")
             self.set_active_channel(self.channel)
             current_command_string = b"current={}\r".format(value)
             self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
-            print("Laser is changing amplitude...")
-            time.sleep(self.SLEEP_TIME)
+            if sleep:
+                time.sleep(self.SLEEP_TIME)
 
         # Update the testbed_state.
         testbed_state.laser_source = self.config_id
