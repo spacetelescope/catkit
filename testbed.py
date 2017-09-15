@@ -149,6 +149,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         # Background images.
         bg_list = []
+        bg_metadata = None
         raw_skip_bg = raw_skip
         if take_background_exposures:
             if use_background_cache and not file_mode:
@@ -236,11 +237,15 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
 def move_beam_dump(beam_dump_position):
     """A safe method to move the beam dump."""
-    with beam_dump() as bd:
-        if beam_dump_position is BeamDumpPosition.in_beam:
-            bd.move_to_position1()
-        elif beam_dump_position is BeamDumpPosition.out_of_beam:
-            bd.move_to_position2()
+    in_beam = True if beam_dump_position == BeamDumpPosition.in_beam else False
+
+    # Check the internal state of the beam dump before moving it.
+    if testbed_state.background is None or (testbed_state.background != in_beam):
+        with beam_dump() as bd:
+            if beam_dump_position is BeamDumpPosition.in_beam:
+                bd.move_to_position1()
+            elif beam_dump_position is BeamDumpPosition.out_of_beam:
+                bd.move_to_position2()
 
 
 def initialize_motors(fpm_position=None, lyot_stop_position=None):
