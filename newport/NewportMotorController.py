@@ -14,7 +14,7 @@ from .lib import XPS_Q8_drivers
 
 
 class NewportMotorController(MotorController):
-    def initialize(self, *args, **kwargs):
+    def initialize(self, initialize_to_nominal=True):
         """Creates an instance of the controller library and opens a connection."""
 
         # Create an instance of the XPS controller.
@@ -36,7 +36,6 @@ class NewportMotorController(MotorController):
         print("Initializing Newport XPS Motor Controller " + self.config_id + "...")
 
         # Initialize and move to nominal positions.
-        initialize_to_nominal = kwargs.get("initialize_to_nominal", True)
         if initialize_to_nominal:
             motors = [s for s in CONFIG_INI.sections() if s.startswith('motor_')]
             for motor_name in motors:
