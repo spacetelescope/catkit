@@ -62,9 +62,8 @@ class ZwoCamera(Camera):
             # Force any single exposure to be halted
             camera.stop_video_capture()
             camera.stop_exposure()
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
+        except Exception:
+            # Catch and hide exceptions that get thrown if the camera rejects the stop commands.
             pass
 
         # Set image format to be RAW16, although camera is only 12-bit.
@@ -83,7 +82,7 @@ class ZwoCamera(Camera):
                        subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
                        bins=None):
         """
-        Low level method to take exposures using a Zwo camera.
+        Low level method to take exposures using a Zwo camera. By default keeps image data in
         :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
         :param num_exposures: Number of exposures.
         :param file_mode: If true fits file will be written to disk
