@@ -15,7 +15,7 @@ class MotorController(object):
         """Opens connection with the DM and sets class attributes for 'config_id' and 'dm'."""
         self.config_id = config_id
         self.socket_id = None
-        self.motor_controller = self.initialize(self, *args, **kwargs)
+        self.motor_controller = self.initialize(*args, **kwargs)
         print("Initialized Motor Controller " + config_id)
 
     # Implementing context manager.
