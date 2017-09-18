@@ -14,7 +14,7 @@ class LaserSource(object):
     def __init__(self, config_id, *args, **kwargs):
         """Opens connection with the laser source and sets class attributes for 'config_id'"""
         self.config_id = config_id
-        self.laser = self.initialize(self, *args, **kwargs)
+        self.laser = self.initialize(*args, **kwargs)
         print("Opened connection to laser source " + config_id)
 
     # Implementing context manager.

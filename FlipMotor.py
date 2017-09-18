@@ -15,7 +15,7 @@ class FlipMotor(object):
         """Opens connection with the motor controller and sets class attributes for 'config_id' and 'motor'."""
         self.config_id = config_id
         self.serial = None
-        self.motor = self.initialize(self, *args, **kwargs)
+        self.motor = self.initialize(*args, **kwargs)
         print("Opened connection to flip motor " + config_id)
 
     # Implementing context manager.
