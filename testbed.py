@@ -9,7 +9,7 @@ from glob import glob
 import numpy as np
 
 from . import testbed_state
-# from ..hardware.SnmpUps import SnmpUps
+from ..hardware.SnmpUps import SnmpUps
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
 from .. import quantity
@@ -61,9 +61,9 @@ def beam_dump():
 def laser_source():
     return ThorlabsMLCS1("thorlabs_source_mcls1")
 
-# TODO: Implement seperate processes for safety monitoring and experiments.
-# def backup_power():
-#     return SnmpUps("white_ups")
+
+def backup_power():
+    return SnmpUps("white_ups")
 
 
 # Convenience functions.
@@ -95,22 +95,22 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :param num_exposures: Number of exposures.
     :param fpm_position: (hicat_types.FpmPosition) Position the focal plane mask will get moved to.
     :param lyot_stop_position: (hicat_types.LyotStopPosition) Position the lyot stop will get moved to.
-    :param file_mode: If true fits file will be written to disk, otherwise the numpy data will be returned.
+    :param file_mode: If false the numpy data will be returned, if true fits files will be written to disk.
     :param raw_skip: Skips x images for every one taken, when used images will be stored in memory and returned.
-    :param path: Path of the directory to save fits file to, required if write_raw_fits is true.
+    :param path: Path of the directory to save fits file to, required if file_mode is true.
     :param exposure_set_name: Additional directory level (ex: coron, direct).
-    :param filename: Name for file, required if write_raw_fits is true.
+    :param filename: Name for file, required if file_mode is true.
     :param take_background_exposures: Boolean flag for whether to take background exposures.
-    :param use_background_cache: Reuses backgrounds with the same exposure time. Supported when write_raw_fits=True.
-    :param pipeline: True runs pipeline, False does not.  Inherits mode to determine whether to write final fits.
+    :param use_background_cache: Reuses backgrounds with the same exposure time. Supported when file_mode=True.
+    :param pipeline: True runs pipeline, False does not.  Inherits file_mode to determine whether to write final fits.
     :param pipeline_plot: Used for viewing the calibrated images as they are taken (usually for debugging).
-    :param return_pipeline_metadata: List of MetaDataEntry that includes additional pipeline info.
+    :param return_pipeline_metadata: List of MetaDataEntry items that includes additional pipeline info.
     :param auto_exposure_time: Flag to enable auto exposure time correction.
-    :param simulator: Flag to enable Mathematica simulator.
+    :param simulator: Flag to enable Mathematica simulator. Supported when file_mode=True.
     :param extra_metadata: List or single MetaDataEntry.
     :param resume: Very primitive way to try and resume an experiment. Skips exposures that already exist on disk.
-    :param camera_kwargs: Extra keywords to be passed to the camera's take_exposures function.
-    :return: hicat_types.HicatImagingProducts object.
+    :param kwargs: Extra keywords to be passed to the camera's take_exposures function.
+    :return: Defaults returns the path of the final calibrated image provided by the data pipeline.
     """
 
     # Initialize all motors and move Focal Plane Mask and Lyot Stop (will skip if already in correct place).
