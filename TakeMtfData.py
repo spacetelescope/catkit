@@ -4,20 +4,19 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from hicat import *
-from hicat.experiments.Experiment import Experiment
-from hicat.hardware.boston.flat_command import flat_command
-from hicat.hardware.testbed import *
-from hicat.hicat_types import *
+from .. import *
+from .Experiment import Experiment
+from ..hardware.boston.flat_command import flat_command
+from ..hardware.testbed import *
+from ..hicat_types import *
 
 
 class TakeMtfData(Experiment):
-
-    def __initialize(self,
-                     bias=True,
-                     flat_map=False,
-                     exposure_time=quantity(250, units.microsecond),
-                     num_exposures=500):
+    def __init__(self,
+                 bias=True,
+                 flat_map=False,
+                 exposure_time=quantity(250, units.microsecond),
+                 num_exposures=500):
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time

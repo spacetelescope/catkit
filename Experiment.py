@@ -17,20 +17,11 @@ import time
 class Experiment(object):
     __metaclass__ = ABCMeta
 
-    # Constructor.
-    def __init__(self, *args, **kwargs):
-        """Stores monitoring variables into self and calls subclass's initialize function."""
-        self.interval = CONFIG_INI.getint("safety", "check_interval")
-        self.min_humidity = CONFIG_INI.getint("safety", "min_humidity")
-        self.max_humidity = CONFIG_INI.getint("safety", "max_humidity")
-        self.min_temp = CONFIG_INI.getint("safety", "min_temp")
-        self. max_temp = CONFIG_INI.getint("safety", "max_temp")
-        self.__initialize(*args, **kwargs)
-
-    @abstractmethod
-    def __initialize(self, *args, **kwargs):
-        """Should be used to store all experiment variables into self, and perform any other set up that needs
-        to happen before starting. All child classes must implement this."""
+    interval = CONFIG_INI.getint("safety", "check_interval")
+    min_humidity = CONFIG_INI.getint("safety", "min_humidity")
+    max_humidity = CONFIG_INI.getint("safety", "max_humidity")
+    min_temp = CONFIG_INI.getint("safety", "min_temp")
+    max_temp = CONFIG_INI.getint("safety", "max_temp")
 
     @abstractmethod
     def experiment(self):
@@ -85,7 +76,7 @@ class Experiment(object):
         Helper function that returns booleans for whether the temperature and humidity are ok.
         :return: Two booleans: temp_ok, humidity_ok.
         """
-        temp, humidity = get_temp_humidity()
+        temp, humidity = get_temp_humidity("thorlabs_tsp01_1")
         temp_ok = self.min_temp <= temp <= self.max_temp
         humidity_ok = self.min_humidity <= humidity <= self.max_humidity
         return temp_ok, humidity_ok
