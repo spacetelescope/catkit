@@ -11,8 +11,8 @@ namespace thorlabs_sensor_cs
     {
         static void Main(string[] args)
         {
-            serial = args[0]
-            string usb_address = "USB0::0x1313::0x80F8::" + serial + "::INSTR"
+            string serial = args[0];
+            string usb_address = "USB0::0x1313::0x80F8::" + serial + "::INSTR";
             TLTSP tsp = new TLTSP(usb_address, true, true);
 
             // Internal temp is internal to the usb sensor.  External is what we need.

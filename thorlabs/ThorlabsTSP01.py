@@ -17,8 +17,10 @@ def get_temp_humidity(config_id):
     # Set up the paths.
     serial_number = CONFIG_INI.get(config_id, "serial_number")
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    full_path = os.path.join(current_dir, "tsp01_resources", "thorlabs_sensor_cs.exe")
-    output = subprocess.check_output(full_path, serial_number)
+    full_path = os.path.join(current_dir,
+                             "tsp01_resources",
+                             "src", "thorlabs_sensor_cs", "bin", "Release", "thorlabs_sensor_cs.exe " + serial_number)
+    output = subprocess.check_output(full_path)
 
     # Remove newlines.
     for remove_me in ["\r", "\n"]:
