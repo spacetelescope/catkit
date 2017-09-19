@@ -4,11 +4,8 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from abc import *
-
 
 class DummyContextManager(object):
-    __metaclass__ = ABCMeta
 
     def __init__(self, config_id):
         self.config_id = config_id
