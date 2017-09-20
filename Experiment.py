@@ -52,7 +52,9 @@ class Experiment(object):
                 safety_warning = False
 
                 # Sleep until it is time to check safety again.
-                time.sleep(self.interval)
+                if not self.__smart_sleep(self.interval, experiment_process):
+                    # Experiment ended before the next check interval, exit the while loop.
+                    break
 
             elif safety_warning:
 
@@ -80,3 +82,20 @@ class Experiment(object):
         temp_ok = self.min_temp <= temp <= self.max_temp
         humidity_ok = self.min_humidity <= humidity <= self.max_humidity
         return temp_ok, humidity_ok
+
+    def __smart_sleep(self, interval, process):
+        """
+        Sleep function that will return false at most 1 second after a process ends.  It sleeps in 1 second increments
+        and checks if the process is alive each time.  Rather than sleeping for the entire interval.  This allows
+        the master script to end when the experiment is finished.
+        :param interval: check_interval from ini.
+        :param process: experiment process to monitor while sleeping.
+        :return: True if monitoring should continue, False if the experiment is done.
+        """
+        sleep_count = 0
+        while process.is_alive():
+            time.sleep(1)
+            sleep_count += 1
+            if sleep_count == interval:
+                return True
+        return False
