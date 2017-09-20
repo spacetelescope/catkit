@@ -20,5 +20,5 @@ class BackupPower(object):
         """Queries backup power and reports status. Returns whatever format the device uses."""
 
     @abstractmethod
-    def is_shutdown_needed(self):
+    def is_power_ok(self):
         """Boolean function to determine whether the system should initiate a shutdown."""
