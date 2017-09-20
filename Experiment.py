@@ -32,7 +32,7 @@ class Experiment(object):
         This function starts the experiment on a separate process and monitors power and humidity while active.
         Do not override.
         """
-        experiment_process = Process(target=self.__run_experiment)
+        experiment_process = Process(target=self.run_experiment)
         experiment_process.start()
         ups = backup_power()
         safety_warning = False
@@ -40,7 +40,7 @@ class Experiment(object):
         while experiment_process.is_alive():
 
             # Check that the UPS not on battery power.
-            power_ok = ups.is_shutdown_needed()
+            power_ok = ups.is_power_ok()
 
             # Check humidity sensor.
             temp_ok, humidity_ok = self.__check_temp_humidity()
@@ -57,13 +57,13 @@ class Experiment(object):
             elif safety_warning:
 
                 # Shut down the experiment (but allow context managers to exit properly).
-                util.soft_kill(experiment_process.pid)
+                util.soft_kill(experiment_process)
 
             else:
                 safety_warning = True
                 print("Safety failure detected, experiment will be softly killed if safety check fails again.")
 
-    def __run_experiment(self):
+    def run_experiment(self):
         """Wrapper for experiment to catch the softkill function's KeyboardInterrupt signal more gracefully."""
         try:
             self.experiment()
