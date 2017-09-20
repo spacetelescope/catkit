@@ -1,0 +1,83 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+# noinspection PyUnresolvedReferences
+from builtins import *
+import numpy as np
+
+from hicat import config as hicat_config
+from .DmCommand import DmCommand
+
+# Read config file once here.
+config = hicat_config.load_config_ini()
+config_name = "boston_kilo952"
+
+# Load values from config.ini into variables.
+num_actuators_pupil = config.getint(config_name, 'dm_length_actuators')
+
+
+def flat_command(bias=False,
+                 flat_map=False,
+                 return_shortname=False,
+                 dm_num=1):
+    """
+    Creates a DmCommand object for a flat command.
+    :param bias: Boolean flag for whether to apply a bias.
+    :param flat_map: Boolean flag for whether to apply a flat_map.
+    :param return_shortname: Boolean flag that will return a string that describes the object as the second parameter.
+    :param dm_num: 1 or 2, for DM1 or DM2.
+    :return: DmCommand object, and optional descriptive string (good for filename).
+    """
+
+    short_name = "flat"
+
+    # Bias.
+    if flat_map:
+        short_name += "_flat_map"
+    if bias:
+        short_name += "_bias"
+
+    zero_array = np.zeros((num_actuators_pupil, num_actuators_pupil))
+    dm_command_object = DmCommand(zero_array, dm_num, flat_map=flat_map, bias=bias)
+
+    if return_shortname:
+        return dm_command_object, short_name
+    else:
+        return dm_command_object
+
+
+def poke_command(actuators, amplitude, bias=False, flat_map=False, return_shortname=False, dm_num=1):
+    """
+    Creates a DmCommand object that pokes actuators at a given amplitude.
+    :param actuators: List of actuators, or a single actuator.
+    :param amplitude: Nanometers of amplitude
+    :param bias: Boolean flag for whether to apply a bias.
+    :param flat_map: Boolean flag for whether to apply a flat_map.
+    :param return_shortname: Boolean flag that will return a string that describes the object as the second parameter.
+    :param dm_num: 1 or 2, for DM1 or DM2.
+    :return: DmCommand object, and optional descriptive string (good for filename).
+    """
+
+    short_name = "poke"
+    poke_array = np.zeros((num_actuators_pupil, num_actuators_pupil))
+
+    # Bias.
+    if flat_map:
+        short_name += "_flat_map"
+    if bias:
+        short_name += "_bias"
+
+    if isinstance(actuators, list):
+        for actuator in actuators:
+            poke_array[actuator] = amplitude
+            short_name += "_" + str(actuator)
+    else:
+        short_name += "_" + str(actuators)
+        poke_array[actuators] = amplitude
+
+    dm_command_object = DmCommand(poke_array, dm_num, flat_map=flat_map, bias=bias)
+
+    if return_shortname:
+        return dm_command_object, short_name
+    else:
+        return dm_command_object
