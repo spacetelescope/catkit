@@ -103,7 +103,7 @@ class ZwoCamera(Camera):
         """
 
         # Convert exposure time to contain units if not already a Pint quantity.
-        if type(exposure_time) is not quantity:
+        if type(exposure_time) is int or type(exposure_time) is float:
             exposure_time = quantity(exposure_time, units.microsecond)
 
         # Set control values on the ZWO camera.

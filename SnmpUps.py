@@ -37,10 +37,10 @@ class SnmpUps(BackupPower):
                 # The response is a list saved into var_binds, and our OID is listed first.
                 return var_binds[0][1]
 
-    def is_shutdown_needed(self):
+    def is_power_ok(self):
         """Boolean function to determine whether the system should initiate a shutdown."""
         try:
-            return True if self.get_status() != 3 else False
+            return False if self.get_status() != 3 else True
         except Exception as err:
             print(err)
-            return True
+            return False
