@@ -10,6 +10,7 @@ from enum import Enum
 from glob import glob
 
 from ..hardware.zwo.ZwoCamera import ZwoCamera
+from ..hardware.sbig.SbigCamera import SbigCamera
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
 from .. import quantity
@@ -24,6 +25,14 @@ from . import testbed_state
 
 
 # Shortcuts to obtaining hardware control objects.
+def pupil_camera():
+    """
+    Proper way to control the pupil camera. Using this function keeps the scripts future-proof.  Use the "with"
+    keyword to take advantage of the built-in context manager for safely closing the camera.
+    :return: An instance of the Camera.py interface.
+    """
+    return SbigCamera("sbig_16803_1")
+
 def imaging_camera():
     """
     Proper way to control the imaging camera. Using this function keeps the scripts future-proof.  Use the "with"
@@ -31,7 +40,6 @@ def imaging_camera():
     :return: An instance of the Camera.py interface.
     """
     return ZwoCamera("zwo_ASI1600MM")
-
 
 def dm_controller():
     """
