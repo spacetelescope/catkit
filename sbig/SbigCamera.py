@@ -136,7 +136,7 @@ class SbigCamera(Camera):
                     print("File already exists: " + full_path)
                     continue
 
-                img = self.__take_single_image(exposure_time)
+                img = self.__capture(exposure_time)
                 # Create a PrimaryHDU object to encapsulate the data.
                 hdu = fits.PrimaryHDU(img)
 
@@ -188,7 +188,7 @@ class SbigCamera(Camera):
 
         # Take exposures and add to list.
         for i in range(num_exposures):
-            img = self.__take_single_image(exposure_time)
+            img = self.__capture(exposure_time)
             img_list.append(img)
 
         return img_list
@@ -209,7 +209,6 @@ class SbigCamera(Camera):
         self.bins = bins if bins is not None else CONFIG_INI.getint(self.config_id, 'bins')
         self.exposure_time = exposure_time if exposure_time is not None else CONFIG_INI.getfloat(self.config_id, 'exposure_time')
 
-        print ("self: ", self)
         # Store the camera's detector shape.
         detector_max_x = CONFIG_INI.getint(self.config_id, 'detector_width')
         detector_max_y = CONFIG_INI.getint(self.config_id, 'detector_length')
@@ -263,13 +262,11 @@ class SbigCamera(Camera):
             r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=fi_params, timeout=self.timeout)
             r.raise_for_status()
         else:
-            print("Not taking full image")
             if error_flag:
                 sys.exit("Exiting. Correct errors in the config.ini file or input parameters.")
 
         # Set Region of Interest.
         if not full_image:
-            print("Setting region of interest")
             roi_params = {'StartX': str(derived_start_x), 'StartY': str(derived_start_y),
                          'NumX': str(self.width), 'NumY': str(self.height),
                          'CoolerState': str(self.cooler_state)}
@@ -293,7 +290,7 @@ class SbigCamera(Camera):
         r.raise_for_status()
         return int(r.text)
 
-    def __take_single_image(self, exposure_time):
+    def __capture(self, exposure_time):
         """Utility function to start and exposure and wait until the camera has completed the
            exposure.  Then wait for the image to be ready for download, and download it.
            Assumes the parameters for the exposure are already set."""
@@ -323,11 +320,9 @@ class SbigCamera(Camera):
             raise Exception("Camera reported no image available after exposure.")
 
         # get the image
-        print("Downloading image...")
         r = requests.get(self.base_url + "ImagerData.bin", timeout=self.timeout)
         r.raise_for_status()
-        image = r.content # returns the entire image in one giant chunk
-
+        image = np.reshape(np.frombuffer(r.content, np.uint16), (self.width//self.bins, self.height//self.bins))
         # Apply flips to the image based on config.ini file
         flip_x = CONFIG_INI.getboolean(self.config_id, 'flip_x')
         flip_y = CONFIG_INI.getboolean(self.config_id, 'flip_y')
@@ -337,4 +332,4 @@ class SbigCamera(Camera):
         if flip_y:
             image = np.fliplr(image)
 
-        return image.astype(np.dtype(np.int))
+        return image  #.astype(np.dtype(np.int))
