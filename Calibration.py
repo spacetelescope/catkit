@@ -1,15 +1,16 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 from collections import OrderedDict
 
-from .. import calibration_take_data, calibration_util
+# noinspection PyUnresolvedReferences
+from builtins import *
+import os
+
 from .Experiment import Experiment
+from .. import calibration_take_data, calibration_util
 from ..hardware.boston.flat_command import flat_command
-from ..hardware.testbed import *
+from .. import util
 from ..hicat_types import *
 
 
@@ -105,9 +106,8 @@ class Calibration(Experiment):
         try:
             data = self.data
         except NameError:
-            data = calibration_take_data.take_cal_data(fpm_position=FpmPosition.coron, dm_shape=self.flat_shape,
-                                                       dm_num=1, exposure_time=quantity(1, units.millisecond),
-                                                       num_exposures=5)
+            data = calibration_take_data.take_cal_data(FpmPosition.coron, self.flat_shape, 1,
+                                                       quantity(1, units.millisecond), num_exposures=5)
         centroid, coords = calibration_util.find_center_of_coron_image(data, return_coords=True)
         dist = calibration_util.find_average_distance_to_center(centroid, coords)
 
@@ -115,9 +115,8 @@ class Calibration(Experiment):
             self.update_cal_dict(["average distance to center [pixels]"], [dist])
 
     def process_clocking(self):
-        data = calibration_take_data.take_cal_data(fpm_position=FpmPosition.coron, dm_shape=self.flat_shape,
-                                                   dm_num=1, exposure_time=quantity(1, units.millisecond),
-                                                   num_exposures=5)
+        data = calibration_take_data.take_cal_data(FpmPosition.coron, self.flat_shape, 1,
+                                                   quantity(1, units.millisecond), num_exposures=5)
 
         mean_angle_hori, mean_angle_vert, mean_angle = calibration_util.find_clocking_angles(data)
         # mean_err_hori, mean_err_vert, err_angle = find_clocking_angles(sim)

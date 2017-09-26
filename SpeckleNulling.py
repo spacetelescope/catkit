@@ -3,12 +3,16 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import os
+import numpy as np
 
 from .Experiment import Experiment
-from ..hardware.boston.sin_command import *
-from ..hardware.testbed import *
-from ..hicat_types import *
-from ..speckle_nulling.speckle_nulling import *
+from ..hardware.boston.sin_command import sin_command
+from ..speckle_nulling import speckle_nulling
+from ..hicat_types import units, quantity, FpmPosition, SinSpecification
+from ..hardware import testbed
+from ..config import CONFIG_INI
+from .. import util
 
 
 class SpeckleNulling(Experiment):
@@ -20,7 +24,7 @@ class SpeckleNulling(Experiment):
                  exposure_time=quantity(1, units.millisecond),
                  num_exposures=2,
                  initial_speckles=SinSpecification(40, 12, quantity(40, units.nanometer), 90)):
-        self.num_iterations=num_iterations
+        self.num_iterations = num_iterations
         self.bias = bias
         self.flat_map = flat_map
         self.path = path
@@ -34,25 +38,26 @@ class SpeckleNulling(Experiment):
                                                         return_shortname=True)
 
         # Initialize the laser and connect to the DM, apply the sine wave shape.
-        with laser_source() as laser:
+        with testbed.laser_source() as laser:
             coron_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
             laser.set_current(coron_laser_current)
-            with dm_controller() as dm:
+            with testbed.dm_controller() as dm:
 
                 for i in range(0, self.num_iterations):
                     dm.apply_shape(current_command_object, 1)
 
                     # Tests the dark zone intensity and updates exposure time if needed, otherwise just returns itself.
-                    coron_exp_time = test_dark_zone_intensity(self.exposure_time, 2)
+                    coron_exp_time = speckle_nulling.test_dark_zone_intensity(self.exposure_time, 2)
 
                     # Take coronographic data, with backgrounds.
                     iteration_path = os.path.join(self.path, "iteration" + str(i))
-                    run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron, path=iteration_path,
-                                      exposure_set_name="coron", filename="itr" + str(i) + "_" + file_name)
+                    testbed.run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron,
+                                              path=iteration_path,
+                                              exposure_set_name="coron", filename="itr" + str(i) + "_" + file_name)
 
                     # Run sensing.
                     coron_path = os.path.join(iteration_path, "coron")
-                    ncycles_new, angle_deg_new, peak_to_valley_new = speckle_sensing(coron_path)
+                    ncycles_new, angle_deg_new, peak_to_valley_new = speckle_nulling.speckle_sensing(coron_path)
 
                     # Generate a list of sin_commands at different phases, and take data for each.
                     phase_list = range(0, 360, 30)
@@ -65,14 +70,15 @@ class SpeckleNulling(Experiment):
                         dm.apply_shape(new_command, 1)
 
                         phase_path = os.path.join(iteration_path, "phase" + str(phi))
-                        run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron, path=phase_path,
-                                          exposure_set_name="coron", filename="itr" + str(i) + "_" + name,
-                                          simulator=False)
+                        testbed.run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron,
+                                                  path=phase_path,
+                                                  exposure_set_name="coron", filename="itr" + str(i) + "_" + name,
+                                                  simulator=False)
 
                     # Run control on the set of phase shifted data.
-                    new_phase = speckle_control_phase(iteration_path)
+                    new_phase = speckle_nulling.speckle_control_phase(iteration_path)
 
-                    # Generate a list of sin_commands at different amplitudes for the best phase, and take data for each.
+                    # Generate a list of sin_commands a range of amplitudes for the best phase, and take data for each.
                     amplitude_coeff_list = np.arange(0.1, 1.5, 0.2)
                     for ampl_ptv in amplitude_coeff_list:
                         # Add the current dm command into a new sin_command.
@@ -86,12 +92,13 @@ class SpeckleNulling(Experiment):
                         dm.apply_shape(new_command, 1)
 
                         amplitude_path = os.path.join(iteration_path, "amplitude" + str(ampl_ptv))
-                        run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron, path=amplitude_path,
-                                          exposure_set_name="coron", filename="itr" + str(i) + "_" + name,
-                                          simulator=False)
+                        testbed.run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron,
+                                                  path=amplitude_path,
+                                                  exposure_set_name="coron", filename="itr" + str(i) + "_" + name,
+                                                  simulator=False)
 
                     # Run control on the set of phase shifted data.
-                    new_amplitude_tmp = speckle_control_amplitude(iteration_path)
+                    new_amplitude_tmp = speckle_nulling.speckle_control_amplitude(iteration_path)
                     new_amplitude = quantity(new_amplitude_tmp, units.nanometer)
 
                     # Create a new sine wave at the specified phase, and add it to our current_dm_command.

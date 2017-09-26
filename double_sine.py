@@ -1,22 +1,23 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-from astropy.io import fits
 # noinspection PyUnresolvedReferences
 from builtins import *
 
+import os
+from astropy.io import fits
+from glob import glob
+
 from hicat.hardware.boston.flat_command import flat_command
-from hicat.hardware.boston.sin_command import *
-from hicat.hardware.testbed import *
-from hicat.hicat_types import *
-from hicat.hicat_types import SinSpecification
+from hicat.hardware.boston.sin_command import sin_command
+from hicat.hardware import testbed
 from hicat.util import write_fits
+from hicat.hicat_types import *
 
 """
 This module contains the double_sine_remove_crossterm function, which will take the data neccesary to compute
 a final image with no crossterm.  
 """
-
 
 positive_sin_dirname = "positive_sin"
 negative_sin_dirname = "negative_sin"
@@ -25,7 +26,6 @@ flat_dirname = "flat"
 
 def remove_crossterm(positive_sin, negative_sin, flat, output_path=None, output_header=None,
                      filename="sin_noxterm.fits"):
-
     clean_speckles = (positive_sin + negative_sin) / 2.0 - flat
     if output_path is not None:
         return write_fits(clean_speckles, os.path.join(output_path, filename), header=output_header)
@@ -34,7 +34,6 @@ def remove_crossterm(positive_sin, negative_sin, flat, output_path=None, output_
 
 
 def __remove_crossterm_files(root_path, simulator=True):
-
     # Set up paths.
     positive_sin_path = glob(os.path.join(root_path, positive_sin_dirname, "*_cal.fits"))[0]
     negative_sin_path = glob(os.path.join(root_path, negative_sin_dirname, "*_cal.fits"))[0]
@@ -108,36 +107,36 @@ def double_sin_remove_crossterm(sin_specification, bias, flat_map,
     flat_command_object, flat_file_name = flat_command(flat_map=flat_map, bias=bias, return_shortname=True)
 
     # Connect to the DM.
-    with dm_controller() as dm:
+    with testbed.dm_controller() as dm:
         # Positive sin wave.
         dm.apply_shape(sin_command_object, 1)
-        positive_final = run_hicat_imaging(exposure_time, num_exposures, fpm_position,
-                                           lyot_stop_position=lyot_stop_position,
-                                           file_mode=file_mode, raw_skip=raw_skip, path=path,
-                                           exposure_set_name=positive_sin_dirname,
-                                           filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                           simulator=simulator,
-                                           resume=resume, **kwargs)
+        positive_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
+                                                   lyot_stop_position=lyot_stop_position,
+                                                   file_mode=file_mode, raw_skip=raw_skip, path=path,
+                                                   exposure_set_name=positive_sin_dirname,
+                                                   filename=sin_file_name, auto_exposure_time=auto_exposure_time,
+                                                   simulator=simulator,
+                                                   resume=resume, **kwargs)
 
         # Negative.
         dm.apply_shape(negative_sin_command_object, 1)
-        negative_final = run_hicat_imaging(exposure_time, num_exposures, fpm_position,
-                                           lyot_stop_position=lyot_stop_position,
-                                           file_mode=file_mode, raw_skip=raw_skip, path=path,
-                                           exposure_set_name=negative_sin_dirname,
-                                           filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                           simulator=simulator,
-                                           resume=resume, **kwargs)
+        negative_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
+                                                   lyot_stop_position=lyot_stop_position,
+                                                   file_mode=file_mode, raw_skip=raw_skip, path=path,
+                                                   exposure_set_name=negative_sin_dirname,
+                                                   filename=sin_file_name, auto_exposure_time=auto_exposure_time,
+                                                   simulator=simulator,
+                                                   resume=resume, **kwargs)
 
         # Flat.
         dm.apply_shape(flat_command_object, 1)
-        flat_final = run_hicat_imaging(exposure_time, num_exposures, fpm_position,
-                                       lyot_stop_position=lyot_stop_position,
-                                       file_mode=file_mode, raw_skip=raw_skip, path=path,
-                                       exposure_set_name=flat_dirname,
-                                       filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                       simulator=simulator,
-                                       resume=resume, **kwargs)
+        flat_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
+                                               lyot_stop_position=lyot_stop_position,
+                                               file_mode=file_mode, raw_skip=raw_skip, path=path,
+                                               exposure_set_name=flat_dirname,
+                                               filename=sin_file_name, auto_exposure_time=auto_exposure_time,
+                                               simulator=simulator,
+                                               resume=resume, **kwargs)
 
     # Create the final file from adding speckles and subtracting the flat.
     if file_mode:

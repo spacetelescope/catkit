@@ -3,9 +3,15 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import numpy as np
+import os
 
 from .Experiment import Experiment
-from .double_sine import *
+from . import double_sine
+from ..hardware import testbed
+from .. import util
+from ..config import CONFIG_INI
+from ..hicat_types import units, quantity, SinSpecification, FpmPosition
 
 
 class TakeDmPlateScaleData(Experiment):
@@ -31,7 +37,7 @@ class TakeDmPlateScaleData(Experiment):
 
     def experiment(self):
 
-        with laser_source() as laser:
+        with testbed.laser_source() as laser:
             coron_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
             laser.set_current(coron_laser_current)
 
@@ -40,6 +46,7 @@ class TakeDmPlateScaleData(Experiment):
                 for ncycle in self.ncycles_range:
                     sin_spec = SinSpecification(angle, ncycle, self.peak_to_valley, self.phase)
                     ncycle_path = os.path.join(angles_path, "ncycles" + str(ncycle))
-                    double_sin_remove_crossterm(sin_spec, self.bias, self.flat_map, self.coron_exposure_time,
-                                                self.coron_nexps, FpmPosition.coron,
-                                                path=os.path.join(ncycle_path, "coron"))
+                    double_sine.double_sin_remove_crossterm(sin_spec, self.bias, self.flat_map,
+                                                            self.coron_exposure_time,
+                                                            self.coron_nexps, FpmPosition.coron,
+                                                            path=os.path.join(ncycle_path, "coron"))

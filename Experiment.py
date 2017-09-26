@@ -6,9 +6,10 @@ from builtins import *
 
 from abc import *
 from multiprocessing import Process
-from ..hardware.testbed import *
-from ..hardware.thorlabs.ThorlabsTSP01 import *
+from ..hardware import testbed
+from ..hardware.thorlabs import ThorlabsTSP01
 from .. config import CONFIG_INI
+from .. import util
 import time
 
 """Abstract base class that instills safety monitoring into any class that inherits it."""
@@ -34,7 +35,7 @@ class Experiment(object):
         """
 
         # Create a SnmpUPS object to monitor the White UPS.
-        ups = backup_power()
+        ups = testbed.backup_power()
 
         # Initialize the safety warning to False.  We will allow one safety failure, but two in a row causes a shutdown.
         safety_warning = False
@@ -84,12 +85,13 @@ class Experiment(object):
         Helper function that returns booleans for whether the temperature and humidity are ok.
         :return: Two booleans: temp_ok, humidity_ok.
         """
-        temp, humidity = get_temp_humidity("thorlabs_tsp01_1")
+        temp, humidity = ThorlabsTSP01.get_temp_humidity("thorlabs_tsp01_1")
         temp_ok = self.min_temp <= temp <= self.max_temp
         humidity_ok = self.min_humidity <= humidity <= self.max_humidity
         return temp_ok, humidity_ok
 
-    def __smart_sleep(self, interval, process):
+    @staticmethod
+    def __smart_sleep(interval, process):
         """
         Sleep function that will return false at most 1 second after a process ends.  It sleeps in 1 second increments
         and checks if the process is alive each time.  Rather than sleeping for the entire interval.  This allows
