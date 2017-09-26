@@ -198,6 +198,7 @@ class SbigCamera(Camera):
         """Applies control values found in the config.ini unless overrides are passed in, and does error checking.
            Makes HTTP requests to set the imager settings.  Will raise an exception for an HTTP error."""
 
+        print("Setting up control values")
         # Load values from config.ini into variables, and override with keyword args when applicable.
         self.center_x = center_x if center_x is not None else CONFIG_INI.getint(self.config_id, 'center_x')
         self.center_y = center_y if center_y is not None else CONFIG_INI.getint(self.config_id, 'center_y')
@@ -212,8 +213,13 @@ class SbigCamera(Camera):
         detector_max_x = CONFIG_INI.getint(self.config_id, 'detector_width')
         detector_max_y = CONFIG_INI.getint(self.config_id, 'detector_length')
 
-        if full_image:
+        if self.full_image:
             print("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
+            fi_params = {'StartX': '0', 'StartY': '0',
+                     'NumX': str(detector_max_x), 'NumY': str(detector_max_y),
+                     'CoolerState': '0'}
+            r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=fi_params, timeout=self.timeout)
+            r.raise_for_status()
             return
 
         # Check for errors, print them all out before exiting.
@@ -263,7 +269,7 @@ class SbigCamera(Camera):
             print("Derived end y coordinate is off the detector ( max", detector_max_y - 1, "):", derived_end_y)
             error_flag = True
 
-        if full_image:
+        if self.full_image:
             print("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
             fi_params = {'StartX': '0', 'StartY': '0',
                          'NumX': str(detector_max_x), 'NumY': str(detector_max_y),
@@ -271,11 +277,13 @@ class SbigCamera(Camera):
             r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=fi_params, timeout=self.timeout)
             r.raise_for_status()
         else:
+            print("Not taking full image")
             if error_flag:
                 sys.exit("Exiting. Correct errors in the config.ini file or input parameters.")
 
         # Set Region of Interest.
         if not full_image:
+            print("Setting region of interest")
             roi_params = {'StartX': str(derived_start_x), 'StartY': str(derived_start_y),
                          'NumX': str(width), 'NumY': str(height),
                          'CoolerState': '0'}
@@ -305,9 +313,10 @@ class SbigCamera(Camera):
            Assumes the parameters for the exposure are already set."""
 
         # start an exposure.
+        params = {'Duration': exposure_time.to(units.second).magnitude,
+                               'FrameType': self.FRAME_TYPE_LIGHT}
         r = requests.get(self.base_url + "ImagerStartExposure.cgi",
-                         data={'Duration': exposure_time.to(units.second).magnitude,
-                               'FrameType': self.FRAME_TYPE_LIGHT},
+                         params=params,
                          timeout=self.timeout)
         r.raise_for_status()
         imager_state = self.IMAGER_STATE_EXPOSING
@@ -316,19 +325,21 @@ class SbigCamera(Camera):
         while imager_state > self.IMAGER_STATE_IDLE:
             sleep(self.min_delay)  # limit the rate at which requests go to the camera
             imager_state = self.__check_imager_state()
-            if imager_state > self.IMAGER_STATE_EXPOSING:
+            if imager_state == self.IMAGER_STATE_ERROR:
                 # an error has occurred
                 print('Imager error during exposure')
                 raise Exception("Camera reported error during exposure.")
 
         # at loop exit, the image should be available
-        image_state = self.__check_imager_state()
-        if image_state <> self.IMAGE_AVAILABLE:
+        image_status = self.__check_image_status()
+        if image_status <> self.IMAGE_AVAILABLE:
             print('No image after exposure')
             raise Exception("Camera reported no image available after exposure.")
 
         # get the image
+        print("Downloading image...")
         r = requests.get(self.base_url + "ImagerData.bin", timeout=self.timeout)
         r.raise_for_status()
-        img = Image.open(BytesIO(r.content)) # need to test if this gets the whole image or we need to loop while imager data is available
+        img = r.content # returns the entire image in one giant chunk
+        print("Image size: ", sys.getsizeof(img))
         return img
