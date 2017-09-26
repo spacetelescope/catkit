@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from abc import *
+from abc import ABCMeta, abstractmethod
 
 """Interface for a deformable mirror controller that can control 2 DMs.  
    It does so by interpreting the first half of the command for DM1, and the second for DM2.

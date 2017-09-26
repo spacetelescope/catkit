@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from abc import *
+from abc import ABCMeta, abstractmethod
 
 """Abstract base class for all cameras. Implementations of this class also become context managers."""
 

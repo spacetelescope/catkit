@@ -3,7 +3,7 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
-from abc import *
+from abc import ABCMeta, abstractmethod
 
 """Interface for a motor controller."""
 
