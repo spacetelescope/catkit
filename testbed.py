@@ -306,8 +306,9 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
         img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
         img_max = __get_max_pixel_count(img_list[0], mask=mask)
 
-        upper_bound = start_exp_time
-        lower_bound = quantity(0, start_exp_time.u)
+        # Hack to use the same pint registry across processes.
+        upper_bound = quantity(start_exp_time.m, start_exp_time.u)
+        lower_bound = quantity(0, upper_bound.u)
         print("Starting exposure time calibration...")
 
         if min_counts <= img_max <= max_counts:
