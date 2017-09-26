@@ -29,16 +29,18 @@ class Experiment(object):
         This function starts the experiment on a separate process and monitors power and humidity while active.
         Do not override.
         """
-
+        print("Running safety tests...")
         # Check tests before starting experiment.
         for safety_test in self.safety_tests:
             if not safety_test.check():
                 print(safety_test.name + " reports unsafe conditions. Aborting experiment...")
                 raise SafetyException()
-
+        print("Safety tests passed!")
+        print("Creating separate process to run experiment...")
         # Spin off and start the process to run the experiment.
         experiment_process = Process(target=self.run_experiment)
         experiment_process.start()
+        print("Experiment process started")
 
         while experiment_process.is_alive():
 
