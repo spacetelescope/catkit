@@ -8,6 +8,7 @@ from glob import glob
 
 import numpy as np
 
+from ..wolfram_wrappers import *
 from . import testbed_state
 from ..hardware.SnmpUps import SnmpUps
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
@@ -218,7 +219,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         # Simulator (file-based only).
         if file_mode and simulator:
-            util.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
+            hicat.wolfram_wrappers.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
 
         # When the pipeline is off, return image lists (data or path depending on filemode).
         if not pipeline:
