@@ -1,15 +1,15 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+from astropy.io import fits
 # noinspection PyUnresolvedReferences
 from builtins import *
-
-from astropy.io import fits
 
 from hicat.hardware.boston.flat_command import flat_command
 from hicat.hardware.boston.sin_command import *
 from hicat.hardware.testbed import *
 from hicat.hicat_types import *
+from hicat.hicat_types import SinSpecification
 from hicat.util import write_fits
 
 """

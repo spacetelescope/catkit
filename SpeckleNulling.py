@@ -4,11 +4,11 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from ..hardware.boston.sin_command import *
 from .Experiment import Experiment
-from ..speckle_nulling.speckle_nulling import *
+from ..hardware.boston.sin_command import *
 from ..hardware.testbed import *
 from ..hicat_types import *
+from ..speckle_nulling.speckle_nulling import *
 
 
 class SpeckleNulling(Experiment):
@@ -16,7 +16,7 @@ class SpeckleNulling(Experiment):
                  num_iterations=400,
                  bias=True,
                  flat_map=False,
-                 path=CONFIG_INI.get("optics_lab", "local_data_path"),
+                 path=util.create_data_path(suffix="speckle_nulling"),
                  exposure_time=quantity(1, units.millisecond),
                  num_exposures=2,
                  initial_speckles=SinSpecification(40, 12, quantity(40, units.nanometer), 90)):
@@ -29,9 +29,6 @@ class SpeckleNulling(Experiment):
         self.initial_speckles = initial_speckles
 
     def experiment(self):
-
-        # Create the date-time string to use as the experiment path.
-        base_path = util.create_data_path(initial_path=self.path, suffix="speckle_nulling")
 
         current_command_object, file_name = sin_command(self.initial_speckles, bias=self.bias, flat_map=self.flat_map,
                                                         return_shortname=True)
@@ -49,7 +46,7 @@ class SpeckleNulling(Experiment):
                     coron_exp_time = test_dark_zone_intensity(self.exposure_time, 2)
 
                     # Take coronographic data, with backgrounds.
-                    iteration_path = os.path.join(base_path, "iteration" + str(i))
+                    iteration_path = os.path.join(self.path, "iteration" + str(i))
                     run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron, path=iteration_path,
                                       exposure_set_name="coron", filename="itr" + str(i) + "_" + file_name)
 

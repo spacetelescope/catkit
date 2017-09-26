@@ -10,7 +10,7 @@ from .double_sine import *
 
 class TakeDmPlateScaleData(Experiment):
     def __init__(self,
-                 path=CONFIG_INI.get("optics_lab", "local_data_path"),
+                 path=util.create_data_path(suffix="dm_plate_scale"),
                  bias=True,
                  flat_map=False,
                  coron_exposure_time=quantity(20, units.millisecond),
@@ -30,15 +30,13 @@ class TakeDmPlateScaleData(Experiment):
         self.phase = phase
 
     def experiment(self):
-        # Create the date-time string to use as the experiment path.
-        base_path = util.create_data_path(suffix="dm_plate_scale", initial_path=self.path)
 
         with laser_source() as laser:
             coron_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
             laser.set_current(coron_laser_current)
 
             for angle in self.angle_range:
-                angles_path = os.path.join(base_path, "angle" + str(angle))
+                angles_path = os.path.join(self.path, "angle" + str(angle))
                 for ncycle in self.ncycles_range:
                     sin_spec = SinSpecification(angle, ncycle, self.peak_to_valley, self.phase)
                     ncycle_path = os.path.join(angles_path, "ncycles" + str(ncycle))

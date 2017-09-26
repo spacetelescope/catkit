@@ -47,10 +47,7 @@ class Calibration(Experiment):
 
         self.flat_shape = flat_command(bias=True)
         self.cal_dict = {}
-
-        local_data_path = CONFIG_INI.get("optics_lab", "local_data_path")
-        cal_data_path = os.path.join(local_data_path,"calibration")
-        self.outpath = util.create_data_path(initial_path=cal_data_path)
+        self.outpath = util.create_data_path(suffix="calibration")
 
         print("Calibration steps to be completed: \n")
         for step in self.steps.keys():

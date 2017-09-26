@@ -10,7 +10,7 @@ from .double_sine import *
 
 class DoubleSinRemoveCrossterm(Experiment):
     def __init__(self,
-                 path=CONFIG_INI.get("optics_lab", "local_data_path"),
+                 path=util.create_data_path(suffix="double_sin"),
                  bias=True,
                  flat_map=False,
                  coron_exposure_time=quantity(20, units.millisecond),
@@ -39,15 +39,12 @@ class DoubleSinRemoveCrossterm(Experiment):
         Take three sets of data using the take_double_sin_exposures function: Coron, Direct, Saturated Direct. Then also
         take a flat data set with no sinewave applied (just a bias).
         """
-
-        # Create the date-time string to use as the experiment path.
-        base_path = util.create_data_path(initial_path=self.path, suffix="double_sin")
         coron_dirname = "coron"
         direct_dirname = "direct"
 
         with laser_source() as laser:
             for ncycle in self.ncycles_range:
-                ncycles_path = os.path.join(base_path, "ncycles" + str(ncycle))
+                ncycles_path = os.path.join(self.path, "ncycles" + str(ncycle))
                 for p2v in self.peak_to_valley_range:
                     peak_to_valley_quantity = quantity(p2v, units.nanometer)
                     sin_spec = SinSpecification(self.angle, ncycle, peak_to_valley_quantity, self.phase)

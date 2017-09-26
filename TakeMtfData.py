@@ -4,7 +4,6 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from .. import *
 from .Experiment import Experiment
 from ..hardware.boston.flat_command import flat_command
 from ..hardware.testbed import *
@@ -16,17 +15,15 @@ class TakeMtfData(Experiment):
                  bias=True,
                  flat_map=False,
                  exposure_time=quantity(250, units.microsecond),
-                 num_exposures=500):
+                 num_exposures=500,
+                 path=util.create_data_path(suffix="mtf_calibration")):
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
+        self.path = path
 
     def experiment(self):
-
-        # Create the date-time string to use as the experiment path.
-        local_data_path = CONFIG_INI.get("optics_lab", "local_data_path")
-        base_path = util.create_data_path(suffix="mtf_calibration", initial_path=local_data_path)
 
         # Create a flat dm command.
         flat_command_object, flat_file_name = flat_command(flat_map=self.flat_map,
@@ -42,5 +39,5 @@ class TakeMtfData(Experiment):
             with dm_controller() as dm:
                 # Flat.
                 dm.apply_shape(flat_command_object, 1)
-                run_hicat_imaging(direct_exp_time, num_exposures, FpmPosition.direct, path=base_path,
+                run_hicat_imaging(direct_exp_time, num_exposures, FpmPosition.direct, path=self.path,
                                   exposure_set_name="direct", filename=flat_file_name)

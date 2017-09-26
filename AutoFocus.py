@@ -1,16 +1,16 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-# noinspection PyUnresolvedReferences
-from builtins import *
 from shutil import copyfile
 
-from ..hardware.testbed_state import MetaDataEntry
+# noinspection PyUnresolvedReferences
+from builtins import *
+
 from .Experiment import Experiment
+from .. import wolfram_wrappers
 from ..hardware.boston.flat_command import flat_command
 from ..hardware.testbed import *
 from ..hicat_types import *
-from .. import wolfram_wrappers
 
 
 class AutoFocus(Experiment):
@@ -18,22 +18,20 @@ class AutoFocus(Experiment):
                  bias=True,
                  flat_map=False,
                  exposure_time=quantity(250, units.microsecond),
-                 num_exposures=500):
+                 num_exposures=500,
+                 path=util.create_data_path(suffix="focus")):
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
+        self.path = path
 
-    def __collect_final_images(self, path):
-        results = [y for x in os.walk(path) for y in glob(os.path.join(x[0], "*_cal.fits"))]
+    def __collect_final_images(self):
+        results = [y for x in os.walk(self.path) for y in glob(os.path.join(x[0], "*_cal.fits"))]
         for img in results:
-            copyfile(img, path)
+            copyfile(img, self.path)
 
     def experiment(self):
-
-        # Create the date-time string to use as the experiment path.
-        local_data_path = CONFIG_INI.get("optics_lab", "local_data_path")
-        base_path = util.create_data_path(initial_path=local_data_path, suffix="focus")
 
         # Ensure flipmount is down.
         move_beam_dump(BeamDumpPosition.out_of_beam)
@@ -58,9 +56,9 @@ class AutoFocus(Experiment):
                         mc.absolute_move("motor_img_camera", position)
                     filename = "focus_" + str(int(position * 1000))
                     metadata = MetaDataEntry("Camera Position", "CAM_POS", position * 1000, "")
-                    run_hicat_imaging(exposure_time, num_exps, FpmPosition.direct, path=base_path, filename=filename,
+                    run_hicat_imaging(exposure_time, num_exps, FpmPosition.direct, path=self.path, filename=filename,
                                       exposure_set_name="motor_" + str(int(position * 1000)), extra_metadata=metadata,
                                       raw_skip=0, use_background_cache=False)
 
-        self.__collect_final_images(base_path)
-        print(wolfram_wrappers.run_auto_focus(base_path))
+        self.__collect_final_images()
+        print(wolfram_wrappers.run_auto_focus(self.path))
