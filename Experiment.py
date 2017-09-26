@@ -32,10 +32,16 @@ class Experiment(object):
         This function starts the experiment on a separate process and monitors power and humidity while active.
         Do not override.
         """
+
+        # Create a SnmpUPS object to monitor the White UPS.
+        ups = backup_power()
+
+        # Initialize the safety warning to False.  We will allow one safety failure, but two in a row causes a shutdown.
+        safety_warning = False
+
+        # Spin off and start the process to run the experiment.
         experiment_process = Process(target=self.run_experiment)
         experiment_process.start()
-        ups = backup_power()
-        safety_warning = False
 
         while experiment_process.is_alive():
 
@@ -45,7 +51,6 @@ class Experiment(object):
             # Check humidity sensor.
             temp_ok, humidity_ok = self.__check_temp_humidity()
 
-            # A shut down will occur after the safety check fails twice in a row.
             if power_ok and temp_ok and humidity_ok:
 
                 # Clear the safety_warning flag, everything is ok.
@@ -56,6 +61,7 @@ class Experiment(object):
                     # Experiment ended before the next check interval, exit the while loop.
                     break
 
+            # A shut down will occur after the safety check fails twice in a row.
             elif safety_warning:
 
                 # Shut down the experiment (but allow context managers to exit properly).

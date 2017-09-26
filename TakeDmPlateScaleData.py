@@ -1,0 +1,47 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+# noinspection PyUnresolvedReferences
+from builtins import *
+
+from .Experiment import Experiment
+from .double_sine import *
+
+
+class TakeDmPlateScaleData(Experiment):
+    def __init__(self,
+                 path=CONFIG_INI.get("optics_lab", "local_data_path"),
+                 bias=True,
+                 flat_map=False,
+                 coron_exposure_time=quantity(20, units.millisecond),
+                 coron_nexps=3,
+                 angle_range=range(70, 100, 10),
+                 ncycles_range=np.arange(5.5, 17.5, .5),
+                 peak_to_valley=quantity(30, units.nanometer),
+                 phase=0):
+        self.path = path
+        self.bias = bias
+        self.flat_map = flat_map
+        self.coron_exposure_time = coron_exposure_time
+        self.coron_nexps = coron_nexps
+        self.angle_range = angle_range
+        self.ncycles_range = ncycles_range
+        self.peak_to_valley = peak_to_valley
+        self.phase = phase
+
+    def experiment(self):
+        # Create the date-time string to use as the experiment path.
+        base_path = util.create_data_path(suffix="dm_plate_scale", initial_path=self.path)
+
+        with laser_source() as laser:
+            coron_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
+            laser.set_current(coron_laser_current)
+
+            for angle in self.angle_range:
+                angles_path = os.path.join(base_path, "angle" + str(angle))
+                for ncycle in self.ncycles_range:
+                    sin_spec = SinSpecification(angle, ncycle, self.peak_to_valley, self.phase)
+                    ncycle_path = os.path.join(angles_path, "ncycles" + str(ncycle))
+                    double_sin_remove_crossterm(sin_spec, self.bias, self.flat_map, self.coron_exposure_time,
+                                                self.coron_nexps, FpmPosition.coron,
+                                                path=os.path.join(ncycle_path, "coron"))
