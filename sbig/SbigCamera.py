@@ -200,15 +200,16 @@ class SbigCamera(Camera):
 
         print("Setting up control values")
         # Load values from config.ini into variables, and override with keyword args when applicable.
+        self.cooler_state = CONFIG_INI.getint(self.config_id, 'cooler_state')
         self.center_x = center_x if center_x is not None else CONFIG_INI.getint(self.config_id, 'center_x')
         self.center_y = center_y if center_y is not None else CONFIG_INI.getint(self.config_id, 'center_y')
         self.width = width if width is not None else CONFIG_INI.getint(self.config_id, 'width')
         self.height = height if height is not None else CONFIG_INI.getint(self.config_id, 'height')
-        self.gain = gain if gain is not None else CONFIG_INI.getint(self.config_id, 'gain')
         self.full_image = full_image if full_image is not None else CONFIG_INI.getboolean(self.config_id, 'full_image')
         self.bins = bins if bins is not None else CONFIG_INI.getint(self.config_id, 'bins')
         self.exposure_time = exposure_time if exposure_time is not None else CONFIG_INI.getfloat(self.config_id, 'exposure_time')
 
+        print ("self: ", self)
         # Store the camera's detector shape.
         detector_max_x = CONFIG_INI.getint(self.config_id, 'detector_width')
         detector_max_y = CONFIG_INI.getint(self.config_id, 'detector_length')
@@ -217,7 +218,7 @@ class SbigCamera(Camera):
             print("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
             fi_params = {'StartX': '0', 'StartY': '0',
                      'NumX': str(detector_max_x), 'NumY': str(detector_max_y),
-                     'CoolerState': '0'}
+                     'CoolerState': str(self.cooler_state)}
             r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=fi_params, timeout=self.timeout)
             r.raise_for_status()
             return
@@ -225,23 +226,8 @@ class SbigCamera(Camera):
         # Check for errors, print them all out before exiting.
         error_flag = False
 
-        # Check that width and height are multiples of 8
-        if self.width % 8 != 0:
-            print("Width is not a multiple of 8:", self.width)
-            error_flag = True
-        if self.height % 8 != 0:
-            print("Height is not a multiple of 8:", self.height)
-            error_flag = True
-
-        # Convert to binned units
+        # Unlike ZWO, width and height are in camera pixels, unaffected by bins
         if self.bins != 1:
-            # For debugging
-            # print("Converting to binned units: bins =", bins)
-
-            self.center_x //= self.bins
-            self.center_y //= self.bins
-            self.width //= self.bins
-            self.height //= self.bins
             # set the parameters for binning
             bin_params = {'BinX': str(self.bins), 'BinY': str(self.bins)}
             r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=bin_params, timeout=self.timeout)
@@ -285,8 +271,8 @@ class SbigCamera(Camera):
         if not full_image:
             print("Setting region of interest")
             roi_params = {'StartX': str(derived_start_x), 'StartY': str(derived_start_y),
-                         'NumX': str(width), 'NumY': str(height),
-                         'CoolerState': '0'}
+                         'NumX': str(self.width), 'NumY': str(self.height),
+                         'CoolerState': str(self.cooler_state)}
             r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=roi_params, timeout=self.timeout)
             r.raise_for_status()
 
@@ -340,6 +326,15 @@ class SbigCamera(Camera):
         print("Downloading image...")
         r = requests.get(self.base_url + "ImagerData.bin", timeout=self.timeout)
         r.raise_for_status()
-        img = r.content # returns the entire image in one giant chunk
-        print("Image size: ", sys.getsizeof(img))
-        return img
+        image = r.content # returns the entire image in one giant chunk
+
+        # Apply flips to the image based on config.ini file
+        flip_x = CONFIG_INI.getboolean(self.config_id, 'flip_x')
+        flip_y = CONFIG_INI.getboolean(self.config_id, 'flip_y')
+
+        if flip_x:
+            image = np.flipud(image)
+        if flip_y:
+            image = np.fliplr(image)
+
+        return image.astype(np.dtype(np.int))
