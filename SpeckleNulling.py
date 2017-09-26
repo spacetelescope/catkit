@@ -20,13 +20,15 @@ class SpeckleNulling(Experiment):
                  num_iterations=400,
                  bias=True,
                  flat_map=False,
-                 path=util.create_data_path(suffix="speckle_nulling"),
+                 path=None,
                  exposure_time=quantity(1, units.millisecond),
                  num_exposures=2,
                  initial_speckles=SinSpecification(40, 12, quantity(40, units.nanometer), 90)):
         self.num_iterations = num_iterations
         self.bias = bias
         self.flat_map = flat_map
+        if path is None:
+            path = util.create_data_path(suffix="speckle_nulling")
         self.path = path
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures

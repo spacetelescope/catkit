@@ -16,7 +16,7 @@ from ..hicat_types import units, quantity, FpmPosition, SinSpecification
 
 class DoubleSinRemoveCrossterm(Experiment):
     def __init__(self,
-                 path=util.create_data_path(suffix="double_sin"),
+                 path=None,
                  bias=True,
                  flat_map=False,
                  coron_exposure_time=quantity(20, units.millisecond),
@@ -27,6 +27,8 @@ class DoubleSinRemoveCrossterm(Experiment):
                  ncycles_range=range(6, 18, 1),
                  peak_to_valley_range=range(5, 55, 5),
                  phase=0):
+        if path is None:
+            path = util.create_data_path(suffix="double_sin")
         self.path = path
         self.bias = bias
         self.flat_map = flat_map

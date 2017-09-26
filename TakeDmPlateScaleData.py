@@ -16,7 +16,7 @@ from ..hicat_types import units, quantity, SinSpecification, FpmPosition
 
 class TakeDmPlateScaleData(Experiment):
     def __init__(self,
-                 path=util.create_data_path(suffix="dm_plate_scale"),
+                 path=None,
                  bias=True,
                  flat_map=False,
                  coron_exposure_time=quantity(20, units.millisecond),
@@ -25,6 +25,8 @@ class TakeDmPlateScaleData(Experiment):
                  ncycles_range=np.arange(5.5, 17.5, .5),
                  peak_to_valley=quantity(30, units.nanometer),
                  phase=0):
+        if path is None:
+            path = util.create_data_path(suffix="dm_plate_scale")
         self.path = path
         self.bias = bias
         self.flat_map = flat_map

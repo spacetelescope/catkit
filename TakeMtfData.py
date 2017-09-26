@@ -18,11 +18,13 @@ class TakeMtfData(Experiment):
                  flat_map=False,
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=500,
-                 path=util.create_data_path(suffix="mtf_calibration")):
+                 path=None):
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
+        if path is None:
+            path = util.create_data_path(suffix="mtf_calibration")
         self.path = path
 
     def experiment(self):
