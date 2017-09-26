@@ -6,7 +6,7 @@ from builtins import *
 
 from collections import OrderedDict
 
-from hicat import calibration_take_data, calibration_util
+from .. import calibration_take_data, calibration_util
 from .Experiment import Experiment
 from ..hardware.boston.flat_command import flat_command
 from ..hardware.testbed import *
@@ -26,14 +26,14 @@ class Calibration(Experiment):
 
         self.write_to_csv = write_to_csv
 
-        self.cam_orientation_step = {'process':cam_orientation}
-        self.chip_orientation_step = {'process':chip_orientation}
+        self.cam_orientation_step = {'process': cam_orientation}
+        self.chip_orientation_step = {'process': chip_orientation}
 
-        self.focus_step = {'process':focus}
-        self.subarray_step = {'process':centering}
-        self.distance_step = {'process':dist_to_center}
-        self.clocking_step = {'process':clocking}
-        self.mtf_step = {'process':mtf}
+        self.focus_step = {'process': focus}
+        self.subarray_step = {'process': centering}
+        self.distance_step = {'process': dist_to_center}
+        self.clocking_step = {'process': clocking}
+        self.mtf_step = {'process': mtf}
 
         self.steps = OrderedDict()
         # Order matters: Put steps in the order they need to be completed
@@ -65,15 +65,8 @@ class Calibration(Experiment):
                 calibration_util.create_csv(cal_dict, filename)
 
     def run_steps(self):
-        """Generic interface to initialize any and/or all defined steps.
-
-        Parameters
-        ----------
-        stepnames : list
-        pars : keywords, optional
-        Optional parameters to define specific processing for
-        each step that has been turned on.
-
+        """
+        Generic interface to initialize any and/or all defined steps.
         """
         # define list of valid steps
         for step in self.steps.keys():
@@ -85,54 +78,53 @@ class Calibration(Experiment):
         return self.cal_dict
 
     def process_focus(self):
-        focus_outpath = os.path.join(self.outpath,'focus')
+        focus_outpath = os.path.join(self.outpath, 'focus')
         focus_data_path = calibration_take_data.take_focus_data(outpath=focus_outpath)
         calibration_util.collect_final_images(focus_outpath)
         output = calibration_util.run_auto_focus(focus_data_path)
 
         if self.write_to_csv:
-            self.update_cal_dict(["best focus"],[output])
-
+            self.update_cal_dict(["best focus"], [output])
 
     def process_cam_orientation(self):
-        cam_outpath = os.path.join(self.outpath,'double_sin')
+        cam_outpath = os.path.join(self.outpath, 'double_sin')
         calibration_take_data.run_speckle_experiment(cam_outpath)
-        calibration_util.collect_final_images(cam_outpath,"*sin_noxterm.fits")
+        calibration_util.collect_final_images(cam_outpath, "*sin_noxterm.fits")
 
     def process_chip_orientation(self):
-        data, subarray_x, subarray_y = calibration_take_data.recenter_subarray(outpath=None,plot=True)
+        data, subarray_x, subarray_y = calibration_take_data.recenter_subarray(outpath=None, plot=True)
 
     def process_subarray_centering(self):
-        subarray_outpath = os.path.join(self.outpath,'subarray')
-        self.data, subarray_x, subarray_y = calibration_take_data.recenter_subarray(outpath=subarray_outpath,plot=False)
+        subarray_outpath = os.path.join(self.outpath, 'subarray')
+        self.data, subarray_x, subarray_y = calibration_take_data.recenter_subarray(outpath=subarray_outpath)
 
         if self.write_to_csv:
-            self.update_cal_dict(["subarray center x","subarray center y"], [subarray_x,subarray_y])
+            self.update_cal_dict(["subarray center x", "subarray center y"], [subarray_x, subarray_y])
 
     def process_distance(self):
         try:
             data = self.data
         except NameError:
-            data = calibration_take_data.take_cal_data(fpm_position=FpmPosition.coron,dm_shape=self.flat_shape,
-                                       dm_num=1, exposure_time=quantity(1, units.millisecond),
-                                       num_exposures=5)
-        centroid, coords = calibration_util.find_center_of_coron_image(data,return_coords=True)
+            data = calibration_take_data.take_cal_data(fpm_position=FpmPosition.coron, dm_shape=self.flat_shape,
+                                                       dm_num=1, exposure_time=quantity(1, units.millisecond),
+                                                       num_exposures=5)
+        centroid, coords = calibration_util.find_center_of_coron_image(data, return_coords=True)
         dist = calibration_util.find_average_distance_to_center(centroid, coords)
 
         if self.write_to_csv:
-            self.update_cal_dict(["average distance to center [pixels]"],[dist])
+            self.update_cal_dict(["average distance to center [pixels]"], [dist])
 
     def process_clocking(self):
-        data = calibration_take_data.take_cal_data(fpm_position=FpmPosition.coron,dm_shape=self.flat_shape,
-                                   dm_num=1, exposure_time=quantity(1, units.millisecond),
-                                   num_exposures=5)
+        data = calibration_take_data.take_cal_data(fpm_position=FpmPosition.coron, dm_shape=self.flat_shape,
+                                                   dm_num=1, exposure_time=quantity(1, units.millisecond),
+                                                   num_exposures=5)
 
         mean_angle_hori, mean_angle_vert, mean_angle = calibration_util.find_clocking_angles(data)
-        #mean_err_hori, mean_err_vert, err_angle = find_clocking_angles(sim)
+        # mean_err_hori, mean_err_vert, err_angle = find_clocking_angles(sim)
 
         if self.write_to_csv:
-            self.update_cal_dict(["clocking horizontal","clocking vertical","clocking angle"],
-                            [mean_angle_hori,mean_angle_vert,mean_angle])
+            self.update_cal_dict(["clocking horizontal", "clocking vertical", "clocking angle"],
+                                 [mean_angle_hori, mean_angle_vert, mean_angle])
 
     def process_mtf(self):
         mtf_data_path = calibration_take_data.take_mtf_data(self.outpath)
@@ -140,11 +132,9 @@ class Calibration(Experiment):
         ps_wo_focus, ps_w_focus, focus = output.split(",")
 
         if self.write_to_csv:
-            self.update_cal_dict(["MTF: plate scale, no focus","MTF: plate scale, focus","MTF: focus"],
-                            [ps_wo_focus,ps_w_focus,focus])
+            self.update_cal_dict(["MTF: plate scale, no focus", "MTF: plate scale, focus", "MTF: focus"],
+                                 [ps_wo_focus, ps_w_focus, focus])
 
     def update_cal_dict(self, names, values):
-        for name,value in zip(names,values):
+        for name, value in zip(names, values):
             self.cal_dict[name] = value
-
-
