@@ -1,13 +1,11 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
+
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from collections import namedtuple
+from hicat.hicat_types import MetaDataEntry
 from .. import units
-
-# Create a named tuple to hold metadata
-MetaDataEntry = namedtuple("MetaDataEntry", "name, name_8chars, value, comment")
 
 # Initialize State Variables.
 background = None

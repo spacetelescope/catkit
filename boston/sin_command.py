@@ -1,14 +1,12 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-# noinspection PyUnresolvedReferences
-from builtins import *
 import math
-from collections import namedtuple
 
 import numpy as np
+# noinspection PyUnresolvedReferences
+from builtins import *
 from scipy.ndimage.interpolation import rotate
-
 # noinspection PyPackageRequirements
 from skimage.transform import resize
 
@@ -31,9 +29,6 @@ command_length = config.getint(config_name, 'command_length')
 # Create the index952 from mask once here.
 mask = util.get_hicat_dm_mask()
 index952 = np.flatnonzero(mask)
-
-# Named Tuple as a container for sine wave specifications. peak_to_valley must be a pint quantity.
-SinSpecification = namedtuple("SinSpecification", "angle, ncycles, peak_to_valley, phase")
 
 
 def sin_command(sin_specification,

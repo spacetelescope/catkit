@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from ...hardware.testbed_state import MetaDataEntry
+from hicat.hicat_types import MetaDataEntry
 from ...interfaces.Camera import Camera
 from ...config import CONFIG_INI
 from ... import units, quantity
