@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from pysnmp.hlapi import *
+from pysnmp import hlapi
 from ..interfaces.BackupPower import BackupPower
 from ..config import CONFIG_INI
 
@@ -24,11 +24,11 @@ class SnmpUps(BackupPower):
         for (error_indication,
              error_status,
              error_index,
-             var_binds) in getCmd(SnmpEngine(),
-                                  CommunityData(community, mpModel=0),
-                                  UdpTransportTarget((ip, port)),
-                                  ContextData(),
-                                  ObjectType(ObjectIdentity(snmp_oid))):
+             var_binds) in hlapi.getCmd(hlapi.SnmpEngine(),
+                                        hlapi.CommunityData(community, mpModel=0),
+                                        hlapi.UdpTransportTarget((ip, port)),
+                                        hlapi.ContextData(),
+                                        hlapi.ObjectType(hlapi.ObjectIdentity(snmp_oid))):
             if error_indication or error_status:
                 raise Exception("Error communicating with White UPS.\n" +
                                 "Error Indication: " + str(error_indication) + "\n" +

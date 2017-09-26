@@ -3,7 +3,7 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
-from ctypes import *
+from ctypes import cdll
 import os
 import re
 import time

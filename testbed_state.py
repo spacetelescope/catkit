@@ -4,8 +4,7 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from hicat.hicat_types import MetaDataEntry
-from .. import units
+from hicat.hicat_types import MetaDataEntry, units
 
 # Initialize State Variables.
 background = None

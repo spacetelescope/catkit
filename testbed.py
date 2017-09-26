@@ -5,22 +5,20 @@ from builtins import *
 
 import os
 from glob import glob
-
 import numpy as np
 
-from ..wolfram_wrappers import *
 from . import testbed_state
-from ..hardware.SnmpUps import SnmpUps
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
-from .. import quantity
 from .. import util
+from .. import wolfram_wrappers
 from ..config import CONFIG_INI
+from ..hardware.SnmpUps import SnmpUps
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
-from ..hicat_types import *
 from ..hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from ..hardware.zwo.ZwoCamera import ZwoCamera
+from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -219,7 +217,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         # Simulator (file-based only).
         if file_mode and simulator:
-            hicat.wolfram_wrappers.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
+            wolfram_wrappers.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
 
         # When the pipeline is off, return image lists (data or path depending on filemode).
         if not pipeline:
@@ -255,12 +253,14 @@ def initialize_motors(fpm_position=None, lyot_stop_position=None):
         if lyot_stop_position:
             mc.absolute_move("motor_lyot_stop_x", __get_lyot_position_from_ini(lyot_stop_position))
 
+
 def move_fpm(fpm_position):
     """A safe method to move the focal plane mask."""
     with motor_controller(initialize_to_nominal=False) as mc:
         motor_id = "motor_FPM_Y"
         new_position = __get_fpm_position_from_ini(fpm_position)
         mc.absolute_move(motor_id, new_position)
+
 
 def move_lyot_stop(lyot_stop_position):
     """A safe method to move the lyot stop."""
@@ -276,6 +276,7 @@ def __get_fpm_position_from_ini(fpm_position):
     else:
         new_position = CONFIG_INI.getfloat("motor_FPM_Y", "direct")
     return new_position
+
 
 def __get_lyot_position_from_ini(lyot_position):
     if lyot_position is LyotStopPosition.in_beam:

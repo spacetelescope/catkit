@@ -4,17 +4,18 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from hicat.hicat_types import MetaDataEntry
-from ...interfaces.Camera import Camera
-from ...config import CONFIG_INI
-from ... import units, quantity
-from ... import util
-from ...hardware import testbed_state
 from astropy.io import fits
 import numpy as np
 import os
 import zwoasi
 import sys
+
+from ...hicat_types import MetaDataEntry, units, quantity
+from ...interfaces.Camera import Camera
+from ...config import CONFIG_INI
+from ... import util
+from ...hardware import testbed_state
+
 
 """Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
 
