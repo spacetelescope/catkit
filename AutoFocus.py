@@ -24,11 +24,13 @@ class AutoFocus(Experiment):
                  flat_map=False,
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=500,
+                 position_list=np.arange(11.0, 13.7, step=.1),
                  path=None):
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
+        self.position_list = position_list
         if path is None:
             path = util.create_data_path(suffix="focus")
         self.path = path
@@ -36,19 +38,9 @@ class AutoFocus(Experiment):
     def __collect_final_images(self):
         results = [y for x in os.walk(self.path) for y in glob(os.path.join(x[0], "*_cal.fits"))]
         for img in results:
-            copyfile(img, self.path)
+            copyfile(img, os.path.join(self.path, os.path.basename(img)))
 
     def experiment(self):
-
-        # Ensure flipmount is down.
-        testbed.move_beam_dump(BeamDumpPosition.out_of_beam)
-
-        # Create the motor positions for the imaging camera motor.
-        position_list = np.arange(11.0, 13.7, step=.1)
-
-        # Set exposure time.
-        exposure_time = quantity(250, units.microsecond)
-        num_exps = 5
 
         with testbed.laser_source() as laser:
             direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
@@ -58,12 +50,12 @@ class AutoFocus(Experiment):
                 dm_command_object = flat_command(bias=True)
                 dm.apply_shape(dm_command_object, 1)
 
-                for position in position_list:
+                for position in self.position_list:
                     with testbed.motor_controller() as mc:
                         mc.absolute_move("motor_img_camera", position)
                     filename = "focus_" + str(int(position * 1000))
-                    metadata = MetaDataEntry("Camera Position", "CAM_POS", position * 1000, "")
-                    testbed.run_hicat_imaging(exposure_time, num_exps, FpmPosition.direct, path=self.path,
+                    metadata = MetaDataEntry("Camera Position", "CAM_POS", position * 1000, "Position * 1000")
+                    testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, FpmPosition.direct, path=self.path,
                                               filename=filename,
                                               exposure_set_name="motor_" + str(int(position * 1000)),
                                               extra_metadata=metadata,
