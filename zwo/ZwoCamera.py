@@ -4,16 +4,17 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from hicat.interfaces.Camera import Camera
-from hicat.config import CONFIG_INI
-from hicat import units, quantity
-from hicat.hardware import testbed_state
+from ...hardware.testbed_state import MetaDataEntry
+from ...interfaces.Camera import Camera
+from ...config import CONFIG_INI
+from ... import units, quantity
+from ... import util
+from ...hardware import testbed_state
 from astropy.io import fits
 import numpy as np
 import os
 import zwoasi
 import sys
-
 
 """Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
 
@@ -61,9 +62,8 @@ class ZwoCamera(Camera):
             # Force any single exposure to be halted
             camera.stop_video_capture()
             camera.stop_exposure()
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
+        except Exception:
+            # Catch and hide exceptions that get thrown if the camera rejects the stop commands.
             pass
 
         # Set image format to be RAW16, although camera is only 12-bit.
@@ -74,50 +74,71 @@ class ZwoCamera(Camera):
         """Close camera connection"""
         self.camera.close()
 
-    def take_exposures(self, exposure_time, num_exposures, path="", filename="",
-                       fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
-                       gain=None, full_image=None, bins=None, resume=False, write_out_data=True):
-        if write_out_data:
-            self.take_exposures_fits(exposure_time, num_exposures, path, filename,
-                                     fits_header_dict, center_x, center_y, width, height,
-                                     gain, full_image, bins, resume)
-            return
-
-        else:
-            img_list = self.take_exposures_data(exposure_time, num_exposures,
-                                                center_x, center_y, width, height,
-                                                gain, full_image, bins)
-            return img_list
-
-    def take_exposures_fits(self, exposure_time, num_exposures, path, filename,
-                            fits_header_dict=None, center_x=None, center_y=None, width=None, height=None,
-                            gain=None, full_image=None, bins=None, resume=False):
+    def take_exposures(self, exposure_time, num_exposures,
+                       file_mode=False, raw_skip=0, path=None, filename=None,
+                       extra_metadata=None,
+                       resume=False,
+                       return_metadata=False,
+                       subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
+                       bins=None):
         """
-        Takes exposures, saves as FITS files and returns list of file paths. The keyword arguments
-        are used as overrides to the default values stored in config.ini.
+        Low level method to take exposures using a Zwo camera. By default keeps image data in
         :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
         :param num_exposures: Number of exposures.
-        :param path: Path of the directory to save fits file to.
-        :param filename: Name for file.
-        :param fits_header_dict: Dictionary of extra attributes to stuff into fits header.
-        :param center_x: X coordinate of center pixel.
-        :param center_y: Y coordinate of center pixel.
+        :param file_mode: If true fits file will be written to disk
+        :param raw_skip: Skips x images for every one taken, when used images will be stored in memory and returned.
+        :param path: Path of the directory to save fits file to, required if write_raw_fits is true.
+        :param filename: Name for file, required if write_raw_fits is true.
+        :param extra_metadata: Will be appended to metadata created and written to fits header.
+        :param resume: If True, skips exposure if filename exists on disk already. Doesn't support data-only mode.
+        :param return_metadata: If True, returns a list of meta data as a second return parameter.
+        :param subarray_x: X coordinate of center pixel of the subarray.
+        :param subarray_y: Y coordinate of center pixel of the subarray.
         :param width: Desired width of image.
         :param height: Desired height of image.
         :param gain: Gain of ZWO camera (volts).
         :param full_image: Boolean for whether to take a full image.
         :param bins: Integer value for number of bins.
-        :param resume: If True, will skip exposure if image exists on disk already.
-        :return: List of file paths to the fits files created.
+        :return: Two parameters: Image list (numpy data or paths), Metadata list of MetaDataEntry objects.
         """
 
         # Convert exposure time to contain units if not already a Pint quantity.
         if type(exposure_time) is not quantity:
             exposure_time = quantity(exposure_time, units.microsecond)
 
-        self.__setup_control_values(exposure_time, center_x=center_x, center_y=center_y, width=width,
+        # Set control values on the ZWO camera.
+        self.__setup_control_values(exposure_time, subarray_x=subarray_x, subarray_y=subarray_y, width=width,
                                     height=height, gain=gain, full_image=full_image, bins=bins)
 
+        # Create metadata from testbed_state and add extra_metadata input.
+        meta_data = [MetaDataEntry("Exposure Time", "EXP_TIME", exposure_time.to(units.microseconds).m, "microseconds")]
+        meta_data.extend(testbed_state.create_metadata())
+        meta_data.append(MetaDataEntry("Camera", "CAMERA", self.config_id, "Camera model, correlates to entry in ini"))
+        meta_data.append(MetaDataEntry("Gain", "GAIN", self.gain, "Gain for camera"))
+        meta_data.append(MetaDataEntry("Bins", "BINS", self.bins, "Binning for camera"))
+        if extra_metadata is not None:
+            if isinstance(extra_metadata, list):
+                meta_data.extend(extra_metadata)
+            else:
+                meta_data.append(extra_metadata)
+
+        # DATA MODE: Takes images and returns data and metadata (does not write anything to disk).
+        img_list = []
+        if not file_mode:
+            # Take exposures and add to list.
+            for i in range(num_exposures):
+                img = self.__capture(exposure_time)
+                img_list.append(img)
+            if return_metadata:
+                return img_list, meta_data
+            else:
+                return img_list
+        else:
+            # Check that path and filename are specified.
+            if path is None or filename is None:
+                raise Exception("You need to specify path and filename when file_mode=True.")
+
+        # FILE MODE:
         # Check for fits extension.
         if not (filename.endswith(".fit") or filename.endswith(".fits")):
             filename += ".fits"
@@ -131,9 +152,8 @@ class ZwoCamera(Camera):
         if not os.path.exists(path):
             os.makedirs(path)
 
-        filepath_list = []
-
-        # Take exposure. Use Astropy to handle fits format.
+        # Take exposures. Use Astropy to handle fits format.
+        skip_counter = 0
         for i in range(num_exposures):
 
             # For multiple exposures append frame number to end of base file name.
@@ -144,24 +164,35 @@ class ZwoCamera(Camera):
             # If Resume is enabled, continue if the file already exists on disk.
             if resume and os.path.isfile(full_path):
                 print("File already exists: " + full_path)
+                img_list.append(full_path)
                 continue
 
             # Take exposure.
             img = self.__capture(exposure_time)
 
+            # Skip writing the fits files per the raw_skip value, and keep img data in memory.
+            if raw_skip != 0:
+                img_list.append(img)
+                if skip_counter == (raw_skip + 1):
+                    skip_counter = 0
+                if skip_counter == 0:
+                    # Write fits.
+                    skip_counter += 1
+                elif skip_counter > 0:
+                    # Skip fits.
+                    skip_counter += 1
+
+                    continue
+
             # Create a PrimaryHDU object to encapsulate the data.
             hdu = fits.PrimaryHDU(img)
 
             # Add headers.
-            hdu.header["EXP_TIME"] = (exposure_time.to(units.microseconds).magnitude, "microseconds")
-            hdu.header["CAMERA"] = (self.config_id, "Model of camera, correlates to entry in ini")
-            hdu.header["GAIN"] = self.gain
-            hdu.header["BINS"] = self.bins
             hdu.header["FRAME"] = i + 1
             hdu.header["FILENAME"] = filename
 
             # Add testbed state metadata.
-            for entry in testbed_state.create_metadata():
+            for entry in meta_data:
                 if len(entry.name_8chars) > 8:
                     print("Fits Header Keyword: " + entry.name_8chars +
                           " is greater than 8 characters and will be truncated.")
@@ -170,48 +201,26 @@ class ZwoCamera(Camera):
                           " is greater than 47 characters and will be truncated.")
                 hdu.header[entry.name_8chars[:8]] = (entry.value, entry.comment)
 
-            # Add extra header keywords passed in.
-            if fits_header_dict:
-                for k, v in fits_header_dict.items():
-                    if len(k) > 8:
-                        print("Fits Header Keyword: " + k + " is greater than 8 characters and will be truncated.")
-                    hdu.header[k[:8]] = v
-
             # Create a HDUList to contain the newly created primary HDU, and write to a new file.
             fits.HDUList([hdu])
             hdu.writeto(full_path, overwrite=True)
             print("wrote " + full_path)
-            filepath_list.append(full_path)
+            if raw_skip == 0:
+                img_list.append(full_path)
 
-        return filepath_list
+        # If data mode, return meta_data with data.
+        if return_metadata:
+            return img_list, meta_data
+        else:
+            return img_list
 
-    def take_exposures_data(self, exposure_time, num_exposures,
-                            center_x=None, center_y=None, width=None, height=None,
-                            gain=None, full_image=None, bins=None):
-        """Takes exposures and returns list of numpy arrays."""
-
-        # Convert exposure time to contain units if not already a Pint quantity.
-        if type(exposure_time) is not quantity:
-            exposure_time = quantity(exposure_time, units.microsecond)
-
-        self.__setup_control_values(exposure_time, center_x=center_x, center_y=center_y, width=width,
-                                    height=height, gain=gain, full_image=full_image, bins=bins)
-        img_list = []
-
-        # Take exposures and add to list.
-        for i in range(num_exposures):
-            img = self.__capture(exposure_time)
-            img_list.append(img)
-
-        return img_list
-
-    def __setup_control_values(self, exposure_time, center_x=None, center_y=None, width=None, height=None,
+    def __setup_control_values(self, exposure_time, subarray_x=None, subarray_y=None, width=None, height=None,
                                gain=None, full_image=None, bins=None):
         """Applies control values found in the config.ini unless overrides are passed in, and does error checking."""
 
         # Load values from config.ini into variables, and override with keyword args when applicable.
-        center_x = center_x if center_x is not None else CONFIG_INI.getint(self.config_id, 'center_x')
-        center_y = center_y if center_y is not None else CONFIG_INI.getint(self.config_id, 'center_y')
+        subarray_x = subarray_x if subarray_x is not None else CONFIG_INI.getint(self.config_id, 'subarray_x')
+        subarray_y = subarray_y if subarray_y is not None else CONFIG_INI.getint(self.config_id, 'subarray_y')
         width = width if width is not None else CONFIG_INI.getint(self.config_id, 'width')
         height = height if height is not None else CONFIG_INI.getint(self.config_id, 'height')
         gain = gain if gain is not None else CONFIG_INI.getint(self.config_id, 'gain')
@@ -251,16 +260,16 @@ class ZwoCamera(Camera):
             # For debugging
             # print("Converting to binned units: bins =", bins)
 
-            center_x //= bins
-            center_y //= bins
+            subarray_x //= bins
+            subarray_y //= bins
             width //= bins
             height //= bins
 
         # Derive the start x/y position of the region of interest, and check that it falls on the detector.
-        derived_start_x = center_x - (width // 2)
-        derived_start_y = center_y - (height // 2)
-        derived_end_x = center_x + (width // 2)
-        derived_end_y = center_y + (height // 2)
+        derived_start_x = subarray_x - (width // 2)
+        derived_start_y = subarray_y - (height // 2)
+        derived_end_x = subarray_x + (width // 2)
+        derived_end_y = subarray_y + (height // 2)
 
         if derived_start_x > detector_max_x or derived_start_x < 0:
             print("Derived start x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_start_x)
@@ -299,13 +308,9 @@ class ZwoCamera(Camera):
         poll = quantity(0.1, units.second)
         image = self.camera.capture(initial_sleep=exposure_time.to(units.second).magnitude, poll=poll.magnitude)
 
-        # Apply flips to the image based on config.ini file
-        flip_x = CONFIG_INI.getboolean(self.config_id, 'flip_x')
-        flip_y = CONFIG_INI.getboolean(self.config_id, 'flip_y')
-
-        if flip_x:
-            image = np.flipud(image)
-        if flip_y:
-            image = np.fliplr(image)
+        # Apply rotation and flip to the image based on config.ini file.
+        theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
+        fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
+        image = util.rotate_and_flip_image(image, theta, fliplr)
 
         return image.astype(np.dtype(np.int))

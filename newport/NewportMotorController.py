@@ -14,7 +14,7 @@ from .lib import XPS_Q8_drivers
 
 
 class NewportMotorController(MotorController):
-    def initialize(self, *args, **kwargs):
+    def initialize(self, initialize_to_nominal=True):
         """Creates an instance of the controller library and opens a connection."""
 
         # Create an instance of the XPS controller.
@@ -33,11 +33,13 @@ class NewportMotorController(MotorController):
 
         self.socket_id = socket_id
         self.motor_controller = myxps
+        print("Initializing Newport XPS Motor Controller " + self.config_id + "...")
 
         # Initialize and move to nominal positions.
-        motors = [s for s in CONFIG_INI.sections() if s.startswith('motor_')]
-        for motor_name in motors:
-            self.__move_to_nominal(motor_name)
+        if initialize_to_nominal:
+            motors = [s for s in CONFIG_INI.sections() if s.startswith('motor_')]
+            for motor_name in motors:
+                self.__move_to_nominal(motor_name)
 
         # Update the testbed_state for the FPM and Lyot Stop.
         self.__update_testbed_state("motor_lyot_stop_x", self.get_position("motor_lyot_stop_x"))
@@ -50,7 +52,7 @@ class NewportMotorController(MotorController):
 
     def absolute_move(self, motor_id, position):
         """
-        Moves motor to specified position.
+        Moves motor to specified position.  Skips if already in position (or close enough).
         :param motor_id: String to match in the config ini (ex: motor_FPM_X).
         :param position: Target position to move to.
         """
@@ -58,13 +60,15 @@ class NewportMotorController(MotorController):
         positioner = CONFIG_INI.get(motor_id, "positioner_name")
         self.__ensure_initialized(group)
 
-        # Move.
-        error_code, return_string = self.motor_controller.GroupMoveAbsolute(self.socket_id, positioner, [position])
-        if error_code != 0:
-            self.__raise_exceptions(error_code, 'GroupMoveAbsolute')
-        else:
-            print("Moved positioner " + positioner + " to " + str(position))
-            self.__update_testbed_state(motor_id, position)
+        current_position = self.get_position(motor_id)
+        if not np.isclose(current_position, position, atol=.001):
+            # Move.
+            error_code, return_string = self.motor_controller.GroupMoveAbsolute(self.socket_id, positioner, [position])
+            if error_code != 0:
+                self.__raise_exceptions(error_code, 'GroupMoveAbsolute')
+            else:
+                print("Moved positioner " + positioner + " to " + str(position))
+                self.__update_testbed_state(motor_id, position)
 
     def relative_move(self, motor_id, distance):
         """

@@ -4,13 +4,12 @@ from __future__ import (absolute_import, division,
 from builtins import *
 
 import os
-
-import numpy as np
-from enum import Enum
 from glob import glob
 
-from ..hardware.zwo.ZwoCamera import ZwoCamera
-from ..hardware.sbig.SbigCamera import SbigCamera
+import numpy as np
+
+from . import testbed_state
+from ..hardware.SnmpUps import SnmpUps
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
 from .. import quantity
@@ -18,8 +17,10 @@ from .. import util
 from ..config import CONFIG_INI
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
-from ..interfaces.DummyContextManager import DummyContextManager
-from . import testbed_state
+from ..hicat_types import *
+from ..hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
+from ..hardware.zwo.ZwoCamera import ZwoCamera
+from ..hardware.sbig.SbigCamera import SbigCamera
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -52,13 +53,13 @@ def dm_controller():
     return BostonDmController("boston_kilo952")
 
 
-def motor_controller():
+def motor_controller(initialize_to_nominal=True):
     """
     Proper way to control the motor controller. Using this function keeps the scripts future-proof.
     Use the "with" keyword to take advantage of the built-in context manager for safely closing the connection.
     :return: An instance of the MotorController.py interface.
     """
-    return NewportMotorController("newport_xps_q8")
+    return NewportMotorController("newport_xps_q8", initialize_to_nominal=initialize_to_nominal)
 
 
 def beam_dump():
@@ -66,143 +67,251 @@ def beam_dump():
 
 
 def laser_source():
-    return DummyContextManager("laser_source")
+    return ThorlabsMLCS1("thorlabs_source_mcls1")
+
+
+def backup_power():
+    return SnmpUps("white_ups")
 
 
 # Convenience functions.
-def run_hicat_imaging(dm_command_object, path, exposure_set_name, file_name, fpm_position, exposure_time, num_exposures,
-                      simulator=True, pipeline=True, auto_exp_time=False, bg_cache=False, **kwargs):
-
-    full_filename = "{}_{}".format(exposure_set_name, file_name)
-    output = take_exposures_and_background(exposure_time, num_exposures, fpm_position, path, full_filename,
-                                           exposure_set_name=exposure_set_name, pipeline=pipeline,
-                                           auto_exp_time=auto_exp_time, bg_cache=bg_cache, **kwargs)
-                                  
-    # Export the DM Command itself as a fits file.
-    dm_command_object.export_fits(os.path.join(path, exposure_set_name))
-
-    # Store config.ini.
-    util.save_ini(os.path.join(path, "config"))
-
-    if simulator:
-        util.run_simulator(os.path.join(path, exposure_set_name), full_filename + ".fits", fpm_position.name)
-
-    return output
-
-
-def take_exposures_and_background(exposure_time, num_exposures, fpm_position, path="", filename="",
-                                  exposure_set_name="", fits_header_dict=None, center_x=None, center_y=None, width=None,
-                                  height=None, gain=None, full_image=None, bins=None, resume=False, pipeline=True,
-                                  write_out_data=True, auto_exp_time=False, bg_cache=False, plot=False):
+def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_position=LyotStopPosition.in_beam,
+                      file_mode=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
+                      take_background_exposures=True, use_background_cache=True,
+                      pipeline=True, pipeline_plot=False, return_pipeline_metadata=False,
+                      auto_exposure_time=True,
+                      simulator=True,
+                      extra_metadata=None,
+                      resume=False,
+                      **kwargs):
     """
-    Standard way to take data on hicat.  This function takes exposures, background images, and then runs a data pipeline
-    to average the images and remove bad pixels.  It controls the beam dump for you, no need to initialize it prior.
+    Standard function for taking imaging data with HiCAT.  For writing fits files (file_mode=True), 'path',
+    'exposure_set_name' and 'filename' parameters are required.
+
+    file_mode = True: (Default)
+        - Returns the output of the pipeline, which will be a path to final calibrated fits file.
+        - When pipeline=False, returns list of paths for images and  backgrounds (if take_background_exposures=True).
+        - Simulator expects the output from the pipeline, so it will not work if pipeline=False.
+
+    file_mode = False:
+        - Returns the output of the pipeline, which is the data for the final calibrated image.
+            - When return_pipeline_metadata=True, returns a second argument with metadata containing centroid info.
+        - When pipeline=False, returns list of data for images and  backgrounds (if take_background_exposures=True).
+        - Simulator, Background Cache, and Resume are not supported.
+
+    :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
+    :param num_exposures: Number of exposures.
+    :param fpm_position: (hicat_types.FpmPosition) Position the focal plane mask will get moved to.
+    :param lyot_stop_position: (hicat_types.LyotStopPosition) Position the lyot stop will get moved to.
+    :param file_mode: If false the numpy data will be returned, if true fits files will be written to disk.
+    :param raw_skip: Skips x images for every one taken, when used images will be stored in memory and returned.
+    :param path: Path of the directory to save fits file to, required if file_mode is true.
+    :param exposure_set_name: Additional directory level (ex: coron, direct).
+    :param filename: Name for file, required if file_mode is true.
+    :param take_background_exposures: Boolean flag for whether to take background exposures.
+    :param use_background_cache: Reuses backgrounds with the same exposure time. Supported when file_mode=True.
+    :param pipeline: True runs pipeline, False does not.  Inherits file_mode to determine whether to write final fits.
+    :param pipeline_plot: Used for viewing the calibrated images as they are taken (usually for debugging).
+    :param return_pipeline_metadata: List of MetaDataEntry items that includes additional pipeline info.
+    :param auto_exposure_time: Flag to enable auto exposure time correction.
+    :param simulator: Flag to enable Mathematica simulator. Supported when file_mode=True.
+    :param extra_metadata: List or single MetaDataEntry.
+    :param resume: Very primitive way to try and resume an experiment. Skips exposures that already exist on disk.
+    :param kwargs: Extra keywords to be passed to the camera's take_exposures function.
+    :return: Defaults returns the path of the final calibrated image provided by the data pipeline.
     """
 
-    # Move the FPM to the desired position.
-    move_fpm(fpm_position)
+    # Initialize all motors and move Focal Plane Mask and Lyot Stop (will skip if already in correct place).
+    initialize_motors(fpm_position=fpm_position, lyot_stop_position=lyot_stop_position)
 
-    if auto_exp_time:
-        move_beam_dump(BeamDumpPosition.out_of_beam)
+    # Auto Exposure.
+    if auto_exposure_time:
         min_counts = CONFIG_INI.getint("zwo_ASI1600MM", "min_counts")
         max_counts = CONFIG_INI.getint("zwo_ASI1600MM", "max_counts")
         exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
 
-    # Create the standard directory structure.
-    if write_out_data:
-        raw_path = os.path.join(path, exposure_set_name, "raw")
+    # Fits directories and filenames.
+    exp_path, raw_path, img_path, bg_path = None, None, None, None
+    if file_mode:
+
+        # Combine exposure set into filename.
+        filename = "{}_{}".format(exposure_set_name, filename)
+
+        # Create the standard directory structure.
+        exp_path = os.path.join(path, exposure_set_name)
+        raw_path = os.path.join(exp_path, "raw")
         img_path = os.path.join(raw_path, "images")
         bg_path = os.path.join(raw_path, "backgrounds")
 
-    else:
-        raw_path = ""
-        img_path = ""
-        bg_path = ""
-
+    # Move beam dump out of beam and take images.
+    move_beam_dump(BeamDumpPosition.out_of_beam)
     with imaging_camera() as img_cam:
 
-        # First take images.
-        move_beam_dump(BeamDumpPosition.out_of_beam)
-        img_list = img_cam.take_exposures(exposure_time, num_exposures, img_path, filename,
-                                          fits_header_dict=fits_header_dict, center_x=center_x, center_y=center_y,
-                                          width=width, height=height, gain=gain, full_image=full_image, bins=bins,
-                                          resume=resume, write_out_data=write_out_data)
+        # Take images.
+        img_list, metadata = img_cam.take_exposures(exposure_time, num_exposures, file_mode=file_mode,
+                                                    raw_skip=raw_skip, path=img_path, filename=filename,
+                                                    extra_metadata=extra_metadata,
+                                                    return_metadata=True,
+                                                    resume=resume,
+                                                    **kwargs)
 
-        # Check background cache.
+        # Background images.
         bg_list = []
-        if bg_cache and write_out_data:
-            bg_cache_path = testbed_state.check_background_cache(exposure_time, num_exposures)
+        bg_metadata = None
+        if take_background_exposures:
+            if use_background_cache and not file_mode:
+                print("Warning: Turning off exposure cache feature because it is only supported with file_mode=True")
+                use_background_cache = False
+            if use_background_cache and raw_skip != 0:
+                print("Warning: Setting use_background_cache=False, cannot be used with raw_skip")
+                use_background_cache = False
 
-            # Cache hit - populate the bg_list with the path to
-            if bg_cache_path is not None:
-                print("Using cached background exposures: " + bg_cache_path)
-                bg_list = glob(os.path.join(bg_cache_path, "*.fits"))
+            if use_background_cache:
+                bg_cache_path = testbed_state.check_background_cache(exposure_time, num_exposures)
 
-                # Leave a small text file in background directory that points to real exposures.
-                os.makedirs(bg_path)
-                with open(os.path.join(bg_path, "cache_directory.txt"), mode='w') as cache_file:
-                    cache_file.write(bg_cache_path)
+                # Cache hit - populate the bg_list with the path to
+                if bg_cache_path is not None:
+                    print("Using cached background exposures: " + bg_cache_path)
+                    bg_list = glob(os.path.join(bg_cache_path, "*.fits"))
 
-        # Now move the beam dump in the path and take backgrounds.
-        if not bg_list:
-            move_beam_dump(BeamDumpPosition.in_beam)
-            bg_filename = 'bkg_{}'.format(filename)
-            bg_list = img_cam.take_exposures(exposure_time, num_exposures, bg_path, bg_filename,
-                                             fits_header_dict=fits_header_dict, center_x=center_x, center_y=center_y,
-                                             width=width, height=height, gain=gain, full_image=full_image, bins=bins,
-                                             resume=resume, write_out_data=write_out_data)
-            if bg_cache and write_out_data:
-                testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
+                    # Leave a small text file in background directory that points to real exposures.
+                    os.makedirs(bg_path)
+                    cache_file_path = os.path.join(bg_path, "cache_directory.txt")
 
+                    with open(cache_file_path, mode=b'w') as cache_file:
+                        cache_file.write(bg_cache_path)
+            if not bg_list:
+                # Move the beam dump in the path and take background exposures.
+                move_beam_dump(BeamDumpPosition.in_beam)
+                bg_filename = "bkg_" + filename if file_mode else None
+                bg_list, bg_metadata = img_cam.take_exposures(exposure_time, num_exposures,
+                                                              file_mode=file_mode,
+                                                              path=bg_path, filename=bg_filename, raw_skip=raw_skip,
+                                                              extra_metadata=extra_metadata,
+                                                              resume=resume,
+                                                              return_metadata=True,
+                                                              **kwargs)
+                if use_background_cache:
+                    testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
 
         # Run data pipeline
-        if pipeline:
-            if write_out_data:
-                data_pipeline.run_data_pipeline(raw_path, bg_list=bg_list)
+        final_output = None
+        satellite_spots = True if fpm_position == FpmPosition.coron else False
+        cal_metadata = None
+        if pipeline and file_mode and raw_skip == 0:
+
+            # Output is the path to the cal file.
+            final_output = data_pipeline.standard_file_pipeline(exp_path)
+
+        if pipeline and raw_skip > 0:
+
+            # Output is the path to the cal file.
+            final_output = data_pipeline.data_pipeline(img_list, bg_list, satellite_spots, output_path=exp_path,
+                                                       filename_root=filename, img_metadata=metadata,
+                                                       bg_metadata=bg_metadata)
+        elif pipeline and not file_mode:
+
+            # Output is the numpy data for the cal file, and our metadata updated with centroid information.
+            final_output, cal_metadata = data_pipeline.data_pipeline(img_list, bg_list, satellite_spots,
+                                                                     plot=pipeline_plot, img_metadata=metadata,
+                                                                     return_metadata=True)
+
+        # Export the DM Command itself as a fits file.
+        if file_mode:
+            testbed_state.dm1_command_object.export_fits(os.path.join(path, exposure_set_name))
+
+        # Store config.ini.
+        if file_mode:
+            util.save_ini(os.path.join(path, "config"))
+
+        # Simulator (file-based only).
+        if file_mode and simulator:
+            util.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
+
+        # When the pipeline is off, return image lists (data or path depending on filemode).
+        if not pipeline:
+            if take_background_exposures:
+                return img_list, bg_list
             else:
-                calibrated = data_pipeline.calibration_pipeline(img_list, bg_list,plot=plot)
-                return calibrated
+                return img_list
+
+        # Return the output of the pipeline and metadata (if requested).
+        if return_pipeline_metadata:
+            return final_output, cal_metadata
+        else:
+            return final_output
 
 
 def move_beam_dump(beam_dump_position):
     """A safe method to move the beam dump."""
-    with beam_dump() as bd:
-        if beam_dump_position is BeamDumpPosition.in_beam:
-            bd.move_to_position1()
-        elif beam_dump_position is BeamDumpPosition.out_of_beam:
-            bd.move_to_position2()
+    in_beam = True if beam_dump_position == BeamDumpPosition.in_beam else False
 
+    # Check the internal state of the beam dump before moving it.
+    if testbed_state.background is None or (testbed_state.background != in_beam):
+        with beam_dump() as bd:
+            if beam_dump_position is BeamDumpPosition.in_beam:
+                bd.move_to_position1()
+            elif beam_dump_position is BeamDumpPosition.out_of_beam:
+                bd.move_to_position2()
+
+
+def initialize_motors(fpm_position=None, lyot_stop_position=None):
+    with motor_controller() as mc:
+        if fpm_position:
+            mc.absolute_move("motor_FPM_Y", __get_fpm_position_from_ini(fpm_position))
+        if lyot_stop_position:
+            mc.absolute_move("motor_lyot_stop_x", __get_lyot_position_from_ini(lyot_stop_position))
 
 def move_fpm(fpm_position):
     """A safe method to move the focal plane mask."""
-    with motor_controller() as mc:
+    with motor_controller(initialize_to_nominal=False) as mc:
         motor_id = "motor_FPM_Y"
-        new_position = None
+        new_position = __get_fpm_position_from_ini(fpm_position)
+        mc.absolute_move(motor_id, new_position)
 
-        if fpm_position is FpmPosition.coron:
-            new_position = CONFIG_INI.getfloat(motor_id, "nominal")
-        elif fpm_position is FpmPosition.direct:
-            new_position = CONFIG_INI.getfloat(motor_id, "direct")
-
-        current_position = mc.get_position(motor_id)
-        if new_position != current_position:
-            mc.absolute_move(motor_id, new_position)
+def move_lyot_stop(lyot_stop_position):
+    """A safe method to move the lyot stop."""
+    with motor_controller(initialize_to_nominal=False) as mc:
+        motor_id = "motor_lyot_stop_x"
+        new_position = __get_lyot_position_from_ini(lyot_stop_position)
+        mc.absolute_move(motor_id, new_position)
 
 
-def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50):
+def __get_fpm_position_from_ini(fpm_position):
+    if fpm_position is FpmPosition.coron:
+        new_position = CONFIG_INI.getfloat("motor_FPM_Y", "default_coron")
+    else:
+        new_position = CONFIG_INI.getfloat("motor_FPM_Y", "direct")
+    return new_position
+
+def __get_lyot_position_from_ini(lyot_position):
+    if lyot_position is LyotStopPosition.in_beam:
+        new_position = CONFIG_INI.getfloat("motor_lyot_stop_x", "in_beam")
+    else:
+        new_position = CONFIG_INI.getfloat("motor_lyot_stop_x", "out_of_beam")
+    return new_position
+
+
+def __get_max_pixel_count(data, mask=None):
+    return np.max(data) if mask is None else np.max(data[np.nonzero(mask)])
+
+
+def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50, mask=None):
     """
     To be used when the dm shape is already applied. Uses the imaging camera to find the correct exposure time.
     :param start_exp_time: The initial time to begin testing with.
     :param min_counts: The minimum number of acceptable counts in the image.
     :param max_counts: The maximum number of acceptable counts in the image.
     :param num_tries: Safety mechanism to prevent infinite loops, max tries before giving up.
+    :param mask: A mask for which to search for the max pixel (ie dark zone).
     :return: The correct exposure time to use, or in the failure case, the start exposure time passed in.
     """
-
+    move_beam_dump(BeamDumpPosition.out_of_beam)
     with imaging_camera() as img_cam:
 
-        img_list = img_cam.take_exposures_data(start_exp_time, 1)
-        img_max = np.max(img_list[0])
+        img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
+        img_max = __get_max_pixel_count(img_list[0], mask=mask)
+
         upper_bound = start_exp_time
         lower_bound = quantity(0, start_exp_time.u)
         print("Starting exposure time calibration...")
@@ -212,16 +321,17 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50)
             print("\tReturning exposure time " + str(start_exp_time))
             return start_exp_time
 
+        best = start_exp_time
         while img_max < max_counts:
             upper_bound *= 2
-            img_list = img_cam.take_exposures_data(upper_bound, 1)
-            img_max = np.max(img_list[0])
+            img_list = img_cam.take_exposures(round(upper_bound, 3), 1, file_mode=False)
+            img_max = __get_max_pixel_count(img_list[0], mask=mask)
             print("\tExposure time " + str(upper_bound) + " yields " + str(img_max) + " counts ")
 
         for i in range(num_tries):
             test = .5 * (upper_bound + lower_bound)
-            img_list = img_cam.take_exposures_data(test, 1)
-            img_max = np.max(img_list[0])
+            img_list = img_cam.take_exposures(round(test, 3), 1, file_mode=False)
+            img_max = __get_max_pixel_count(img_list[0], mask=mask)
             print("\tExposure time " + str(test) + " yields " + str(img_max) + " counts ")
 
             if min_counts <= img_max <= max_counts:
@@ -234,19 +344,6 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50)
             elif img_max > max_counts:
                 print("\tNew upper bound " + str(test))
                 upper_bound = test
-
-
-class BeamDumpPosition(Enum):
-    """
-    Enum for the possible states of the Beam Dump.
-    """
-    in_beam = 1
-    out_of_beam = 2
-
-
-class FpmPosition(Enum):
-    """
-    Enum for the possible states for the focal plane mask.
-    """
-    coron = 1
-    direct = 2
+            best = test
+        # If we run out of tries, return the best so far.
+        return best
