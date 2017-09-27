@@ -23,7 +23,8 @@ class Calibration(Experiment):
                  dist_to_center=True,
                  clocking=True,
                  mtf=True,
-                 write_to_csv=True):
+                 write_to_csv=True,
+                 path=None):
 
         self.write_to_csv = write_to_csv
 
@@ -56,6 +57,11 @@ class Calibration(Experiment):
                 print('    {}\n'.format(step))
 
     def experiment(self):
+
+        # Wait to set the path until the experiment starts (rather than the constructor)
+        if self.outpath is None:
+            self.outpath = util.create_data_path(suffix="calibration")
+
         cal_dict = self.run_steps()
         filename = 'calibration.csv'
 

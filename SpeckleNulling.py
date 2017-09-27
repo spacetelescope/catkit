@@ -27,14 +27,16 @@ class SpeckleNulling(Experiment):
         self.num_iterations = num_iterations
         self.bias = bias
         self.flat_map = flat_map
-        if path is None:
-            path = util.create_data_path(suffix="speckle_nulling")
         self.path = path
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.initial_speckles = initial_speckles
 
     def experiment(self):
+
+        # Wait to set the path until the experiment starts (rather than the constructor)
+        if self.path is None:
+            self.path = util.create_data_path(suffix="speckle_nulling")
 
         current_command_object, file_name = sin_command(self.initial_speckles, bias=self.bias, flat_map=self.flat_map,
                                                         return_shortname=True)

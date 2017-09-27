@@ -31,8 +31,6 @@ class AutoFocus(Experiment):
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.position_list = position_list
-        if path is None:
-            path = util.create_data_path(suffix="focus")
         self.path = path
 
     def __collect_final_images(self):
@@ -41,6 +39,10 @@ class AutoFocus(Experiment):
             copyfile(img, os.path.join(self.path, os.path.basename(img)))
 
     def experiment(self):
+
+        # Wait to set the path until the experiment starts (rather than the constructor)
+        if self.path is None:
+            self.path = util.create_data_path(suffix="focus")
 
         with testbed.laser_source() as laser:
             direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")

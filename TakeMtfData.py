@@ -23,11 +23,14 @@ class TakeMtfData(Experiment):
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
-        if path is None:
-            path = util.create_data_path(suffix="mtf_calibration")
         self.path = path
 
     def experiment(self):
+
+        # Wait to set the path until the experiment starts (rather than the constructor).
+        if self.path is None:
+            self.path = util.create_data_path(suffix="mtf_calibration")
+
         # Create a flat dm command.
         flat_command_object, flat_file_name = flat_command(flat_map=self.flat_map,
                                                            bias=self.bias,
