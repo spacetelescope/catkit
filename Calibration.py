@@ -18,11 +18,11 @@ class Calibration(Experiment):
     def __init__(self,
                  cam_orientation=True,
                  chip_orientation=True,
-                 focus=False,
+                 focus=True,
                  centering=True,
                  dist_to_center=True,
                  clocking=True,
-                 mtf=False,
+                 mtf=True,
                  write_to_csv=True):
 
         self.write_to_csv = write_to_csv
