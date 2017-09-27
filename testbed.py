@@ -20,6 +20,8 @@ from ..hardware.newport.NewportMotorController import NewportMotorController
 from ..hicat_types import *
 from ..hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from ..hardware.zwo.ZwoCamera import ZwoCamera
+from ..interfaces.DummyLaserSource import DummyLaserSource
+
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -59,7 +61,8 @@ def beam_dump():
 
 
 def laser_source():
-    return ThorlabsMLCS1("thorlabs_source_mcls1")
+    #return ThorlabsMLCS1("thorlabs_source_mcls1")
+    return DummyLaserSource("dummy")
 
 
 def backup_power():
