@@ -11,7 +11,7 @@ from glob import glob
 from hicat.hardware.boston.flat_command import flat_command
 from hicat.hardware.boston.sin_command import sin_command
 from hicat.hardware import testbed
-from hicat.util import write_fits
+from hicat.util import write_fits, read_fits
 from hicat.hicat_types import *
 
 """
@@ -40,27 +40,33 @@ def __remove_crossterm_files(root_path, simulator=True):
     flat_path = glob(os.path.join(root_path, flat_dirname, "*_cal.fits"))[0]
 
     # Open files.
-    postive_sin_fits = fits.open(positive_sin_path)
-    negative_sin_fits = fits.open(negative_sin_path)
-    flat_fits = fits.open(flat_path)
+    positive_sin_header, postive_sin_fits  = read_fits(positive_sin_path)
+    negative_sin_fits = read_fits(negative_sin_path, return_header=False)
+    flat_fits = read_fits(flat_path, return_header=False)
 
     # Perform calculation  (postive + negative) / 2 - flat.
-    remove_crossterm(postive_sin_fits[0].data,
-                     negative_sin_fits[0].data,
-                     flat_fits[0].data,
+    remove_crossterm(postive_sin_fits,
+                     negative_sin_fits,
+                     flat_fits,
                      output_path=root_path,
-                     output_header=postive_sin_fits[0].header)
+                     output_header=positive_sin_header)
 
     if simulator:
         # Also apply to the simulated images.
         sim_positive_sin_path = glob(os.path.join(root_path, positive_sin_dirname, "simulated", "*.fits"))[0]
         sim_negative_sin_path = glob(os.path.join(root_path, negative_sin_dirname, "simulated", "*.fits"))[0]
         sim_flat_path = glob(os.path.join(root_path, flat_dirname, "simulated", "*.fits"))[0]
-        remove_crossterm(sim_positive_sin_path[0].data,
-                         sim_negative_sin_path[0].data,
-                         sim_flat_path[0].data,
+
+        # Open files.
+        postive_simulator_fits = read_fits(sim_positive_sin_path, return_header=False)
+        negative_simulator_fits = read_fits(sim_negative_sin_path, return_header=False)
+        flat_simulator_fits = read_fits(sim_flat_path, return_header=False)
+
+        remove_crossterm(postive_simulator_fits,
+                         negative_simulator_fits,
+                         flat_simulator_fits,
                          output_path=root_path,
-                         output_header=postive_sin_fits[0].header,
+                         output_header=positive_sin_header,
                          filename="sin_noxterm_simulated.fits")
 
 
