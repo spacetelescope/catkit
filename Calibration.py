@@ -12,6 +12,7 @@ from .. import calibration_take_data, calibration_util
 from ..hardware.boston.flat_command import flat_command
 from .. import util
 from ..hicat_types import *
+from ..config import CONFIG_INI
 
 
 class Calibration(Experiment):
@@ -49,7 +50,7 @@ class Calibration(Experiment):
 
         self.flat_shape = flat_command(bias=True)
         self.cal_dict = {}
-        self.outpath = util.create_data_path(suffix="calibration")
+        self.outpath = path
 
         print("Calibration steps to be completed: \n")
         for step in self.steps.keys():
@@ -60,7 +61,9 @@ class Calibration(Experiment):
 
         # Wait to set the path until the experiment starts (rather than the constructor)
         if self.outpath is None:
-            self.outpath = util.create_data_path(suffix="calibration")
+            local_data_path = CONFIG_INI.get("optics_lab", "local_data_path")
+            cal_data_path = os.path.join(local_data_path, "calibration")
+            self.outpath = util.create_data_path(initial_path=cal_data_path)
 
         cal_dict = self.run_steps()
         filename = 'calibration.csv'
