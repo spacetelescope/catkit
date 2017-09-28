@@ -8,6 +8,7 @@ from ...hardware.testbed_state import MetaDataEntry
 from hicat.interfaces.Camera import Camera
 from hicat.config import CONFIG_INI
 from hicat import units, quantity
+from ... import util
 from hicat.hardware import testbed_state
 from astropy.io import fits
 from time import sleep
@@ -331,13 +332,10 @@ class SbigCamera(Camera):
         r = requests.get(self.base_url + "ImagerData.bin", timeout=self.timeout)
         r.raise_for_status()
         image = np.reshape(np.frombuffer(r.content, np.uint16), (self.width//self.bins, self.height//self.bins))
-        # Apply flips to the image based on config.ini file
-        flip_x = CONFIG_INI.getboolean(self.config_id, 'flip_x')
-        flip_y = CONFIG_INI.getboolean(self.config_id, 'flip_y')
 
-        if flip_x:
-            image = np.flipud(image)
-        if flip_y:
-            image = np.fliplr(image)
+        # Apply rotation and flip to the image based on config.ini file.
+        theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
+        fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
+        image = util.rotate_and_flip_image(image, theta, fliplr)
 
         return image
