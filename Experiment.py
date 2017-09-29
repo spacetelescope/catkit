@@ -71,7 +71,8 @@ class Experiment(object):
             self.experiment()
         except KeyboardInterrupt:
             # Silently catch KeyboardInterrupt exception used to kill experiment.
-            pass
+            print("Child process: caught ctrl-c")
+            raise
 
     @staticmethod
     def __smart_sleep(interval, process):
