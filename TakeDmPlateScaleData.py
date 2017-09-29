@@ -15,6 +15,8 @@ from ..hicat_types import units, quantity, SinSpecification, FpmPosition
 
 
 class TakeDmPlateScaleData(Experiment):
+    name = "Take DM Plate Scale Data"
+
     def __init__(self,
                  path=None,
                  bias=True,

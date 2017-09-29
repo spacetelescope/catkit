@@ -16,6 +16,7 @@ import time
 
 class Experiment(object):
     __metaclass__ = ABCMeta
+    name = None
 
     interval = CONFIG_INI.getint("safety", "check_interval")
     safety_tests = [UpsSafetyTest(), HumidityTemperatureTest()]
@@ -70,8 +71,7 @@ class Experiment(object):
         try:
             self.experiment()
         except KeyboardInterrupt:
-            # Silently catch KeyboardInterrupt exception used to kill experiment.
-            print("Child process: caught ctrl-c")
+            print("Child process: caught ctrl-c, raising exception.")
             raise
 
     @staticmethod

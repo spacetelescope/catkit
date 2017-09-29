@@ -13,6 +13,8 @@ from ..config import CONFIG_INI
 
 
 class TakeMtfData(Experiment):
+    name = "Take MTF Data"
+
     def __init__(self,
                  bias=True,
                  flat_map=False,

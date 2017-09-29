@@ -16,6 +16,8 @@ from ..config import CONFIG_INI
 
 
 class Calibration(Experiment):
+    name = "Calibration"
+
     def __init__(self,
                  cam_orientation=True,
                  chip_orientation=True,

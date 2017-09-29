@@ -19,6 +19,8 @@ from ..config import CONFIG_INI
 
 
 class AutoFocus(Experiment):
+    name = "Auto Focus"
+
     def __init__(self,
                  bias=True,
                  flat_map=False,

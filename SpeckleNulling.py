@@ -16,6 +16,8 @@ from .. import util
 
 
 class SpeckleNulling(Experiment):
+    name = "Speckle Nulling"
+
     def __init__(self,
                  num_iterations=400,
                  bias=True,

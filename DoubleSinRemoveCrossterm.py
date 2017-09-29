@@ -15,6 +15,8 @@ from ..hicat_types import units, quantity, FpmPosition, SinSpecification
 
 
 class DoubleSinRemoveCrossterm(Experiment):
+    name = "Double Sin Remove Crossterm"
+
     def __init__(self,
                  path=None,
                  bias=True,
