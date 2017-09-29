@@ -32,14 +32,8 @@ namespace thorlabs_sensor_cs
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
-                Console.WriteLine();
-                Console.Write("Device {0:D}: ", cnt);
-                Console.WriteLine("{0:S} could not be open", resourceString);
+                Console.WriteLine(e.Message);               
                 Console.WriteLine("Connect the TSP01 device(s) and try again");
-                Console.WriteLine();
-                Console.WriteLine("Press any Key to finish");
-                Console.ReadKey();
                 return;
             }
         }
