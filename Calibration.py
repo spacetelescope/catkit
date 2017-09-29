@@ -54,12 +54,11 @@ class Calibration(Experiment):
         self.cal_dict = {}
         self.outpath = path
 
+    def experiment(self):
         print("Calibration steps to be completed: \n")
         for step in self.steps.keys():
             if self.steps[step][0]['process']:
                 print('    {}\n'.format(step))
-
-    def experiment(self):
 
         # Wait to set the path until the experiment starts (rather than the constructor)
         if self.outpath is None:
