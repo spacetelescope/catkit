@@ -28,7 +28,8 @@ class Calibration(Experiment):
                  clocking=True,
                  mtf=True,
                  write_to_csv=True,
-                 path=None):
+                 path=None,
+                 plot=True):
 
         self.write_to_csv = write_to_csv
 
@@ -54,6 +55,7 @@ class Calibration(Experiment):
         self.flat_shape = flat_command(bias=True)
         self.cal_dict = {}
         self.outpath = path
+        self.plot = plot
 
     def experiment(self):
         print("Calibration steps to be completed: \n")
@@ -104,7 +106,7 @@ class Calibration(Experiment):
         calibration_util.collect_final_images(cam_outpath, "*sin_noxterm.fits")
 
     def process_chip_orientation(self):
-        data, subarray_x, subarray_y = calibration_take_data.recenter_subarray(outpath=None, plot=True)
+        data, subarray_x, subarray_y = calibration_take_data.recenter_subarray(outpath=None, plot=self.plot)
 
     def process_subarray_centering(self):
         subarray_outpath = os.path.join(self.outpath, 'subarray')
