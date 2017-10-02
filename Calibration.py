@@ -7,6 +7,7 @@ from collections import OrderedDict
 from builtins import *
 import os
 
+from .. import wolfram_wrappers
 from .Experiment import Experiment
 from .. import calibration_take_data, calibration_util
 from ..hardware.boston.flat_command import flat_command
@@ -92,7 +93,7 @@ class Calibration(Experiment):
         focus_outpath = os.path.join(self.outpath, 'focus')
         focus_data_path = calibration_take_data.take_focus_data(outpath=focus_outpath)
         calibration_util.collect_final_images(focus_outpath)
-        output = calibration_util.run_auto_focus(focus_data_path)
+        output = wolfram_wrappers.run_auto_focus(focus_data_path)
 
         if self.write_to_csv:
             self.update_cal_dict(["best focus"], [output])
@@ -137,7 +138,7 @@ class Calibration(Experiment):
 
     def process_mtf(self):
         mtf_data_path = calibration_take_data.take_mtf_data(self.outpath)
-        output = calibration_util.run_mtf(mtf_data_path)
+        output = wolfram_wrappers.run_mtf(mtf_data_path)
         ps_wo_focus, ps_w_focus, focus = output.split(",")
 
         if self.write_to_csv:
