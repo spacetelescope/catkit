@@ -5,11 +5,11 @@ from __future__ import (absolute_import, division,
 from builtins import *
 
 from ...hardware.testbed_state import MetaDataEntry
-from hicat.interfaces.Camera import Camera
-from hicat.config import CONFIG_INI
-from hicat import units, quantity
+from ...interfaces.Camera import Camera
+from ...config import CONFIG_INI
+from ...hicat_types import units, quantity
 from ... import util
-from hicat.hardware import testbed_state
+from ...hardware import testbed_state
 from astropy.io import fits
 from time import sleep
 import numpy as np
@@ -17,22 +17,22 @@ import os
 import requests
 import sys
 
+
 # implementation of a camera to run the SBIG STX-16803 Pupil Cam and KAF-1603ME/STT-1603M small cam
 
 class SbigCamera(Camera):
+    FRAME_TYPE_DARK = 0
+    FRAME_TYPE_LIGHT = 1
+    FRAME_TYPE_BIAS = 2
+    FRAME_TYPE_FLAT_FIELD = 3
 
-    FRAME_TYPE_DARK=0
-    FRAME_TYPE_LIGHT=1
-    FRAME_TYPE_BIAS=2
-    FRAME_TYPE_FLAT_FIELD=3
+    IMAGER_STATE_IDLE = 0
+    IMAGER_STATE_EXPOSING = 2
+    IMAGER_STATE_READING_OUT = 3
+    IMAGER_STATE_ERROR = 5
 
-    IMAGER_STATE_IDLE=0
-    IMAGER_STATE_EXPOSING=2
-    IMAGER_STATE_READING_OUT=3
-    IMAGER_STATE_ERROR=5
-
-    NO_IMAGE_AVAILABLE=0
-    IMAGE_AVAILABLE=1
+    NO_IMAGE_AVAILABLE = 0
+    IMAGE_AVAILABLE = 1
 
     def initialize(self, *args, **kwargs):
         """Loads the SBIG config information and verifies that the camera is idle.
@@ -52,14 +52,12 @@ class SbigCamera(Camera):
 
         self.imager_status = imager_status
 
-
-
     def close(self):
         # check status and abort any imaging in progress
         imager_status = self.__check_imager_state()
         if imager_status > self.IMAGER_STATE_IDLE:
             # work in progress, abort the exposure
-            sleep(self.min_delay) # limit the rate at which requests go to the camera
+            sleep(self.min_delay)  # limit the rate at which requests go to the camera
             r = requests.get(self.base_url + "ImagerAbortExposure.cgi")
             # no data is returned, but an http error indicates if the abort failed
             r.raise_for_status()
@@ -216,7 +214,8 @@ class SbigCamera(Camera):
         self.height = height if height is not None else CONFIG_INI.getint(self.config_id, 'height')
         self.full_image = full_image if full_image is not None else CONFIG_INI.getboolean(self.config_id, 'full_image')
         self.bins = bins if bins is not None else CONFIG_INI.getint(self.config_id, 'bins')
-        self.exposure_time = exposure_time if exposure_time is not None else CONFIG_INI.getfloat(self.config_id, 'exposure_time')
+        self.exposure_time = exposure_time if exposure_time is not None else CONFIG_INI.getfloat(self.config_id,
+                                                                                                 'exposure_time')
 
         # Store the camera's detector shape.
         detector_max_x = CONFIG_INI.getint(self.config_id, 'detector_width')
@@ -225,8 +224,8 @@ class SbigCamera(Camera):
         if self.full_image:
             print("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
             fi_params = {'StartX': '0', 'StartY': '0',
-                     'NumX': str(detector_max_x), 'NumY': str(detector_max_y),
-                     'CoolerState': str(self.cooler_state)}
+                         'NumX': str(detector_max_x), 'NumY': str(detector_max_y),
+                         'CoolerState': str(self.cooler_state)}
             r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=fi_params, timeout=self.timeout)
             r.raise_for_status()
             return
@@ -277,11 +276,10 @@ class SbigCamera(Camera):
         # Set Region of Interest.
         if not full_image:
             roi_params = {'StartX': str(derived_start_x), 'StartY': str(derived_start_y),
-                         'NumX': str(self.width), 'NumY': str(self.height),
-                         'CoolerState': str(self.cooler_state)}
+                          'NumX': str(self.width), 'NumY': str(self.height),
+                          'CoolerState': str(self.cooler_state)}
             r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=roi_params, timeout=self.timeout)
             r.raise_for_status()
-
 
     def __check_imager_state(self):
         """Utility function to get the current state of the camera.
@@ -306,7 +304,7 @@ class SbigCamera(Camera):
 
         # start an exposure.
         params = {'Duration': exposure_time.to(units.second).magnitude,
-                               'FrameType': self.FRAME_TYPE_LIGHT}
+                  'FrameType': self.FRAME_TYPE_LIGHT}
         r = requests.get(self.base_url + "ImagerStartExposure.cgi",
                          params=params,
                          timeout=self.timeout)
@@ -331,7 +329,7 @@ class SbigCamera(Camera):
         # get the image
         r = requests.get(self.base_url + "ImagerData.bin", timeout=self.timeout)
         r.raise_for_status()
-        image = np.reshape(np.frombuffer(r.content, np.uint16), (self.width//self.bins, self.height//self.bins))
+        image = np.reshape(np.frombuffer(r.content, np.uint16), (self.width // self.bins, self.height // self.bins))
 
         # Apply rotation and flip to the image based on config.ini file.
         theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
