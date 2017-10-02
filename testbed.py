@@ -20,6 +20,7 @@ from ..hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from ..hardware.zwo.ZwoCamera import ZwoCamera
 from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity
 from ..interfaces.DummyLaserSource import DummyLaserSource
+from ..hardware.sbig.SbigCamera import SbigCamera
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -32,6 +33,14 @@ def imaging_camera():
     :return: An instance of the Camera.py interface.
     """
     return ZwoCamera("zwo_ASI1600MM")
+
+def pupil_camera():
+    """
+        Proper way to control the pupil camera. Using this function keeps the scripts future-proof.  Use the "with"
+        keyword to take advantage of the built-in context manager for safely closing the camera.
+        :return: An instance of the Camera.py interface.
+        """
+    return SbigCamera("sbig_16803_1")
 
 
 def dm_controller():
