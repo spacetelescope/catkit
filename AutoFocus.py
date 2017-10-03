@@ -54,16 +54,19 @@ class AutoFocus(Experiment):
                 dm_command_object = flat_command(bias=True)
                 dm.apply_shape(dm_command_object, 1)
 
-                for position in self.position_list:
-                    with testbed.motor_controller() as mc:
+                for i, position in enumerate(self.position_list):
+                    init_motors = True if i == 0 else False
+                    auto_exposure_time = True if i == 0 else False
+                    with testbed.motor_controller(initialize_to_nominal=init_motors) as mc:
                         mc.absolute_move("motor_img_camera", position)
                     filename = "focus_" + str(int(position * 1000))
                     metadata = MetaDataEntry("Camera Position", "CAM_POS", position * 1000, "Position * 1000")
                     testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, FpmPosition.direct, path=self.path,
-                                              filename=filename,
+                                              filename=filename, auto_exposure_time=auto_exposure_time,
                                               exposure_set_name="motor_" + str(int(position * 1000)),
                                               extra_metadata=metadata,
-                                              raw_skip=0, use_background_cache=False)
+                                              raw_skip=0, use_background_cache=False,
+                                              initialize_motors=False)
 
         self.__collect_final_images()
         print(wolfram_wrappers.run_auto_focus(self.path))
