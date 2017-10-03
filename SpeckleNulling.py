@@ -58,7 +58,7 @@ class SpeckleNulling(Experiment):
                     # Take coronographic data, with backgrounds.
                     iteration_path = os.path.join(self.path, "iteration" + str(i))
                     testbed.run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron,
-                                              path=iteration_path,
+                                              path=iteration_path, auto_exposure_time=False,
                                               exposure_set_name="coron", filename="itr" + str(i) + "_" + file_name)
 
                     # Run sensing.
