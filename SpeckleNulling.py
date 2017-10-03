@@ -79,7 +79,7 @@ class SpeckleNulling(Experiment):
 
                         phase_path = os.path.join(iteration_path, "phase" + str(phi))
                         testbed.run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron,
-                                                  path=phase_path,
+                                                  path=phase_path, auto_exposure_time=False,
                                                   exposure_set_name="coron", filename="itr" + str(i) + "_" + name,
                                                   simulator=False)
 
@@ -101,7 +101,7 @@ class SpeckleNulling(Experiment):
 
                         amplitude_path = os.path.join(iteration_path, "amplitude" + str(ampl_ptv))
                         testbed.run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron,
-                                                  path=amplitude_path,
+                                                  path=amplitude_path, auto_exposure_time=False,
                                                   exposure_set_name="coron", filename="itr" + str(i) + "_" + name,
                                                   simulator=False)
 
@@ -113,3 +113,9 @@ class SpeckleNulling(Experiment):
                     phase_correction_command = sin_command(SinSpecification(angle_deg_new, ncycles_new, new_amplitude,
                                                                             new_phase))
                     current_command_object.data += phase_correction_command.data
+
+                # Take a final image with auto exposure.
+                testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, FpmPosition.coron,
+                                          path=self.path,
+                                          exposure_set_name="", filename="final_dark_zone.fits",
+                                          simulator=False)
