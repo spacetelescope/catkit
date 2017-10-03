@@ -30,41 +30,54 @@ class Experiment(object):
         This function starts the experiment on a separate process and monitors power and humidity while active.
         Do not override.
         """
-        print("Running safety tests...")
-        # Check tests before starting experiment.
-        for safety_test in self.safety_tests:
-            if not safety_test.check():
-                print(safety_test.name + " reports unsafe conditions. Aborting experiment...")
-                raise SafetyException()
-        print("Safety tests passed!")
-        print("Creating separate process to run experiment...")
-        # Spin off and start the process to run the experiment.
-        experiment_process = Process(target=self.run_experiment)
-        experiment_process.start()
-        print("Experiment process started")
-
-        while experiment_process.is_alive():
-
+        experiment_process = None
+        try:
+            print("Running safety tests...")
+            # Check tests before starting experiment.
             for safety_test in self.safety_tests:
+                if not safety_test.check():
+                    print(safety_test.name + " reports unsafe conditions. Aborting experiment...")
+                    raise SafetyException()
+            print("Safety tests passed!")
+            print("Creating separate process to run experiment...")
+            # Spin off and start the process to run the experiment.
+            experiment_process = Process(target=self.run_experiment)
+            experiment_process.start()
+            print(self.name + " process started")
 
-                if safety_test.check():
-                    # Check passed, clear any warning that might be set and proceed to sleep until next iteration.
-                    safety_test.warning = False
+            while experiment_process.is_alive():
 
-                elif safety_test.warning:
-                        # Shut down the experiment (but allow context managers to exit properly).
-                        util.soft_kill(experiment_process)
-                        raise SafetyException()
+                for safety_test in self.safety_tests:
 
-                else:
-                    print("Warning issued for " + safety_test.name +
-                          ". Experiment will be softly killed if safety check fails again.")
-                    safety_test.warning=True
+                    if safety_test.check():
+                        # Check passed, clear any warning that might be set and proceed to sleep until next iteration.
+                        safety_test.warning = False
 
-            # Sleep until it is time to check safety again.
-            if not self.__smart_sleep(self.interval, experiment_process):
-                # Experiment ended before the next check interval, exit the while loop.
-                break
+                    elif safety_test.warning:
+                            # Shut down the experiment (but allow context managers to exit properly).
+                            util.soft_kill(experiment_process)
+                            raise SafetyException()
+
+                    else:
+                        print("Warning issued for " + safety_test.name +
+                              ". Experiment will be softly killed if safety check fails again.")
+                        safety_test.warning = True
+
+                # Sleep until it is time to check safety again.
+                if not self.__smart_sleep(self.interval, experiment_process):
+                    # Experiment ended before the next check interval, exit the while loop.
+                    break
+        except KeyboardInterrupt:
+            print("Parent process: caught ctrl-c, raising exception.")
+            raise
+        except SafetyException:
+            raise
+        except:
+            print("Monitoring process caught an unexpected problem.")
+            # Shut down the experiment (but allow context managers to exit properly).
+            if experiment_process is not None:
+                util.soft_kill(experiment_process)
+            raise SafetyException()
 
     def run_experiment(self):
         """Wrapper for experiment to catch the softkill function's KeyboardInterrupt signal more gracefully."""
