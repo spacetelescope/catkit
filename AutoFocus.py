@@ -66,7 +66,7 @@ class AutoFocus(Experiment):
                                               exposure_set_name="motor_" + str(int(position * 1000)),
                                               extra_metadata=metadata,
                                               raw_skip=0, use_background_cache=False,
-                                              initialize_motors=False)
+                                              init_motors=False)
 
         self.__collect_final_images()
         print(wolfram_wrappers.run_auto_focus(self.path))
