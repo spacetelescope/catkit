@@ -25,7 +25,8 @@ class SpeckleNulling(Experiment):
                  path=None,
                  exposure_time=quantity(1, units.millisecond),
                  num_exposures=2,
-                 initial_speckles=SinSpecification(40, 12, quantity(40, units.nanometer), 90)):
+                 initial_speckles=SinSpecification(40, 12, quantity(40, units.nanometer), 90),
+                 suffix=None):
         self.num_iterations = num_iterations
         self.bias = bias
         self.flat_map = flat_map
@@ -33,12 +34,16 @@ class SpeckleNulling(Experiment):
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.initial_speckles = initial_speckles
+        self.suffix = suffix
 
     def experiment(self):
 
         # Wait to set the path until the experiment starts (rather than the constructor)
         if self.path is None:
-            self.path = util.create_data_path(suffix="speckle_nulling")
+            suffix = "speckle_nulling"
+            if self.suffix is not None:
+                suffix = suffix + "_" + self.suffix
+            self.path = util.create_data_path(suffix=suffix)
 
         current_command_object, file_name = sin_command(self.initial_speckles, bias=self.bias, flat_map=self.flat_map,
                                                         return_shortname=True)
@@ -54,8 +59,14 @@ class SpeckleNulling(Experiment):
                 for i in range(0, self.num_iterations):
                     dm.apply_shape(current_command_object, 1)
 
-                    # Tests the dark zone intensity and updates exposure time if needed, otherwise just returns itself.
-                    coron_exp_time = speckle_nulling.test_dark_zone_intensity(coron_exp_time, 2)
+                    if i == 0:
+                        # Allow auto exposure to run the first time only.
+                        min_counts = CONFIG_INI.getint("zwo_ASI1600MM", "min_counts")
+                        max_counts = CONFIG_INI.getint("zwo_ASI1600MM", "max_counts")
+                        coron_exp_time = testbed.auto_exp_time_no_shape(self.exposure_time, min_counts, max_counts)
+                    else:
+                        # Tests the dark zone intensity and updates exposure time if needed, or just returns itself.
+                        coron_exp_time = speckle_nulling.test_dark_zone_intensity(coron_exp_time, 2)
 
                     # Take coronographic data, with backgrounds.
                     iteration_path = os.path.join(self.path, "iteration" + str(i))
@@ -87,7 +98,7 @@ class SpeckleNulling(Experiment):
                     new_phase = speckle_nulling.speckle_control_phase(iteration_path)
 
                     # Generate a list of sin_commands a range of amplitudes for the best phase, and take data for each.
-                    amplitude_coeff_list = np.arange(0.1, 1.5, 0.2)
+                    amplitude_coeff_list = np.arange(0.1, 3.2, 0.3)
                     for ampl_ptv in amplitude_coeff_list:
                         # Add the current dm command into a new sin_command.
                         peak_to_valley_test = peak_to_valley_new * ampl_ptv
