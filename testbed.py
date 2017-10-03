@@ -85,6 +85,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                       simulator=True,
                       extra_metadata=None,
                       resume=False,
+                      initialize_motors=True,
                       **kwargs):
     """
     Standard function for taking imaging data with HiCAT.  For writing fits files (file_mode=True), 'path',
@@ -124,7 +125,11 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     """
 
     # Initialize all motors and move Focal Plane Mask and Lyot Stop (will skip if already in correct place).
-    initialize_motors(fpm_position=fpm_position, lyot_stop_position=lyot_stop_position)
+    if initialize_motors:
+        initialize_motors(fpm_position=fpm_position, lyot_stop_position=lyot_stop_position)
+    else:
+        move_fpm(fpm_position)
+        move_lyot_stop(lyot_stop_position)
 
     # Auto Exposure.
     if auto_exposure_time:
