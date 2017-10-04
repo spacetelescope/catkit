@@ -19,7 +19,7 @@ class SpeckleNulling(Experiment):
     name = "Speckle Nulling"
 
     def __init__(self,
-                 num_iterations=10,
+                 num_iterations=200,
                  bias=True,
                  flat_map=False,
                  path=None,
