@@ -215,6 +215,22 @@ class ZwoCamera(Camera):
         else:
             return img_list
 
+    def flash_id(self, new_id):
+        """
+        Flashes the camera memory to append a string at the end of the camera name.
+        :param usb_index: This will be zero unless there is another camera with the same name plugged in.
+        :param new_id: Ascii value of the string you want to append.
+                       Passing the value 49 will append (1) to the name.
+                       Passing the value 50 will append (2) to the name.
+        """
+        camera_info_before = self.camera.get_camera_property()
+        print("Before Flash:")
+        print(camera_info_before["Name"])
+        self.camera.set_id(0, new_id)
+        print("After Flash:")
+        camera_info_after = self.camera.get_camera_property()
+        print(camera_info_after["Name"])
+
     def __setup_control_values(self, exposure_time, subarray_x=None, subarray_y=None, width=None, height=None,
                                gain=None, full_image=None, bins=None):
         """Applies control values found in the config.ini unless overrides are passed in, and does error checking."""
