@@ -32,7 +32,7 @@ def imaging_camera():
     keyword to take advantage of the built-in context manager for safely closing the camera.
     :return: An instance of the Camera.py interface.
     """
-    return ZwoCamera("zwo_ASI1600MM")
+    return ZwoCamera("zwo_ASI178MM_2")
 
 def pupil_camera():
     """
@@ -133,8 +133,9 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
     # Auto Exposure.
     if auto_exposure_time:
-        min_counts = CONFIG_INI.getint("zwo_ASI1600MM", "min_counts")
-        max_counts = CONFIG_INI.getint("zwo_ASI1600MM", "max_counts")
+        camera_name = CONFIG_INI.get("testbed", "imaging_camera")
+        min_counts = CONFIG_INI.getint(camera_name, "min_counts")
+        max_counts = CONFIG_INI.getint(camera_name, "max_counts")
         exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
 
     # Fits directories and filenames.
