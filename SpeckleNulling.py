@@ -61,8 +61,9 @@ class SpeckleNulling(Experiment):
 
                     if i == 0:
                         # Allow auto exposure to run the first time only.
-                        min_counts = CONFIG_INI.getint("zwo_ASI1600MM", "min_counts")
-                        max_counts = CONFIG_INI.getint("zwo_ASI1600MM", "max_counts")
+                        camera_name = CONFIG_INI.get("testbed", "imaging_camera")
+                        min_counts = CONFIG_INI.getint(camera_name, "min_counts")
+                        max_counts = CONFIG_INI.getint(camera_name, "max_counts")
                         coron_exp_time = testbed.auto_exp_time_no_shape(self.exposure_time, min_counts, max_counts)
                     else:
                         # Tests the dark zone intensity and updates exposure time if needed, or just returns itself.

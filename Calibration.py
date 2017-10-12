@@ -131,7 +131,7 @@ class Calibration(Experiment):
         data = calibration_take_data.take_cal_data(FpmPosition.coron, self.flat_shape, 1,
                                                    quantity(1, units.millisecond), num_exposures=5)
 
-        mean_angle_hori, mean_angle_vert, mean_angle = calibration_util.find_clocking_angles(data)
+        mean_angle_hori, mean_angle_vert, mean_angle = calibration_util.find_clocking_angles(data[0])
         # mean_err_hori, mean_err_vert, err_angle = find_clocking_angles(sim)
 
         if self.write_to_csv:
