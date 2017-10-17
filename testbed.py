@@ -32,7 +32,17 @@ def imaging_camera():
     keyword to take advantage of the built-in context manager for safely closing the camera.
     :return: An instance of the Camera.py interface.
     """
-    return ZwoCamera("zwo_ASI178MM_2")
+    camera_name = CONFIG_INI.get("testbed", "imaging_camera")
+    return ZwoCamera(camera_name)
+
+def phase_retrieval_camera():
+    """
+    Proper way to control the imaging camera. Using this function keeps the scripts future-proof.  Use the "with"
+    keyword to take advantage of the built-in context manager for safely closing the camera.
+    :return: An instance of the Camera.py interface.
+    """
+    camera_name = CONFIG_INI.get("testbed", "phase_retrieval_camera")
+    return ZwoCamera(camera_name)
 
 def pupil_camera():
     """
@@ -40,7 +50,8 @@ def pupil_camera():
         keyword to take advantage of the built-in context manager for safely closing the camera.
         :return: An instance of the Camera.py interface.
         """
-    return SbigCamera("sbig_16803_1")
+    camera_name = CONFIG_INI.get("testbed", "pupil_camera")
+    return ZwoCamera(camera_name)
 
 
 def dm_controller():
