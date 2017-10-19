@@ -4,20 +4,12 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from shutil import copyfile
-
-import os
-from glob import glob
 import numpy as np
 
 from .Experiment import Experiment
 from .modules import auto_focus
 from .. import wolfram_wrappers
-from ..hardware.boston.flat_command import flat_command
-from .. import util
-from ..hardware import testbed
 from ..hicat_types import *
-from ..config import CONFIG_INI
 
 
 class AutoFocus(Experiment):
