@@ -1,16 +1,17 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-# noinspection PyUnresolvedReferences
-from builtins import *
-import numpy as np
 import os
 
+import numpy as np
+# noinspection PyUnresolvedReferences
+from builtins import *
+
+from .modules import double_sine
 from .Experiment import Experiment
-from . import double_sine
-from ..hardware import testbed
 from .. import util
 from ..config import CONFIG_INI
+from ..hardware import testbed
 from ..hicat_types import units, quantity, SinSpecification, FpmPosition
 
 

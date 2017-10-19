@@ -9,6 +9,7 @@ import os
 
 from .. import wolfram_wrappers
 from .Experiment import Experiment
+from .modules import auto_focus
 from .. import calibration_take_data, calibration_util
 from ..hardware.boston.flat_command import flat_command
 from .. import util
@@ -93,7 +94,7 @@ class Calibration(Experiment):
 
     def process_focus(self):
         focus_outpath = os.path.join(self.outpath, 'focus')
-        focus_data_path = calibration_take_data.take_focus_data(outpath=focus_outpath)
+        focus_data_path = auto_focus.take_auto_focus_data(focus_outpath)
         calibration_util.collect_final_images(focus_outpath)
         output = wolfram_wrappers.run_auto_focus(focus_data_path)
 
