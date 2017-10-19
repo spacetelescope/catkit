@@ -17,7 +17,7 @@ from ..hardware.SnmpUps import SnmpUps
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
 from ..hardware.zwo.ZwoCamera import ZwoCamera
-from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity, CameraType
+from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity
 from ..interfaces.DummyLaserSource import DummyLaserSource
 
 
@@ -89,27 +89,18 @@ def backup_power():
 
 
 def get_camera(camera_type):
-    if camera_type == CameraType.imaging:
+    if camera_type == "imaging_camera":
         return imaging_camera()
-    elif camera_type == CameraType.phase_retrieval:
+    elif camera_type == "phase_retrieval_camera":
         return phase_retrieval_camera()
-    elif camera_type == CameraType.pupil:
+    elif camera_type == "pupil_camera":
         return pupil_camera()
 
 
-def get_camera_ini_name(camera_type):
-    if camera_type == CameraType.imaging:
-        return CONFIG_INI.get("testbed", "imaging_camera")
-    elif camera_type == CameraType.phase_retrieval:
-        return CONFIG_INI.get("testbed", "phase_retrieval_camera")
-    elif camera_type == CameraType.pupil:
-        return CONFIG_INI.get("testbed", "pupil_camera")
-
-
 def get_camera_motor_name(camera_type):
-    if camera_type == CameraType.imaging:
+    if camera_type == "imaging_camera":
         return "motor_img_camera"
-    elif camera_type == CameraType.phase_retrieval:
+    elif camera_type == "phase_retrieval_camera":
         return "motor_phase_camera"
 
 
@@ -123,7 +114,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                       extra_metadata=None,
                       resume=False,
                       init_motors=True,
-                      camera_type=CameraType.imaging,
+                      camera_type="imaging_camera",
                       **kwargs):
     """
     Standard function for taking imaging data with HiCAT.  For writing fits files (file_mode=True), 'path',
@@ -159,7 +150,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :param extra_metadata: List or single MetaDataEntry.
     :param resume: Very primitive way to try and resume an experiment. Skips exposures that already exist on disk.
     :param init_motors: (Boolean) True will initially move all motors to nominal, False will not.
-    :param camera_type: (CameraType) Tells us which camera to use (imaging, phase or pupil).
+    :param camera_type: (String) Tells us which camera to use, valid values are under [testbed] in the ini.
     :param kwargs: Extra keywords to be passed to the camera's take_exposures function.
     :return: Defaults returns the path of the final calibrated image provided by the data pipeline.
     """
@@ -173,10 +164,10 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
     # Auto Exposure.
     if auto_exposure_time:
-        camera_name = get_camera_ini_name(camera_type)
+        camera_name = CONFIG_INI.get("testbed", camera_type)
         min_counts = CONFIG_INI.getint(camera_name, "min_counts")
         max_counts = CONFIG_INI.getint(camera_name, "max_counts")
-        exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
+        exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts, camera_type=camera_type)
 
     # Fits directories and filenames.
     exp_path, raw_path, img_path, bg_path = None, None, None, None
@@ -345,7 +336,8 @@ def __get_max_pixel_count(data, mask=None):
     return np.max(data) if mask is None else np.max(data[np.nonzero(mask)])
 
 
-def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50, mask=None):
+def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50, mask=None,
+                           camera_type="imaging_camera"):
     """
     To be used when the dm shape is already applied. Uses the imaging camera to find the correct exposure time.
     :param start_exp_time: The initial time to begin testing with.
@@ -356,7 +348,7 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
     :return: The correct exposure time to use, or in the failure case, the start exposure time passed in.
     """
     move_beam_dump(BeamDumpPosition.out_of_beam)
-    with imaging_camera() as img_cam:
+    with get_camera(camera_type) as img_cam:
 
         img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
         img_max = __get_max_pixel_count(img_list[0], mask=mask)
