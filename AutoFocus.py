@@ -1,10 +1,11 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-from shutil import copyfile
-
 # noinspection PyUnresolvedReferences
 from builtins import *
+
+from shutil import copyfile
+
 import os
 from glob import glob
 import numpy as np
@@ -27,13 +28,15 @@ class AutoFocus(Experiment):
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=500,
                  position_list=np.arange(11.0, 13.7, step=.1),
-                 path=None):
+                 path=None,
+                 camera_type=CameraType.imaging):
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.position_list = position_list
         self.path = path
+        self.camera_type = camera_type
 
     def __collect_final_images(self):
         results = [y for x in os.walk(self.path) for y in glob(os.path.join(x[0], "*_cal.fits"))]
@@ -51,14 +54,14 @@ class AutoFocus(Experiment):
             laser.set_current(direct_laser_current)
 
             with testbed.dm_controller() as dm:
-                dm_command_object = flat_command(bias=True)
+                dm_command_object = flat_command(bias=self.bias, flat_map=self.flat_map)
                 dm.apply_shape(dm_command_object, 1)
 
                 for i, position in enumerate(self.position_list):
                     init_motors = True if i == 0 else False
                     auto_exposure_time = True if i == 0 else False
                     with testbed.motor_controller(initialize_to_nominal=init_motors) as mc:
-                        mc.absolute_move("motor_img_camera", position)
+                        mc.absolute_move(testbed.get_camera_motor_name(self.camera_type), position)
                     filename = "focus_" + str(int(position * 1000))
                     metadata = MetaDataEntry("Camera Position", "CAM_POS", position * 1000, "Position * 1000")
                     testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, FpmPosition.direct, path=self.path,
@@ -66,7 +69,8 @@ class AutoFocus(Experiment):
                                               exposure_set_name="motor_" + str(int(position * 1000)),
                                               extra_metadata=metadata,
                                               raw_skip=0, use_background_cache=False,
-                                              init_motors=False)
+                                              init_motors=False,
+                                              camera_type=self.camera_type)
 
         self.__collect_final_images()
         print(wolfram_wrappers.run_auto_focus(self.path))
