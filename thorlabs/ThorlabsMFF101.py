@@ -43,12 +43,14 @@ class ThorlabsMFF101(FlipMotor):
         up_command = b"\x6A\x04\x00\x01\x21\x01"
         self.motor.write(up_command)
         testbed_state.background = True
+        time.sleep(1)
 
     def move_to_position2(self):
         """Implements a move to "down" position """
         down_command = b"\x6A\x04\x00\x02\x21\x01"
         self.motor.write(down_command)
         testbed_state.background = False
+        time.sleep(1)
 
     def blink_led(self):
         self.motor.write(b"\x23\x02\x00\x00\x21\x01")
