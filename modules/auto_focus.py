@@ -37,7 +37,8 @@ def take_auto_focus_data(bias,
 
             for i, position in enumerate(position_list):
                 init_motors = True if i == 0 else False
-                auto_exposure_time = True if i == 0 else False
+                #auto_exposure_time = True if i == 0 else False
+                auto_exposure_time = True
                 with testbed.motor_controller(initialize_to_nominal=init_motors) as mc:
                     mc.absolute_move(testbed.get_camera_motor_name(camera_type), position)
                 filename = "focus_" + str(int(position * 1000))
@@ -47,6 +48,8 @@ def take_auto_focus_data(bias,
                                           exposure_set_name="motor_" + str(int(position * 1000)),
                                           extra_metadata=metadata,
                                           raw_skip=0, use_background_cache=False,
+                                          take_background_exposures=False,
+                                          pipeline=False,
                                           init_motors=False,
                                           camera_type=camera_type)
     return path
