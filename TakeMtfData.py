@@ -10,6 +10,7 @@ from ..hardware import testbed
 from ..hicat_types import units, quantity, FpmPosition
 from .. import util
 from ..config import CONFIG_INI
+from ..wolfram_wrappers import run_mtf
 
 
 class TakeMtfData(Experiment):
@@ -19,16 +20,17 @@ class TakeMtfData(Experiment):
                  bias=True,
                  flat_map=False,
                  exposure_time=quantity(250, units.microsecond),
-                 num_exposures=500,
-                 path=None):
+                 num_exposures=100,
+                 path=None,
+                 camera_type="imaging_camera"):
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.path = path
+        self.camera_type = camera_type
 
     def experiment(self):
-
         # Wait to set the path until the experiment starts (rather than the constructor).
         if self.path is None:
             self.path = util.create_data_path(suffix="mtf_calibration")
@@ -47,5 +49,7 @@ class TakeMtfData(Experiment):
             with testbed.dm_controller() as dm:
                 # Flat.
                 dm.apply_shape(flat_command_object, 1)
-                testbed.run_hicat_imaging(direct_exp_time, num_exposures, FpmPosition.direct, path=self.path,
-                                          exposure_set_name="direct", filename=flat_file_name)
+                cal_file_path = testbed.run_hicat_imaging(direct_exp_time, num_exposures, FpmPosition.direct,
+                                                          path=self.path, exposure_set_name="direct",
+                                                          filename=flat_file_name, camera_type=self.camera_type)
+        run_mtf(cal_file_path)
