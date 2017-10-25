@@ -23,8 +23,7 @@ class AutoFocus(Experiment):
                  position_list=np.arange(11.0, 13.7, step=.1),
                  path=None,
                  camera_type="imaging_camera",
-                 auto_exposure=True,
-                 **camera_kwargs):
+                 auto_exposure=True):
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
