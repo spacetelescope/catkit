@@ -23,7 +23,7 @@ class AutoFocus(Experiment):
                  position_list=np.arange(11.0, 13.7, step=.1),
                  path=None,
                  camera_type="imaging_camera",
-                 auto_exposure=True):
+                 **kwargs):
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
@@ -31,7 +31,7 @@ class AutoFocus(Experiment):
         self.position_list = position_list
         self.path = path
         self.camera_type = camera_type
-        self.auto_exposure = auto_exposure
+        self.kwargs = kwargs
 
     def experiment(self):
         output_path = auto_focus.take_auto_focus_data(self.bias,
@@ -41,6 +41,6 @@ class AutoFocus(Experiment):
                                                       self.position_list,
                                                       self.path,
                                                       self.camera_type,
-                                                      auto_exposure=self.auto_exposure)
+                                                      **self.kwargs)
         auto_focus.collect_final_images(output_path)
         print(wolfram_wrappers.run_auto_focus(output_path))

@@ -141,8 +141,7 @@ class Calibration(Experiment):
 
     def process_mtf(self):
         mtf_data_path = calibration_take_data.take_mtf_data(self.outpath)
-        output = wolfram_wrappers.run_mtf(mtf_data_path)
-        ps_wo_focus, ps_w_focus, focus = output.split(",")
+        ps_wo_focus, ps_w_focus, focus = wolfram_wrappers.run_mtf(mtf_data_path)
 
         if self.write_to_csv:
             self.update_cal_dict(["MTF: plate scale, no focus", "MTF: plate scale, focus", "MTF: focus"],

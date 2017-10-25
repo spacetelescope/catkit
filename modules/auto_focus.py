@@ -23,7 +23,7 @@ def take_auto_focus_data(bias,
                          position_list,
                          path,
                          camera_type,
-                         auto_exposure=True):
+                         **kwargs):
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         path = util.create_data_path(suffix="focus")
@@ -32,29 +32,26 @@ def take_auto_focus_data(bias,
         direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
         laser.set_current(direct_laser_current)
 
+        with testbed.motor_controller():
+            # Initialize motors.
+            print("Initialized motors for Auto Focus once, and will now only move the camera motor.")
+
         with testbed.dm_controller() as dm:
             dm_command_object = flat_command(bias=bias, flat_map=flat_map)
             dm.apply_shape(dm_command_object, 1)
 
             for i, position in enumerate(position_list):
-                init_motors = True if i == 0 else False
-                if auto_exposure:
-                    auto_exposure_time = True
-                else:
-                    auto_exposure_time = True if i == 0 else False
-                with testbed.motor_controller(initialize_to_nominal=init_motors) as mc:
+                with testbed.motor_controller(initialize_to_nominal=False) as mc:
                     mc.absolute_move(testbed.get_camera_motor_name(camera_type), position)
                 filename = "focus_" + str(int(position * 1000))
                 metadata = MetaDataEntry("Camera Position", "CAM_POS", position * 1000, "Position * 1000")
                 testbed.run_hicat_imaging(exposure_time, num_exposures, FpmPosition.direct, path=path,
-                                          filename=filename, auto_exposure_time=auto_exposure_time,
+                                          filename=filename,
                                           exposure_set_name="motor_" + str(int(position * 1000)),
                                           extra_metadata=metadata,
-                                          raw_skip=0, use_background_cache=False,
-                                          take_background_exposures=False,
-                                          pipeline=False,
-                                          init_motors=init_motors,
-                                          camera_type=camera_type)
+                                          init_motors=False,
+                                          camera_type=camera_type,
+                                          **kwargs)
     return path
 
 
