@@ -108,7 +108,7 @@ def get_camera_motor_name(camera_type):
 def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_position=LyotStopPosition.in_beam,
                       file_mode=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
                       take_background_exposures=True, use_background_cache=True,
-                      pipeline=True, pipeline_plot=False, return_pipeline_metadata=False,
+                      pipeline=True, return_pipeline_metadata=False,
                       auto_exposure_time=True,
                       simulator=True,
                       extra_metadata=None,
@@ -143,7 +143,6 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :param take_background_exposures: Boolean flag for whether to take background exposures.
     :param use_background_cache: Reuses backgrounds with the same exposure time. Supported when file_mode=True.
     :param pipeline: True runs pipeline, False does not.  Inherits file_mode to determine whether to write final fits.
-    :param pipeline_plot: Used for viewing the calibrated images as they are taken (usually for debugging).
     :param return_pipeline_metadata: List of MetaDataEntry items that includes additional pipeline info.
     :param auto_exposure_time: Flag to enable auto exposure time correction.
     :param simulator: Flag to enable Mathematica simulator. Supported when file_mode=True.
@@ -229,6 +228,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                                                           resume=resume,
                                                           return_metadata=True,
                                                           **kwargs)
+
                 if use_background_cache:
                     testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
 
@@ -250,7 +250,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
             # Output is the numpy data for the cal file, and our metadata updated with centroid information.
             final_output, cal_metadata = data_pipeline.data_pipeline(img_list, bg_list, satellite_spots,
-                                                                     plot=pipeline_plot, img_metadata=metadata,
+                                                                     img_metadata=metadata,
                                                                      return_metadata=True)
 
         # Export the DM Command itself as a fits file.
