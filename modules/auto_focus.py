@@ -22,7 +22,8 @@ def take_auto_focus_data(bias,
                          num_exposures,
                          position_list,
                          path,
-                         camera_type):
+                         camera_type,
+                         auto_exposure=True):
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         path = util.create_data_path(suffix="focus")
@@ -37,8 +38,10 @@ def take_auto_focus_data(bias,
 
             for i, position in enumerate(position_list):
                 init_motors = True if i == 0 else False
-                #auto_exposure_time = True if i == 0 else False
-                auto_exposure_time = True
+                if auto_exposure:
+                    auto_exposure_time = True
+                else:
+                    auto_exposure_time = True if i == 0 else False
                 with testbed.motor_controller(initialize_to_nominal=init_motors) as mc:
                     mc.absolute_move(testbed.get_camera_motor_name(camera_type), position)
                 filename = "focus_" + str(int(position * 1000))
@@ -50,7 +53,7 @@ def take_auto_focus_data(bias,
                                           raw_skip=0, use_background_cache=False,
                                           take_background_exposures=False,
                                           pipeline=False,
-                                          init_motors=False,
+                                          init_motors=init_motors,
                                           camera_type=camera_type)
     return path
 
