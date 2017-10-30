@@ -4,76 +4,63 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from astropy.io import fits
-import numpy as np
-import os
-import zwoasi
-import sys
-
-from ...hicat_types import MetaDataEntry, units, quantity
+from ...hardware.testbed_state import MetaDataEntry
 from ...interfaces.Camera import Camera
 from ...config import CONFIG_INI
+from ...hicat_types import units, quantity
 from ... import util
 from ...hardware import testbed_state
+from astropy.io import fits
+from time import sleep
+import numpy as np
+import os
+import requests
+import sys
 
 
-"""Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
+# implementation of a camera to run the SBIG STX-16803 Pupil Cam and KAF-1603ME/STT-1603M small cam
 
+class SbigCamera(Camera):
+    FRAME_TYPE_DARK = 0
+    FRAME_TYPE_LIGHT = 1
+    FRAME_TYPE_BIAS = 2
+    FRAME_TYPE_FLAT_FIELD = 3
 
-class ZwoCamera(Camera):
+    IMAGER_STATE_IDLE = 0
+    IMAGER_STATE_EXPOSING = 2
+    IMAGER_STATE_READING_OUT = 3
+    IMAGER_STATE_ERROR = 5
+
+    NO_IMAGE_AVAILABLE = 0
+    IMAGE_AVAILABLE = 1
+
     def initialize(self, *args, **kwargs):
-        """Opens connection with camera and returns the camera manufacturer specific object.
-           Uses the config_id to look up parameters in the config.ini."""
-        env_filename = os.getenv('ZWO_ASI_LIB')
+        """Loads the SBIG config information and verifies that the camera is idle.
+           Uses the config_id to look up parameters in the config.ini"""
 
-        # noinspection PyBroadException
-        try:
-            zwoasi.init(env_filename)
-        except Exception:
-            # Library already initialized, continuing...
-            pass
+        # find the SBIG config information
+        camera_name = CONFIG_INI.get(self.config_id, "camera_name")
+        self.base_url = CONFIG_INI.get(self.config_id, "base_url")
+        self.timeout = CONFIG_INI.getint(self.config_id, "timeout")
+        self.min_delay = CONFIG_INI.getfloat(self.config_id, 'min_delay')
 
-        # Attempt to find USB camera.
-        num_cameras = zwoasi.get_num_cameras()
-        if num_cameras == 0:
-            print('No cameras found')
-            sys.exit(0)
+        # check the status, which should be idle
+        imager_status = self.__check_imager_state()
+        if imager_status > self.IMAGER_STATE_IDLE:
+            # Error.  Can't start the camera or camera is already busy
+            raise Exception("Camera reported incorrect state (" + str(imager_status) + ") during initialization.")
 
-        cameras_found = zwoasi.list_cameras()  # Model names of the connected cameras.
-
-        # Get camera id and name.
-        camera_name = CONFIG_INI.get(self.config_id, 'camera_name')
-        camera_index = cameras_found.index(camera_name)
-
-        # Create a camera object using the zwoasi library.
-        camera = zwoasi.Camera(camera_index)
-
-        # Get all of the camera controls.
-        controls = camera.get_controls()
-
-        # Restore all controls to default values, in case any other application modified them.
-        for c in controls:
-            camera.set_control_value(controls[c]['ControlType'], controls[c]['DefaultValue'])
-
-        # Set bandwidth overload control to minvalue.
-        camera.set_control_value(zwoasi.ASI_BANDWIDTHOVERLOAD, camera.get_controls()['BandWidth']['MinValue'])
-
-        # noinspection PyBroadException
-        try:
-            # Force any single exposure to be halted
-            camera.stop_video_capture()
-            camera.stop_exposure()
-        except Exception:
-            # Catch and hide exceptions that get thrown if the camera rejects the stop commands.
-            pass
-
-        # Set image format to be RAW16, although camera is only 12-bit.
-        camera.set_image_type(zwoasi.ASI_IMG_RAW16)
-        return camera
+        self.imager_status = imager_status
 
     def close(self):
-        """Close camera connection"""
-        self.camera.close()
+        # check status and abort any imaging in progress
+        imager_status = self.__check_imager_state()
+        if imager_status > self.IMAGER_STATE_IDLE:
+            # work in progress, abort the exposure
+            sleep(self.min_delay)  # limit the rate at which requests go to the camera
+            r = requests.get(self.base_url + "ImagerAbortExposure.cgi")
+            # no data is returned, but an http error indicates if the abort failed
+            r.raise_for_status()
 
     def take_exposures(self, exposure_time, num_exposures,
                        file_mode=False, raw_skip=0, path=None, filename=None,
@@ -83,7 +70,7 @@ class ZwoCamera(Camera):
                        subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
                        bins=None):
         """
-        Low level method to take exposures using a Zwo camera. By default keeps image data in
+        Low level method to take exposures using an SBIG camera. By default keeps image data in memory
         :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
         :param num_exposures: Number of exposures.
         :param file_mode: If true fits file will be written to disk
@@ -97,17 +84,16 @@ class ZwoCamera(Camera):
         :param subarray_y: Y coordinate of center pixel of the subarray.
         :param width: Desired width of image.
         :param height: Desired height of image.
-        :param gain: Gain of ZWO camera (volts).
+        :param gain: Gain is ignored for the SBIG camera; the API doesn't have a way to set gain.
         :param full_image: Boolean for whether to take a full image.
         :param bins: Integer value for number of bins.
         :return: Two parameters: Image list (numpy data or paths), Metadata list of MetaDataEntry objects.
         """
 
         # Convert exposure time to contain units if not already a Pint quantity.
-        if type(exposure_time) is int or type(exposure_time) is float:
+        if type(exposure_time) is not quantity:
             exposure_time = quantity(exposure_time, units.microsecond)
 
-        # Set control values on the ZWO camera.
         self.__setup_control_values(exposure_time, subarray_x=subarray_x, subarray_y=subarray_y, width=width,
                                     height=height, gain=gain, full_image=full_image, bins=bins)
 
@@ -115,7 +101,6 @@ class ZwoCamera(Camera):
         meta_data = [MetaDataEntry("Exposure Time", "EXP_TIME", exposure_time.to(units.microseconds).m, "microseconds")]
         meta_data.extend(testbed_state.create_metadata())
         meta_data.append(MetaDataEntry("Camera", "CAMERA", self.config_id, "Camera model, correlates to entry in ini"))
-        meta_data.append(MetaDataEntry("Gain", "GAIN", self.gain, "Gain for camera"))
         meta_data.append(MetaDataEntry("Bins", "BINS", self.bins, "Binning for camera"))
         if extra_metadata is not None:
             if isinstance(extra_metadata, list):
@@ -215,78 +200,51 @@ class ZwoCamera(Camera):
         else:
             return img_list
 
-    def flash_id(self, new_id):
-        """
-        Flashes the camera memory to append a string at the end of the camera name.
-        :param usb_index: This will be zero unless there is another camera with the same name plugged in.
-        :param new_id: Ascii value of the string you want to append.
-                       Passing the value 49 will append (1) to the name.
-                       Passing the value 50 will append (2) to the name.
-        """
-        camera_info_before = self.camera.get_camera_property()
-        print("Before Flash:")
-        print(camera_info_before["Name"])
-        self.camera.set_id(0, new_id)
-        print("After Flash:")
-        camera_info_after = self.camera.get_camera_property()
-        print(camera_info_after["Name"])
-
     def __setup_control_values(self, exposure_time, subarray_x=None, subarray_y=None, width=None, height=None,
                                gain=None, full_image=None, bins=None):
-        """Applies control values found in the config.ini unless overrides are passed in, and does error checking."""
+        """Applies control values found in the config.ini unless overrides are passed in, and does error checking.
+           Makes HTTP requests to set the imager settings.  Will raise an exception for an HTTP error."""
 
+        print("Setting up control values")
         # Load values from config.ini into variables, and override with keyword args when applicable.
-        subarray_x = subarray_x if subarray_x is not None else CONFIG_INI.getint(self.config_id, 'subarray_x')
-        subarray_y = subarray_y if subarray_y is not None else CONFIG_INI.getint(self.config_id, 'subarray_y')
-        width = width if width is not None else CONFIG_INI.getint(self.config_id, 'width')
-        height = height if height is not None else CONFIG_INI.getint(self.config_id, 'height')
-        gain = gain if gain is not None else CONFIG_INI.getint(self.config_id, 'gain')
-        full_image = full_image if full_image is not None else CONFIG_INI.getboolean(self.config_id, 'full_image')
-        bins = bins if bins is not None else CONFIG_INI.getint(self.config_id, 'bins')
-
-        # Set some class attributes.
-        self.gain = gain
-        self.bins = bins
-
-        # Set up our custom control values.
-        self.camera.set_control_value(zwoasi.ASI_GAIN, gain)
-        self.camera.set_control_value(zwoasi.ASI_EXPOSURE, int(exposure_time.to(units.microsecond).magnitude))
+        self.cooler_state = CONFIG_INI.getint(self.config_id, 'cooler_state')
+        self.subarray_x = subarray_x if subarray_x is not None else CONFIG_INI.getint(self.config_id, 'subarray_x')
+        self.subarray_y = subarray_y if subarray_y is not None else CONFIG_INI.getint(self.config_id, 'subarray_y')
+        self.width = width if width is not None else CONFIG_INI.getint(self.config_id, 'width')
+        self.height = height if height is not None else CONFIG_INI.getint(self.config_id, 'height')
+        self.full_image = full_image if full_image is not None else CONFIG_INI.getboolean(self.config_id, 'full_image')
+        self.bins = bins if bins is not None else CONFIG_INI.getint(self.config_id, 'bins')
+        self.exposure_time = exposure_time if exposure_time is not None else CONFIG_INI.getfloat(self.config_id,
+                                                                                                 'exposure_time')
 
         # Store the camera's detector shape.
-        cam_info = self.camera.get_camera_property()
-        detector_max_x = cam_info['MaxWidth']
-        detector_max_y = cam_info['MaxHeight']
+        detector_max_x = CONFIG_INI.getint(self.config_id, 'detector_width')
+        detector_max_y = CONFIG_INI.getint(self.config_id, 'detector_length')
 
-        if full_image:
+        if self.full_image:
             print("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
+            fi_params = {'StartX': '0', 'StartY': '0',
+                         'NumX': str(detector_max_x), 'NumY': str(detector_max_y),
+                         'CoolerState': str(self.cooler_state)}
+            r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=fi_params, timeout=self.timeout)
+            r.raise_for_status()
             return
 
         # Check for errors, print them all out before exiting.
         error_flag = False
 
-        # Check that width and height are multiples of 8
-        if width % 8 != 0:
-            print("Width is not a multiple of 8:", width)
-            error_flag = True
-        if height % 8 != 0:
-            print("Height is not a multiple of 8:", height)
-            error_flag = True
-
-        # Convert to binned units
-        if bins != 1:
-            # For debugging
-            # print("Converting to binned units: bins =", bins)
-
-            subarray_x //= bins
-            subarray_y //= bins
-            width //= bins
-            height //= bins
+        # Unlike ZWO, width and height are in camera pixels, unaffected by bins
+        if self.bins != 1:
+            # set the parameters for binning
+            bin_params = {'BinX': str(self.bins), 'BinY': str(self.bins)}
+            r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=bin_params, timeout=self.timeout)
+            r.raise_for_status()
 
         # Derive the start x/y position of the region of interest, and check that it falls on the detector.
-        derived_start_x = subarray_x - (width // 2)
-        derived_start_y = subarray_y - (height // 2)
-        derived_end_x = subarray_x + (width // 2)
-        derived_end_y = subarray_y + (height // 2)
+        derived_start_x = self.subarray_x - (self.width // 2)
+        derived_start_y = self.subarray_y - (self.height // 2)
+        derived_end_x = self.subarray_x + (self.width // 2)
+        derived_end_y = self.subarray_y + (self.height // 2)
 
         if derived_start_x > detector_max_x or derived_start_x < 0:
             print("Derived start x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_start_x)
@@ -304,30 +262,78 @@ class ZwoCamera(Camera):
             print("Derived end y coordinate is off the detector ( max", detector_max_y - 1, "):", derived_end_y)
             error_flag = True
 
-        if full_image:
+        if self.full_image:
             print("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
+            fi_params = {'StartX': '0', 'StartY': '0',
+                         'NumX': str(detector_max_x), 'NumY': str(detector_max_y),
+                         'CoolerState': '0'}
+            r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=fi_params, timeout=self.timeout)
+            r.raise_for_status()
         else:
             if error_flag:
                 sys.exit("Exiting. Correct errors in the config.ini file or input parameters.")
 
         # Set Region of Interest.
         if not full_image:
-            self.camera.set_roi(start_x=derived_start_x,
-                                start_y=derived_start_y,
-                                width=width,
-                                height=height,
-                                image_type=zwoasi.ASI_IMG_RAW16,
-                                bins=bins)
+            roi_params = {'StartX': str(derived_start_x), 'StartY': str(derived_start_y),
+                          'NumX': str(self.width), 'NumY': str(self.height),
+                          'CoolerState': str(self.cooler_state)}
+            r = requests.get(self.base_url + "ImagerSetSettings.cgi", params=roi_params, timeout=self.timeout)
+            r.raise_for_status()
+
+    def __check_imager_state(self):
+        """Utility function to get the current state of the camera.
+           Make an HTTP request and check for good response, then return the value of the response.
+           Will raise an exception on an HTTP failure."""
+        r = requests.get(self.base_url + "ImagerState.cgi", timeout=self.timeout)
+        r.raise_for_status()
+        return int(r.text)
+
+    def __check_image_status(self):
+        """Utility function to check that the camera is ready to expose.
+           Make an HTTP request and check for good response, then return the value of hte response.
+           Will raise an exception on an HTTP failure."""
+        r = requests.get(self.base_url + "ImagerImageReady.cgi", timeout=self.timeout)
+        r.raise_for_status()
+        return int(r.text)
 
     def __capture(self, exposure_time):
+        """Utility function to start and exposure and wait until the camera has completed the
+           exposure.  Then wait for the image to be ready for download, and download it.
+           Assumes the parameters for the exposure are already set."""
 
-        # Passing the initial_sleep and poll values prevent crashes. DO NOT REMOVE!!!
-        poll = quantity(0.1, units.second)
-        image = self.camera.capture(initial_sleep=exposure_time.to(units.second).magnitude, poll=poll.magnitude)
+        # start an exposure.
+        params = {'Duration': exposure_time.to(units.second).magnitude,
+                  'FrameType': self.FRAME_TYPE_LIGHT}
+        r = requests.get(self.base_url + "ImagerStartExposure.cgi",
+                         params=params,
+                         timeout=self.timeout)
+        r.raise_for_status()
+        imager_state = self.IMAGER_STATE_EXPOSING
+
+        # wait until imager has taken an image
+        while imager_state > self.IMAGER_STATE_IDLE:
+            sleep(self.min_delay)  # limit the rate at which requests go to the camera
+            imager_state = self.__check_imager_state()
+            if imager_state == self.IMAGER_STATE_ERROR:
+                # an error has occurred
+                print('Imager error during exposure')
+                raise Exception("Camera reported error during exposure.")
+
+        # at loop exit, the image should be available
+        image_status = self.__check_image_status()
+        if image_status <> self.IMAGE_AVAILABLE:
+            print('No image after exposure')
+            raise Exception("Camera reported no image available after exposure.")
+
+        # get the image
+        r = requests.get(self.base_url + "ImagerData.bin", timeout=self.timeout)
+        r.raise_for_status()
+        image = np.reshape(np.frombuffer(r.content, np.uint16), (self.width // self.bins, self.height // self.bins))
 
         # Apply rotation and flip to the image based on config.ini file.
         theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
         fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
         image = util.rotate_and_flip_image(image, theta, fliplr)
 
-        return image.astype(np.dtype(np.int))
+        return image

@@ -1,39 +1,22 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-# noinspection PyUnresolvedReferences
-from builtins import *
 import math
-from collections import namedtuple
 
 import numpy as np
+# noinspection PyUnresolvedReferences
+from builtins import *
 from scipy.ndimage.interpolation import rotate
-
 # noinspection PyPackageRequirements
 from skimage.transform import resize
 
-from hicat import *  # Pulls in the root hicat __init.py__ stuff.
-from hicat import config as hicat_config
-from hicat import util
-from hicat.hardware.boston.DmCommand import DmCommand
+from ... import util
+from .DmCommand import DmCommand
+from ...hicat_types import units
+from ...config import CONFIG_INI
 
-# Read config file once here.
-config = hicat_config.load_config_ini()
-config_name = "boston_kilo952"
 
-# Load values from config.ini into variables.
-num_actuators_pupil = config.getint(config_name, 'dm_length_actuators')
-total_actuators = config.getint(config_name, 'number_of_actuators')
-fl6 = config.getfloat('optical_design', 'focal_length6')
-fl7 = config.getfloat('optical_design', 'focal_length7')
-command_length = config.getint(config_name, 'command_length')
-
-# Create the index952 from mask once here.
-mask = util.get_hicat_dm_mask()
-index952 = np.flatnonzero(mask)
-
-# Named Tuple as a container for sine wave specifications. peak_to_valley must be a pint quantity.
-SinSpecification = namedtuple("SinSpecification", "angle, ncycles, peak_to_valley, phase")
+dm_config_id = "boston_kilo952"
 
 
 def sin_command(sin_specification,
@@ -59,6 +42,7 @@ def sin_command(sin_specification,
         sin_specification = [sin_specification]
 
     # Create an array of zeros.
+    num_actuators_pupil = CONFIG_INI.getint(dm_config_id, 'dm_length_actuators')
     sin_wave = np.zeros((num_actuators_pupil, num_actuators_pupil))
     if initial_data is not None:
         sin_wave += initial_data
@@ -71,6 +55,7 @@ def sin_command(sin_specification,
                                spec.phase)
 
     # Apply the DM pupil mask.
+    mask = util.get_hicat_dm_mask()
     sin_wave *= mask
 
     # Create the DM Command Object.
@@ -85,7 +70,7 @@ def sin_command(sin_specification,
         if flat_map:
             short_name += "_flat_map"
         if bias:
-            bias_volts = config.getint(config_name, "bias_volts")
+            bias_volts = CONFIG_INI.getint(dm_config_id, "bias_volts")
             short_name += "_bias" + str(bias_volts)
         return dm_command_object, short_name
     else:
@@ -96,7 +81,11 @@ def __sin_wave_aj_matlab(rotate_deg, ncycles, amplitude_factor):
     """
     Depricated - This function creates an imperfect sine wave due to numpy resize and rotate. Use __sin_wave().
     """
+    fl6 = CONFIG_INI.getfloat('optical_design', 'focal_length6')
+    fl7 = CONFIG_INI.getfloat('optical_design', 'focal_length7')
+
     # Create Sin Wave.
+    num_actuators_pupil = CONFIG_INI.getint(dm_config_id, 'dm_length_actuators')
     ddms = num_actuators_pupil * float(300e-6)
     dapod = 1.025 * float(18e-3)
     apod_length = 256
@@ -128,6 +117,7 @@ def __sin_wave(rotate_deg, ncycles, peak_to_valley, phase):
     """
 
     # Make a linear ramp.
+    num_actuators_pupil = CONFIG_INI.getint(dm_config_id, 'dm_length_actuators')
     linear_ramp = np.linspace(-0.5, 0.5, num=num_actuators_pupil, endpoint=False)
 
     # Convert to radians.

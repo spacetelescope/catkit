@@ -5,21 +5,22 @@ from builtins import *
 
 import os
 from glob import glob
-
 import numpy as np
 
 from . import testbed_state
-from ..hardware.SnmpUps import SnmpUps
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
-from .. import quantity
 from .. import util
+from .. import wolfram_wrappers
 from ..config import CONFIG_INI
+from ..hardware.SnmpUps import SnmpUps
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
-from ..hicat_types import *
 from ..hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from ..hardware.zwo.ZwoCamera import ZwoCamera
+from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity
+from ..interfaces.DummyLaserSource import DummyLaserSource
+from ..hardware.sbig.SbigCamera import SbigCamera
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -31,7 +32,26 @@ def imaging_camera():
     keyword to take advantage of the built-in context manager for safely closing the camera.
     :return: An instance of the Camera.py interface.
     """
-    return ZwoCamera("zwo_ASI1600MM")
+    camera_name = CONFIG_INI.get("testbed", "imaging_camera")
+    return ZwoCamera(camera_name)
+
+def phase_retrieval_camera():
+    """
+    Proper way to control the imaging camera. Using this function keeps the scripts future-proof.  Use the "with"
+    keyword to take advantage of the built-in context manager for safely closing the camera.
+    :return: An instance of the Camera.py interface.
+    """
+    camera_name = CONFIG_INI.get("testbed", "phase_retrieval_camera")
+    return ZwoCamera(camera_name)
+
+def pupil_camera():
+    """
+        Proper way to control the pupil camera. Using this function keeps the scripts future-proof.  Use the "with"
+        keyword to take advantage of the built-in context manager for safely closing the camera.
+        :return: An instance of the Camera.py interface.
+        """
+    camera_name = CONFIG_INI.get("testbed", "pupil_camera")
+    return ZwoCamera(camera_name)
 
 
 def dm_controller():
@@ -59,7 +79,8 @@ def beam_dump():
 
 
 def laser_source():
-    return ThorlabsMLCS1("thorlabs_source_mcls1")
+    #return ThorlabsMLCS1("thorlabs_source_mcls1")
+    return DummyLaserSource("dummy")
 
 
 def backup_power():
@@ -70,11 +91,12 @@ def backup_power():
 def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_position=LyotStopPosition.in_beam,
                       file_mode=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
                       take_background_exposures=True, use_background_cache=True,
-                      pipeline=True, pipeline_plot=False, return_pipeline_metadata=False,
+                      pipeline=True, return_pipeline_metadata=False,
                       auto_exposure_time=True,
                       simulator=True,
                       extra_metadata=None,
                       resume=False,
+                      init_motors=True,
                       **kwargs):
     """
     Standard function for taking imaging data with HiCAT.  For writing fits files (file_mode=True), 'path',
@@ -103,7 +125,6 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :param take_background_exposures: Boolean flag for whether to take background exposures.
     :param use_background_cache: Reuses backgrounds with the same exposure time. Supported when file_mode=True.
     :param pipeline: True runs pipeline, False does not.  Inherits file_mode to determine whether to write final fits.
-    :param pipeline_plot: Used for viewing the calibrated images as they are taken (usually for debugging).
     :param return_pipeline_metadata: List of MetaDataEntry items that includes additional pipeline info.
     :param auto_exposure_time: Flag to enable auto exposure time correction.
     :param simulator: Flag to enable Mathematica simulator. Supported when file_mode=True.
@@ -114,12 +135,17 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     """
 
     # Initialize all motors and move Focal Plane Mask and Lyot Stop (will skip if already in correct place).
-    initialize_motors(fpm_position=fpm_position, lyot_stop_position=lyot_stop_position)
+    if init_motors:
+        initialize_motors(fpm_position=fpm_position, lyot_stop_position=lyot_stop_position)
+    else:
+        move_fpm(fpm_position)
+        move_lyot_stop(lyot_stop_position)
 
     # Auto Exposure.
     if auto_exposure_time:
-        min_counts = CONFIG_INI.getint("zwo_ASI1600MM", "min_counts")
-        max_counts = CONFIG_INI.getint("zwo_ASI1600MM", "max_counts")
+        camera_name = CONFIG_INI.get("testbed", "imaging_camera")
+        min_counts = CONFIG_INI.getint(camera_name, "min_counts")
+        max_counts = CONFIG_INI.getint(camera_name, "max_counts")
         exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
 
     # Fits directories and filenames.
@@ -178,7 +204,9 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                 bg_filename = "bkg_" + filename if file_mode else None
                 bg_list, bg_metadata = img_cam.take_exposures(exposure_time, num_exposures,
                                                               file_mode=file_mode,
-                                                              path=bg_path, filename=bg_filename, raw_skip=raw_skip,
+                                                              path=bg_path,
+                                                              filename=bg_filename,
+                                                              raw_skip=raw_skip,
                                                               extra_metadata=extra_metadata,
                                                               resume=resume,
                                                               return_metadata=True,
@@ -205,11 +233,11 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
             # Output is the numpy data for the cal file, and our metadata updated with centroid information.
             final_output, cal_metadata = data_pipeline.data_pipeline(img_list, bg_list, satellite_spots,
-                                                                     plot=pipeline_plot, img_metadata=metadata,
+                                                                     img_metadata=metadata,
                                                                      return_metadata=True)
 
         # Export the DM Command itself as a fits file.
-        if file_mode:
+        if file_mode and testbed_state.dm1_command_object is not None:
             testbed_state.dm1_command_object.export_fits(os.path.join(path, exposure_set_name))
 
         # Store config.ini.
@@ -218,7 +246,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         # Simulator (file-based only).
         if file_mode and simulator:
-            util.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
+            wolfram_wrappers.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
 
         # When the pipeline is off, return image lists (data or path depending on filemode).
         if not pipeline:
@@ -254,12 +282,14 @@ def initialize_motors(fpm_position=None, lyot_stop_position=None):
         if lyot_stop_position:
             mc.absolute_move("motor_lyot_stop_x", __get_lyot_position_from_ini(lyot_stop_position))
 
+
 def move_fpm(fpm_position):
     """A safe method to move the focal plane mask."""
     with motor_controller(initialize_to_nominal=False) as mc:
         motor_id = "motor_FPM_Y"
         new_position = __get_fpm_position_from_ini(fpm_position)
         mc.absolute_move(motor_id, new_position)
+
 
 def move_lyot_stop(lyot_stop_position):
     """A safe method to move the lyot stop."""
@@ -275,6 +305,7 @@ def __get_fpm_position_from_ini(fpm_position):
     else:
         new_position = CONFIG_INI.getfloat("motor_FPM_Y", "direct")
     return new_position
+
 
 def __get_lyot_position_from_ini(lyot_position):
     if lyot_position is LyotStopPosition.in_beam:
@@ -304,8 +335,9 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
         img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
         img_max = __get_max_pixel_count(img_list[0], mask=mask)
 
-        upper_bound = start_exp_time
-        lower_bound = quantity(0, start_exp_time.u)
+        # Hack to use the same pint registry across processes.
+        upper_bound = quantity(start_exp_time.m, start_exp_time.u)
+        lower_bound = quantity(0, upper_bound.u)
         print("Starting exposure time calibration...")
 
         if min_counts <= img_max <= max_counts:
