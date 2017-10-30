@@ -22,15 +22,26 @@ class TakePhaseRetrievalData(Experiment):
                  flat_map=True,
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=5,
-                 position_list=np.arange(-100, 110, step=10),
+                 step=10,
                  path=None,
                  camera_type="phase_retrieval_camera",
                  **kwargs):
+        """
+        Takes a set of data with the phase_retrieval camera (default) at constant "step" increments from focus.
+        :param bias: (boolean) Apply a constant bias on the DM.
+        :param flat_map: (boolean) Apply the flat map onto the DM.
+        :param exposure_time: (pint.quantity) Pint quantity for exposure time.
+        :param num_exposures: (int) Number of exposures.
+        :param step: (int) Step size to use for the motor positions (default is 10).
+        :param path: (string) Path to save data.
+        :param camera_type: (string) Camera type, maps to the [tested] section in the ini.
+        :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
+        """
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
-        self.position_list = position_list
+        self.step = step
         self.path = path
         self.camera_type = camera_type
         self.kwargs = kwargs
@@ -40,7 +51,7 @@ class TakePhaseRetrievalData(Experiment):
                                   self.flat_map,
                                   self.exposure_time,
                                   self.num_exposures,
-                                  self.position_list,
+                                  self.step,
                                   self.path,
                                   self.camera_type,
                                   **self.kwargs)
@@ -50,7 +61,7 @@ def take_phase_retrieval_data(bias,
                               flat_map,
                               exposure_time,
                               num_exposures,
-                              position_list,
+                              step,
                               path,
                               camera_type,
                               **kwargs):
@@ -60,6 +71,16 @@ def take_phase_retrieval_data(bias,
 
     # Get the selected camera's current focus from the ini.
     focus_value = CONFIG_INI.getfloat(testbed.get_camera_motor_name(camera_type), "nominal")
+
+    # Create the position list centered at the focus value, with constant step increments.
+    bottom_steps = np.arange(focus_value, min, step=-step)
+    top_steps = np.arange(focus_value + step, max, step=step)
+    position_list = bottom_steps.tolist()
+    position_list.extend(top_steps.tolist())
+    position_list = [round(elem, 2) for elem in position_list]
+    position_list = sorted(position_list)
+
+    position_list = sorted(position_list)
 
     with testbed.laser_source() as laser:
         direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
