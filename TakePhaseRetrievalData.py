@@ -25,6 +25,7 @@ class TakePhaseRetrievalData(Experiment):
                  step=10,
                  path=None,
                  camera_type="phase_retrieval_camera",
+                 position_list = None,
                  **kwargs):
         """
         Takes a set of data with the phase_retrieval camera (default) at constant "step" increments from focus.
@@ -44,6 +45,7 @@ class TakePhaseRetrievalData(Experiment):
         self.step = step
         self.path = path
         self.camera_type = camera_type
+        self.position_list = position_list
         self.kwargs = kwargs
 
     def experiment(self):
@@ -54,6 +56,7 @@ class TakePhaseRetrievalData(Experiment):
                                   self.step,
                                   self.path,
                                   self.camera_type,
+                                  position_list = self.position_list,
                                   **self.kwargs)
 
 
@@ -64,23 +67,28 @@ def take_phase_retrieval_data(bias,
                               step,
                               path,
                               camera_type,
+                              position_list=None,
                               **kwargs):
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         path = util.create_data_path(suffix="phase_retrieval_data")
 
     # Get the selected camera's current focus from the ini.
-    focus_value = CONFIG_INI.getfloat(testbed.get_camera_motor_name(camera_type), "nominal")
+    motor_name = testbed.get_camera_motor_name(camera_type)
+    focus_value = CONFIG_INI.getfloat(motor_name, "nominal")
+    min_motor_position = CONFIG_INI.getint(motor_name, "min")
+    max_motor_position = CONFIG_INI.getint(motor_name, "max")
 
     # Create the position list centered at the focus value, with constant step increments.
-    bottom_steps = np.arange(focus_value, min, step=-step)
-    top_steps = np.arange(focus_value + step, max, step=step)
-    position_list = bottom_steps.tolist()
-    position_list.extend(top_steps.tolist())
-    position_list = [round(elem, 2) for elem in position_list]
-    position_list = sorted(position_list)
-
-    position_list = sorted(position_list)
+    if position_list is None:
+        bottom_steps = np.arange(focus_value, min_motor_position, step=-step)
+        top_steps = np.arange(focus_value + step, max_motor_position, step=step)
+        position_list = bottom_steps.tolist()
+        position_list.extend(top_steps.tolist())
+        position_list = [round(elem, 2) for elem in position_list]
+        position_list = sorted(position_list)
+        position_list = sorted(position_list)
+    print(position_list)
 
     with testbed.laser_source() as laser:
         direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
