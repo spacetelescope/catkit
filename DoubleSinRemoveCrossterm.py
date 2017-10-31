@@ -22,7 +22,7 @@ class DoubleSinRemoveCrossterm(Experiment):
                  path=None,
                  bias=True,
                  flat_map=False,
-                 coron_exposure_time=quantity(20, units.millisecond),
+                 coron_exposure_time=quantity(200, units.millisecond),
                  direct_exposure_time=quantity(250, units.microsecond),
                  coron_nexps=10,
                  direct_nexps=10,

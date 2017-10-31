@@ -22,9 +22,9 @@ class TakeDmPlateScaleData(Experiment):
                  path=None,
                  bias=True,
                  flat_map=False,
-                 coron_exposure_time=quantity(20, units.millisecond),
-                 coron_nexps=3,
-                 angle_range=range(70, 100, 10),
+                 coron_exposure_time=quantity(200, units.millisecond),
+                 coron_nexps=2,
+                 angle_range=range(-90, 100, 10),
                  ncycles_range=np.arange(5.5, 17.5, .5),
                  peak_to_valley=quantity(30, units.nanometer),
                  phase=0):
