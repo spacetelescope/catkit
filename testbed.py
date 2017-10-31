@@ -16,11 +16,10 @@ from ..config import CONFIG_INI
 from ..hardware.SnmpUps import SnmpUps
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
-from ..hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from ..hardware.zwo.ZwoCamera import ZwoCamera
 from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity
 from ..interfaces.DummyLaserSource import DummyLaserSource
-from ..hardware.sbig.SbigCamera import SbigCamera
+
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -35,6 +34,7 @@ def imaging_camera():
     camera_name = CONFIG_INI.get("testbed", "imaging_camera")
     return ZwoCamera(camera_name)
 
+
 def phase_retrieval_camera():
     """
     Proper way to control the imaging camera. Using this function keeps the scripts future-proof.  Use the "with"
@@ -43,6 +43,7 @@ def phase_retrieval_camera():
     """
     camera_name = CONFIG_INI.get("testbed", "phase_retrieval_camera")
     return ZwoCamera(camera_name)
+
 
 def pupil_camera():
     """
@@ -79,12 +80,28 @@ def beam_dump():
 
 
 def laser_source():
-    #return ThorlabsMLCS1("thorlabs_source_mcls1")
+    # return ThorlabsMLCS1("thorlabs_source_mcls1")
     return DummyLaserSource("dummy")
 
 
 def backup_power():
     return SnmpUps("white_ups")
+
+
+def get_camera(camera_type):
+    if camera_type == "imaging_camera":
+        return imaging_camera()
+    elif camera_type == "phase_retrieval_camera":
+        return phase_retrieval_camera()
+    elif camera_type == "pupil_camera":
+        return pupil_camera()
+
+
+def get_camera_motor_name(camera_type):
+    if camera_type == "imaging_camera":
+        return "motor_img_camera"
+    elif camera_type == "phase_retrieval_camera":
+        return "motor_phase_camera"
 
 
 # Convenience functions.
@@ -97,6 +114,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                       extra_metadata=None,
                       resume=False,
                       init_motors=True,
+                      camera_type="imaging_camera",
                       **kwargs):
     """
     Standard function for taking imaging data with HiCAT.  For writing fits files (file_mode=True), 'path',
@@ -130,6 +148,8 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :param simulator: Flag to enable Mathematica simulator. Supported when file_mode=True.
     :param extra_metadata: List or single MetaDataEntry.
     :param resume: Very primitive way to try and resume an experiment. Skips exposures that already exist on disk.
+    :param init_motors: (Boolean) True will initially move all motors to nominal, False will not.
+    :param camera_type: (String) Tells us which camera to use, valid values are under [testbed] in the ini.
     :param kwargs: Extra keywords to be passed to the camera's take_exposures function.
     :return: Defaults returns the path of the final calibrated image provided by the data pipeline.
     """
@@ -143,15 +163,14 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
     # Auto Exposure.
     if auto_exposure_time:
-        camera_name = CONFIG_INI.get("testbed", "imaging_camera")
+        camera_name = CONFIG_INI.get("testbed", camera_type)
         min_counts = CONFIG_INI.getint(camera_name, "min_counts")
         max_counts = CONFIG_INI.getint(camera_name, "max_counts")
-        exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts)
+        exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts, camera_type=camera_type)
 
     # Fits directories and filenames.
     exp_path, raw_path, img_path, bg_path = None, None, None, None
     if file_mode:
-
         # Combine exposure set into filename.
         filename = "{}_{}".format(exposure_set_name, filename)
 
@@ -163,15 +182,15 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
     # Move beam dump out of beam and take images.
     move_beam_dump(BeamDumpPosition.out_of_beam)
-    with imaging_camera() as img_cam:
+    with get_camera(camera_type) as cam:
 
         # Take images.
-        img_list, metadata = img_cam.take_exposures(exposure_time, num_exposures, file_mode=file_mode,
-                                                    raw_skip=raw_skip, path=img_path, filename=filename,
-                                                    extra_metadata=extra_metadata,
-                                                    return_metadata=True,
-                                                    resume=resume,
-                                                    **kwargs)
+        img_list, metadata = cam.take_exposures(exposure_time, num_exposures, file_mode=file_mode,
+                                                raw_skip=raw_skip, path=img_path, filename=filename,
+                                                extra_metadata=extra_metadata,
+                                                return_metadata=True,
+                                                resume=resume,
+                                                **kwargs)
 
         # Background images.
         bg_list = []
@@ -202,15 +221,14 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                 # Move the beam dump in the path and take background exposures.
                 move_beam_dump(BeamDumpPosition.in_beam)
                 bg_filename = "bkg_" + filename if file_mode else None
-                bg_list, bg_metadata = img_cam.take_exposures(exposure_time, num_exposures,
-                                                              file_mode=file_mode,
-                                                              path=bg_path,
-                                                              filename=bg_filename,
-                                                              raw_skip=raw_skip,
-                                                              extra_metadata=extra_metadata,
-                                                              resume=resume,
-                                                              return_metadata=True,
-                                                              **kwargs)
+                bg_list, bg_metadata = cam.take_exposures(exposure_time, num_exposures,
+                                                          file_mode=file_mode,
+                                                          path=bg_path, filename=bg_filename, raw_skip=raw_skip,
+                                                          extra_metadata=extra_metadata,
+                                                          resume=resume,
+                                                          return_metadata=True,
+                                                          **kwargs)
+
                 if use_background_cache:
                     testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
 
@@ -219,7 +237,6 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         satellite_spots = True if fpm_position == FpmPosition.coron else False
         cal_metadata = None
         if pipeline and file_mode and raw_skip == 0:
-
             # Output is the path to the cal file.
             final_output = data_pipeline.standard_file_pipeline(exp_path)
 
@@ -319,7 +336,8 @@ def __get_max_pixel_count(data, mask=None):
     return np.max(data) if mask is None else np.max(data[np.nonzero(mask)])
 
 
-def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50, mask=None):
+def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50, mask=None,
+                           camera_type="imaging_camera"):
     """
     To be used when the dm shape is already applied. Uses the imaging camera to find the correct exposure time.
     :param start_exp_time: The initial time to begin testing with.
@@ -330,7 +348,7 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
     :return: The correct exposure time to use, or in the failure case, the start exposure time passed in.
     """
     move_beam_dump(BeamDumpPosition.out_of_beam)
-    with imaging_camera() as img_cam:
+    with get_camera(camera_type) as img_cam:
 
         img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
         img_max = __get_max_pixel_count(img_list[0], mask=mask)
