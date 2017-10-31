@@ -5,7 +5,8 @@ from __future__ import (absolute_import, division,
 from builtins import *
 import numpy as np
 
-from hicat import config as hicat_config
+from ... import config as hicat_config
+from ... import util
 from .DmCommand import DmCommand
 
 # Read config file once here.
@@ -81,3 +82,20 @@ def poke_command(actuators, amplitude, bias=False, flat_map=False, return_shortn
         return dm_command_object, short_name
     else:
         return dm_command_object
+
+
+def poke_letter_f_command(amplitude, bias=False, flat_map=False, dm_num=1):
+    data = np.zeros((num_actuators_pupil, num_actuators_pupil))
+
+    # Side
+    data[10:24, 12] = amplitude
+
+    # Top
+    data[24, 12:22] = amplitude
+
+    # Middle
+    data[19, 12:17] = amplitude
+
+    # Convert to 1d array and return a DmCommand object.
+    command_array = util.convert_dm_image_to_command(data)
+    return DmCommand(command_array, dm_num, flat_map=flat_map, bias=bias)
