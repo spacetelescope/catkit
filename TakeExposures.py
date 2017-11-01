@@ -76,15 +76,19 @@ def take_exposures(dm_command_object,
 
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
-        path = util.create_data_path(suffix="{}_take_exposures_data".format(filename))
+        path = util.create_data_path(suffix="take_exposures_data")
 
     # Establish image type and set the FPM position and laser current
     if coronograph:
         fpm_position = FpmPosition.coron
         laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
+        if exposure_set_name is None:
+            exposure_set_name = "coron"
     else:
         fpm_position = FpmPosition.direct
         laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
+        if exposure_set_name is None:
+            exposure_set_name = "direct"
 
     # Take data
     with testbed.laser_source() as laser:
