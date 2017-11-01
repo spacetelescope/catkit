@@ -99,7 +99,7 @@ class SpeckleNulling(Experiment):
                     new_phase = speckle_nulling.speckle_control_phase(iteration_path)
 
                     # Generate a list of sin_commands a range of amplitudes for the best phase, and take data for each.
-                    amplitude_coeff_list = np.arange(0.1, 3.2, 0.3)
+                    amplitude_coeff_list = np.arange(0.2, 2.0, 0.2)
                     for ampl_ptv in amplitude_coeff_list:
                         # Add the current dm command into a new sin_command.
                         peak_to_valley_test = peak_to_valley_new * ampl_ptv
