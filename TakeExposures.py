@@ -11,28 +11,26 @@ from ..hicat_types import *
 from .. import util
 from ..hardware import testbed
 from ..config import CONFIG_INI
+from ..hardware.boston.flat_command import flat_command
 
 
 class TakeExposures(Experiment):
-    name = "Take Phase Retrieval Data"
+    name = "Take Exposures"
 
     def __init__(self,
-                 dm_command_object,
+                 dm_command_object=flat_command(True, False),  # Default flat with bias.
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=5,
-                 path=None,
-                 image_type="coron",
-                 camera_type="phase_retrieval_camera",
-                 camera_position=None,
+                 camera_type="imaging_camera",
+                 coronograph=False,
                  pipeline=True,
-                 filename="test_coron",
+                 path=None,
                  exposure_set_name=None,
+                 filename=None,
                  **kwargs):
         """
         Takes a set of data with any camera, any DM command, any exposure time, etc.
-        :param bias: (boolean) Apply a constant bias on the DM.
-        :param flat_map: (boolean) Apply the flat map onto the DM.
-        :param sine: (boolean) Apply a sine wave on the DM.
+        :param dm_command_object: (DmCommand) DmCommand object to apply on a DM.
         :param exposure_time: (pint.quantity) Pint quantity for exposure time.
         :param num_exposures: (int) Number of exposures.
         :param step: (int) Step size to use for the motor positions (default is 10).
@@ -44,24 +42,22 @@ class TakeExposures(Experiment):
         self.dm_command_object = dm_command_object
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
-        self.path = path
-        self.image_type = image_type
         self.camera_type = camera_type
-        self.camera_position = camera_position
+        self.coronograph = coronograph
         self.pipeline = pipeline
-        self.filename = filename
+        self.path = path
         self.exposure_set_name = exposure_set_name
+        self.filename = filename
         self.kwargs = kwargs
 
     def experiment(self):
         take_exposures(self.dm_command_object,
                        self.exposure_time,
                        self.num_exposures,
-                       self.path,
-                       self.image_type,
                        self.camera_type,
-                       self.camera_position,
+                       self.coronograph,
                        self.pipeline,
+                       self.path,
                        self.filename,
                        self.exposure_set_name,
                        **self.kwargs)
@@ -70,31 +66,23 @@ class TakeExposures(Experiment):
 def take_exposures(dm_command_object,
                    exposure_time,
                    num_exposures,
-                   path,
-                   image_type,
                    camera_type,
-                   camera_position,
+                   coronograph,
                    pipeline,
+                   path,
                    filename,
                    exposure_set_name,
                    **kwargs):
+
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
-        path = util.create_data_path(suffix="{}_data".format(filename))
-
-    # Get the selected camera's current focus from the ini.
-    motor_name = testbed.get_camera_motor_name(camera_type)
-    focus_value = CONFIG_INI.getfloat(motor_name, "nominal")
-
-    # Create the position list centered at the focus value, with constant step increments.
-    if camera_position is None:
-        camera_position = focus_value
+        path = util.create_data_path(suffix="{}_take_exposures_data".format(filename))
 
     # Establish image type and set the FPM position and laser current
-    if image_type == "coron":
+    if coronograph:
         fpm_position = FpmPosition.coron
         laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
-    elif image_type == "direct":
+    else:
         fpm_position = FpmPosition.direct
         laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
 
@@ -102,24 +90,23 @@ def take_exposures(dm_command_object,
     with testbed.laser_source() as laser:
         laser.set_current(laser_current)
 
-        with testbed.motor_controller():
-            # Initialize motors.
-            print("Initialized motors once, and will now only move the camera motor.")
-
-        with testbed.dm_controller() as dm:
-            dm.apply_shape(dm_command_object, dm_command_object.dm_num)
-
-            if not camera_position:
-                with testbed.motor_controller(initialize_to_nominal=True) as mc:
-                    mc.absolute_move(testbed.get_camera_motor_name(camera_type), camera_position)
-            metadata = MetaDataEntry("Camera Position", "CAM_POS", camera_position * 1000, "Position * 1000")
-
+        if dm_command_object:
+            with testbed.dm_controller() as dm:
+                dm.apply_shape(dm_command_object, dm_command_object.dm_num)
+                testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position, path=path,
+                                          filename=filename,
+                                          exposure_set_name=exposure_set_name,
+                                          init_motors=False,
+                                          camera_type=camera_type,
+                                          pipeline=pipeline,
+                                          **kwargs)
+        else:
             testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position, path=path,
                                       filename=filename,
                                       exposure_set_name=exposure_set_name,
-                                      extra_metadata=metadata,
                                       init_motors=False,
                                       camera_type=camera_type,
                                       pipeline=pipeline,
                                       **kwargs)
+
     return path
