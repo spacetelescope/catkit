@@ -129,5 +129,5 @@ class SpeckleNulling(Experiment):
                 # Take a final image with auto exposure.
                 testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, FpmPosition.coron,
                                           path=self.path,
-                                          exposure_set_name="", filename="final_dark_zone.fits",
+                                          exposure_set_name="final", filename="final_dark_zone.fits",
                                           simulator=False)
