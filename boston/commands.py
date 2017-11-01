@@ -8,6 +8,7 @@ import numpy as np
 from ... import config as hicat_config
 from ... import util
 from .DmCommand import DmCommand
+from ...hicat_types import units, quantity
 
 # Read config file once here.
 config = hicat_config.load_config_ini()
@@ -62,6 +63,9 @@ def poke_command(actuators, amplitude, bias=False, flat_map=False, return_shortn
     short_name = "poke"
     poke_array = np.zeros((num_actuators_pupil, num_actuators_pupil))
 
+    # Convert peak the valley from a quantity to nanometers, and get the magnitude.
+    amplitude = amplitude.to(units.nanometers).m
+
     # Bias.
     if flat_map:
         short_name += "_flat_map"
@@ -84,11 +88,14 @@ def poke_command(actuators, amplitude, bias=False, flat_map=False, return_shortn
         return dm_command_object
 
 
-def poke_letter_f_command(amplitude, bias=False, flat_map=False, dm_num=1):
+def poke_letter_f_command(amplitude=quantity(140, units.nanometers), bias=False, flat_map=False, dm_num=1):
     """
     Creates the letter F in normal orientation when viewed in DS9.
     """
     data = np.zeros((num_actuators_pupil, num_actuators_pupil))
+
+    # Convert peak the valley from a quantity to nanometers, and get the magnitude.
+    amplitude = amplitude.to(units.nanometers).m
 
     # Side
     data[10:24, 12] = amplitude

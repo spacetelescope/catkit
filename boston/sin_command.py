@@ -132,5 +132,5 @@ def __sin_wave(rotate_deg, ncycles, peak_to_valley, phase):
     yt = y_mesh * np.sin(theta_rad)
     xyt = xt + yt
     xyf = xyt * float(ncycles) * 2.0 * np.pi
-    sine_wave = (float(peak_to_valley.to_base_units().m) / 2.0) * np.cos(xyf + phase_rad)
+    sine_wave = (float(peak_to_valley.to(units.nanometer).m) / 2.0) * np.cos(xyf + phase_rad)
     return sine_wave
