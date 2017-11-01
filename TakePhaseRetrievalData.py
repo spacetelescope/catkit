@@ -11,7 +11,7 @@ from ..hicat_types import *
 from .. import util
 from ..hardware import testbed
 from ..config import CONFIG_INI
-from ..hardware.boston.flat_command import flat_command
+from ..hardware.boston.commands import flat_command
 
 
 class TakePhaseRetrievalData(Experiment):

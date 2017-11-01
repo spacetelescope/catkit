@@ -11,7 +11,7 @@ from .. import wolfram_wrappers
 from .Experiment import Experiment
 from .modules import auto_focus
 from .. import calibration_take_data, calibration_util
-from ..hardware.boston.flat_command import flat_command
+from ..hardware.boston.commands import flat_command
 from .. import util
 from ..hicat_types import *
 from ..config import CONFIG_INI

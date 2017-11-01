@@ -8,7 +8,7 @@ import os
 from astropy.io import fits
 from glob import glob
 
-from hicat.hardware.boston.flat_command import flat_command
+from hicat.hardware.boston.commands import flat_command
 from hicat.hardware.boston.sin_command import sin_command
 from hicat.hardware import testbed
 from hicat.util import write_fits, read_fits

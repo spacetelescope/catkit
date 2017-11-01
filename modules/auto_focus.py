@@ -9,7 +9,7 @@ from shutil import copyfile
 import os
 from glob import glob
 
-from ...hardware.boston.flat_command import flat_command
+from ...hardware.boston.commands import flat_command
 from ... import util
 from ...hardware import testbed
 from ...hicat_types import *

@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division,
 from builtins import *
 
 from .Experiment import Experiment
-from ..hardware.boston.flat_command import flat_command
+from ..hardware.boston.commands import flat_command
 from ..hardware import testbed
 from ..hicat_types import units, quantity, FpmPosition
 from .. import util
