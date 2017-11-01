@@ -172,6 +172,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     exp_path, raw_path, img_path, bg_path = None, None, None, None
     if file_mode:
         # Combine exposure set into filename.
+        filename = "image" if filename is None else filename
         filename = "{}_{}".format(exposure_set_name, filename)
 
         # Create the standard directory structure.
