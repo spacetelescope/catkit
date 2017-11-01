@@ -19,13 +19,13 @@ class SpeckleNulling(Experiment):
     name = "Speckle Nulling"
 
     def __init__(self,
-                 num_iterations=200,
+                 num_iterations=10,
                  bias=True,
                  flat_map=False,
                  path=None,
-                 exposure_time=quantity(1, units.millisecond),
-                 num_exposures=2,
-                 initial_speckles=SinSpecification(40, 12, quantity(40, units.nanometer), 90),
+                 exposure_time=quantity(100, units.millisecond),
+                 num_exposures=3,
+                 initial_speckles=SinSpecification(10, 12, quantity(25, units.nanometer), 90),
                  suffix=None):
         self.num_iterations = num_iterations
         self.bias = bias
