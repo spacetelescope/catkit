@@ -105,7 +105,7 @@ class Calibration(Experiment):
                                                           exposure_time,
                                                           num_exposures,
                                                           position_list,
-                                                          self.outpath,
+                                                          focus_outpath,
                                                           "imaging_camera")
         calibration_util.collect_final_images(focus_outpath)
         output = wolfram_wrappers.run_auto_focus(focus_data_path)
