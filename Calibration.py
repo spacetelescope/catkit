@@ -97,8 +97,8 @@ class Calibration(Experiment):
         focus_outpath = os.path.join(self.outpath, 'focus')
         bias = True
         flat_map = False
-        num_exposures = 100
-        position_list = np.arange(10.0, 14.1, step=.2)
+        num_exposures = 200
+        position_list = np.arange(10.0, 13.7, step=.1)
         exposure_time = quantity(250, units.microsecond)
         focus_data_path = auto_focus.take_auto_focus_data(bias,
                                                           flat_map,
