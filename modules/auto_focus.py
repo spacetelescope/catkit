@@ -28,6 +28,8 @@ def take_auto_focus_data(bias,
     if path is None:
         path = util.create_data_path(suffix="focus")
 
+    camera_motor = testbed.get_camera_motor_name(camera_type)
+
     with testbed.laser_source() as laser:
         direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
         laser.set_current(direct_laser_current)
@@ -42,7 +44,7 @@ def take_auto_focus_data(bias,
 
             for i, position in enumerate(position_list):
                 with testbed.motor_controller(initialize_to_nominal=False) as mc:
-                    mc.absolute_move(testbed.get_camera_motor_name(camera_type), position)
+                    mc.absolute_move(camera_motor, position)
                 filename = "focus_" + str(int(position * 1000))
                 metadata = MetaDataEntry("Camera Position", "CAM_POS", position * 1000, "Position * 1000")
                 testbed.run_hicat_imaging(exposure_time, num_exposures, FpmPosition.direct, path=path,

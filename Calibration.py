@@ -6,6 +6,7 @@ from collections import OrderedDict
 # noinspection PyUnresolvedReferences
 from builtins import *
 import os
+import numpy as np
 
 from .. import wolfram_wrappers
 from .Experiment import Experiment
@@ -94,7 +95,18 @@ class Calibration(Experiment):
 
     def process_focus(self):
         focus_outpath = os.path.join(self.outpath, 'focus')
-        focus_data_path = auto_focus.take_auto_focus_data(focus_outpath)
+        bias = True
+        flat_map = False
+        num_exposures = 200
+        position_list = np.arange(10.0, 13.7, step=.1)
+        exposure_time = quantity(250, units.microsecond)
+        focus_data_path = auto_focus.take_auto_focus_data(bias,
+                                                          flat_map,
+                                                          exposure_time,
+                                                          num_exposures,
+                                                          position_list,
+                                                          focus_outpath,
+                                                          "imaging_camera")
         calibration_util.collect_final_images(focus_outpath)
         output = wolfram_wrappers.run_auto_focus(focus_data_path)
 
@@ -119,9 +131,9 @@ class Calibration(Experiment):
     def process_distance(self):
         try:
             data = self.data
-        except NameError:
+        except (NameError, AttributeError):
             data = calibration_take_data.take_cal_data(FpmPosition.coron, self.flat_shape, 1,
-                                                       quantity(1, units.millisecond), num_exposures=5)
+                                                       quantity(1, units.millisecond), num_exposures=1)[0]
         centroid, coords = calibration_util.find_center(data, coron=True, return_coords=True)
         dist = calibration_util.find_average_distance_to_center(centroid, coords)
 
