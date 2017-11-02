@@ -6,6 +6,7 @@ from collections import OrderedDict
 # noinspection PyUnresolvedReferences
 from builtins import *
 import os
+import numpy as np
 
 from .. import wolfram_wrappers
 from .Experiment import Experiment
@@ -94,7 +95,18 @@ class Calibration(Experiment):
 
     def process_focus(self):
         focus_outpath = os.path.join(self.outpath, 'focus')
-        focus_data_path = auto_focus.take_auto_focus_data(focus_outpath)
+        bias = True
+        flat_map = False
+        num_exposures = 100
+        position_list = np.arange(10.0, 14.1, step=.2)
+        exposure_time = quantity(250, units.microsecond)
+        focus_data_path = auto_focus.take_auto_focus_data(bias,
+                                                          flat_map,
+                                                          exposure_time,
+                                                          num_exposures,
+                                                          position_list,
+                                                          self.outpath,
+                                                          "imaging_camera")
         calibration_util.collect_final_images(focus_outpath)
         output = wolfram_wrappers.run_auto_focus(focus_data_path)
 
