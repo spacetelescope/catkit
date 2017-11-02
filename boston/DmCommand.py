@@ -77,8 +77,8 @@ class DmCommand(object):
         else:
             # Convert nanometers to volts.
             script_dir = os.path.dirname(__file__)
-            nm_to_volts_map = fits.open(os.path.join(script_dir, "meters_to_volts_dm1.fits"))
-            dm_command = hicat_util.safe_divide(self.data, nm_to_volts_map[0].data)
+            nm_to_volts_map = fits.getdata(os.path.join(script_dir, "meters_to_volts_dm1.fits"))
+            dm_command = hicat_util.safe_divide(self.data, nm_to_volts_map)
 
             # Apply bias.
             if self.bias:

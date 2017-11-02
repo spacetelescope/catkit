@@ -64,7 +64,7 @@ def poke_command(actuators, amplitude, bias=False, flat_map=False, return_shortn
     poke_array = np.zeros((num_actuators_pupil, num_actuators_pupil))
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
-    amplitude = amplitude.to(units.nanometers).m
+    amplitude = amplitude.to(units.meters).m
 
     # Bias.
     if flat_map:
@@ -88,14 +88,14 @@ def poke_command(actuators, amplitude, bias=False, flat_map=False, return_shortn
         return dm_command_object
 
 
-def poke_letter_f_command(amplitude=quantity(140, units.nanometers), bias=False, flat_map=False, dm_num=1):
+def poke_letter_f_command(amplitude=quantity(500, units.nanometers), bias=False, flat_map=False, dm_num=1):
     """
     Creates the letter F in normal orientation when viewed in DS9.
     """
     data = np.zeros((num_actuators_pupil, num_actuators_pupil))
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
-    amplitude = amplitude.to(units.nanometers).m
+    amplitude = amplitude.to(units.meters).m
 
     # Side
     data[10:24, 12] = amplitude
@@ -107,8 +107,7 @@ def poke_letter_f_command(amplitude=quantity(140, units.nanometers), bias=False,
     data[19, 12:17] = amplitude
 
     # Convert to 1d array and return a DmCommand object.
-    command_array = util.convert_dm_image_to_command(data)
-    return DmCommand(command_array, dm_num, flat_map=flat_map, bias=bias)
+    return DmCommand(data, dm_num, flat_map=flat_map, bias=bias)
 
 
 def checkerboard_command(amplitude, bias=False, flat_map=False, dm_num=1, offset_x=0, offset_y=3, step=4):
