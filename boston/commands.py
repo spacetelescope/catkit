@@ -48,7 +48,7 @@ def flat_command(bias=False,
         return dm_command_object
 
 
-def poke_command(actuators, amplitude, bias=False, flat_map=False, return_shortname=False, dm_num=1):
+def poke_command(actuators, amplitude=quantity(500, units.nanometers), bias=False, flat_map=False, return_shortname=False, dm_num=1):
     """
     Creates a DmCommand object that pokes actuators at a given amplitude.
     :param actuators: List of actuators, or a single actuator.
@@ -110,14 +110,17 @@ def poke_letter_f_command(amplitude=quantity(500, units.nanometers), bias=False,
     return DmCommand(data, dm_num, flat_map=flat_map, bias=bias)
 
 
-def checkerboard_command(amplitude, bias=False, flat_map=False, dm_num=1, offset_x=0, offset_y=3, step=4):
+def checkerboard_command(amplitude=quantity(500, units.nanometers), bias=False, flat_map=False,
+                         dm_num=1, offset_x=0, offset_y=3, step=4):
     """
     Creates a checkerboard pattern DM command.  Useful for phase retrieval or 4D images. Default values
     start with the zero index of the DM command ("first actuator").
     """
     data = np.zeros((num_actuators_pupil, num_actuators_pupil))
+
+    # Convert peak the valley from a quantity to nanometers, and get the magnitude.
+    amplitude = amplitude.to(units.meters).m
+
     data[offset_x::step, offset_y::step] = amplitude
 
-    # Convert to 1d array and return a DmCommand object.
-    command_array = util.convert_dm_image_to_command(data)
-    return DmCommand(command_array, dm_num, flat_map=flat_map, bias=bias)
+    return DmCommand(data, dm_num, flat_map=flat_map, bias=bias)
