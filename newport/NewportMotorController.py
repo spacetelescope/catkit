@@ -166,8 +166,8 @@ class NewportMotorController(MotorController):
     @staticmethod
     def __update_testbed_state(motorid, position):
         if motorid == "motor_lyot_stop_x":
-            nominal = CONFIG_INI.getfloat(motorid, "nominal")
-            testbed_state.lyot_stop = True if np.isclose(nominal, position, atol=.001) else False
+            ini_value = CONFIG_INI.getfloat(motorid, "in_beam")
+            testbed_state.lyot_stop = True if np.isclose(ini_value, position, atol=.001) else False
         elif motorid == "motor_FPM_Y":
-            nominal = CONFIG_INI.getfloat(motorid, "nominal")
-            testbed_state.coronograph = True if np.isclose(nominal, position, atol=.001) else False
+            ini_value = CONFIG_INI.getfloat(motorid, "default_coron")
+            testbed_state.coronograph = True if np.isclose(ini_value, position, atol=.001) else False
