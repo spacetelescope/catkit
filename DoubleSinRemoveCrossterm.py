@@ -4,6 +4,8 @@ from __future__ import (absolute_import, division,
 import os
 
 # noinspection PyUnresolvedReferences
+from hicat_types import LyotStopPosition
+
 from builtins import *
 
 from .modules import double_sine
@@ -29,7 +31,9 @@ class DoubleSinRemoveCrossterm(Experiment):
                  angle=0,
                  ncycles_range=range(6, 18, 1),
                  peak_to_valley_range=range(5, 55, 5),
-                 phase=0):
+                 phase=0,
+                 fpm_position=FpmPosition.coron,
+                 lyot_stop_position=LyotStopPosition.in_beam):
         self.path = path
         self.bias = bias
         self.flat_map = flat_map
@@ -41,6 +45,8 @@ class DoubleSinRemoveCrossterm(Experiment):
         self.ncycles_range = ncycles_range
         self.peak_to_valley_range = peak_to_valley_range
         self.phase = phase
+        self.fpm_position = fpm_position
+        self.lyot_stop_position = lyot_stop_position
 
     def experiment(self):
 

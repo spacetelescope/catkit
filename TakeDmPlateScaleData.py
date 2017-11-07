@@ -2,6 +2,7 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
 import os
+from hicat_types import LyotStopPosition
 
 import numpy as np
 # noinspection PyUnresolvedReferences
@@ -27,7 +28,10 @@ class TakeDmPlateScaleData(Experiment):
                  angle_range=range(0, 100, 10),
                  ncycles_range=np.arange(5.5, 17.5, .5),
                  peak_to_valley=quantity(45, units.nanometer),
-                 phase=0):
+                 phase=0,
+                 fpm_position=FpmPosition.coron,
+                 lyot_stop_position=LyotStopPosition.in_beam,
+                 ):
         self.path = path
         self.bias = bias
         self.flat_map = flat_map
@@ -37,6 +41,8 @@ class TakeDmPlateScaleData(Experiment):
         self.ncycles_range = ncycles_range
         self.peak_to_valley = peak_to_valley
         self.phase = phase
+        self.fpm_position = fpm_position
+        self.lyot_stop_position = lyot_stop_position
 
     def experiment(self):
 
@@ -55,5 +61,6 @@ class TakeDmPlateScaleData(Experiment):
                     ncycle_path = os.path.join(angles_path, "ncycles" + str(ncycle))
                     double_sine.double_sin_remove_crossterm(sin_spec, self.bias, self.flat_map,
                                                             self.coron_exposure_time,
-                                                            self.coron_nexps, FpmPosition.coron,
-                                                            path=os.path.join(ncycle_path, "coron"))
+                                                            self.coron_nexps, self.fpm_position,
+                                                            path=os.path.join(ncycle_path, "coron"),
+                                                            lyot_stop_position=self.lyot_stop_position)
