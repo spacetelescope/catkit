@@ -7,6 +7,7 @@ import os
 from glob import glob
 import numpy as np
 
+from hicat.hicat_types import ImageCentering
 from . import testbed_state
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
@@ -108,7 +109,7 @@ def get_camera_motor_name(camera_type):
 def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_position=LyotStopPosition.in_beam,
                       file_mode=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
                       take_background_exposures=True, use_background_cache=True,
-                      pipeline=True, return_pipeline_metadata=False,
+                      pipeline=True, return_pipeline_metadata=False, centering=ImageCentering.auto,
                       auto_exposure_time=True,
                       simulator=True,
                       extra_metadata=None,
@@ -144,6 +145,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :param use_background_cache: Reuses backgrounds with the same exposure time. Supported when file_mode=True.
     :param pipeline: True runs pipeline, False does not.  Inherits file_mode to determine whether to write final fits.
     :param return_pipeline_metadata: List of MetaDataEntry items that includes additional pipeline info.
+    :param centering: (ImageCentering) Mode pipeline will use to find the center of images and recenter them.
     :param auto_exposure_time: Flag to enable auto exposure time correction.
     :param simulator: Flag to enable Mathematica simulator. Supported when file_mode=True.
     :param extra_metadata: List or single MetaDataEntry.
@@ -235,22 +237,23 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         # Run data pipeline
         final_output = None
-        satellite_spots = True if fpm_position == FpmPosition.coron else False
+        if centering is not ImageCentering.off:
+            centering = ImageCentering.satellite_spots if fpm_position == FpmPosition.coron else ImageCentering.psf
         cal_metadata = None
         if pipeline and file_mode and raw_skip == 0:
             # Output is the path to the cal file.
-            final_output = data_pipeline.standard_file_pipeline(exp_path)
+            final_output = data_pipeline.standard_file_pipeline(exp_path, centering=centering)
 
         if pipeline and raw_skip > 0:
 
             # Output is the path to the cal file.
-            final_output = data_pipeline.data_pipeline(img_list, bg_list, satellite_spots, output_path=exp_path,
+            final_output = data_pipeline.data_pipeline(img_list, bg_list, centering, output_path=exp_path,
                                                        filename_root=filename, img_metadata=metadata,
                                                        bg_metadata=bg_metadata)
         elif pipeline and not file_mode:
 
             # Output is the numpy data for the cal file, and our metadata updated with centroid information.
-            final_output, cal_metadata = data_pipeline.data_pipeline(img_list, bg_list, satellite_spots,
+            final_output, cal_metadata = data_pipeline.data_pipeline(img_list, bg_list, centering,
                                                                      img_metadata=metadata,
                                                                      return_metadata=True)
 
