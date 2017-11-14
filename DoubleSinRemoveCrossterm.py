@@ -33,7 +33,8 @@ class DoubleSinRemoveCrossterm(Experiment):
                  peak_to_valley_range=range(5, 55, 5),
                  phase=0,
                  fpm_position=FpmPosition.coron,
-                 lyot_stop_position=LyotStopPosition.in_beam):
+                 lyot_stop_position=LyotStopPosition.in_beam,
+                 **kwargs):
         self.path = path
         self.bias = bias
         self.flat_map = flat_map
@@ -47,6 +48,7 @@ class DoubleSinRemoveCrossterm(Experiment):
         self.phase = phase
         self.fpm_position = fpm_position
         self.lyot_stop_position = lyot_stop_position
+        self.kwargs = kwargs
 
     def experiment(self):
 
@@ -76,7 +78,8 @@ class DoubleSinRemoveCrossterm(Experiment):
                     double_sine.double_sin_remove_crossterm(sin_spec, self.bias, self.flat_map,
                                                             self.coron_exposure_time,
                                                             self.coron_nexps, FpmPosition.coron,
-                                                            path=os.path.join(p2v_path, coron_dirname))
+                                                            path=os.path.join(p2v_path, coron_dirname),
+                                                            **self.kwargs)
 
                     # Direct.
                     direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
@@ -88,4 +91,4 @@ class DoubleSinRemoveCrossterm(Experiment):
                         dm.apply_shape(sin_command_object, 1)
                         testbed.run_hicat_imaging(self.direct_exposure_time, self.direct_nexps, FpmPosition.direct,
                                                   path=p2v_path, exposure_set_name=direct_dirname,
-                                                  filename=sin_file_name)
+                                                  filename=sin_file_name, **self.kwargs)
