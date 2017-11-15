@@ -7,7 +7,7 @@ import os
 from glob import glob
 import numpy as np
 
-from hicat.hicat_types import ImageCentering
+from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity, ImageCentering
 from . import testbed_state
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
@@ -18,7 +18,6 @@ from ..hardware.SnmpUps import SnmpUps
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
 from ..hardware.zwo.ZwoCamera import ZwoCamera
-from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity
 from ..interfaces.DummyLaserSource import DummyLaserSource
 
 
@@ -259,11 +258,11 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         # Export the DM Command itself as a fits file.
         if file_mode and testbed_state.dm1_command_object is not None:
-            testbed_state.dm1_command_object.export_fits(os.path.join(path, exposure_set_name))
+            testbed_state.dm1_command_object.export_fits(exp_path)
 
         # Store config.ini.
         if file_mode:
-            util.save_ini(os.path.join(path, "config"))
+            util.save_ini(os.path.join(exp_path, "config"))
 
         # Simulator (file-based only).
         if file_mode and simulator:
@@ -321,18 +320,22 @@ def move_lyot_stop(lyot_stop_position):
 
 
 def __get_fpm_position_from_ini(fpm_position):
-    if fpm_position is FpmPosition.coron:
+    if fpm_position.value ==  FpmPosition.coron.value:
         new_position = CONFIG_INI.getfloat("motor_FPM_Y", "default_coron")
-    else:
+    elif fpm_position.value == FpmPosition.direct.value:
         new_position = CONFIG_INI.getfloat("motor_FPM_Y", "direct")
+    else:
+        raise AttributeError("Unknown FpmPosition value: " + str(fpm_position))
     return new_position
 
 
 def __get_lyot_position_from_ini(lyot_position):
-    if lyot_position is LyotStopPosition.in_beam:
+    if lyot_position.value == LyotStopPosition.in_beam.value:
         new_position = CONFIG_INI.getfloat("motor_lyot_stop_x", "in_beam")
-    else:
+    elif lyot_position.value == LyotStopPosition.out_of_beam.value:
         new_position = CONFIG_INI.getfloat("motor_lyot_stop_x", "out_of_beam")
+    else:
+        raise AttributeError("Unknown LyotStopPosition value " + str(lyot_position))
     return new_position
 
 
