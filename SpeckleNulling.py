@@ -76,10 +76,6 @@ class SpeckleNulling(Experiment):
                 for i in range(0, self.num_iterations):
                     dm.apply_shape(current_command_object, 1)
 
-                    # Move motors to the correct location before auto-exposure starts.
-                    testbed.move_lyot_stop(self.lyot_stop_position)
-                    testbed.move_fpm(self.fpm_position)
-
                     # Tests the dark zone intensity and updates exposure time if needed, or just returns itself.
                     auto_exposure_time = speckle_nulling.test_dark_zone_intensity(auto_exposure_time, 2,
                                                                                   fpm_position=self.fpm_position,
