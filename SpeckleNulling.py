@@ -56,6 +56,8 @@ class SpeckleNulling(Experiment):
                                                                bias=self.bias,
                                                                flat_map=self.flat_map)
             file_name = "flat_map" if self.flat_map else "bias"
+            if self.initial_speckles:
+                print("Ignoring initial speckles and loading dm_command from disk.")
 
         # Inject sin waves if initial_speckles is passed in.
         elif self.initial_speckles:
