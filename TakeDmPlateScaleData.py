@@ -31,7 +31,7 @@ class TakeDmPlateScaleData(Experiment):
                  phase=0,
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
-                 ):
+                 **kwargs):
         self.path = path
         self.bias = bias
         self.flat_map = flat_map
@@ -43,6 +43,7 @@ class TakeDmPlateScaleData(Experiment):
         self.phase = phase
         self.fpm_position = fpm_position
         self.lyot_stop_position = lyot_stop_position
+        self.kwargs = kwargs
 
     def experiment(self):
 
@@ -63,4 +64,5 @@ class TakeDmPlateScaleData(Experiment):
                                                             self.coron_exposure_time,
                                                             self.coron_nexps, self.fpm_position,
                                                             path=os.path.join(ncycle_path, "coron"),
-                                                            lyot_stop_position=self.lyot_stop_position)
+                                                            lyot_stop_position=self.lyot_stop_position,
+                                                            **self.kwargs)

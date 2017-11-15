@@ -12,7 +12,7 @@ from hicat.hardware.boston.commands import flat_command
 from hicat.hardware.boston.sin_command import sin_command
 from hicat.hardware import testbed
 from hicat.util import write_fits, read_fits
-from hicat.hicat_types import *
+from hicat.hicat_types import LyotStopPosition, SinSpecification
 
 """
 This module contains the double_sine_remove_crossterm function, which will take the data neccesary to compute

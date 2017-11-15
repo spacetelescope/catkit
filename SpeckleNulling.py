@@ -65,8 +65,6 @@ class SpeckleNulling(Experiment):
             exp_set_name = "direct"
             laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
 
-        camera_name = CONFIG_INI.get("testbed", "imaging_camera")
-
         # Initialize the laser and connect to the DM, apply the sine wave shape.
         with testbed.laser_source() as laser:
             laser.set_current(laser_current)
@@ -77,9 +75,10 @@ class SpeckleNulling(Experiment):
                     dm.apply_shape(current_command_object, 1)
 
                     # Tests the dark zone intensity and updates exposure time if needed, or just returns itself.
-                    auto_exposure_time = speckle_nulling.test_dark_zone_intensity(auto_exposure_time, 2,
-                                                                                  fpm_position=self.fpm_position,
-                                                                                  lyot_stop_position=self.lyot_stop_position)
+                    auto_exposure_time = speckle_nulling.test_dark_zone_intensity(
+                                                            auto_exposure_time, 2,
+                                                            fpm_position=self.fpm_position,
+                                                            lyot_stop_position=self.lyot_stop_position)
 
                     # Take coronographic data, with backgrounds.
                     iteration_path = os.path.join(self.path, "iteration" + str(i))
