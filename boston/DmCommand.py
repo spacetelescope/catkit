@@ -142,3 +142,16 @@ class DmCommand(object):
 
         # Save raw data as input to the simulator.
         hicat_util.write_fits(self.data, os.path.join(dir_path, "dm_command_2d_noflat"))
+
+
+def load_dm_command(path, dm_num=1, flat_map=False, bias=False):
+    """
+    Loads a DM command fits file from disk and returns a DmCommand object.
+    :param path: Path to the "2d_noflat" dm command.
+    :param dm_num: Which DM to create the command for.
+    :param flat_map: Apply a flat map in addition to the data.
+    :param bias: Apply a constant bias to the command.
+    :return: DmCommand object representing the dm command fits file.
+    """
+    data = fits.getdata(path)
+    return DmCommand(data, dm_num, flat_map=flat_map, bias=bias)
