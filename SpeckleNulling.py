@@ -8,9 +8,12 @@ import numpy as np
 
 from .Experiment import Experiment
 from ..hardware.boston.sin_command import sin_command
+from ..hardware.boston.commands import flat_command
+
 from ..speckle_nulling import speckle_nulling
 from ..hicat_types import units, quantity, FpmPosition, SinSpecification
 from ..hardware import testbed
+from ..hardware.boston import DmCommand
 from ..config import CONFIG_INI
 from .. import util
 
@@ -25,6 +28,7 @@ class SpeckleNulling(Experiment):
                  path=None,
                  exposure_time=quantity(100, units.millisecond),
                  num_exposures=3,
+                 dm_command_path=None,
                  initial_speckles=SinSpecification(10, 12, quantity(25, units.nanometer), 90),
                  suffix=None):
         self.num_iterations = num_iterations
@@ -33,6 +37,7 @@ class SpeckleNulling(Experiment):
         self.path = path
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
+        self.dm_command_path = dm_command_path
         self.initial_speckles = initial_speckles
         self.suffix = suffix
 
@@ -45,10 +50,27 @@ class SpeckleNulling(Experiment):
                 suffix = suffix + "_" + self.suffix
             self.path = util.create_data_path(suffix=suffix)
 
-        current_command_object, file_name = sin_command(self.initial_speckles, bias=self.bias, flat_map=self.flat_map,
-                                                        return_shortname=True)
+        # Start with a previously stored DM command if dm_command_path is passed in.
+        if self.dm_command_path:
+            current_command_object = DmCommand.load_dm_command(self.dm_command_path,
+                                                               bias=self.bias,
+                                                               flat_map=self.flat_map)
+            file_name = "flat_map" if self.flat_map else "bias"
+
+        # Inject sin waves if initial_speckles is passed in.
+        elif self.initial_speckles:
+            current_command_object, file_name = sin_command(self.initial_speckles, bias=self.bias,
+                                                            flat_map=self.flat_map,
+                                                            return_shortname=True)
+
+        # Create a flat map or bias command if no dm_command_path or initial_speckles are passed in.
+        else:
+            current_command_object, file_name = flat_command(bias=self.bias,
+                                                             flat_map=self.flat_map,
+                                                             return_shortname=True)
+
         # Set the starting exposure time.
-        coron_exp_time = self.exposure_time
+        exp_time = self.exposure_time
 
         # Initialize the laser and connect to the DM, apply the sine wave shape.
         with testbed.laser_source() as laser:
@@ -64,14 +86,14 @@ class SpeckleNulling(Experiment):
                         camera_name = CONFIG_INI.get("testbed", "imaging_camera")
                         min_counts = CONFIG_INI.getint(camera_name, "min_counts")
                         max_counts = CONFIG_INI.getint(camera_name, "max_counts")
-                        coron_exp_time = testbed.auto_exp_time_no_shape(self.exposure_time, min_counts, max_counts)
+                        exp_time = testbed.auto_exp_time_no_shape(self.exposure_time, min_counts, max_counts)
                     else:
                         # Tests the dark zone intensity and updates exposure time if needed, or just returns itself.
-                        coron_exp_time = speckle_nulling.test_dark_zone_intensity(coron_exp_time, 2)
+                        exp_time = speckle_nulling.test_dark_zone_intensity(exp_time, 2)
 
                     # Take coronographic data, with backgrounds.
                     iteration_path = os.path.join(self.path, "iteration" + str(i))
-                    testbed.run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron,
+                    testbed.run_hicat_imaging(exp_time, self.num_exposures, FpmPosition.coron,
                                               path=iteration_path, auto_exposure_time=False,
                                               exposure_set_name="coron", filename="itr" + str(i) + "_" + file_name)
 
@@ -90,7 +112,7 @@ class SpeckleNulling(Experiment):
                         dm.apply_shape(new_command, 1)
 
                         phase_path = os.path.join(iteration_path, "phase" + str(phi))
-                        testbed.run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron,
+                        testbed.run_hicat_imaging(exp_time, self.num_exposures, FpmPosition.coron,
                                                   path=phase_path, auto_exposure_time=False,
                                                   exposure_set_name="coron", filename="itr" + str(i) + "_" + name,
                                                   simulator=False)
@@ -112,7 +134,7 @@ class SpeckleNulling(Experiment):
                         dm.apply_shape(new_command, 1)
 
                         amplitude_path = os.path.join(iteration_path, "amplitude" + str(ampl_ptv))
-                        testbed.run_hicat_imaging(coron_exp_time, self.num_exposures, FpmPosition.coron,
+                        testbed.run_hicat_imaging(exp_time, self.num_exposures, FpmPosition.coron,
                                                   path=amplitude_path, auto_exposure_time=False,
                                                   exposure_set_name="coron", filename="itr" + str(i) + "_" + name,
                                                   simulator=False)
