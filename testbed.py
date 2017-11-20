@@ -236,8 +236,6 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         # Run data pipeline
         final_output = None
-        if centering is not ImageCentering.off:
-            centering = ImageCentering.satellite_spots if fpm_position == FpmPosition.coron else ImageCentering.psf
         cal_metadata = None
         if pipeline and file_mode and raw_skip == 0:
             # Output is the path to the cal file.
