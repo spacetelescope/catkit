@@ -109,7 +109,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                       file_mode=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
                       take_background_exposures=True, use_background_cache=True,
                       pipeline=True, return_pipeline_metadata=False, centering=ImageCentering.auto,
-                      auto_exposure_time=True,
+                      auto_exposure_time=True, auto_exposure_mask=None,
                       simulator=True,
                       extra_metadata=None,
                       resume=False,
@@ -167,7 +167,11 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         camera_name = CONFIG_INI.get("testbed", camera_type)
         min_counts = CONFIG_INI.getint(camera_name, "min_counts")
         max_counts = CONFIG_INI.getint(camera_name, "max_counts")
-        exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts, camera_type=camera_type)
+        exposure_time = auto_exp_time_no_shape(exposure_time,
+                                               min_counts,
+                                               max_counts,
+                                               camera_type=camera_type,
+                                               mask=auto_exposure_mask)
 
     # Fits directories and filenames.
     exp_path, raw_path, img_path, bg_path = None, None, None, None
