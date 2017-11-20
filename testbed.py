@@ -109,7 +109,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                       file_mode=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
                       take_background_exposures=True, use_background_cache=True,
                       pipeline=True, return_pipeline_metadata=False, centering=ImageCentering.auto,
-                      auto_exposure_time=True, auto_exposure_mask=None,
+                      auto_exposure_time=True, auto_exposure_mask_size=None,
                       simulator=True,
                       extra_metadata=None,
                       resume=False,
@@ -146,6 +146,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :param return_pipeline_metadata: List of MetaDataEntry items that includes additional pipeline info.
     :param centering: (ImageCentering) Mode pipeline will use to find the center of images and recenter them.
     :param auto_exposure_time: Flag to enable auto exposure time correction.
+    :param auto_exposure_mask_size: Value in lambda / d units to use to create a circle mask for auto exposure.
     :param simulator: Flag to enable Mathematica simulator. Supported when file_mode=True.
     :param extra_metadata: List or single MetaDataEntry.
     :param resume: Very primitive way to try and resume an experiment. Skips exposures that already exist on disk.
@@ -165,13 +166,19 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     # Auto Exposure.
     if auto_exposure_time:
         camera_name = CONFIG_INI.get("testbed", camera_type)
-        min_counts = CONFIG_INI.getint(camera_name, "min_counts")
         max_counts = CONFIG_INI.getint(camera_name, "max_counts")
+        min_counts = CONFIG_INI.getint(camera_name, "min_counts")
+        subarray_size = CONFIG_INI.getint(camera_name, "width")
+
+        circle_mask = None
+        if auto_exposure_mask_size:
+            circle_mask = util.create_psf_mask((subarray_size, subarray_size), auto_exposure_mask_size)
+
         exposure_time = auto_exp_time_no_shape(exposure_time,
                                                min_counts,
                                                max_counts,
                                                camera_type=camera_type,
-                                               mask=auto_exposure_mask)
+                                               mask=circle_mask)
 
     # Fits directories and filenames.
     exp_path, raw_path, img_path, bg_path = None, None, None, None
