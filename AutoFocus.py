@@ -16,8 +16,8 @@ class AutoFocus(Experiment):
     name = "Auto Focus"
 
     def __init__(self,
-                 bias=True,
-                 flat_map=False,
+                 bias=False,
+                 flat_map=True,
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=500,
                  position_list=np.arange(11.0, 13.7, step=.1),

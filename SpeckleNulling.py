@@ -117,7 +117,7 @@ class SpeckleNulling(Experiment):
                     ncycles_new, angle_deg_new, peak_to_valley_new = speckle_nulling.speckle_sensing(coron_path)
 
                     # Generate a list of sin_commands at different phases, and take data for each.
-                    phase_list = range(0, 360, 45)
+                    phase_list = range(0, 360, 30)
                     for phi in phase_list:
                         # Add the current dm command into a new sin_command.
                         new_command, name = sin_command(
