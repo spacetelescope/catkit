@@ -34,6 +34,7 @@ class DoubleSinRemoveCrossterm(Experiment):
                  phase=0,
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
+                 alignment_speckle=SinSpecification(90, 17, quantity(50, units.nanometer), 0),
                  **kwargs):
         self.path = path
         self.bias = bias
@@ -48,6 +49,7 @@ class DoubleSinRemoveCrossterm(Experiment):
         self.phase = phase
         self.fpm_position = fpm_position
         self.lyot_stop_position = lyot_stop_position
+        self.alignment_speckle = alignment_speckle
         self.kwargs = kwargs
 
     def experiment(self):
@@ -75,7 +77,7 @@ class DoubleSinRemoveCrossterm(Experiment):
                     # Coron.
                     coron_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
                     laser.set_current(coron_laser_current)
-                    double_sine.double_sin_remove_crossterm(sin_spec, self.bias, self.flat_map,
+                    double_sine.double_sin_remove_crossterm(sin_spec, self.alignment_speckle, self.bias, self.flat_map,
                                                             self.coron_exposure_time,
                                                             self.coron_nexps, FpmPosition.coron,
                                                             path=os.path.join(p2v_path, coron_dirname),

@@ -23,8 +23,8 @@ class SpeckleNulling(Experiment):
 
     def __init__(self,
                  num_iterations=10,
-                 bias=True,
-                 flat_map=False,
+                 bias=False,
+                 flat_map=True,
                  path=None,
                  exposure_time=quantity(100, units.millisecond),
                  num_exposures=3,

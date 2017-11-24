@@ -70,7 +70,7 @@ def __remove_crossterm_files(root_path, simulator=True):
                          filename="sin_noxterm_simulated.fits")
 
 
-def double_sin_remove_crossterm(sin_specification, bias, flat_map,
+def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat_map,
                                 exposure_time, num_exposures, fpm_position,
                                 lyot_stop_position=LyotStopPosition.in_beam,
                                 file_mode=True, raw_skip=0, path=None, simulator=True,
@@ -100,17 +100,20 @@ def double_sin_remove_crossterm(sin_specification, bias, flat_map,
     """
 
     # Create positive sin wave from specification.
-    sin_command_object, sin_file_name = sin_command(sin_specification, bias=bias, flat_map=flat_map,
+    positive_sine_spec_with_alignment = [sin_specification, alignment_speckle]
+    sin_command_object, sin_file_name = sin_command(positive_sine_spec_with_alignment, bias=bias, flat_map=flat_map,
                                                     return_shortname=True)
 
     # Create a "negative" sine wave by adding a phase of 180 from the original.
     negative_sin_spec = SinSpecification(sin_specification.angle, sin_specification.ncycles,
                                          sin_specification.peak_to_valley, 180)
-    negative_sin_command_object, neg_file_name = sin_command(negative_sin_spec, bias=bias, flat_map=flat_map,
+    negative_sine_spec_with_alignment = [sin_specification, alignment_speckle]
+    negative_sin_command_object, neg_file_name = sin_command(negative_sine_spec_with_alignment, bias=bias, flat_map=flat_map,
                                                              return_shortname=True)
 
     # Create a flat dm command.
-    flat_command_object, flat_file_name = flat_command(flat_map=flat_map, bias=bias, return_shortname=True)
+    flat_command_object, flat_file_name =  sin_command(alignment_speckle, bias=bias, flat_map=flat_map,
+                                                             return_shortname=True)
 
     # Connect to the DM.
     with testbed.dm_controller() as dm:

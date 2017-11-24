@@ -31,6 +31,7 @@ class TakeDmPlateScaleData(Experiment):
                  phase=0,
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
+                 alignment_speckle=SinSpecification(90, 17, quantity(50, units.nanometer), 0),
                  **kwargs):
         self.path = path
         self.bias = bias
@@ -43,6 +44,7 @@ class TakeDmPlateScaleData(Experiment):
         self.phase = phase
         self.fpm_position = fpm_position
         self.lyot_stop_position = lyot_stop_position
+        self. alignment_speckle = alignment_speckle
         self.kwargs = kwargs
 
     def experiment(self):
@@ -60,7 +62,7 @@ class TakeDmPlateScaleData(Experiment):
                 for ncycle in self.ncycles_range:
                     sin_spec = SinSpecification(angle, ncycle, self.peak_to_valley, self.phase)
                     ncycle_path = os.path.join(angles_path, "ncycles" + str(ncycle))
-                    double_sine.double_sin_remove_crossterm(sin_spec, self.bias, self.flat_map,
+                    double_sine.double_sin_remove_crossterm(sin_spec, self.alignment_speckle, self.bias, self.flat_map,
                                                             self.coron_exposure_time,
                                                             self.coron_nexps, self.fpm_position,
                                                             path=os.path.join(ncycle_path, "coron"),
