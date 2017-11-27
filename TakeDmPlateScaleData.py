@@ -2,18 +2,18 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
 import os
-from hicat_types import LyotStopPosition
 
 import numpy as np
 # noinspection PyUnresolvedReferences
 from builtins import *
 
+from ..hicat_types import ImageCentering
 from .modules import double_sine
 from .Experiment import Experiment
 from .. import util
 from ..config import CONFIG_INI
 from ..hardware import testbed
-from ..hicat_types import units, quantity, SinSpecification, FpmPosition
+from ..hicat_types import units, quantity, SinSpecification, FpmPosition, LyotStopPosition
 
 
 class TakeDmPlateScaleData(Experiment):
@@ -31,7 +31,9 @@ class TakeDmPlateScaleData(Experiment):
                  phase=0,
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
-                 alignment_speckle=SinSpecification(90, 17, quantity(50, units.nanometer), 0),
+                 alignment_speckle=False,
+                 centering=ImageCentering.auto,
+                 auto_exposure_mask_size=None,
                  **kwargs):
         self.path = path
         self.bias = bias
@@ -44,7 +46,9 @@ class TakeDmPlateScaleData(Experiment):
         self.phase = phase
         self.fpm_position = fpm_position
         self.lyot_stop_position = lyot_stop_position
-        self. alignment_speckle = alignment_speckle
+        self.alignment_speckle = alignment_speckle
+        self.centering = centering
+        self.auto_exposure_mask_size = auto_exposure_mask_size
         self.kwargs = kwargs
 
     def experiment(self):
@@ -62,9 +66,15 @@ class TakeDmPlateScaleData(Experiment):
                 for ncycle in self.ncycles_range:
                     sin_spec = SinSpecification(angle, ncycle, self.peak_to_valley, self.phase)
                     ncycle_path = os.path.join(angles_path, "ncycles" + str(ncycle))
-                    double_sine.double_sin_remove_crossterm(sin_spec, self.alignment_speckle, self.bias, self.flat_map,
+                    double_sine.double_sin_remove_crossterm(sin_spec,
+                                                            self.alignment_speckle,
+                                                            self.bias,
+                                                            self.flat_map,
                                                             self.coron_exposure_time,
-                                                            self.coron_nexps, self.fpm_position,
+                                                            self.coron_nexps,
+                                                            self.fpm_position,
+                                                            self.auto_exposure_mask_size,
+                                                            centering=self.centering,
                                                             path=os.path.join(ncycle_path, "coron"),
                                                             lyot_stop_position=self.lyot_stop_position,
                                                             **self.kwargs)
