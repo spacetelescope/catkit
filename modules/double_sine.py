@@ -8,11 +8,12 @@ import os
 from astropy.io import fits
 from glob import glob
 
-from hicat.hardware.boston.commands import flat_command
-from hicat.hardware.boston.sin_command import sin_command
-from hicat.hardware import testbed
-from hicat.util import write_fits, read_fits
-from hicat.hicat_types import LyotStopPosition, SinSpecification
+from hicat.hicat_types import ImageCentering
+from ...hardware.boston.commands import flat_command
+from ...hardware.boston.sin_command import sin_command
+from ...hardware import testbed
+from ...util import write_fits, read_fits
+from ...hicat_types import LyotStopPosition, SinSpecification, quantity, units
 
 """
 This module contains the double_sine_remove_crossterm function, which will take the data neccesary to compute
@@ -40,7 +41,7 @@ def __remove_crossterm_files(root_path, simulator=True):
     flat_path = glob(os.path.join(root_path, flat_dirname, "*_cal.fits"))[0]
 
     # Open files.
-    positive_sin_header, postive_sin_fits  = read_fits(positive_sin_path)
+    positive_sin_header, postive_sin_fits = read_fits(positive_sin_path)
     negative_sin_fits = read_fits(negative_sin_path, return_header=False)
     flat_fits = read_fits(flat_path, return_header=False)
 
@@ -72,6 +73,7 @@ def __remove_crossterm_files(root_path, simulator=True):
 
 def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat_map,
                                 exposure_time, num_exposures, fpm_position,
+                                auto_exposure_mask_size,
                                 lyot_stop_position=LyotStopPosition.in_beam,
                                 file_mode=True, raw_skip=0, path=None, simulator=True,
                                 auto_exposure_time=True,
@@ -82,6 +84,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     If file_mode = True, then the final result will be saved as sin_noxterm.fits at specified path.  Otherwise
     the numpy image data will be returned by this function.
     :param sin_specification: (SinSpecification) for the sin wave to apply on the DM.
+    :param alignment_speckle: (Boolean) Flag for whether to inject a speckle specifically for aligning images.
     :param bias: (Boolean) Apply a constant bias.
     :param flat_map: (Boolean) Apply the flat map.
     :param exposure_time: (Pint Quantity) Exposure time used for each exposure.
@@ -99,21 +102,28 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
              If file_mode=True: Nothing is returned.
     """
 
+    # Aligment speckle specification, only used when alignment_speckle param is True.
+    alignment_speckle_spec = SinSpecification(90, 17, quantity(50, units.nanometer), 0)
+    centering = ImageCentering.injected_speckles if alignment_speckle else ImageCentering.auto
+
     # Create positive sin wave from specification.
-    positive_sine_spec_with_alignment = [sin_specification, alignment_speckle]
-    sin_command_object, sin_file_name = sin_command(positive_sine_spec_with_alignment, bias=bias, flat_map=flat_map,
+    positive_sine_spec_list = [sin_specification]
+    if alignment_speckle:
+        positive_sine_spec_list.append(alignment_speckle_spec)
+    sin_command_object, sin_file_name = sin_command(positive_sine_spec_list, bias=bias, flat_map=flat_map,
                                                     return_shortname=True)
 
     # Create a "negative" sine wave by adding a phase of 180 from the original.
-    negative_sin_spec = SinSpecification(sin_specification.angle, sin_specification.ncycles,
-                                         sin_specification.peak_to_valley, 180)
-    negative_sine_spec_with_alignment = [sin_specification, alignment_speckle]
-    negative_sin_command_object, neg_file_name = sin_command(negative_sine_spec_with_alignment, bias=bias, flat_map=flat_map,
+    negative_sine_spec_list = [SinSpecification(sin_specification.angle, sin_specification.ncycles,
+                                                sin_specification.peak_to_valley, 180)]
+    if alignment_speckle:
+        negative_sine_spec_list.append(alignment_speckle_spec)
+    negative_sin_command_object, neg_file_name = sin_command(negative_sine_spec_list, bias=bias, flat_map=flat_map,
                                                              return_shortname=True)
 
     # Create a flat dm command.
-    flat_command_object, flat_file_name =  sin_command(alignment_speckle, bias=bias, flat_map=flat_map,
-                                                             return_shortname=True)
+    flat_command_object, flat_file_name = sin_command(alignment_speckle, bias=bias, flat_map=flat_map,
+                                                      return_shortname=True)
 
     # Connect to the DM.
     with testbed.dm_controller() as dm:
@@ -124,7 +134,8 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                    file_mode=file_mode, raw_skip=raw_skip, path=path,
                                                    exposure_set_name=positive_sin_dirname,
                                                    filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                                   simulator=simulator,
+                                                   simulator=simulator, centering=centering,
+                                                   auto_exposure_mask_size=auto_exposure_mask_size,
                                                    resume=resume, **kwargs)
 
         # Negative.
@@ -134,17 +145,19 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                    file_mode=file_mode, raw_skip=raw_skip, path=path,
                                                    exposure_set_name=negative_sin_dirname,
                                                    filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                                   simulator=simulator,
+                                                   simulator=simulator, centering=centering,
+                                                   auto_exposure_mask_size=auto_exposure_mask_size,
                                                    resume=resume, **kwargs)
 
-        # Flat.
+        # Flat (always use PSF image centering).
         dm.apply_shape(flat_command_object, 1)
         flat_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
                                                lyot_stop_position=lyot_stop_position,
                                                file_mode=file_mode, raw_skip=raw_skip, path=path,
                                                exposure_set_name=flat_dirname,
                                                filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                               simulator=simulator,
+                                               simulator=simulator, centering=centering,
+                                               auto_exposure_mask_size=auto_exposure_mask_size,
                                                resume=resume, **kwargs)
 
     # Create the final file from adding speckles and subtracting the flat.
