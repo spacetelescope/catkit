@@ -91,6 +91,8 @@ class DoubleSinRemoveCrossterm(Experiment):
                     with testbed.dm_controller() as dm:
                         # Postive sin wave.
                         dm.apply_shape(sin_command_object, 1)
-                        testbed.run_hicat_imaging(self.direct_exposure_time, self.direct_nexps, FpmPosition.direct,
+                        testbed.run_hicat_imaging(self.direct_exposure_time, self.direct_nexps,
+                                                  FpmPosition.direct,
                                                   path=p2v_path, exposure_set_name=direct_dirname,
-                                                  filename=sin_file_name, **self.kwargs)
+                                                  filename=sin_file_name,
+                                                  **self.kwargs)
