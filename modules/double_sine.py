@@ -77,7 +77,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                 lyot_stop_position=LyotStopPosition.in_beam,
                                 file_mode=True, raw_skip=0, path=None, simulator=True,
                                 auto_exposure_time=True,
-                                resume=False,
+                                resume=False, centering=ImageCentering.auto,
                                 **kwargs):
     """
     Takes 3 sets of exposures: "Positive Sin", "Negative Sin", and "Flat", and remove the cross term.
@@ -104,7 +104,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
 
     # Aligment speckle specification, only used when alignment_speckle param is True.
     alignment_speckle_spec = SinSpecification(90, 17, quantity(50, units.nanometer), 0)
-    centering = ImageCentering.injected_speckles if alignment_speckle else ImageCentering.auto
+    # centering = ImageCentering.injected_speckles if alignment_speckle else ImageCentering.auto
 
     # Create positive sin wave from specification.
     positive_sine_spec_list = [sin_specification]
@@ -122,8 +122,11 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                              return_shortname=True)
 
     # Create a flat dm command.
-    flat_command_object, flat_file_name = sin_command(alignment_speckle, bias=bias, flat_map=flat_map,
+    if alignment_speckle:
+        flat_command_object, flat_file_name = sin_command(alignment_speckle_spec, bias=bias, flat_map=flat_map,
                                                       return_shortname=True)
+    else:
+        flat_command_object, flat_file_name = flat_command(bias=bias, flat_map=flat_map, return_shortname=True)
 
     # Connect to the DM.
     with testbed.dm_controller() as dm:

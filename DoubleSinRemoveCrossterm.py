@@ -36,6 +36,7 @@ class DoubleSinRemoveCrossterm(Experiment):
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
                  alignment_speckle=False,
+                 centering=ImageCentering.auto,
                  auto_exposure_mask_size=5.5,
                  **kwargs):
         self.path = path
@@ -53,6 +54,7 @@ class DoubleSinRemoveCrossterm(Experiment):
         self.lyot_stop_position = lyot_stop_position
         self.alignment_speckle = alignment_speckle
         self.auto_exposure_mask_size=auto_exposure_mask_size
+        self.centering = centering
         self.kwargs = kwargs
 
     def experiment(self):
@@ -61,6 +63,9 @@ class DoubleSinRemoveCrossterm(Experiment):
         Take three sets of data using the take_double_sin_exposures function: Coron, Direct, Saturated Direct. Then also
         take a flat data set with no sinewave applied (just a bias).
         """
+
+        if self.alignment_speckle:
+            self.centering=ImageCentering.injected_speckles
 
         # Wait to set the path until the experiment starts (rather than the constructor)
         if self.path is None:
@@ -85,6 +90,7 @@ class DoubleSinRemoveCrossterm(Experiment):
                                                             self.coron_nexps, FpmPosition.coron,
                                                             self.auto_exposure_mask_size,
                                                             path=os.path.join(p2v_path, coron_dirname),
+                                                            centering=self.centering,
                                                             **self.kwargs)
 
                     # Direct.
