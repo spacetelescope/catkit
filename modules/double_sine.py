@@ -103,7 +103,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     """
 
     # Aligment speckle specification, only used when alignment_speckle param is True.
-    alignment_speckle_spec = SinSpecification(90, 17, quantity(50, units.nanometer), 0)
+    alignment_speckle_spec = SinSpecification(90, 17, quantity(60, units.nanometer), 0)
     # centering = ImageCentering.injected_speckles if alignment_speckle else ImageCentering.auto
 
     # Create positive sin wave from specification.
