@@ -11,7 +11,7 @@ from ..hardware.boston.sin_command import sin_command
 from ..hardware.boston.commands import flat_command
 
 from ..speckle_nulling import speckle_nulling
-from ..hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition
+from ..hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition, ImageCentering
 from ..hardware import testbed
 from ..hardware.boston import DmCommand
 from ..config import CONFIG_INI
@@ -33,6 +33,7 @@ class SpeckleNulling(Experiment):
                  suffix=None,
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
+                 centering=ImageCentering.auto,
                  **kwargs):
         self.num_iterations = num_iterations
         self.bias = bias
@@ -45,6 +46,7 @@ class SpeckleNulling(Experiment):
         self.suffix = suffix
         self.fpm_position = fpm_position
         self.lyot_stop_position = lyot_stop_position
+        self.centering = centering
         self.kwargs = kwargs
 
     def experiment(self):
@@ -99,15 +101,16 @@ class SpeckleNulling(Experiment):
 
                     # Tests the dark zone intensity and updates exposure time if needed, or just returns itself.
                     auto_exposure_time = speckle_nulling.test_dark_zone_intensity(
-                                                            auto_exposure_time, 2,
-                                                            fpm_position=self.fpm_position,
-                                                            lyot_stop_position=self.lyot_stop_position)
+                        auto_exposure_time, 2,
+                        fpm_position=self.fpm_position,
+                        lyot_stop_position=self.lyot_stop_position,
+                        centering=self.centering)
 
                     # Take coronographic data, with backgrounds.
                     iteration_path = os.path.join(self.path, "iteration" + str(i))
                     testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                               lyot_stop_position=self.lyot_stop_position,
-
+                                              centering=self.centering,
                                               path=iteration_path, auto_exposure_time=False,
                                               exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + file_name,
                                               **self.kwargs)
@@ -131,6 +134,7 @@ class SpeckleNulling(Experiment):
                         testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                                   lyot_stop_position=self.lyot_stop_position,
                                                   path=phase_path, auto_exposure_time=False,
+                                                  centering=self.centering,
                                                   exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + name,
                                                   simulator=False, **self.kwargs)
 
@@ -154,6 +158,7 @@ class SpeckleNulling(Experiment):
 
                         testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                                   lyot_stop_position=self.lyot_stop_position,
+                                                  centering=self.centering,
                                                   path=amplitude_path, auto_exposure_time=False,
                                                   exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + name,
                                                   simulator=False, **self.kwargs)
@@ -167,8 +172,9 @@ class SpeckleNulling(Experiment):
                                                                             new_phase))
                     current_command_object.data += phase_correction_command.data
 
-                # Take a final image with auto exposure.
+                # Take a final (non-saturated) image using auto exposure without the dark zone mask.
                 testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, self.fpm_position,
+                                          centering=self.centering,
                                           lyot_stop_position=self.lyot_stop_position,
                                           path=self.path,
                                           exposure_set_name="final", filename="final_dark_zone.fits",
