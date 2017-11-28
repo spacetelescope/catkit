@@ -359,7 +359,7 @@ def __get_max_pixel_count(data, mask=None):
 
 
 def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50, mask=None,
-                           camera_type="imaging_camera"):
+                           camera_type="imaging_camera", centering=ImageCentering.auto, pipeline=False):
     """
     To be used when the dm shape is already applied. Uses the imaging camera to find the correct exposure time.
     :param start_exp_time: The initial time to begin testing with.
@@ -372,8 +372,16 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
     move_beam_dump(BeamDumpPosition.out_of_beam)
     with get_camera(camera_type) as img_cam:
 
-        img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
-        img_max = __get_max_pixel_count(img_list[0], mask=mask)
+        # Take images and backgrounds and run them through the pipeline.
+        if pipeline:
+            img_list = img_cam.take_exposures(start_exp_time, 2, file_mode=False)
+            move_beam_dump(BeamDumpPosition.in_beam)
+            bg_list = img_cam.take_exposures(start_exp_time, 2, file_mode=False)
+            image = data_pipeline.data_pipeline(img_list, bg_list, centering=centering)
+        else:
+            img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
+            image = img_list[0]
+        img_max = __get_max_pixel_count(image, mask=mask)
 
         # Hack to use the same pint registry across processes.
         upper_bound = quantity(start_exp_time.m, start_exp_time.u)
@@ -388,14 +396,33 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
         best = start_exp_time
         while img_max < max_counts:
             upper_bound *= 2
-            img_list = img_cam.take_exposures(round(upper_bound, 3), 1, file_mode=False)
-            img_max = __get_max_pixel_count(img_list[0], mask=mask)
+            move_beam_dump(BeamDumpPosition.out_of_beam)
+            if pipeline:
+                img_list = img_cam.take_exposures(round(upper_bound, 3), 2, file_mode=False)
+                move_beam_dump(BeamDumpPosition.in_beam)
+                bg_list = img_cam.take_exposures(round(upper_bound, 3), 2, file_mode=False)
+                image = data_pipeline.data_pipeline(img_list, bg_list, centering=centering)
+            else:
+                img_list = img_cam.take_exposures(round(upper_bound, 3), 1, file_mode=False)
+                image = img_list[0]
+            img_max = __get_max_pixel_count(image, mask=mask)
+
+
             print("\tExposure time " + str(upper_bound) + " yields " + str(img_max) + " counts ")
 
         for i in range(num_tries):
             test = .5 * (upper_bound + lower_bound)
-            img_list = img_cam.take_exposures(round(test, 3), 1, file_mode=False)
-            img_max = __get_max_pixel_count(img_list[0], mask=mask)
+            move_beam_dump(BeamDumpPosition.out_of_beam)
+            if pipeline:
+                img_list = img_cam.take_exposures(round(test, 3), 2, file_mode=False)
+                move_beam_dump(BeamDumpPosition.in_beam)
+                bg_list = img_cam.take_exposures(round(test, 3), 2, file_mode=False)
+                image = data_pipeline.data_pipeline(img_list, bg_list, centering=centering)
+            else:
+                img_list = img_cam.take_exposures(round(test, 3), 1, file_mode=False)
+                image = img_list[0]
+            img_max = __get_max_pixel_count(image, mask=mask)
+
             print("\tExposure time " + str(test) + " yields " + str(img_max) + " counts ")
 
             if min_counts <= img_max <= max_counts:
