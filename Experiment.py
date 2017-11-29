@@ -35,7 +35,9 @@ class Experiment(object):
             print("Running safety tests...")
             # Check tests before starting experiment.
             for safety_test in self.safety_tests:
-                if not safety_test.check():
+                status, msg = safety_test.check()
+                print(msg)
+                if not status:
                     print(safety_test.name + " reports unsafe conditions. Aborting experiment...")
                     raise SafetyException()
             print("Safety tests passed!")
