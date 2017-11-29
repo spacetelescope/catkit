@@ -48,17 +48,20 @@ class Experiment(object):
             while experiment_process.is_alive():
 
                 for safety_test in self.safety_tests:
-
-                    if safety_test.check():
+                    status, message = safety_test.check()
+                    if status:
                         # Check passed, clear any warning that might be set and proceed to sleep until next iteration.
+                        print(message)
                         safety_test.warning = False
 
                     elif safety_test.warning:
                             # Shut down the experiment (but allow context managers to exit properly).
+                            print(message)
                             util.soft_kill(experiment_process)
                             raise SafetyException()
 
                     else:
+                        print(message)
                         print("Warning issued for " + safety_test.name +
                               ". Experiment will be softly killed if safety check fails again.")
                         safety_test.warning = True

@@ -19,7 +19,7 @@ class SafetyTest(object):
 
     @abstractmethod
     def check(self):
-        """Implement to return a boolean. True means everything is ok, false represents unsafe conditions."""
+        """Implement to return two values: boolean for pass/fail, and a string for status message."""
 
 
 class UpsSafetyTest(SafetyTest):
@@ -30,7 +30,7 @@ class UpsSafetyTest(SafetyTest):
     ups = testbed.backup_power()
 
     def check(self):
-        return self.ups.is_power_ok()
+        return self.ups.is_power_ok(return_status_msg=True)
 
 
 class HumidityTemperatureTest(SafetyTest):
@@ -44,14 +44,30 @@ class HumidityTemperatureTest(SafetyTest):
 
     def check(self):
         if "TSP01GUI.exe" in (p.name() for p in psutil.process_iter()):
-            print("Close the Thorlabs GUI and run again. It interferes with our code.")
-            return False
+            status_msg = "Humidity and Temperature test failed: Close the Thorlabs GUI and run again. " \
+                         "It interferes with our code."
+            return False, status_msg
 
         temp, humidity = ThorlabsTSP01.get_temp_humidity("thorlabs_tsp01_1")
         temp_ok = self.min_temp <= temp <= self.max_temp
-        humidity_ok = self.min_humidity <= humidity <= self.max_humidity
-        return temp_ok and humidity_ok
 
+        if temp_ok:
+            status_msg = "Temperature test passed: {} falls between {} and {}.".format(
+                temp, self.min_temp, self.max_temp)
+        else:
+            status_msg = "Temperature test failed: {} is outside of {} and {}.".format(
+                temp, self.min_temp, self.max_temp)
+
+        humidity_ok = self.min_humidity <= humidity <= self.max_humidity
+
+        if humidity_ok:
+            status_msg += "\nHumidity test passed: {} falls between {} and {}.".format(
+                humidity, self.min_humidity, self.max_humidity)
+        else:
+            status_msg += "\nHumidity test failed: {} is outside of {} and {}.".format(
+                humidity, self.min_humidity, self.max_humidity)
+
+        return temp_ok and humidity_ok, status_msg
 
 class SafetyException(Exception):
     def __init__(self, *args, **kwargs):
