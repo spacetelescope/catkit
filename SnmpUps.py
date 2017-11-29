@@ -37,10 +37,26 @@ class SnmpUps(BackupPower):
                 # The response is a list saved into var_binds, and our OID is listed first.
                 return var_binds[0][1]
 
-    def is_power_ok(self):
+    def is_power_ok(self, return_status_msg=False):
         """Boolean function to determine whether the system should initiate a shutdown."""
         try:
-            return False if self.get_status() != 3 else True
+            status = self.get_status()
+            result = False if status != 3 else True
+            if return_status_msg:
+                return result, self.__generate_status_message(status)
+            else:
+                return result
+
         except Exception as err:
             print(err)
-            return False
+            if return_status_msg:
+                return False, "UPS failed safety test: SNMP interface request failed."
+            else:
+                return False
+
+    @staticmethod
+    def __generate_status_message(status):
+        if status == 3:
+            return "UPS passed safety test: A value of 3 was returned over the SNMP interface."
+        else:
+            return "UPS failed safety test: A value of " + str(status) + " where only 3 is acceptable."
