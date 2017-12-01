@@ -173,7 +173,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         circle_mask = None
         if auto_exposure_mask_size:
             print(fpm_position)
-            if fpm_position==fpm_position.coron:
+            if fpm_position == fpm_position.coron:
                 circle_mask = util.create_psf_mask((subarray_size, subarray_size), auto_exposure_mask_size)
                 print("using auto-expose circular mask, radius (lambda/d): ", auto_exposure_mask_size)
             else:
@@ -335,7 +335,7 @@ def move_lyot_stop(lyot_stop_position):
 
 
 def __get_fpm_position_from_ini(fpm_position):
-    if fpm_position.value ==  FpmPosition.coron.value:
+    if fpm_position.value == FpmPosition.coron.value:
         new_position = CONFIG_INI.getfloat("motor_FPM_Y", "default_coron")
     elif fpm_position.value == FpmPosition.direct.value:
         new_position = CONFIG_INI.getfloat("motor_FPM_Y", "direct")
@@ -367,6 +367,9 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
     :param max_counts: The maximum number of acceptable counts in the image.
     :param num_tries: Safety mechanism to prevent infinite loops, max tries before giving up.
     :param mask: A mask for which to search for the max pixel (ie dark zone).
+    :param camera_type: String value from ini under the [testbed] tag.
+    :param centering: Mode from ImageCentering enum for how to center images.
+    :param pipeline: Boolean for whether to use the pipeline or not.
     :return: The correct exposure time to use, or in the failure case, the start exposure time passed in.
     """
     move_beam_dump(BeamDumpPosition.out_of_beam)
