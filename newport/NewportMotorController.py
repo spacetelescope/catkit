@@ -63,11 +63,11 @@ class NewportMotorController(MotorController):
         current_position = self.get_position(motor_id)
         if not np.isclose(current_position, position, atol=.001):
             # Move.
+            print("Moving positioner " + positioner + " to " + str(position) + "...")
             error_code, return_string = self.motor_controller.GroupMoveAbsolute(self.socket_id, positioner, [position])
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupMoveAbsolute')
             else:
-                print("Moved positioner " + positioner + " to " + str(position))
                 self.__update_testbed_state(motor_id, position)
 
     def relative_move(self, motor_id, distance):
@@ -81,11 +81,11 @@ class NewportMotorController(MotorController):
         self.__ensure_initialized(group)
 
         # Move.
+        print("Moving positioner " + positioner + " by " + str(distance) + "...")
         error_code, return_string = self.motor_controller.GroupMoveRelative(self.socket_id, positioner, [distance])
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupMoveRelative')
         else:
-            print("Moved positioner " + positioner + " by " + str(distance))
             self.__update_testbed_state(motor_id, self.get_position(motor_id))
 
     def get_position(self, motor_id):
@@ -102,7 +102,6 @@ class NewportMotorController(MotorController):
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupPositionCurrentGet')
         else:
-            print('Positioner ' + positioner + ' is in position ' + str(current_position))
             return current_position
 
     def __ensure_initialized(self, group):
@@ -166,8 +165,8 @@ class NewportMotorController(MotorController):
     @staticmethod
     def __update_testbed_state(motorid, position):
         if motorid == "motor_lyot_stop_x":
-            nominal = CONFIG_INI.getfloat(motorid, "nominal")
-            testbed_state.lyot_stop = True if np.isclose(nominal, position, atol=.001) else False
+            ini_value = CONFIG_INI.getfloat(motorid, "in_beam")
+            testbed_state.lyot_stop = True if np.isclose(ini_value, position, atol=.001) else False
         elif motorid == "motor_FPM_Y":
-            nominal = CONFIG_INI.getfloat(motorid, "nominal")
-            testbed_state.coronograph = True if np.isclose(nominal, position, atol=.001) else False
+            ini_value = CONFIG_INI.getfloat(motorid, "default_coron")
+            testbed_state.coronograph = True if np.isclose(ini_value, position, atol=.001) else False

@@ -218,7 +218,6 @@ class ZwoCamera(Camera):
     def flash_id(self, new_id):
         """
         Flashes the camera memory to append a string at the end of the camera name.
-        :param usb_index: This will be zero unless there is another camera with the same name plugged in.
         :param new_id: Ascii value of the string you want to append.
                        Passing the value 49 will append (1) to the name.
                        Passing the value 50 will append (2) to the name.

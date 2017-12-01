@@ -6,7 +6,6 @@ from builtins import *
 import numpy as np
 
 from ... import config as hicat_config
-from ... import util
 from .DmCommand import DmCommand
 from ...hicat_types import units, quantity
 
@@ -48,7 +47,8 @@ def flat_command(bias=False,
         return dm_command_object
 
 
-def poke_command(actuators, amplitude=quantity(500, units.nanometers), bias=False, flat_map=False, return_shortname=False, dm_num=1):
+def poke_command(actuators, amplitude=quantity(500, units.nanometers), bias=False,
+                 flat_map=False, return_shortname=False, dm_num=1):
     """
     Creates a DmCommand object that pokes actuators at a given amplitude.
     :param actuators: List of actuators, or a single actuator.

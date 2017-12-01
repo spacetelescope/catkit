@@ -7,6 +7,7 @@ import os
 from glob import glob
 import numpy as np
 
+from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity, ImageCentering
 from . import testbed_state
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
 from .. import data_pipeline
@@ -17,7 +18,6 @@ from ..hardware.SnmpUps import SnmpUps
 from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
 from ..hardware.zwo.ZwoCamera import ZwoCamera
-from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity
 from ..interfaces.DummyLaserSource import DummyLaserSource
 
 
@@ -108,8 +108,8 @@ def get_camera_motor_name(camera_type):
 def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_position=LyotStopPosition.in_beam,
                       file_mode=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
                       take_background_exposures=True, use_background_cache=True,
-                      pipeline=True, return_pipeline_metadata=False,
-                      auto_exposure_time=True,
+                      pipeline=True, return_pipeline_metadata=False, centering=ImageCentering.auto,
+                      auto_exposure_time=True, auto_exposure_mask_size=None,
                       simulator=True,
                       extra_metadata=None,
                       resume=False,
@@ -144,7 +144,9 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :param use_background_cache: Reuses backgrounds with the same exposure time. Supported when file_mode=True.
     :param pipeline: True runs pipeline, False does not.  Inherits file_mode to determine whether to write final fits.
     :param return_pipeline_metadata: List of MetaDataEntry items that includes additional pipeline info.
+    :param centering: (ImageCentering) Mode pipeline will use to find the center of images and recenter them.
     :param auto_exposure_time: Flag to enable auto exposure time correction.
+    :param auto_exposure_mask_size: Value in lambda / d units to use to create a circle mask for auto exposure.
     :param simulator: Flag to enable Mathematica simulator. Supported when file_mode=True.
     :param extra_metadata: List or single MetaDataEntry.
     :param resume: Very primitive way to try and resume an experiment. Skips exposures that already exist on disk.
@@ -164,9 +166,25 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     # Auto Exposure.
     if auto_exposure_time:
         camera_name = CONFIG_INI.get("testbed", camera_type)
-        min_counts = CONFIG_INI.getint(camera_name, "min_counts")
         max_counts = CONFIG_INI.getint(camera_name, "max_counts")
-        exposure_time = auto_exp_time_no_shape(exposure_time, min_counts, max_counts, camera_type=camera_type)
+        min_counts = CONFIG_INI.getint(camera_name, "min_counts")
+        subarray_size = CONFIG_INI.getint(camera_name, "width")
+
+        circle_mask = None
+        if auto_exposure_mask_size:
+            print(fpm_position)
+            if fpm_position == fpm_position.coron:
+                circle_mask = util.create_psf_mask((subarray_size, subarray_size), auto_exposure_mask_size)
+                print("using auto-expose circular mask, radius (lambda/d): ", auto_exposure_mask_size)
+            else:
+                circle_mask = None
+                print("not using the circular mask in direct mode")
+
+        exposure_time = auto_exp_time_no_shape(exposure_time,
+                                               min_counts,
+                                               max_counts,
+                                               camera_type=camera_type,
+                                               mask=circle_mask)
 
     # Fits directories and filenames.
     exp_path, raw_path, img_path, bg_path = None, None, None, None
@@ -235,32 +253,31 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         # Run data pipeline
         final_output = None
-        satellite_spots = True if fpm_position == FpmPosition.coron else False
         cal_metadata = None
         if pipeline and file_mode and raw_skip == 0:
             # Output is the path to the cal file.
-            final_output = data_pipeline.standard_file_pipeline(exp_path)
+            final_output = data_pipeline.standard_file_pipeline(exp_path, centering=centering)
 
         if pipeline and raw_skip > 0:
 
             # Output is the path to the cal file.
-            final_output = data_pipeline.data_pipeline(img_list, bg_list, satellite_spots, output_path=exp_path,
+            final_output = data_pipeline.data_pipeline(img_list, bg_list, centering, output_path=exp_path,
                                                        filename_root=filename, img_metadata=metadata,
                                                        bg_metadata=bg_metadata)
         elif pipeline and not file_mode:
 
             # Output is the numpy data for the cal file, and our metadata updated with centroid information.
-            final_output, cal_metadata = data_pipeline.data_pipeline(img_list, bg_list, satellite_spots,
+            final_output, cal_metadata = data_pipeline.data_pipeline(img_list, bg_list, centering,
                                                                      img_metadata=metadata,
                                                                      return_metadata=True)
 
         # Export the DM Command itself as a fits file.
         if file_mode and testbed_state.dm1_command_object is not None:
-            testbed_state.dm1_command_object.export_fits(os.path.join(path, exposure_set_name))
+            testbed_state.dm1_command_object.export_fits(exp_path)
 
         # Store config.ini.
         if file_mode:
-            util.save_ini(os.path.join(path, "config"))
+            util.save_ini(os.path.join(exp_path, "config"))
 
         # Simulator (file-based only).
         if file_mode and simulator:
@@ -318,18 +335,22 @@ def move_lyot_stop(lyot_stop_position):
 
 
 def __get_fpm_position_from_ini(fpm_position):
-    if fpm_position is FpmPosition.coron:
+    if fpm_position.value == FpmPosition.coron.value:
         new_position = CONFIG_INI.getfloat("motor_FPM_Y", "default_coron")
-    else:
+    elif fpm_position.value == FpmPosition.direct.value:
         new_position = CONFIG_INI.getfloat("motor_FPM_Y", "direct")
+    else:
+        raise AttributeError("Unknown FpmPosition value: " + str(fpm_position))
     return new_position
 
 
 def __get_lyot_position_from_ini(lyot_position):
-    if lyot_position is LyotStopPosition.in_beam:
+    if lyot_position.value == LyotStopPosition.in_beam.value:
         new_position = CONFIG_INI.getfloat("motor_lyot_stop_x", "in_beam")
-    else:
+    elif lyot_position.value == LyotStopPosition.out_of_beam.value:
         new_position = CONFIG_INI.getfloat("motor_lyot_stop_x", "out_of_beam")
+    else:
+        raise AttributeError("Unknown LyotStopPosition value " + str(lyot_position))
     return new_position
 
 
@@ -338,7 +359,7 @@ def __get_max_pixel_count(data, mask=None):
 
 
 def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50, mask=None,
-                           camera_type="imaging_camera"):
+                           camera_type="imaging_camera", centering=ImageCentering.auto, pipeline=False):
     """
     To be used when the dm shape is already applied. Uses the imaging camera to find the correct exposure time.
     :param start_exp_time: The initial time to begin testing with.
@@ -346,13 +367,24 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
     :param max_counts: The maximum number of acceptable counts in the image.
     :param num_tries: Safety mechanism to prevent infinite loops, max tries before giving up.
     :param mask: A mask for which to search for the max pixel (ie dark zone).
+    :param camera_type: String value from ini under the [testbed] tag.
+    :param centering: Mode from ImageCentering enum for how to center images.
+    :param pipeline: Boolean for whether to use the pipeline or not.
     :return: The correct exposure time to use, or in the failure case, the start exposure time passed in.
     """
     move_beam_dump(BeamDumpPosition.out_of_beam)
     with get_camera(camera_type) as img_cam:
 
-        img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
-        img_max = __get_max_pixel_count(img_list[0], mask=mask)
+        # Take images and backgrounds and run them through the pipeline.
+        if pipeline:
+            img_list = img_cam.take_exposures(start_exp_time, 2, file_mode=False)
+            move_beam_dump(BeamDumpPosition.in_beam)
+            bg_list = img_cam.take_exposures(start_exp_time, 2, file_mode=False)
+            image = data_pipeline.data_pipeline(img_list, bg_list, centering=centering)
+        else:
+            img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
+            image = img_list[0]
+        img_max = __get_max_pixel_count(image, mask=mask)
 
         # Hack to use the same pint registry across processes.
         upper_bound = quantity(start_exp_time.m, start_exp_time.u)
@@ -367,14 +399,33 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
         best = start_exp_time
         while img_max < max_counts:
             upper_bound *= 2
-            img_list = img_cam.take_exposures(round(upper_bound, 3), 1, file_mode=False)
-            img_max = __get_max_pixel_count(img_list[0], mask=mask)
+            move_beam_dump(BeamDumpPosition.out_of_beam)
+            if pipeline:
+                img_list = img_cam.take_exposures(round(upper_bound, 3), 2, file_mode=False)
+                move_beam_dump(BeamDumpPosition.in_beam)
+                bg_list = img_cam.take_exposures(round(upper_bound, 3), 2, file_mode=False)
+                image = data_pipeline.data_pipeline(img_list, bg_list, centering=centering)
+            else:
+                img_list = img_cam.take_exposures(round(upper_bound, 3), 1, file_mode=False)
+                image = img_list[0]
+            img_max = __get_max_pixel_count(image, mask=mask)
+
+
             print("\tExposure time " + str(upper_bound) + " yields " + str(img_max) + " counts ")
 
         for i in range(num_tries):
             test = .5 * (upper_bound + lower_bound)
-            img_list = img_cam.take_exposures(round(test, 3), 1, file_mode=False)
-            img_max = __get_max_pixel_count(img_list[0], mask=mask)
+            move_beam_dump(BeamDumpPosition.out_of_beam)
+            if pipeline:
+                img_list = img_cam.take_exposures(round(test, 3), 2, file_mode=False)
+                move_beam_dump(BeamDumpPosition.in_beam)
+                bg_list = img_cam.take_exposures(round(test, 3), 2, file_mode=False)
+                image = data_pipeline.data_pipeline(img_list, bg_list, centering=centering)
+            else:
+                img_list = img_cam.take_exposures(round(test, 3), 1, file_mode=False)
+                image = img_list[0]
+            img_max = __get_max_pixel_count(image, mask=mask)
+
             print("\tExposure time " + str(test) + " yields " + str(img_max) + " counts ")
 
             if min_counts <= img_max <= max_counts:
