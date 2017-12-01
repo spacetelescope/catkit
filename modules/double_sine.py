@@ -90,6 +90,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     :param exposure_time: (Pint Quantity) Exposure time used for each exposure.
     :param num_exposures: (int) Number of raw exposures to take
     :param fpm_position: (FpmPosition) Coronograph position.
+    :param auto_exposure_mask_size: (int) Value in lambda / d units to use to create a circle mask for auto exposure.
     :param lyot_stop_position: (LyotStopPosition) Lyot Stop position.
     :param file_mode: (Boolean) True will save fits files to disk, False will keep everything in memory.
     :param raw_skip: (int) Optimization for filemode=True that will skip writing x exposures for every 1 taken.
@@ -97,6 +98,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     :param simulator: (Boolean) True will run the simulator (file_mode=True is required).
     :param auto_exposure_time: (Boolean) True will alter exposure time to get the counts into a linear range.
     :param resume: (Boolean) Primitive way to resume an experiment that was incomplete, file_mode=True only.
+    :param centering: (ImageCentering) Mode pipeline will use to find the center of images and recenter them.
     :param kwargs: Specific keyword arguments passed to the Camera interface.
     :return: If file_mode=False: Numpy image data for final image with crossterm removed.
              If file_mode=True: Nothing is returned.
@@ -104,7 +106,6 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
 
     # Aligment speckle specification, only used when alignment_speckle param is True.
     alignment_speckle_spec = SinSpecification(90, 17, quantity(60, units.nanometer), 0)
-    # centering = ImageCentering.injected_speckles if alignment_speckle else ImageCentering.auto
 
     # Create positive sin wave from specification.
     positive_sine_spec_list = [sin_specification]

@@ -4,7 +4,6 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 import psutil
-import time
 from abc import ABCMeta, abstractmethod
 from ..hardware import testbed
 from .. config import CONFIG_INI
@@ -69,6 +68,7 @@ class HumidityTemperatureTest(SafetyTest):
 
         return temp_ok and humidity_ok, status_msg
 
+
 class SafetyException(Exception):
-    def __init__(self, *args, **kwargs):
-        Exception.__init__(self, *args, **kwargs)
+    def __init__(self, *args):
+        Exception.__init__(self, *args)

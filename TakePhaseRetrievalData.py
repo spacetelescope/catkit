@@ -7,7 +7,7 @@ from builtins import *
 import numpy as np
 
 from .Experiment import Experiment
-from ..hicat_types import *
+from ..hicat_types import quantity, units, MetaDataEntry, FpmPosition
 from .. import util
 from ..hardware import testbed
 from ..config import CONFIG_INI
@@ -25,7 +25,7 @@ class TakePhaseRetrievalData(Experiment):
                  step=10,
                  path=None,
                  camera_type="phase_retrieval_camera",
-                 position_list = None,
+                 position_list=None,
                  **kwargs):
         """
         Takes a set of data with the phase_retrieval camera (default) at constant "step" increments from focus.
@@ -56,7 +56,7 @@ class TakePhaseRetrievalData(Experiment):
                                   self.step,
                                   self.path,
                                   self.camera_type,
-                                  position_list = self.position_list,
+                                  position_list=self.position_list,
                                   **self.kwargs)
 
 

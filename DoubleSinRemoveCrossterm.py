@@ -4,8 +4,6 @@ from __future__ import (absolute_import, division,
 import os
 
 # noinspection PyUnresolvedReferences
-from hicat_types import LyotStopPosition
-
 from builtins import *
 
 from hicat.hicat_types import ImageCentering
@@ -15,7 +13,7 @@ from .. import util
 from ..config import CONFIG_INI
 from ..hardware import testbed
 from ..hardware.boston.sin_command import sin_command
-from ..hicat_types import units, quantity, FpmPosition, SinSpecification
+from ..hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition
 
 
 class DoubleSinRemoveCrossterm(Experiment):
@@ -53,7 +51,7 @@ class DoubleSinRemoveCrossterm(Experiment):
         self.fpm_position = fpm_position
         self.lyot_stop_position = lyot_stop_position
         self.alignment_speckle = alignment_speckle
-        self.auto_exposure_mask_size=auto_exposure_mask_size
+        self.auto_exposure_mask_size = auto_exposure_mask_size
         self.centering = centering
         self.kwargs = kwargs
 
@@ -65,7 +63,7 @@ class DoubleSinRemoveCrossterm(Experiment):
         """
 
         if self.alignment_speckle:
-            self.centering=ImageCentering.injected_speckles
+            self.centering = ImageCentering.injected_speckles
 
         # Wait to set the path until the experiment starts (rather than the constructor)
         if self.path is None:

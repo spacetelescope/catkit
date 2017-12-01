@@ -119,7 +119,7 @@ class Calibration(Experiment):
         calibration_util.collect_final_images(cam_outpath, "*sin_noxterm.fits")
 
     def process_chip_orientation(self):
-        data, subarray_x, subarray_y = calibration_take_data.recenter_subarray(outpath=None, plot=self.plot)
+        calibration_take_data.recenter_subarray(outpath=None, plot=self.plot)
 
     def process_subarray_centering(self):
         subarray_outpath = os.path.join(self.outpath, 'subarray')

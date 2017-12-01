@@ -4,8 +4,6 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-import numpy as np
-
 from .Experiment import Experiment
 from ..hicat_types import *
 from .. import util
