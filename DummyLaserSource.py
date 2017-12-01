@@ -3,14 +3,9 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
-from ctypes import cdll
-import os
-import re
-import time
 
 from .LaserSource import LaserSource
-from ..config import CONFIG_INI
-from ..hardware import testbed_state
+
 
 """Interface for a laser source."""
 
