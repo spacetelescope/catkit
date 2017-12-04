@@ -17,8 +17,8 @@ class TakeMtfData(Experiment):
     name = "Take MTF Data"
 
     def __init__(self,
-                 bias=True,
-                 flat_map=False,
+                 bias=False,
+                 flat_map=True,
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=100,
                  path=None,
