@@ -21,8 +21,8 @@ class TakeDmPlateScaleData(Experiment):
 
     def __init__(self,
                  path=None,
-                 bias=True,
-                 flat_map=False,
+                 bias=False,
+                 flat_map=True,
                  coron_exposure_time=quantity(100, units.millisecond),
                  coron_nexps=10,
                  angle_range=range(0, 100, 10),

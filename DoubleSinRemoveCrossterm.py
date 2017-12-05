@@ -21,8 +21,8 @@ class DoubleSinRemoveCrossterm(Experiment):
 
     def __init__(self,
                  path=None,
-                 bias=True,
-                 flat_map=False,
+                 bias=False,
+                 flat_map=True,
                  coron_exposure_time=quantity(200, units.millisecond),
                  direct_exposure_time=quantity(250, units.microsecond),
                  coron_nexps=10,
