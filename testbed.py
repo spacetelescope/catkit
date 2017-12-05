@@ -299,14 +299,14 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
 def move_beam_dump(beam_dump_position):
     """A safe method to move the beam dump."""
-    in_beam = True if beam_dump_position == BeamDumpPosition.in_beam else False
+    in_beam = True if beam_dump_position.value == BeamDumpPosition.in_beam.value else False
 
     # Check the internal state of the beam dump before moving it.
     if testbed_state.background is None or (testbed_state.background != in_beam):
         with beam_dump() as bd:
-            if beam_dump_position is BeamDumpPosition.in_beam:
+            if beam_dump_position.value == BeamDumpPosition.in_beam.value:
                 bd.move_to_position1()
-            elif beam_dump_position is BeamDumpPosition.out_of_beam:
+            elif beam_dump_position.value == BeamDumpPosition.out_of_beam.value:
                 bd.move_to_position2()
 
 
