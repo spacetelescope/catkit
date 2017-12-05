@@ -83,7 +83,7 @@ class SpeckleNulling(Experiment):
         auto_exposure_time = self.exposure_time
 
         # Set the exposure set name and laser current based on FPM position.
-        if self.fpm_position == FpmPosition.coron:
+        if self.fpm_position.value == FpmPosition.coron.value:
             exp_set_name = "coron"
             laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
         else:
