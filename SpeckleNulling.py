@@ -90,6 +90,7 @@ class SpeckleNulling(Experiment):
             exp_set_name = "direct"
             laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
 
+
         # Initialize the laser and connect to the DM, apply the sine wave shape.
         with testbed.laser_source() as laser:
             laser.set_current(laser_current)
