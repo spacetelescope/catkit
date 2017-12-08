@@ -304,6 +304,7 @@ def move_beam_dump(beam_dump_position):
     # Check the internal state of the beam dump before moving it.
     if testbed_state.background is None or (testbed_state.background != in_beam):
         with beam_dump() as bd:
+            print("Moving beam dump " + beam_dump_position.name)
             if beam_dump_position.value == BeamDumpPosition.in_beam.value:
                 bd.move_to_position1()
             elif beam_dump_position.value == BeamDumpPosition.out_of_beam.value:
