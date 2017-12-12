@@ -47,6 +47,9 @@ class Accufiz(FizeauInterferometer):
 
         pathfile = os.path.join(path, filename)  # pathdir + inputfile
 
+        pathfile = pathfile.replace('\\',
+                                    '\\\\')  ### This line is here because when sent through webservice slashes tend to disappear. If we sent in parameter a path with only one slash, they disappear
+
         #  This line is here because when sent through webservice slashes tend
         #  to disappear. If we sent in parameter a path with only one slash,
         #  they disappear
@@ -56,7 +59,8 @@ class Accufiz(FizeauInterferometer):
         if 'success' in measres.text:
             r = requests.post("http://192.168.192.131/WebService4D/WebService4D.asmx/SaveMeasurement", data=paramsave)
             if glob(pathfile + '.h5'):
-                print('SUCCESS IN SAVING ' + pathfile + '.h5 : ' + num_frames + 'frames in ' + str(time.time() - orig))
+                #print('SUCCESS IN SAVING ' + pathfile + '.h5 : ' + num_frames + 'frames in ' + str(time.time() - orig))
+                print('SUCCESS IN SAVING ' + pathfile)
             else:
                 print("FAIL IN SAVING MEASUREMENT " + pathfile + ".h5")
         else:
