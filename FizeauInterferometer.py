@@ -15,7 +15,7 @@ class FizeauInterferometer(object):
     def __init__(self, config_id, *args, **kwargs):
         """Opens connection with camera sets class attributes for 'config_id'"""
         self.config_id = config_id
-        self.interferometer = self.initialize(self, *args, **kwargs)
+        self.interferometer = self.initialize(*args, **kwargs)
         print("Opened connection to Fizeau Interferometer: " + self.config_id)
 
     # Implementing context manager.
@@ -37,5 +37,5 @@ class FizeauInterferometer(object):
         """Close interferometer connection."""
 
     @abstractmethod
-    def take_measurement(self, num_frames, path, filename, *args, **kwargs):
+    def take_measurement(self, num_frames, path, filename):
         """Takes exposures and should be able to save fits and simply return the image data."""
