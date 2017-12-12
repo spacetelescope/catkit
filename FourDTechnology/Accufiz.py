@@ -76,9 +76,10 @@ class Accufiz(FizeauInterferometer):
             if not os.path.exists(path):
                 os.makedirs(path)
             r = requests.post("http://{}/WebService4D/WebService4D.asmx/SaveMeasurement".format(ip), data=paramsave)
+            time.sleep(1)
             if glob(pathfile + '.h5'):
                 print('SUCCESS IN SAVING ' + pathfile)
-                return self.__convert_h5_to_fits(path)
+                return self.__convert_h5_to_fits(path, pathfile)
             else:
                 print("FAIL IN SAVING MEASUREMENT " + pathfile + ".h5")
         else:
@@ -90,26 +91,29 @@ class Accufiz(FizeauInterferometer):
         return os.path.join(script_dir, mask)
 
     @staticmethod
-    def __convert_h5_to_fits(path):
+    def __convert_h5_to_fits(path, file):
         os.chdir(path)
 
-        for file in glob('*.h5'):
-            pathfile = file
-            pathdifits = file[:-3] + '.fits'
+        file = file if file.endswith(".h5") else file + ".h5"
+        pathfile = file
+        pathdifits = file[:-3] + '.fits'
 
-            maskinh5 = np.array(h5py.File(pathfile, 'r').get('measurement0').get('Detectormask'))
-            image0 = np.array(h5py.File(pathfile, 'r').get('measurement0').get('genraw').get('data')) * maskinh5
+        maskinh5 = np.array(h5py.File(pathfile, 'r').get('measurement0').get('Detectormask'))
+        image0 = np.array(h5py.File(pathfile, 'r').get('measurement0').get('genraw').get('data')) * maskinh5
 
-            fits.PrimaryHDU(maskinh5).writeto(pathdifits, overwrite=True)
+        fits.PrimaryHDU(maskinh5).writeto(pathdifits, overwrite=True)
 
-            radiusmask = np.int(np.sqrt(np.sum(maskinh5) / math.pi))
-            center = ndimage.measurements.center_of_mass(maskinh5)
+        radiusmask = np.int(np.sqrt(np.sum(maskinh5) / math.pi))
+        center = ndimage.measurements.center_of_mass(maskinh5)
 
-            image = np.clip(image0, -10, +10)[np.int(center[0]) - radiusmask:np.int(center[0]) + radiusmask - 1,
-                    np.int(center[1]) - radiusmask: np.int(center[1]) + radiusmask - 1]
+        image = np.clip(image0, -10, +10)[np.int(center[0]) - radiusmask:np.int(center[0]) + radiusmask - 1,
+                np.int(center[1]) - radiusmask: np.int(center[1]) + radiusmask - 1]
 
-            fits.PrimaryHDU(image).writeto(pathdifits, overwrite=True)
-            return glob('*.fits')
+        # Convert waves to nanometers (wavelength of 632.8).
+        image = image * 632.8
+
+        fits.PrimaryHDU(image).writeto(pathdifits, overwrite=True)
+        return pathdifits
 
     @staticmethod
     def change_permissions_windows(path):
