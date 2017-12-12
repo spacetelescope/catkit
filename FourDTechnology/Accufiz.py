@@ -48,7 +48,7 @@ class Accufiz(FizeauInterferometer):
 
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d", permissions=True)
+            path = util.create_data_path(initial_path=central_store_path, suffix="4d")
 
         if filename is None:
             filename = "4d_measurement"
@@ -67,12 +67,14 @@ class Accufiz(FizeauInterferometer):
         pathfile = pathfile.replace('\\',
                                     '/')
 
-        # pathfile = pathfile.replace('/',
-        #                             '\\\\')
+        pathfile = pathfile.replace('/',
+                                    '\\\\')
 
         paramsave = {"fileName": pathfile}
 
         if 'success' in measres.text:
+            if not os.path.exists(path):
+                os.makedirs(path)
             r = requests.post("http://{}/WebService4D/WebService4D.asmx/SaveMeasurement".format(ip), data=paramsave)
             if glob(pathfile + '.h5'):
                 print('SUCCESS IN SAVING ' + pathfile)
@@ -108,4 +110,19 @@ class Accufiz(FizeauInterferometer):
 
             fits.PrimaryHDU(image).writeto(pathdifits, overwrite=True)
             return glob('*.fits')
+
+    @staticmethod
+    def change_permissions_windows(path):
+        import win32security
+        import ntsecuritycon as con
+        import os
+        import pdb
+        userx, domain, type = win32security.LookupAccountName("", "Everyone")
+        for dirpath, dirnames, filenames in os.walk(path):
+            for FILENAME in filenames:
+                sd = win32security.GetFileSecurity(path + '\\' + FILENAME, win32security.DACL_SECURITY_INFORMATION)
+                dacl = sd.GetSecurityDescriptorDacl()  # instead of dacl = win32security.ACL()
+                dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, userx)
+                sd.SetSecurityDescriptorDacl(1, dacl, 0)
+                win32security.SetFileSecurity(path + '\\' + FILENAME, win32security.DACL_SECURITY_INFORMATION, sd)
 
