@@ -119,19 +119,3 @@ class Accufiz(FizeauInterferometer):
 
         fits.PrimaryHDU(image).writeto(pathdifits, overwrite=True)
         return pathdifits
-
-    @staticmethod
-    def change_permissions_windows(path):
-        import win32security
-        import ntsecuritycon as con
-        import os
-        import pdb
-        userx, domain, type = win32security.LookupAccountName("", "Everyone")
-        for dirpath, dirnames, filenames in os.walk(path):
-            for FILENAME in filenames:
-                sd = win32security.GetFileSecurity(path + '\\' + FILENAME, win32security.DACL_SECURITY_INFORMATION)
-                dacl = sd.GetSecurityDescriptorDacl()  # instead of dacl = win32security.ACL()
-                dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, userx)
-                sd.SetSecurityDescriptorDacl(1, dacl, 0)
-                win32security.SetFileSecurity(path + '\\' + FILENAME, win32security.DACL_SECURITY_INFORMATION, sd)
-
