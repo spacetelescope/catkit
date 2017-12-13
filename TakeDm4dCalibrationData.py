@@ -26,6 +26,8 @@ class TakeDm4dCalibrationData(Experiment):
                  path=None,
                  filename=None,
                  dm_num=2,
+                 rotate=0,
+                 fliplr=False,
                  **kwargs):
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
@@ -40,6 +42,8 @@ class TakeDm4dCalibrationData(Experiment):
         self.path = path
         self.filename = filename
         self.dm_num = dm_num
+        self.rotate = rotate
+        self.fliplr = fliplr
         self.kwargs = kwargs
 
     def experiment(self):
@@ -48,11 +52,17 @@ class TakeDm4dCalibrationData(Experiment):
 
         with Accufiz("4d_accufiz", mask=mask) as four_d:
             # Reference image.
-            reference_path = four_d.take_measurement(path=self.path, filename=self.filename + "_reference")
+            reference_path = four_d.take_measurement(path=self.path,
+                                                     filename=self.filename + "_reference",
+                                                     rotate=self.rotate,
+                                                     fliplr=self.fliplr)
 
             with testbed.dm_controller() as dm:
                 dm.apply_shape(self.dm_command_object, self.dm_num)
-                image_path = four_d.take_measurement(path=self.path, filename=self.filename + "_command_image")
+                image_path = four_d.take_measurement(path=self.path,
+                                                     filename=self.filename + "_command_image",
+                                                     rotate=self.rotate,
+                                                     fliplr=self.fliplr)
 
                 # Open fits files and subtract.
                 reference = fits.getdata(reference_path)
@@ -63,5 +73,3 @@ class TakeDm4dCalibrationData(Experiment):
 
                 # Save the DM_Command used.
                 self.dm_command_object.export_fits(self.path)
-
-
