@@ -44,7 +44,9 @@ class Accufiz(FizeauInterferometer):
     def take_measurement(self,
                          num_frames=2,
                          path=None,
-                         filename=None):
+                         filename=None,
+                         rotate=0,
+                         fliplr=False):
 
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
@@ -79,7 +81,7 @@ class Accufiz(FizeauInterferometer):
             time.sleep(1)
             if glob(pathfile + '.h5'):
                 print('SUCCESS IN SAVING ' + pathfile)
-                return self.__convert_h5_to_fits(path, pathfile)
+                return self.__convert_h5_to_fits(path, pathfile, rotate, fliplr)
             else:
                 print("FAIL IN SAVING MEASUREMENT " + pathfile + ".h5")
         else:
@@ -91,7 +93,7 @@ class Accufiz(FizeauInterferometer):
         return os.path.join(script_dir, mask)
 
     @staticmethod
-    def __convert_h5_to_fits(path, file):
+    def __convert_h5_to_fits(path, file, rotate, fliplr):
         os.chdir(path)
 
         file = file if file.endswith(".h5") else file + ".h5"
@@ -108,6 +110,9 @@ class Accufiz(FizeauInterferometer):
 
         image = np.clip(image0, -10, +10)[np.int(center[0]) - radiusmask:np.int(center[0]) + radiusmask - 1,
                 np.int(center[1]) - radiusmask: np.int(center[1]) + radiusmask - 1]
+
+        # Apply the rotation and flips.
+        image = util.rotate_and_flip_image(image, rotate, fliplr)
 
         # Convert waves to nanometers (wavelength of 632.8).
         image = image * 632.8
