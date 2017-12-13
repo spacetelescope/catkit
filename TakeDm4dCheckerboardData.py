@@ -69,7 +69,7 @@ class TakeDm4dCheckerboardData(Experiment):
                         image = fits.getdata(image_path)
 
                         # Subtract the reference from image.
-                        util.write_fits(image - reference, os.path.join(self.path, file_name + "_subtracted"))
+                        util.write_fits(np.abs(image - reference), os.path.join(self.path, file_name + "_subtracted"))
 
                         # Save the DM_Command used.
                         command.export_fits(self.path)
