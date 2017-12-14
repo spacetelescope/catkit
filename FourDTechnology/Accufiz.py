@@ -46,7 +46,8 @@ class Accufiz(FizeauInterferometer):
                          path=None,
                          filename=None,
                          rotate=0,
-                         fliplr=False):
+                         fliplr=False,
+                         exposure_set=""):
 
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
