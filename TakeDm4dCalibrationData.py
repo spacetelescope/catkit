@@ -53,6 +53,7 @@ class TakeDm4dCalibrationData(Experiment):
         with Accufiz("4d_accufiz", mask=mask) as four_d:
             # Reference image.
             reference_path = four_d.take_measurement(path=self.path,
+                                                     num_frames=self.num_frames,
                                                      filename=self.filename + "_reference",
                                                      rotate=self.rotate,
                                                      fliplr=self.fliplr)
@@ -60,6 +61,7 @@ class TakeDm4dCalibrationData(Experiment):
             with testbed.dm_controller() as dm:
                 dm.apply_shape(self.dm_command_object, self.dm_num)
                 image_path = four_d.take_measurement(path=self.path,
+                                                     num_frames=self.num_frames,
                                                      filename=self.filename + "_command_image",
                                                      rotate=self.rotate,
                                                      fliplr=self.fliplr)
@@ -69,7 +71,7 @@ class TakeDm4dCalibrationData(Experiment):
                 image = fits.getdata(image_path)
 
                 # Subtract the reference from image.
-                util.write_fits(np.abs(image - reference), os.path.join(self.path, self.filename + "_subtracted"))
+                util.write_fits(reference - image, os.path.join(self.path, self.filename + "_subtracted"))
 
                 # Save the DM_Command used.
                 self.dm_command_object.export_fits(self.path)
