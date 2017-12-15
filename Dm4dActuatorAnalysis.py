@@ -9,12 +9,12 @@ import os
 from astropy.io import fits
 
 from .Experiment import Experiment
-from ..hardware.boston.commands import poke_letter_f_command, poke_command
+from ..hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
 from ..hardware import testbed
 from ..hardware.FourDTechnology.Accufiz import Accufiz
 from ..config import CONFIG_INI
 from .. import util
-from .. hicat_types import units, quantity
+from ..hicat_types import units, quantity
 
 
 class Dm4dActuatorAnalysis(Experiment):
@@ -22,8 +22,8 @@ class Dm4dActuatorAnalysis(Experiment):
 
     def __init__(self,
                  actuators=[1],
-                 amplitude_range=range(100,800,100),
-                 amplitude_range_units = units.nanometer,
+                 amplitude_range=range(100, 800, 100),
+                 amplitude_range_units=units.nanometer,
                  mask="dm2_detector.mask",
                  num_frames=2,
                  path=None,
@@ -53,14 +53,19 @@ class Dm4dActuatorAnalysis(Experiment):
 
     def experiment(self):
 
-        with Accufiz("4d_accufiz", mask=self.mask) as four_d:
-            # Reference image.
-            reference_path = four_d.take_measurement(path=self.path,
-                                                     filename="reference",
-                                                     rotate=self.rotate,
-                                                     fliplr=self.fliplr)
-
         with testbed.dm_controller() as dm:
+            flat_command_object = flat_command(bias=True,
+                                               flat_map=False,
+                                               return_shortname=False,
+                                               dm_num=2)
+            dm.apply_shape(flat_command_object, self.dm_num)
+
+            with Accufiz("4d_accufiz", mask=self.mask) as four_d:
+                # Reference image.
+                reference_path = four_d.take_measurement(path=self.path,
+                                                         filename="reference",
+                                                         rotate=self.rotate,
+                                                         fliplr=self.fliplr)
 
             for i in self.amplitude_range:
                 file_name = "poke_amplitude_{}_nm".format(i)
