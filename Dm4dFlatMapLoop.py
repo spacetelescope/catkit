@@ -20,7 +20,7 @@ from .. import dm_calibration_util
 
 
 class Dm4dFlatMapLoop(Experiment):
-    name = "Dm 4d Actuator Analysis"
+    name = "Dm 4d Flat Map Loop"
 
     def __init__(self,
                  mask="dm2_detector.mask",
@@ -52,28 +52,21 @@ class Dm4dFlatMapLoop(Experiment):
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
         repo_path = util.find_repo_location()
-        mask_path = os.path.join(repo_path, "hardware", "FourDTechnology", map_file_name)
+        mask_path = os.path.join(repo_path, "hicat", "hardware", "FourDTechnology", map_file_name)
         actuator_index = {}
         with open(mask_path) as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 actuator_index[int(row['actuator'])] = (int(row['x_coord']), int(row['y_coord']))
 
-        # Take Reference image.
-        with Accufiz("4d_accufiz", mask=self.mask) as four_d:
-            reference_path = four_d.take_measurement(path=self.path,
-                                                     filename="reference",
-                                                     rotate=self.rotate,
-                                                     fliplr=self.fliplr)
-
         # Start with a bias on the DM.
         actuator_intensities = {}
         with testbed.dm_controller() as dm:
-            flat_command_object = flat_command(bias=True,
+            command_object = flat_command(bias=True,
                                                flat_map=False,
                                                return_shortname=False,
                                                dm_num=2)
-            dm.apply_shape(flat_command_object, self.dm_num)
+            dm.apply_shape(command_object, self.dm_num)
 
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 initial_file_name = "initial_bias"
@@ -82,28 +75,44 @@ class Dm4dFlatMapLoop(Experiment):
                                                      rotate=self.rotate,
                                                      fliplr=self.fliplr)
 
-                # Open fits files and subtract.
-                reference = fits.getdata(reference_path)
-                image = fits.getdata(image_path)
-
-                # Subtract the reference from image.
-                initial_subtracted_image_path = os.path.join(self.path, initial_file_name + "_subtracted")
-                util.write_fits(reference - image, initial_subtracted_image_path)
-
                 # Save the DM_Command used.
-                flat_command_object.export_fits(os.path.join(self.path, initial_file_name))
+                command_object.export_fits(os.path.join(self.path, initial_file_name))
 
+            flat_value = 0
+            for i in range(2):
                 # Using the actuator_map, find the intensities at each actuator pixel value.
-                initial_subtracted_image = reference = fits.getdata(initial_subtracted_image_path)
-                for key, value in actuator_index:
+                image = fits.getdata(image_path)
+                for key, value in actuator_index.items():
 
                     # Create a small circle mask around index, and take the median.
-                    actuator_mask = dm_calibration_util.circle_mask(initial_subtracted_image, value[0], value[1], 3)
+                    actuator_mask = dm_calibration_util.circle_mask(image, value[0], value[1], 3)
 
                     # Find the median within the mask.
-                    actuator_intensity = np.median(actuator_mask)
+                    actuator_intensity = np.median(image[actuator_mask])
 
                     # Add to intensity dictionary.
                     actuator_intensities[key] = actuator_intensity
 
-                print(actuator_intensities)
+                # Find the median of all the intensities and use that as the "flat" value.
+                if i == 0:
+                    flat_value = np.median(np.array(list(actuator_intensities.values())))
+
+                # Generate the correction values.
+                corrected_values = []
+                for key, value in actuator_intensities.items():
+                    corrected_values.append(quantity(value - flat_value, units.nanometer).to_base_units().m)
+
+                # Update the DmCommand.
+                command_object.data += util.convert_dm_command_to_image(corrected_values)
+
+                # Apply the new command.
+                dm.apply_shape(command_object, dm_num=self.dm_num)
+
+                file_name = "iteration{}".format(i)
+                image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
+                                                     filename=file_name,
+                                                     rotate=self.rotate,
+                                                     fliplr=self.fliplr)
+
+                # Save the DM_Command used.
+                command_object.export_fits(os.path.join(self.path, file_name))
