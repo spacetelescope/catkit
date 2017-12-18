@@ -30,6 +30,8 @@ class Dm4dFlatMapLoop(Experiment):
                  dm_num=2,
                  rotate=180,
                  fliplr=False,
+                 iterations=2,
+                 damping_ratio=.5,
                  **kwargs):
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
@@ -45,6 +47,8 @@ class Dm4dFlatMapLoop(Experiment):
         self.dm_num = dm_num
         self.rotate = rotate
         self.fliplr = fliplr
+        self.iterations = iterations
+        self.damping_ratio = damping_ratio
         self.kwargs = kwargs
 
     def experiment(self):
@@ -62,26 +66,31 @@ class Dm4dFlatMapLoop(Experiment):
         # Start with a bias on the DM.
         actuator_intensities = {}
         with testbed.dm_controller() as dm:
+
             command_object = flat_command(bias=True,
                                                flat_map=False,
                                                return_shortname=False,
                                                dm_num=2)
             dm.apply_shape(command_object, self.dm_num)
 
+            print("Taking initial image...")
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 initial_file_name = "initial_bias"
                 image_path = four_d.take_measurement(path=os.path.join(self.path, initial_file_name),
                                                      filename=initial_file_name,
                                                      rotate=self.rotate,
+                                                     num_frames=self.num_frames,
                                                      fliplr=self.fliplr)
 
                 # Save the DM_Command used.
                 command_object.export_fits(os.path.join(self.path, initial_file_name))
 
             flat_value = 0
-            for i in range(2):
+            for i in range(self.iterations):
                 # Using the actuator_map, find the intensities at each actuator pixel value.
                 image = fits.getdata(image_path)
+
+                print("Finding intensities...")
                 for key, value in actuator_index.items():
 
                     # Create a small circle mask around index, and take the median.
@@ -97,10 +106,20 @@ class Dm4dFlatMapLoop(Experiment):
                 if i == 0:
                     flat_value = np.median(np.array(list(actuator_intensities.values())))
 
+                # Calculate and print the variance and standard deviation.
+                intensity_values = np.array(list(actuator_intensities.values()))
+                print("Variance: ", np.var(intensity_values))
+                print("Standard deviation: ", np.std(intensity_values))
+
                 # Generate the correction values.
+                print("Generating corrections...")
                 corrected_values = []
                 for key, value in actuator_intensities.items():
-                    corrected_values.append(quantity(value - flat_value, units.nanometer).to_base_units().m)
+                    correction = quantity(value - flat_value, units.nanometer).to_base_units().m
+
+                    # Apply damping ratio.
+                    correction *= self.damping_ratio
+                    corrected_values.append(correction)
 
                 # Update the DmCommand.
                 command_object.data += util.convert_dm_command_to_image(corrected_values)
@@ -108,10 +127,12 @@ class Dm4dFlatMapLoop(Experiment):
                 # Apply the new command.
                 dm.apply_shape(command_object, dm_num=self.dm_num)
 
+                print("Taking exposures with 4D...")
                 file_name = "iteration{}".format(i)
                 image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
                                                      filename=file_name,
                                                      rotate=self.rotate,
+                                                     num_frames=self.num_frames,
                                                      fliplr=self.fliplr)
 
                 # Save the DM_Command used.
