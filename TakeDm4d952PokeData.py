@@ -22,7 +22,7 @@ class TakeDm4d952PokeData(Experiment):
 
     def __init__(self,
                  mask="dm2_detector.mask",
-                 num_frames=2,
+                 num_frames=5,
                  path=None,
                  dm_num=2,
                  rotate=0,
@@ -60,6 +60,7 @@ class TakeDm4d952PokeData(Experiment):
                 dm.apply_shape(command, self.dm_num)
                 with Accufiz("4d_accufiz", mask=mask) as four_d:
                     image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
+                                                         num_frames=self.num_frames,
                                                          filename=file_name,
                                                          rotate=self.rotate,
                                                          fliplr=self.fliplr)
