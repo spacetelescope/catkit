@@ -32,10 +32,12 @@ class Dm4dFlatMapLoop(Experiment):
                  fliplr=False,
                  iterations=2,
                  damping_ratio=.5,
+                 create_flat_map=True,
                  **kwargs):
+
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d")
+            path = util.create_data_path(initial_path=central_store_path, suffix="4d_flat_map_loop")
 
         if filename is None:
             filename = "4d_"
@@ -49,6 +51,7 @@ class Dm4dFlatMapLoop(Experiment):
         self.fliplr = fliplr
         self.iterations = iterations
         self.damping_ratio = damping_ratio
+        self.create_flat_map = create_flat_map
         self.kwargs = kwargs
 
     def experiment(self):
@@ -86,6 +89,8 @@ class Dm4dFlatMapLoop(Experiment):
                 command_object.export_fits(os.path.join(self.path, initial_file_name))
 
             flat_value = 0
+            best_std_deviation = None
+            best_flat_map = None
             for i in range(self.iterations):
                 # Using the actuator_map, find the intensities at each actuator pixel value.
                 image = fits.getdata(image_path)
@@ -109,7 +114,12 @@ class Dm4dFlatMapLoop(Experiment):
                 # Calculate and print the variance and standard deviation.
                 intensity_values = np.array(list(actuator_intensities.values()))
                 print("Variance: ", np.var(intensity_values))
-                print("Standard deviation: ", np.std(intensity_values))
+                std_deviation = np.std(intensity_values)
+                print("Standard deviation: ", std_deviation)
+
+                if best_std_deviation is None or std_deviation < best_std_deviation:
+                    best_std_deviation = std_deviation
+                    best_flat_map = i
 
                 # Generate the correction values.
                 print("Generating corrections...")
@@ -137,3 +147,18 @@ class Dm4dFlatMapLoop(Experiment):
 
                 # Save the DM_Command used.
                 command_object.export_fits(os.path.join(self.path, file_name))
+
+            if self.create_flat_map:
+                iteration_folder_name = "iteration" + str(i)
+                full_path = os.path.join(self.path, iteration_folder_name, "dm_command", "dm_command_2d.fits")
+                dm_command_data = fits.getdata(full_path)
+
+                # Convert the dm command units to volts.
+                max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
+                dm_command_data *= max_volts
+
+                filename = "flat_map_volts_dm1.fits" if self.dm_num == 1 else "flat_map_volts_dm2.fits"
+                root_dir = util.find_package_location()
+                full_output_path = os.path.join(root_dir, "hardware", "boston", filename)
+
+                util.write_fits(dm_command_data, full_output_path)
