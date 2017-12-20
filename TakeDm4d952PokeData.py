@@ -4,12 +4,14 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-import numpy as np
 import os
+from glob import glob
+from photutils import find_peaks
 from astropy.io import fits
+import matplotlib.pyplot as plt
 
 from .Experiment import Experiment
-from ..hardware.boston.commands import poke_letter_f_command, poke_command, checkerboard_command
+from ..hardware.boston.commands import poke_command
 from ..hardware import testbed
 from ..hardware.FourDTechnology.Accufiz import Accufiz
 from ..config import CONFIG_INI
@@ -27,6 +29,8 @@ class TakeDm4d952PokeData(Experiment):
                  dm_num=2,
                  rotate=0,
                  fliplr=False,
+                 show_plot=False,
+                 create_csv=True,
                  **kwargs):
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
@@ -38,6 +42,8 @@ class TakeDm4d952PokeData(Experiment):
         self.dm_num = dm_num
         self.rotate = rotate
         self.fliplr = fliplr
+        self.show_plot = show_plot
+        self.create_csv = create_csv
         self.kwargs = kwargs
 
     def experiment(self):
@@ -74,3 +80,47 @@ class TakeDm4d952PokeData(Experiment):
 
                     # Save the DM_Command used.
                     command.export_fits(os.path.join(self.path, file_name))
+
+        if self.create_csv:
+            self.create_actuator_index()
+
+    def create_actuator_index(self):
+        root_dir = util.find_package_location()
+        csv_filename = "actuator_map_dm1.csv" if self.dm_num == 1 else " actuator_map_dm2.csv"
+        csv_file = os.path.join(root_dir, "hardware", "FourDTechnology", csv_filename)
+
+        actuator_indices = {}
+        num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
+        for i in range(num_actuators):
+
+            # Open the correct poke file.
+            poke_file = glob(self.path + "*_" + str(i) + "_subtracted.fits")[0]
+
+            # Get the data
+            data = fits.getdata(poke_file)
+
+            # Find the centroid of the poke.
+            table = find_peaks(data, data.max() * .95, npeaks=1)
+            x_peak = table["x_peak"][0]
+            y_peak = table["y_peak"][0]
+            coord = (x_peak, y_peak)
+
+            actuator_indices[i] = coord
+            print(i)
+
+        if self.show_plot:
+            plt.figure(figsize=(10, 8))
+            ref_image = fits.getdata(os.path.join(self.path, "reference.fits"))
+            plt.imshow(ref_image)
+            plt.title("Number of actuators: {}".format(len(actuator_indices)))
+            plt.show()
+
+        csv_list = []
+        for key, r in actuator_indices.items():
+            plt.scatter(r[0], r[1], color='black', s=6)
+            csv_list.append(str(key) + "," + str(r[0]) + "," + str(r[1]))
+
+        with open(csv_file, "wb") as csvfile:
+            csvfile.write(str("actuator,x_coord,y_coord\n"))
+            for row in csv_list:
+                csvfile.write(row + "\n")
