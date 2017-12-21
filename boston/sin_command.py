@@ -70,7 +70,8 @@ def sin_command(sin_specification,
         if flat_map:
             short_name += "_flat_map"
         if bias:
-            bias_volts = CONFIG_INI.getint(dm_config_id, "bias_volts")
+            bias_name = "bias_volts_dm1" if dm_num == 1 else "bias_volts_dm2"
+            bias_volts = CONFIG_INI.getint(dm_config_id, bias_name)
             short_name += "_bias" + str(bias_volts)
         return dm_command_object, short_name
     else:
