@@ -8,6 +8,7 @@ import numpy as np
 import os
 from astropy.io import fits
 
+from hicat.hicat_types import MetaDataEntry
 from .Experiment import Experiment
 from ..hardware.boston.commands import poke_letter_f_command, poke_command, checkerboard_command, flat_command
 from ..hardware import testbed
@@ -77,8 +78,15 @@ class TakeDm4dCheckerboardData(Experiment):
                             reference = fits.getdata(reference_path)
                             image = fits.getdata(image_path)
 
+                            # Create metadata.  
+                            metadata = [MetaDataEntry("offset_x", "offset_x", str(i), "Checkerboard offset x-axis")]
+                            metadata.append(MetaDataEntry("offset_y", "offset_y", str(j), "Checkerboard offset y-axis"))
+                            metadata.append("amplitude", "amp", str(k), "Amplitude in nanometers")
+
                             # Subtract the reference from image.
-                            util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"))
+                            util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"),
+                                            metadata=metadata)
+
 
                             # Save the DM_Command used.
                             command.export_fits(os.path.join(self.path, file_name))
