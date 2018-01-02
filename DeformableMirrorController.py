@@ -1,8 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 
 from abc import ABCMeta, abstractmethod
 
@@ -13,6 +14,7 @@ from abc import ABCMeta, abstractmethod
 
 class DeformableMirrorController(object):
     __metaclass__ = ABCMeta
+    log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):
         """Opens connection with the DM and sets class attributes for 'config_id' and 'dm'."""
@@ -22,7 +24,7 @@ class DeformableMirrorController(object):
         self.dm1_command = None
         self.dm2_command = None
         self.dm_controller = self.initialize(self, *args, **kwargs)
-        print("Opened connection to DM " + config_id)
+        self.log.info("Opened connection to DM " + config_id)
 
     # Implementing context manager.
     def __enter__(self, *args, **kwargs):
@@ -31,7 +33,7 @@ class DeformableMirrorController(object):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
         self.dm_controller = None
-        print("Safely closed DM " + self.config_id)
+        self.log.info("Safely closed DM " + self.config_id)
 
     # Abstract Methods.
     @abstractmethod

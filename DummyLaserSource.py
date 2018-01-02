@@ -1,8 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 
 from .LaserSource import LaserSource
 
@@ -11,6 +12,7 @@ from .LaserSource import LaserSource
 
 
 class DummyLaserSource(LaserSource):
+    log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):
         self.config_id = config_id
@@ -19,10 +21,10 @@ class DummyLaserSource(LaserSource):
         return None
 
     def close(self):
-        print("Dummy Laser closed.")
+        self.log.info("Dummy Laser closed.")
 
     def set_current(self, value, sleep=True):
-        print("Set Current being ignored.")
+        self.log.info("Set Current being ignored.")
 
     def get_current(self):
         return None

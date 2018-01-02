@@ -1,8 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 
 from abc import ABCMeta, abstractmethod
 
@@ -11,12 +12,13 @@ from abc import ABCMeta, abstractmethod
 
 class Camera(object):
     __metaclass__ = ABCMeta
+    log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):
         """Opens connection with camera sets class attributes for 'config_id' and 'camera'."""
         self.config_id = config_id
         self.camera = self.initialize(self, *args, **kwargs)
-        print("Opened connection to camera: " + self.config_id)
+        self.log.info("Opened connection to camera: " + self.config_id)
 
     # Implementing context manager.
     def __enter__(self, *args, **kwargs):
@@ -25,7 +27,7 @@ class Camera(object):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
         self.camera = None
-        print("Safely closed camera: " + self.config_id)
+        self.log.info("Safely closed camera: " + self.config_id)
 
     # Abstract Methods.
     @abstractmethod

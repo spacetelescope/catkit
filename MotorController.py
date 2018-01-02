@@ -1,22 +1,24 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
 from abc import ABCMeta, abstractmethod
+import logging
 
 """Interface for a motor controller."""
 
 
 class MotorController(object):
     __metaclass__ = ABCMeta
+    log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):
         """Opens connection with the DM and sets class attributes for 'config_id' and 'dm'."""
         self.config_id = config_id
         self.socket_id = None
         self.motor_controller = self.initialize(*args, **kwargs)
-        print("Initialized Motor Controller " + config_id)
+        self.log.info("Initialized Motor Controller " + config_id)
 
     # Implementing context manager.
     def __enter__(self, *args, **kwargs):
@@ -25,7 +27,7 @@ class MotorController(object):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
         self.motor_controller = None
-        print("Safely closed connection to Motor Controller " + self.config_id)
+        self.log.info("Safely closed connection to Motor Controller " + self.config_id)
 
     # Abstract Methods.
     @abstractmethod
