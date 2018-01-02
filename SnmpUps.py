@@ -1,8 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 
 from pysnmp import hlapi
 from ..interfaces.BackupPower import BackupPower
@@ -12,6 +13,7 @@ from ..config import CONFIG_INI
 
 
 class SnmpUps(BackupPower):
+    log = logging.getLogger(__name__)
 
     def get_status(self):
 
@@ -39,6 +41,7 @@ class SnmpUps(BackupPower):
 
     def is_power_ok(self, return_status_msg=False):
         """Boolean function to determine whether the system should initiate a shutdown."""
+        self.log.info("checking SNMP power status")
         try:
             status = self.get_status()
             result = False if status != 3 else True
@@ -48,8 +51,9 @@ class SnmpUps(BackupPower):
                 return result
 
         except Exception as err:
-            print(err)
+            self.log.exception(err.message)
             if return_status_msg:
+                self.log.error("UPS failed safety test: SNMP interface request failed.")
                 return False, "UPS failed safety test: SNMP interface request failed."
             else:
                 return False

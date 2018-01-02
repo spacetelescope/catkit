@@ -1,11 +1,12 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
 
 from astropy.io import fits
 import numpy as np
+import logging
 import os
 import zwoasi
 import sys
@@ -21,6 +22,9 @@ from ...hardware import testbed_state
 
 
 class ZwoCamera(Camera):
+
+    log = logging.getLogger(__name__)
+
     def initialize(self, *args, **kwargs):
         """Opens connection with camera and returns the camera manufacturer specific object.
            Uses the config_id to look up parameters in the config.ini."""
@@ -36,7 +40,7 @@ class ZwoCamera(Camera):
         # Attempt to find USB camera.
         num_cameras = zwoasi.get_num_cameras()
         if num_cameras == 0:
-            print('No cameras found')
+            self.log.error('No cameras found')
             sys.exit(0)
 
         cameras_found = zwoasi.list_cameras()  # Model names of the connected cameras.
@@ -164,7 +168,7 @@ class ZwoCamera(Camera):
 
             # If Resume is enabled, continue if the file already exists on disk.
             if resume and os.path.isfile(full_path):
-                print("File already exists: " + full_path)
+                self.log.info("File already exists: " + full_path)
                 img_list.append(full_path)
                 continue
 
@@ -195,17 +199,17 @@ class ZwoCamera(Camera):
             # Add testbed state metadata.
             for entry in meta_data:
                 if len(entry.name_8chars) > 8:
-                    print("Fits Header Keyword: " + entry.name_8chars +
+                    self.log.warning("Fits Header Keyword: " + entry.name_8chars +
                           " is greater than 8 characters and will be truncated.")
                 if len(entry.comment) > 47:
-                    print("Fits Header comment for " + entry.name_8chars +
+                    self.log.warning("Fits Header comment for " + entry.name_8chars +
                           " is greater than 47 characters and will be truncated.")
                 hdu.header[entry.name_8chars[:8]] = (entry.value, entry.comment)
 
             # Create a HDUList to contain the newly created primary HDU, and write to a new file.
             fits.HDUList([hdu])
             hdu.writeto(full_path, overwrite=True)
-            print("wrote " + full_path)
+            self.log.info("wrote " + full_path)
             if raw_skip == 0:
                 img_list.append(full_path)
 
@@ -223,12 +227,12 @@ class ZwoCamera(Camera):
                        Passing the value 50 will append (2) to the name.
         """
         camera_info_before = self.camera.get_camera_property()
-        print("Before Flash:")
-        print(camera_info_before["Name"])
+        self.log.info("Before Flash:")
+        self.log.info(camera_info_before["Name"])
         self.camera.set_id(0, new_id)
-        print("After Flash:")
+        self.log.info("After Flash:")
         camera_info_after = self.camera.get_camera_property()
-        print(camera_info_after["Name"])
+        self.log.info(camera_info_after["Name"])
 
     def __setup_control_values(self, exposure_time, subarray_x=None, subarray_y=None, width=None, height=None,
                                gain=None, full_image=None, bins=None):
@@ -257,24 +261,24 @@ class ZwoCamera(Camera):
         detector_max_y = cam_info['MaxHeight']
 
         if full_image:
-            print("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
+            self.log.info("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
             return
 
-        # Check for errors, print them all out before exiting.
+        # Check for errors, log them all before exiting.
         error_flag = False
 
         # Check that width and height are multiples of 8
         if width % 8 != 0:
-            print("Width is not a multiple of 8:", width)
+            self.log.error("Width is not a multiple of 8:", width)
             error_flag = True
         if height % 8 != 0:
-            print("Height is not a multiple of 8:", height)
+            self.log.error("Height is not a multiple of 8:", height)
             error_flag = True
 
         # Convert to binned units
         if bins != 1:
             # For debugging
-            # print("Converting to binned units: bins =", bins)
+            # self.log.debug("Converting to binned units: bins =", bins)
 
             subarray_x //= bins
             subarray_y //= bins
@@ -288,23 +292,23 @@ class ZwoCamera(Camera):
         derived_end_y = subarray_y + (height // 2)
 
         if derived_start_x > detector_max_x or derived_start_x < 0:
-            print("Derived start x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_start_x)
+            self.log.error("Derived start x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_start_x)
             error_flag = True
 
         if derived_start_y > detector_max_y or derived_start_y < 0:
-            print("Derived start y coordinate is off the detector ( max", detector_max_y - 1, "):", derived_start_y)
+            self.log.error("Derived start y coordinate is off the detector ( max", detector_max_y - 1, "):", derived_start_y)
             error_flag = True
 
         if derived_end_x > detector_max_x or derived_end_x < 0:
-            print("Derived end x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_end_x)
+            self.log.error("Derived end x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_end_x)
             error_flag = True
 
         if derived_end_y > detector_max_y or derived_end_y < 0:
-            print("Derived end y coordinate is off the detector ( max", detector_max_y - 1, "):", derived_end_y)
+            self.log.error("Derived end y coordinate is off the detector ( max", detector_max_y - 1, "):", derived_end_y)
             error_flag = True
 
         if full_image:
-            print("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
+            self.log.error("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
         else:
             if error_flag:
                 sys.exit("Exiting. Correct errors in the config.ini file or input parameters.")

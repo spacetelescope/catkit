@@ -1,8 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 import requests
 from ..config import CONFIG_INI
 from ..interfaces.RemotePowerSwitch import RemotePowerSwitch
@@ -16,6 +17,7 @@ switch.turn_on("motor_controller_outlet")
 
 
 class WebPowerSwitch(RemotePowerSwitch):
+    log=logging.getLogger(__name__)
 
     def turn_on(self, outlet_id):
         """
@@ -24,6 +26,7 @@ class WebPowerSwitch(RemotePowerSwitch):
         outlet_num = CONFIG_INI.getint(self.config_id, outlet_id)
         script_line = self.__find_script_line(outlet_num, True)
         self.__http_script_call(script_line)
+        self.log.info("Turning on outlet " + outlet_id + " number " + str(outlet_num))
 
     def turn_off(self, outlet_id):
         """
@@ -32,6 +35,7 @@ class WebPowerSwitch(RemotePowerSwitch):
         outlet_num = CONFIG_INI.getint(self.config_id, outlet_id)
         script_line = self.__find_script_line(outlet_num, False)
         self.__http_script_call(script_line)
+        self.log.info("Turning off outlet " + outlet_id + " number " + str(outlet_num))
 
     def all_on(self):
         """
@@ -39,6 +43,7 @@ class WebPowerSwitch(RemotePowerSwitch):
         """
         script_line = CONFIG_INI.get(self.config_id, "all_on")
         self.__http_script_call(script_line)
+        self.log.info("Turning on all outlets")
 
     def all_off(self):
         """
@@ -46,6 +51,7 @@ class WebPowerSwitch(RemotePowerSwitch):
         """
         script_line = CONFIG_INI.get(self.config_id, "all_off")
         self.__http_script_call(script_line)
+        self.log.info("Turning off all outlets")
 
     @staticmethod
     def __find_script_line(outlet_num, on):
@@ -82,7 +88,7 @@ class WebPowerSwitch(RemotePowerSwitch):
         try:
             requests.get(ip_string, auth=(user, password))
         except requests.exceptions.RequestException as e:  # This is the correct syntax
-            print(e)
+            self.log.exception(e.message)
 
     def __get_config_values(self):
         user = CONFIG_INI.get(self.config_id, "user")
