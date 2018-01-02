@@ -1,8 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 
 import numpy as np
 
@@ -16,6 +17,7 @@ from ..hardware.boston.commands import flat_command
 
 class TakePhaseRetrievalData(Experiment):
     name = "Take Phase Retrieval Data"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  bias=False,
@@ -69,6 +71,9 @@ def take_phase_retrieval_data(bias,
                               camera_type,
                               position_list=None,
                               **kwargs):
+
+    log = logging.getLogger(__name__)
+
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         path = util.create_data_path(suffix="phase_retrieval_data")
@@ -88,7 +93,7 @@ def take_phase_retrieval_data(bias,
         position_list = [round(elem, 2) for elem in position_list]
         position_list = sorted(position_list)
         position_list = sorted(position_list)
-    print(position_list)
+    log.debug("position list: " + str(position_list))
 
     with testbed.laser_source() as laser:
         direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
@@ -96,7 +101,7 @@ def take_phase_retrieval_data(bias,
 
         with testbed.motor_controller():
             # Initialize motors.
-            print("Initialized motors once, and will now only move the camera motor.")
+            log.info("Initialized motors once, and will now only move the camera motor.")
 
         with testbed.dm_controller() as dm:
             dm_command_object = flat_command(bias=bias, flat_map=flat_map)
