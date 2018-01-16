@@ -79,9 +79,9 @@ class TakeDm4dCheckerboardData(Experiment):
                             image = fits.getdata(image_path)
 
                             # Create metadata.  
-                            metadata = [MetaDataEntry("offset_x", "offset_x", str(i), "Checkerboard offset x-axis")]
-                            metadata.append(MetaDataEntry("offset_y", "offset_y", str(j), "Checkerboard offset y-axis"))
-                            metadata.append("amplitude", "amp", str(k), "Amplitude in nanometers")
+                            metadata = [MetaDataEntry("offset_x", "offset_x", i, "Checkerboard offset x-axis")]
+                            metadata.append(MetaDataEntry("offset_y", "offset_y", j, "Checkerboard offset y-axis"))
+                            metadata.append(MetaDataEntry("amplitude", "amp", k, "Amplitude in nanometers"))
 
                             # Subtract the reference from image.
                             util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"),
