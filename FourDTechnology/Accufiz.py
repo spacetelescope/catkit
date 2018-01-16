@@ -31,12 +31,12 @@ class Accufiz(FizeauInterferometer):
         set_timeout_string = "http://{}/WebService4D/WebService4D.asmx/SetTimeout?timeOut={}".format(ip, timeout)
         requests.get(set_timeout_string)
 
-        # Set the Mask.
-        filemask = self.__get_mask_path(mask)
-        typeofmask = "Detector"
-        parammask = {"maskType": typeofmask, "fileName": filemask}
-        set_mask_string = "http://{}/WebService4D/WebService4D.asmx/SetMask".format(ip)
-        resmask = requests.get(set_mask_string, params=parammask)
+        # Set the Mask. This mask has to be local to the 4D computer in this directory.
+        # filemask = os.path.join("c:\\4Sight_masks", mask)
+        # typeofmask = "Detector"
+        # parammask = {"maskType": typeofmask, "fileName": filemask}
+        # set_mask_string = "http://{}/WebService4D/WebService4D.asmx/SetMask".format(ip)
+        # resmask = requests.post(set_mask_string, data=parammask)
 
     def close(self):
         """Close interferometer connection?"""
