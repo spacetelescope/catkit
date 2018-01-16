@@ -99,7 +99,7 @@ class Dm4dZernikeLoop(Experiment):
             best_zernike_command = None
 
             # Create the zernike shape.
-            zernike = util.convert_dm_image_to_command(self.create_zernike())
+            zernike_1d = util.convert_dm_image_to_command(self.create_zernike())
 
             for i in range(self.iterations):
                 # Using the actuator_map, find the intensities at each actuator pixel value.
@@ -119,12 +119,13 @@ class Dm4dZernikeLoop(Experiment):
                 # Find the median of all the intensities and bias the zernike.
                 if i == 0:
                     flat_value = np.median(np.array(list(actuator_intensities.values())))
-                    zernike += flat_value
+                    zernike_1d += flat_value
 
                 # Calculate and print the variance and standard deviation.
                 intensity_values = np.array(list(actuator_intensities.values()))
-                print("Variance: ", np.var(intensity_values))
-                std_deviation = np.std(intensity_values)
+                diff = intensity_values - zernike_1d
+                print("Variance: ", np.var(diff))
+                std_deviation = np.std(diff)
                 print("Standard deviation: ", std_deviation)
 
                 if best_std_deviation is None or std_deviation < best_std_deviation:
@@ -135,7 +136,7 @@ class Dm4dZernikeLoop(Experiment):
                 print("Generating corrections...")
                 corrected_values = []
                 for key, value in actuator_intensities.items():
-                    correction = quantity(value - zernike[key], units.nanometer).to_base_units().m
+                    correction = quantity(value - zernike_1d[key], units.nanometer).to_base_units().m
 
                     # Apply damping ratio.
                     correction *= self.damping_ratio
@@ -167,18 +168,16 @@ class Dm4dZernikeLoop(Experiment):
                 max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
                 dm_command_data *= max_volts
 
-                zernike_name = zernike.zern_name(self.zernike_index)
-
+                # Add the Zernike name to the file name.
+                zernike_name = zernike.zern_name(self.zernike_index) + "_zernike"
                 filename = zernike_name + "_volts_dm1.fits" if self.dm_num == 1 else zernike_name + "_volts_dm2.fits"
                 root_dir = util.find_package_location()
                 full_output_path = os.path.join(root_dir, "hardware", "boston", filename)
-
                 util.write_fits(dm_command_data, full_output_path)
 
     def create_zernike(self):
         dm_length = CONFIG_INI.getint("boston_kilo952", 'dm_length_actuators')
-        linear_ramp = np.linspace(-1, 1, num=dm_length)
-        print(linear_ramp)
+        linear_ramp = np.linspace(-1, 1, num=dm_length, endpoint=False)
 
         # Create a 2D ramp.
         x, y = np.meshgrid(linear_ramp, linear_ramp)
