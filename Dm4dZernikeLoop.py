@@ -171,9 +171,7 @@ class Dm4dZernikeLoop(Experiment):
                 # Add the Zernike name to the file name.
                 zernike_name = zernike.zern_name(self.zernike_index) + "_zernike"
                 filename = zernike_name + "_volts_dm1.fits" if self.dm_num == 1 else zernike_name + "_volts_dm2.fits"
-                root_dir = util.find_package_location()
-                full_output_path = os.path.join(root_dir, "hardware", "boston", filename)
-                util.write_fits(dm_command_data, full_output_path)
+                util.write_fits(dm_command_data, os.path.join(self.path, filename))
 
     def create_zernike(self):
         dm_length = CONFIG_INI.getint("boston_kilo952", 'dm_length_actuators')
