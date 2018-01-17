@@ -95,12 +95,13 @@ class Dm4dZernikeLoop(Experiment):
                 # Save the DM_Command used.
                 command_object.export_fits(os.path.join(self.path, initial_file_name))
 
-            if self.peak2valley is not list:
+            if isinstance(self.peak2valley, int):
                 self.peak2valley = [self.peak2valley]
 
             for p2v in self.peak2valley:
                 best_std_deviation = None
                 best_zernike_command = None
+                p2v_string = str(p2v) + "_nm_p2v"
 
                 # Create the zernike shape.
                 zernike_1d = util.convert_dm_image_to_command(self.create_zernike(p2v))
@@ -154,7 +155,7 @@ class Dm4dZernikeLoop(Experiment):
 
                     print("Taking exposures with 4D...")
                     file_name = "iteration{}".format(i)
-                    p2v_string = str(p2v) + "_nm_p2v"
+
                     image_path = four_d.take_measurement(path=os.path.join(self.path, p2v_string, file_name),
                                                          filename=file_name,
                                                          rotate=self.rotate,
@@ -162,21 +163,21 @@ class Dm4dZernikeLoop(Experiment):
                                                          fliplr=self.fliplr)
 
                     # Save the DM_Command used.
-                    command_object.export_fits(os.path.join(self.path, file_name))
+                    command_object.export_fits(os.path.join(self.path, p2v_string, file_name))
 
-                    if self.create_zernike_map:
-                        iteration_folder_name = "iteration" + str(best_zernike_command)
-                        full_path = os.path.join(self.path, iteration_folder_name, "dm_command", "dm_command_2d.fits")
-                        dm_command_data = fits.getdata(full_path)
+                if self.create_zernike_map:
+                    iteration_folder_name = "iteration" + str(best_zernike_command)
+                    full_path = os.path.join(self.path, p2v_string, iteration_folder_name, "dm_command", "dm_command_2d.fits")
+                    dm_command_data = fits.getdata(full_path)
 
-                        # Convert the dm command units to volts.
-                        max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
-                        dm_command_data *= max_volts
+                    # Convert the dm command units to volts.
+                    max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
+                    dm_command_data *= max_volts
 
-                        # Add the Zernike name to the file name.
-                        zernike_name = zernike.zern_name(self.zernike_index) + "_zernike"
-                        filename = zernike_name + "_volts_dm1.fits" if self.dm_num == 1 else zernike_name + "_volts_dm2.fits"
-                        util.write_fits(dm_command_data, os.path.join(self.path, p2v_string, filename))
+                    # Add the Zernike name to the file name.
+                    zernike_name = zernike.zern_name(self.zernike_index) + "_zernike"
+                    filename = zernike_name + "_volts_dm1.fits" if self.dm_num == 1 else zernike_name + "_volts_dm2.fits"
+                    util.write_fits(dm_command_data, os.path.join(self.path, p2v_string, filename))
 
     def create_zernike(self, p2v):
         dm_length = CONFIG_INI.getint("boston_kilo952", 'dm_length_actuators')
