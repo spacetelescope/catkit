@@ -177,7 +177,9 @@ class Dm4dZernikeLoop(Experiment):
 
     def create_zernike(self):
         dm_length = CONFIG_INI.getint("boston_kilo952", 'dm_length_actuators')
-        linear_ramp = np.linspace(-1, 1, num=dm_length, endpoint=False)
+
+        # Add +1 to dm_length to fix a bug in poppy. We trim the extra row and column below.
+        linear_ramp = np.linspace(-1, 1, num=dm_length + 1)
 
         # Create a 2D ramp.
         x, y = np.meshgrid(linear_ramp, linear_ramp)
@@ -185,8 +187,12 @@ class Dm4dZernikeLoop(Experiment):
         r = np.sqrt(x ** 2 + y ** 2)
         theta = np.arctan2(y, x)
 
-        # so actually calculating the desired values is a one-line function call:
+        # Create the zernike array using poppy.
         z = zernike.zernike1(self.zernike_index, rho=r, theta=theta)
+
+        # Trim the first row and column to get rid of NaNs.
+        z = np.delete(z, 0, 0)
+        z = np.delete(z, 0, 1)
 
         # Normalize z between -.5, .5 and multiply by peak_to_valley
         max = np.nanmax(z)
