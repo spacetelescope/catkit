@@ -38,10 +38,6 @@ class Dm4dZernikeLoop(Experiment):
                  create_zernike_map=True,
                  **kwargs):
 
-        if path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d_zernike_loop")
-
         if filename is None:
             filename = "4d_"
 
@@ -60,6 +56,11 @@ class Dm4dZernikeLoop(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
+
+        if self.path is None:
+            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
+            zernike_name = zernike.zern_name(self.zernike_index).replace(" ", "_").lower()
+            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_zernike_loop_" + zernike_name)
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
@@ -177,7 +178,7 @@ class Dm4dZernikeLoop(Experiment):
         dm_length = CONFIG_INI.getint("boston_kilo952", 'dm_length_actuators')
 
         # Add +1 to dm_length to fix a bug in poppy. We trim the extra row and column below.
-        linear_ramp = np.linspace(-1, 1, num=dm_length + 1)
+        linear_ramp = np.linspace(-1, 1, num=dm_length + 1, endpoint=False)
 
         # Create a 2D ramp.
         x, y = np.meshgrid(linear_ramp, linear_ramp)
