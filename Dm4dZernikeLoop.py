@@ -25,7 +25,7 @@ class Dm4dZernikeLoop(Experiment):
 
     def __init__(self,
                  zernike_index=5,
-                 peak2valley=10,
+                 peak2valley=[100],
                  mask="dm2_detector.mask",
                  num_frames=2,
                  path=None,
@@ -95,86 +95,90 @@ class Dm4dZernikeLoop(Experiment):
                 # Save the DM_Command used.
                 command_object.export_fits(os.path.join(self.path, initial_file_name))
 
-            flat_value = 0
-            best_std_deviation = None
-            best_zernike_command = None
+            if self.peak2valley is not list:
+                self.peak2valley = [self.peak2valley]
 
-            # Create the zernike shape.
-            zernike_1d = util.convert_dm_image_to_command(self.create_zernike())
+            for p2v in self.peak2valley:
+                best_std_deviation = None
+                best_zernike_command = None
 
-            for i in range(self.iterations):
-                # Using the actuator_map, find the intensities at each actuator pixel value.
-                image = fits.getdata(image_path)
+                # Create the zernike shape.
+                zernike_1d = util.convert_dm_image_to_command(self.create_zernike(p2v))
 
-                print("Finding intensities...")
-                for key, value in actuator_index.items():
-                    # Create a small circle mask around index, and take the median.
-                    actuator_mask = dm_calibration_util.circle_mask(image, value[0], value[1], 3)
+                for i in range(self.iterations):
+                    # Using the actuator_map, find the intensities at each actuator pixel value.
+                    image = fits.getdata(image_path)
 
-                    # Find the median within the mask.
-                    actuator_intensity = np.median(image[actuator_mask])
+                    print("Finding intensities...")
+                    for key, value in actuator_index.items():
+                        # Create a small circle mask around index, and take the median.
+                        actuator_mask = dm_calibration_util.circle_mask(image, value[0], value[1], 3)
 
-                    # Add to intensity dictionary.
-                    actuator_intensities[key] = actuator_intensity
+                        # Find the median within the mask.
+                        actuator_intensity = np.median(image[actuator_mask])
 
-                # Find the median of all the intensities and bias the zernike.
-                if i == 0:
-                    flat_value = np.median(np.array(list(actuator_intensities.values())))
-                    zernike_1d += flat_value
+                        # Add to intensity dictionary.
+                        actuator_intensities[key] = actuator_intensity
 
-                # Calculate and print the variance and standard deviation.
-                intensity_values = np.array(list(actuator_intensities.values()))
-                diff = intensity_values - zernike_1d
-                print("Variance: ", np.var(diff))
-                std_deviation = np.std(diff)
-                print("Standard deviation: ", std_deviation)
+                    # Find the median of all the intensities and bias the zernike.
+                    if i == 0:
+                        flat_value = np.median(np.array(list(actuator_intensities.values())))
+                        zernike_1d += flat_value
 
-                if best_std_deviation is None or std_deviation < best_std_deviation:
-                    best_std_deviation = std_deviation
-                    best_zernike_command = i
+                    # Calculate and print the variance and standard deviation.
+                    intensity_values = np.array(list(actuator_intensities.values()))
+                    diff = intensity_values - zernike_1d
+                    print("Variance: ", np.var(diff))
+                    std_deviation = np.std(diff)
+                    print("Standard deviation: ", std_deviation)
 
-                # Generate the correction values.
-                print("Generating corrections...")
-                corrected_values = []
-                for key, value in actuator_intensities.items():
-                    correction = quantity(value - zernike_1d[key], units.nanometer).to_base_units().m
+                    if best_std_deviation is None or std_deviation < best_std_deviation:
+                        best_std_deviation = std_deviation
+                        best_zernike_command = i
 
-                    # Apply damping ratio.
-                    correction *= self.damping_ratio
-                    corrected_values.append(correction)
+                    # Generate the correction values.
+                    print("Generating corrections...")
+                    corrected_values = []
+                    for key, value in actuator_intensities.items():
+                        correction = quantity(value - zernike_1d[key], units.nanometer).to_base_units().m
 
-                # Update the DmCommand.
-                command_object.data += util.convert_dm_command_to_image(corrected_values)
+                        # Apply damping ratio.
+                        correction *= self.damping_ratio
+                        corrected_values.append(correction)
 
-                # Apply the new command.
-                dm.apply_shape(command_object, dm_num=self.dm_num)
+                    # Update the DmCommand.
+                    command_object.data += util.convert_dm_command_to_image(corrected_values)
 
-                print("Taking exposures with 4D...")
-                file_name = "iteration{}".format(i)
-                image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
-                                                     filename=file_name,
-                                                     rotate=self.rotate,
-                                                     num_frames=self.num_frames,
-                                                     fliplr=self.fliplr)
+                    # Apply the new command.
+                    dm.apply_shape(command_object, dm_num=self.dm_num)
 
-                # Save the DM_Command used.
-                command_object.export_fits(os.path.join(self.path, file_name))
+                    print("Taking exposures with 4D...")
+                    file_name = "iteration{}".format(i)
+                    p2v_string = str(p2v) + "_nm_p2v"
+                    image_path = four_d.take_measurement(path=os.path.join(self.path, p2v_string, file_name),
+                                                         filename=file_name,
+                                                         rotate=self.rotate,
+                                                         num_frames=self.num_frames,
+                                                         fliplr=self.fliplr)
 
-            if self.create_zernike_map:
-                iteration_folder_name = "iteration" + str(best_zernike_command)
-                full_path = os.path.join(self.path, iteration_folder_name, "dm_command", "dm_command_2d.fits")
-                dm_command_data = fits.getdata(full_path)
+                    # Save the DM_Command used.
+                    command_object.export_fits(os.path.join(self.path, file_name))
 
-                # Convert the dm command units to volts.
-                max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
-                dm_command_data *= max_volts
+                    if self.create_zernike_map:
+                        iteration_folder_name = "iteration" + str(best_zernike_command)
+                        full_path = os.path.join(self.path, iteration_folder_name, "dm_command", "dm_command_2d.fits")
+                        dm_command_data = fits.getdata(full_path)
 
-                # Add the Zernike name to the file name.
-                zernike_name = zernike.zern_name(self.zernike_index) + "_zernike"
-                filename = zernike_name + "_volts_dm1.fits" if self.dm_num == 1 else zernike_name + "_volts_dm2.fits"
-                util.write_fits(dm_command_data, os.path.join(self.path, filename))
+                        # Convert the dm command units to volts.
+                        max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
+                        dm_command_data *= max_volts
 
-    def create_zernike(self):
+                        # Add the Zernike name to the file name.
+                        zernike_name = zernike.zern_name(self.zernike_index) + "_zernike"
+                        filename = zernike_name + "_volts_dm1.fits" if self.dm_num == 1 else zernike_name + "_volts_dm2.fits"
+                        util.write_fits(dm_command_data, os.path.join(self.path, p2v_string, filename))
+
+    def create_zernike(self, p2v):
         dm_length = CONFIG_INI.getint("boston_kilo952", 'dm_length_actuators')
 
         # Add +1 to dm_length to fix a bug in poppy. We trim the extra row and column below.
@@ -196,4 +200,4 @@ class Dm4dZernikeLoop(Experiment):
         # Normalize z between -.5, .5 and multiply by peak_to_valley
         max = np.nanmax(z)
         min = np.nanmin(z)
-        return (z / (max - min)) * self.peak2valley
+        return (z / (max - min)) * p2v
