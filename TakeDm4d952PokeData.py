@@ -24,7 +24,7 @@ class TakeDm4d952PokeData(Experiment):
 
     def __init__(self,
                  mask="dm2_detector.mask",
-                 num_frames=5,
+                 num_frames=3,
                  path=None,
                  dm_num=2,
                  rotate=0,
@@ -87,14 +87,14 @@ class TakeDm4d952PokeData(Experiment):
     def create_actuator_index(self):
         root_dir = util.find_package_location()
         csv_filename = "actuator_map_dm1.csv" if self.dm_num == 1 else " actuator_map_dm2.csv"
-        csv_file = os.path.join(root_dir, "hardware", "FourDTechnology", csv_filename)
+        csv_file = os.path.join(self.path, csv_filename)
 
         actuator_indices = {}
         num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
         for i in range(num_actuators):
 
             # Open the correct poke file.
-            poke_file = glob(self.path + "*_" + str(i) + "_subtracted.fits")[0]
+            poke_file = glob(os.path.join(self.path + "*_" + str(i) + "_subtracted.fits"))[0]
 
             # Get the data
             data = fits.getdata(poke_file)
