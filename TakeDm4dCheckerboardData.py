@@ -22,7 +22,7 @@ class TakeDm4dCheckerboardData(Experiment):
     name = "Take Dm 4d Checkerboard Data"
 
     def __init__(self,
-                 amplitude_range=[700],
+                 amplitude_range=range(-2200, 850, 200),
                  mask="dm2_detector.mask",
                  num_frames=2,
                  path=None,

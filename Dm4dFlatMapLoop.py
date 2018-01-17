@@ -24,20 +24,16 @@ class Dm4dFlatMapLoop(Experiment):
 
     def __init__(self,
                  mask="dm2_detector.mask",
-                 num_frames=2,
+                 num_frames=10,
                  path=None,
                  filename=None,
                  dm_num=2,
                  rotate=180,
                  fliplr=False,
-                 iterations=2,
-                 damping_ratio=.5,
+                 iterations=25,
+                 damping_ratio=.6,
                  create_flat_map=True,
                  **kwargs):
-
-        if path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d_flat_map_loop")
 
         if filename is None:
             filename = "4d_"
@@ -55,6 +51,10 @@ class Dm4dFlatMapLoop(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
+
+        if self.path is None:
+            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
+            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_flat_map_loop")
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
