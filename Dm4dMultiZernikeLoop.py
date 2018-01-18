@@ -27,8 +27,8 @@ class Dm4dMultiZernikeLoop(Experiment):
     def __init__(self,
                  first_zernike=5,
                  second_zernike=4,
-                 first_p2v=range(10,200,25),
-                 second_p2v=range(-300,400,100),
+                 first_p2v=[20,40,80,160],
+                 second_p2v=range(-500, 600, 50),
                  mask="dm2_detector.mask",
                  num_frames=2,
                  path=None,
@@ -36,8 +36,8 @@ class Dm4dMultiZernikeLoop(Experiment):
                  dm_num=2,
                  rotate=180,
                  fliplr=False,
-                 iterations=2,
-                 damping_ratio=.5,
+                 iterations=20,
+                 damping_ratio=.6,
                  create_zernike_map=True,
                  **kwargs):
 
