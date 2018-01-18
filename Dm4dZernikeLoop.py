@@ -35,7 +35,7 @@ class Dm4dZernikeLoop(Experiment):
                  rotate=180,
                  fliplr=False,
                  iterations=2,
-                 damping_ratio=.5,
+                 damping_ratio=.6,
                  create_zernike_map=True,
                  **kwargs):
 

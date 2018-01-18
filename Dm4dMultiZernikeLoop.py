@@ -28,7 +28,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                  first_zernike=5,
                  second_zernike=4,
                  first_p2v=[20,40,80,160],
-                 second_p2v=range(-500, 600, 50),
+                 second_p2v=range(-500, 550, 50),
                  mask="dm2_detector.mask",
                  num_frames=2,
                  path=None,
