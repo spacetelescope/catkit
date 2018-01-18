@@ -4,10 +4,11 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-import numpy as np
 import os
+from glob import glob
 from astropy.io import fits
 
+from hicat import dm_calibration_util
 from hicat.hicat_types import MetaDataEntry
 from .Experiment import Experiment
 from ..hardware.boston.commands import poke_letter_f_command, poke_command, checkerboard_command, flat_command
@@ -29,6 +30,8 @@ class TakeDm4dCheckerboardData(Experiment):
                  dm_num=2,
                  rotate=0,
                  fliplr=False,
+                 show_plot=False,
+                 create_csv=True,
                  **kwargs):
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
@@ -41,6 +44,8 @@ class TakeDm4dCheckerboardData(Experiment):
         self.dm_num = dm_num
         self.rotate = rotate
         self.fliplr = fliplr
+        self.show_plot = show_plot
+        self.create_csv = create_csv
         self.kwargs = kwargs
 
     def experiment(self):
@@ -78,7 +83,7 @@ class TakeDm4dCheckerboardData(Experiment):
                             reference = fits.getdata(reference_path)
                             image = fits.getdata(image_path)
 
-                            # Create metadata.  
+                            # Create metadata.
                             metadata = [MetaDataEntry("offset_x", "offset_x", i, "Checkerboard offset x-axis")]
                             metadata.append(MetaDataEntry("offset_y", "offset_y", j, "Checkerboard offset y-axis"))
                             metadata.append(MetaDataEntry("amplitude", "amp", k, "Amplitude in nanometers"))
@@ -90,3 +95,9 @@ class TakeDm4dCheckerboardData(Experiment):
 
                             # Save the DM_Command used.
                             command.export_fits(os.path.join(self.path, file_name))
+        if self.create_csv:
+            files_path = glob(os.path.join(self.path, file_name.split("_")[0] + "*_subtracted"))
+            dm_calibration_util.create_actuator_index(self.dm_num, path=self.path,
+                                                      files=files_path,
+                                                      reffiles=reference_path,
+                                                      show_plot=self.show_plot)
