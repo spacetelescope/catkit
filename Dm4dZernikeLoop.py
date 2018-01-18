@@ -105,7 +105,7 @@ class Dm4dZernikeLoop(Experiment):
                 p2v_string = str(p2v) + "_nm_p2v"
 
                 # Create the zernike shape.
-                zernike_1d = util.convert_dm_image_to_command(my_zernike_module.create_zernike(p2v))
+                zernike_1d = util.convert_dm_image_to_command(my_zernike_module.create_zernike(self.zernike_index,p2v))
 
                 for i in range(self.iterations):
                     # Using the actuator_map, find the intensities at each actuator pixel value.
