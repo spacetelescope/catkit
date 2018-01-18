@@ -10,6 +10,7 @@ import csv
 from poppy import zernike
 from astropy.io import fits
 
+from .modules import zernike as my_zernike_module
 from .Experiment import Experiment
 from ..hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
 from ..hardware import testbed
@@ -104,7 +105,7 @@ class Dm4dZernikeLoop(Experiment):
                 p2v_string = str(p2v) + "_nm_p2v"
 
                 # Create the zernike shape.
-                zernike_1d = util.convert_dm_image_to_command(self.create_zernike(p2v))
+                zernike_1d = util.convert_dm_image_to_command(my_zernike_module.create_zernike(p2v))
 
                 for i in range(self.iterations):
                     # Using the actuator_map, find the intensities at each actuator pixel value.
@@ -178,27 +179,3 @@ class Dm4dZernikeLoop(Experiment):
                     zernike_name = zernike.zern_name(self.zernike_index) + "_zernike"
                     filename = zernike_name + "_volts_dm1.fits" if self.dm_num == 1 else zernike_name + "_volts_dm2.fits"
                     util.write_fits(dm_command_data, os.path.join(self.path, p2v_string, filename))
-
-    def create_zernike(self, p2v):
-        dm_length = CONFIG_INI.getint("boston_kilo952", 'dm_length_actuators')
-
-        # Add +1 to dm_length to fix a bug in poppy. We trim the extra row and column below.
-        linear_ramp = np.linspace(-1, 1, num=dm_length + 1, endpoint=False)
-
-        # Create a 2D ramp.
-        x, y = np.meshgrid(linear_ramp, linear_ramp)
-
-        r = np.sqrt(x ** 2 + y ** 2)
-        theta = np.arctan2(y, x)
-
-        # Create the zernike array using poppy.
-        z = zernike.zernike1(self.zernike_index, rho=r, theta=theta)
-
-        # Trim the first row and column to get rid of NaNs.
-        z = np.delete(z, 0, 0)
-        z = np.delete(z, 0, 1)
-
-        # Normalize z between -.5, .5 and multiply by peak_to_valley
-        max = np.nanmax(z)
-        min = np.nanmin(z)
-        return (z / (max - min)) * p2v
