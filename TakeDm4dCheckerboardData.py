@@ -96,7 +96,12 @@ class TakeDm4dCheckerboardData(Experiment):
                             # Save the DM_Command used.
                             command.export_fits(os.path.join(self.path, file_name))
         if self.create_csv:
-            files_path = glob(os.path.join(self.path, file_name.split("_")[0] + "*_subtracted.fits"))
+            print("file_name:   ",file_name)
+            print("split:   ",file_name.split("_")[0])
+            print("self.path:  ",self.path)
+            print("1:   ",os.path.join(self.path, file_name.split("_")[0] + "*_subtracted.fits"))
+            files_path = glob(os.path.join(self.path, file_name.split("_")[0] + "*_subtracted.fits").replace("\\","/"))
+            print("files_path 1:   ", files_path)
             dm_calibration_util.create_actuator_index(self.dm_num, path=self.path,
                                                       files=files_path,
                                                       reffiles=reference_path,
