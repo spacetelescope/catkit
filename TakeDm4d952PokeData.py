@@ -30,11 +30,8 @@ class TakeDm4d952PokeData(Experiment):
                  rotate=0,
                  fliplr=False,
                  show_plot=False,
-                 create_csv=True,
+                 overwrite_csv=False,
                  **kwargs):
-        if path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d_952_poke")
 
         self.mask = mask
         self.num_frames = num_frames
@@ -43,52 +40,53 @@ class TakeDm4d952PokeData(Experiment):
         self.rotate = rotate
         self.fliplr = fliplr
         self.show_plot = show_plot
-        self.create_csv = create_csv
+        self.overwrite_csv = overwrite_csv
         self.kwargs = kwargs
 
     def experiment(self):
 
+        if self.path is None:
+            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
+            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_952_poke")
+
         mask = "dm2_detector.mask" if self.dm_num == 2 else "dm1_detector.mask"
 
-        # with Accufiz("4d_accufiz", mask=mask) as four_d:
-        #     # Reference image.
-        #     reference_path = four_d.take_measurement(path=self.path,
-        #                                              filename="reference",
-        #                                              rotate=self.rotate,
-        #                                              fliplr=self.fliplr)
-        #
-        # with testbed.dm_controller() as dm:
-        #     # Generate the 16 permutations of checkerboards, and add the commands to a list.
-        #     for i in range(0, 952):
-        #         file_name = "poke_actuator_{}".format(i)
-        #         command = poke_command(i, amplitude=quantity(800, units.nanometers), dm_num=self.dm_num)
-        #
-        #         dm.apply_shape(command, self.dm_num)
-        #         with Accufiz("4d_accufiz", mask=mask) as four_d:
-        #             image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
-        #                                                  num_frames=self.num_frames,
-        #                                                  filename=file_name,
-        #                                                  rotate=self.rotate,
-        #                                                  fliplr=self.fliplr)
-        #
-        #             # Open fits files and subtract.
-        #             reference = fits.getdata(reference_path)
-        #             image = fits.getdata(image_path)
-        #
-        #             # Subtract the reference from image.
-        #             util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"))
-        #
-        #             # Save the DM_Command used.
-        #             command.export_fits(os.path.join(self.path, file_name))
+        with Accufiz("4d_accufiz", mask=mask) as four_d:
+            # Reference image.
+            reference_path = four_d.take_measurement(path=self.path,
+                                                     filename="reference",
+                                                     rotate=self.rotate,
+                                                     fliplr=self.fliplr)
 
-        if self.create_csv:
-            self.create_actuator_index()
+        with testbed.dm_controller() as dm:
+
+            # Poke every actuator, one at a time.
+            for i in range(0, 952):
+                file_name = "poke_actuator_{}".format(i)
+                command = poke_command(i, amplitude=quantity(800, units.nanometers), dm_num=self.dm_num)
+
+                dm.apply_shape(command, self.dm_num)
+                with Accufiz("4d_accufiz", mask=mask) as four_d:
+                    image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
+                                                         num_frames=self.num_frames,
+                                                         filename=file_name,
+                                                         rotate=self.rotate,
+                                                         fliplr=self.fliplr)
+
+                    # Open fits files and subtract.
+                    reference = fits.getdata(reference_path)
+                    image = fits.getdata(image_path)
+
+                    # Subtract the reference from image.
+                    util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"))
+
+                    # Save the DM_Command used.
+                    command.export_fits(os.path.join(self.path, file_name))
+
+        self.create_actuator_index(self.overwrite_csv)
 
     def create_actuator_index(self):
-        root_dir = util.find_package_location()
         csv_filename = "actuator_map_dm1.csv" if self.dm_num == 1 else " actuator_map_dm2.csv"
-
-        self.path = "Z:/Testbeds/hicat_dev/data/2018-01-19T18-30-13_4d_952_poke"
         csv_file = os.path.join(self.path, csv_filename)
 
         actuator_indices = {}
@@ -96,13 +94,7 @@ class TakeDm4d952PokeData(Experiment):
         for i in range(num_actuators):
 
             # Open the correct poke file.
-            #poke_file = glob(os.path.join(self.path + "*_" + str(i) + "_subtracted.fits"))[0]
-
-            #print("self.path: ",self.path)
-            #print(os.path.join(self.path , "*_" + str(i) + "_subtracted.fits"))
-            #print(glob(os.path.join(self.path , "*_" + str(i) + "_subtracted.fits")))
-            poke_file = glob(os.path.join(self.path , "*_" + str(i) + "_subtracted.fits"))[0]
-            #print(poke_file)
+            poke_file = glob(os.path.join(self.path + "*_" + str(i) + "_subtracted.fits"))[0]
 
             # Get the data
             data = fits.getdata(poke_file)
@@ -116,6 +108,11 @@ class TakeDm4d952PokeData(Experiment):
             actuator_indices[i] = coord
             print(i)
 
+        csv_list = []
+        for key, r in actuator_indices.items():
+            plt.scatter(r[0], r[1], color='black', s=6)
+            csv_list.append(str(key) + "," + str(r[0]) + "," + str(r[1]))
+
         if self.show_plot:
             plt.figure(figsize=(10, 8))
             ref_image = fits.getdata(os.path.join(self.path, "reference.fits"))
@@ -123,13 +120,15 @@ class TakeDm4d952PokeData(Experiment):
             plt.title("Number of actuators: {}".format(len(actuator_indices)))
             plt.show()
 
-        csv_list = []
-        for key, r in actuator_indices.items():
-            plt.scatter(r[0], r[1], color='black', s=6)
-            csv_list.append(str(key) + "," + str(r[0]) + "," + str(r[1]))
-        plt.show()
-
         with open(csv_file, "wb") as csvfile:
             csvfile.write(str("actuator,x_coord,y_coord\n"))
             for row in csv_list:
                 csvfile.write(row + "\n")
+
+        if self.overwrite_csv:
+            root_dir = util.find_package_location()
+            package_csv_file = os.path.join(root_dir, csv_filename)
+            with open(package_csv_file, "wb") as csv:
+                csv.write(str("actuator,x_coord,y_coord\n"))
+                for row in csv_list:
+                    package_csv_file.write(row + "\n")

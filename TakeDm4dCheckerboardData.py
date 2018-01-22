@@ -31,11 +31,8 @@ class TakeDm4dCheckerboardData(Experiment):
                  rotate=0,
                  fliplr=False,
                  show_plot=False,
-                 create_csv=True,
+                 overwrite_csv=False,
                  **kwargs):
-        if path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d_checkerboard")
 
         self.amplitude_range = amplitude_range
         self.mask = mask
@@ -45,10 +42,14 @@ class TakeDm4dCheckerboardData(Experiment):
         self.rotate = rotate
         self.fliplr = fliplr
         self.show_plot = show_plot
-        self.create_csv = create_csv
+        self.overwrite_csv = overwrite_csv
         self.kwargs = kwargs
 
     def experiment(self):
+
+        if self.path is None:
+            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
+            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_checkerboard")
 
         mask = "dm2_detector.mask" if self.dm_num == 2 else "dm1_detector.mask"
 
@@ -92,17 +93,12 @@ class TakeDm4dCheckerboardData(Experiment):
                             util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"),
                                             metadata=metadata)
 
-
                             # Save the DM_Command used.
                             command.export_fits(os.path.join(self.path, file_name))
-        if self.create_csv:
-            print("file_name:   ",file_name)
-            print("split:   ",file_name.split("_")[0])
-            print("self.path:  ",self.path)
-            print("1:   ",os.path.join(self.path, file_name.split("_")[0] + "*_subtracted.fits"))
-            files_path = glob(os.path.join(self.path, file_name.split("_")[0] + "*_subtracted.fits").replace("\\","/"))
-            print("files_path 1:   ", files_path)
-            dm_calibration_util.create_actuator_index(self.dm_num, path=self.path,
-                                                      files=files_path,
-                                                      reffiles=reference_path,
-                                                      show_plot=self.show_plot)
+
+        files_path = glob(os.path.join(self.path, file_name.split("_")[0] + "*_subtracted.fits"))
+        dm_calibration_util.create_actuator_index(self.dm_num, path=self.path,
+                                                  files=files_path,
+                                                  reffiles=reference_path,
+                                                  show_plot=self.show_plot,
+                                                  overwrite_csv=self.overwrite_csv)
