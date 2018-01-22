@@ -24,13 +24,13 @@ class Dm4dFlatMapLoop(Experiment):
 
     def __init__(self,
                  mask="dm2_detector.mask",
-                 num_frames=10,
+                 num_frames=2,
                  path=None,
                  filename=None,
                  dm_num=2,
                  rotate=180,
                  fliplr=False,
-                 iterations=25,
+                 iterations=20,
                  damping_ratio=.6,
                  create_flat_map=True,
                  **kwargs):
