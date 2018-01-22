@@ -61,7 +61,8 @@ class TakeDm4d952PokeData(Experiment):
         with testbed.dm_controller() as dm:
 
             # Poke every actuator, one at a time.
-            for i in range(0, 952):
+            num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
+            for i in range(0, num_actuators):
                 file_name = "poke_actuator_{}".format(i)
                 command = poke_command(i, amplitude=quantity(800, units.nanometers), dm_num=self.dm_num)
 
@@ -83,10 +84,10 @@ class TakeDm4d952PokeData(Experiment):
                     # Save the DM_Command used.
                     command.export_fits(os.path.join(self.path, file_name))
 
-        self.create_actuator_index(self.overwrite_csv)
+        self.create_actuator_index()
 
     def create_actuator_index(self):
-        csv_filename = "actuator_map_dm1.csv" if self.dm_num == 1 else " actuator_map_dm2.csv"
+        csv_filename = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
         csv_file = os.path.join(self.path, csv_filename)
 
         actuator_indices = {}
@@ -94,7 +95,7 @@ class TakeDm4d952PokeData(Experiment):
         for i in range(num_actuators):
 
             # Open the correct poke file.
-            poke_file = glob(os.path.join(self.path + "*_" + str(i) + "_subtracted.fits"))[0]
+            poke_file = glob(os.path.join(self.path, "*_" + str(i) + "_subtracted.fits"))[0]
 
             # Get the data
             data = fits.getdata(poke_file)
@@ -131,4 +132,4 @@ class TakeDm4d952PokeData(Experiment):
             with open(package_csv_file, "wb") as csv:
                 csv.write(str("actuator,x_coord,y_coord\n"))
                 for row in csv_list:
-                    package_csv_file.write(row + "\n")
+                    csv.write(row + "\n")
