@@ -84,9 +84,9 @@ def create_metadata():
 
     if dm2_command_object is not None:
         metadata.append(MetaDataEntry("bias_dm2", "bias_dm2", dm2_command_object.bias,
-                                      "Constant voltage applied to all actuators on DM2"))
+                                      "Constant voltage applied to actuators on DM2"))
         metadata.append(MetaDataEntry("flat_map_dm2", "flatmap1", dm2_command_object.flat_map,
-                                      "Flat map applied to correct resting shape of DM2"))
+                                      "Flat map applied to correct shape of DM2"))
 
         sin_flag = True if dm2_command_object.sin_specification else False
         metadata.append(MetaDataEntry("sine_wave_dm2", "sine_dm2", sin_flag,
