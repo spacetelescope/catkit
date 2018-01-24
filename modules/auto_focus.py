@@ -40,7 +40,8 @@ def take_auto_focus_data(bias,
 
         with testbed.dm_controller() as dm:
             dm_command_object = flat_command(bias=bias, flat_map=flat_map)
-            dm.apply_shape(dm_command_object, 1)
+            dm_command_object_2 = flat_command(bias=bias, flat_map=flat_map, dm_num=2)
+            dm.apply_shape_to_both(dm_command_object, dm_command_object_2)
 
             for i, position in enumerate(position_list):
                 with testbed.motor_controller(initialize_to_nominal=False) as mc:
