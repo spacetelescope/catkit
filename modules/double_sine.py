@@ -131,6 +131,10 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
 
     # Connect to the DM.
     with testbed.dm_controller() as dm:
+
+        # Apply a flat to DM2.
+        dm.apply_shape(flat_command(flat_map=True, dm_num=2), 2)
+
         # Positive sin wave.
         dm.apply_shape(sin_command_object, 1)
         positive_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
