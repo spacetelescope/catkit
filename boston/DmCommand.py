@@ -1,5 +1,5 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
@@ -36,7 +36,8 @@ class DmCommand(object):
         self.command_length = CONFIG_INI.getint('boston_kilo952', 'command_length')
         self.pupil_length = CONFIG_INI.getint('boston_kilo952', 'dm_length_actuators')
         self.max_volts = CONFIG_INI.getint('boston_kilo952', 'max_volts')
-        self.bias_volts = CONFIG_INI.getint('boston_kilo952', 'bias_volts')
+        self.bias_volts_dm1 = CONFIG_INI.getint('boston_kilo952', 'bias_volts_dm1')
+        self.bias_volts_dm2 = CONFIG_INI.getint('boston_kilo952', 'bias_volts_dm2')
 
         # Error handling for dm_num.
         if not (dm_num == 1 or dm_num == 2):
@@ -82,16 +83,19 @@ class DmCommand(object):
 
             # Apply bias.
             if self.bias:
-                dm_command += self.bias_volts
+                dm_command += self.bias_volts_dm1 if self.dm_num == 1 else self.bias_volts_dm2
 
             # OR apply Flat Map.
             elif self.flat_map:
                 script_dir = os.path.dirname(__file__)
                 if self.dm_num == 1:
-                    flat_map_volts = fits.open(os.path.join(script_dir, "flat_map_volts_dm1.fits"))
+                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
+                    flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
                 else:
-                    raise Exception("There is no flat map for dm_num " + str(self.dm_num))
+                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
+                    flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+                    dm_command += flat_map_volts[0].data
 
             # Convert between 0-1.
             dm_command /= self.max_volts
@@ -101,12 +105,13 @@ class DmCommand(object):
 
         if self.dm_num == 1:
             dm_command = np.append(dm_command, np.zeros(self.command_length - dm_command.size))
-            return dm_command
-        elif self.dm_num == 2:
+
+        else:
             zero_buffer = np.zeros(int(self.command_length / 2))
             dm_command = np.append(zero_buffer, dm_command)
             dm_command = np.append(dm_command, np.zeros(self.command_length - dm_command.size))
-            return dm_command
+
+        return dm_command
 
     def save_as_fits(self, filepath):
         """

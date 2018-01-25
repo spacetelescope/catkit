@@ -1,5 +1,5 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
@@ -15,6 +15,7 @@ config_name = "boston_kilo952"
 
 # Load values from config.ini into variables.
 num_actuators_pupil = config.getint(config_name, 'dm_length_actuators')
+total_actuators = config.getint(config_name, 'number_of_actuators')
 
 
 def flat_command(bias=False,
@@ -47,7 +48,7 @@ def flat_command(bias=False,
         return dm_command_object
 
 
-def poke_command(actuators, amplitude=quantity(500, units.nanometers), bias=False,
+def poke_command(actuators, amplitude=quantity(700, units.nanometers), bias=True,
                  flat_map=False, return_shortname=False, dm_num=1):
     """
     Creates a DmCommand object that pokes actuators at a given amplitude.
@@ -61,7 +62,7 @@ def poke_command(actuators, amplitude=quantity(500, units.nanometers), bias=Fals
     """
 
     short_name = "poke"
-    poke_array = np.zeros((num_actuators_pupil, num_actuators_pupil))
+    poke_array = np.zeros(total_actuators)
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
     amplitude = amplitude.to(units.meters).m
@@ -88,7 +89,7 @@ def poke_command(actuators, amplitude=quantity(500, units.nanometers), bias=Fals
         return dm_command_object
 
 
-def poke_letter_f_command(amplitude=quantity(500, units.nanometers), bias=False, flat_map=False, dm_num=1):
+def poke_letter_f_command(amplitude=quantity(250, units.nanometers), bias=False, flat_map=True, dm_num=1):
     """
     Creates the letter F in normal orientation when viewed in DS9.
     """
@@ -110,7 +111,7 @@ def poke_letter_f_command(amplitude=quantity(500, units.nanometers), bias=False,
     return DmCommand(data, dm_num, flat_map=flat_map, bias=bias)
 
 
-def checkerboard_command(amplitude=quantity(500, units.nanometers), bias=False, flat_map=False,
+def checkerboard_command(amplitude=quantity(250, units.nanometers), bias=False, flat_map=True,
                          dm_num=1, offset_x=0, offset_y=3, step=4):
     """
     Creates a checkerboard pattern DM command.  Useful for phase retrieval or 4D images. Default values
