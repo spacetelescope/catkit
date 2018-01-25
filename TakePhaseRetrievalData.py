@@ -28,6 +28,8 @@ class TakePhaseRetrievalData(Experiment):
                  path=None,
                  camera_type="phase_retrieval_camera",
                  position_list=None,
+                 command=None,
+                 suffix=None,
                  **kwargs):
         """
         Takes a set of data with the phase_retrieval camera (default) at constant "step" increments from focus.
@@ -48,6 +50,8 @@ class TakePhaseRetrievalData(Experiment):
         self.path = path
         self.camera_type = camera_type
         self.position_list = position_list
+        self.command = command
+        self.suffix = suffix
         self.kwargs = kwargs
 
     def experiment(self):
@@ -59,6 +63,8 @@ class TakePhaseRetrievalData(Experiment):
                                   self.path,
                                   self.camera_type,
                                   position_list=self.position_list,
+                                  command=self.command,
+                                  suffix=self.suffix,
                                   **self.kwargs)
 
 
@@ -70,13 +76,16 @@ def take_phase_retrieval_data(bias,
                               path,
                               camera_type,
                               position_list=None,
+                              command=None,
+                              suffix=None,
                               **kwargs):
 
     log = logging.getLogger(__name__)
 
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
-        path = util.create_data_path(suffix="phase_retrieval_data")
+        suffix = "phase_retrieval_data" if suffix is None else "phase_retrieval_data_" + suffix
+        path = util.create_data_path(suffix=suffix)
         util.setup_hicat_logging(path, "phase_retrieval_data", level=logging.WARNING)
 
 
@@ -94,7 +103,6 @@ def take_phase_retrieval_data(bias,
         position_list.extend(top_steps.tolist())
         position_list = [round(elem, 2) for elem in position_list]
         position_list = sorted(position_list)
-        position_list = sorted(position_list)
     log.debug("position list: " + str(position_list))
 
     with testbed.laser_source() as laser:
@@ -106,8 +114,11 @@ def take_phase_retrieval_data(bias,
             log.info("Initialized motors once, and will now only move the camera motor.")
 
         with testbed.dm_controller() as dm:
-            dm_command_object = flat_command(bias=bias, flat_map=flat_map)
-            dm.apply_shape(dm_command_object, 1)
+            if command is not None:
+                dm.apply_shape(command, 1)
+            else:
+                dm_command_object = flat_command(bias=bias, flat_map=flat_map)
+                dm.apply_shape(dm_command_object, 1)
 
             for i, position in enumerate(position_list):
                 with testbed.motor_controller(initialize_to_nominal=False) as mc:

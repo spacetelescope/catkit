@@ -82,7 +82,7 @@ class Experiment(object):
         except SafetyException:
             self.log.exception("Safety exception.")
             raise
-        except:
+        except Exception as e:
             self.log.exception("Monitoring process caught an unexpected problem.")
             # Shut down the experiment (but allow context managers to exit properly).
             if experiment_process is not None:
