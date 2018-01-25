@@ -90,12 +90,14 @@ class SpeckleNulling(Experiment):
             exp_set_name = "direct"
             laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
 
-
         # Initialize the laser and connect to the DM, apply the sine wave shape.
         with testbed.laser_source() as laser:
             laser.set_current(laser_current)
 
             with testbed.dm_controller() as dm:
+
+                # Apply a flat map to DM2.
+                dm.apply_shape(flat_command(flat_map=True, dm_num=2), 2)
 
                 for i in range(0, self.num_iterations):
                     dm.apply_shape(current_command_object, 1)
