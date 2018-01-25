@@ -1,8 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 from abc import ABCMeta, abstractmethod
 
 """Interface for a laser source."""
@@ -10,12 +11,13 @@ from abc import ABCMeta, abstractmethod
 
 class LaserSource(object):
     __metaclass__ = ABCMeta
+    log = logging.getLogger()
 
     def __init__(self, config_id, *args, **kwargs):
         """Opens connection with the laser source and sets class attributes for 'config_id'"""
         self.config_id = config_id
         self.laser = self.initialize(*args, **kwargs)
-        print("Opened connection to laser source " + config_id)
+        self.log.info("Opened connection to laser source " + config_id)
 
     # Implementing context manager.
     def __enter__(self, *args, **kwargs):
@@ -24,7 +26,7 @@ class LaserSource(object):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
         self.laser = None
-        print("Safely closed connection to laser source " + self.config_id)
+        self.log.info("Safely closed connection to laser source " + self.config_id)
 
     # Abstract Methods.
     @abstractmethod
