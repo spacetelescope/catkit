@@ -3,6 +3,7 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 
 from .Experiment import Experiment
 from ..hicat_types import *
@@ -75,6 +76,8 @@ def take_exposures(dm_command_object,
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         path = util.create_data_path(suffix="take_exposures_data")
+        util.setup_hicat_logging(path, "take_exposures_data", level=logging.WARNING)
+
 
     # Establish image type and set the FPM position and laser current
     if coronograph:

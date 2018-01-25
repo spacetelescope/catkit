@@ -59,6 +59,7 @@ class SpeckleNulling(Experiment):
             if self.suffix is not None:
                 suffix = suffix + "_" + self.suffix
             self.path = util.create_data_path(suffix=suffix)
+            util.setup_hicat_logging(self.path, "speckle_nulling", level=logging.WARNING)
 
         # Start with a previously stored DM command if dm_command_path is passed in.
         if self.dm_command_path:

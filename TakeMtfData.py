@@ -36,6 +36,7 @@ class TakeMtfData(Experiment):
         # Wait to set the path until the experiment starts (rather than the constructor).
         if self.path is None:
             self.path = util.create_data_path(suffix="mtf_calibration")
+            util.setup_hicat_logging(self.path, "mtf_calibration", level=logging.WARNING)
 
         # Create a flat dm command.
         flat_command_object, flat_file_name = flat_command(flat_map=self.flat_map,

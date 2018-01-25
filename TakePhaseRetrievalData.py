@@ -77,6 +77,8 @@ def take_phase_retrieval_data(bias,
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         path = util.create_data_path(suffix="phase_retrieval_data")
+        util.setup_hicat_logging(path, "phase_retrieval_data", level=logging.WARNING)
+
 
     # Get the selected camera's current focus from the ini.
     motor_name = testbed.get_camera_motor_name(camera_type)
