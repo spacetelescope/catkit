@@ -16,7 +16,8 @@ class TakeExposures(Experiment):
     name = "Take Exposures"
 
     def __init__(self,
-                 dm_command_object=flat_command(True, False),  # Default flat with bias.
+                 dm1_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
+                 dm2_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=5,
                  camera_type="imaging_camera",
@@ -28,7 +29,7 @@ class TakeExposures(Experiment):
                  **kwargs):
         """
         Takes a set of data with any camera, any DM command, any exposure time, etc.
-        :param dm_command_object: (DmCommand) DmCommand object to apply on a DM.
+        :param dm1_command_object: (DmCommand) DmCommand object to apply on a DM.
         :param exposure_time: (pint.quantity) Pint quantity for exposure time.
         :param num_exposures: (int) Number of exposures.
         :param step: (int) Step size to use for the motor positions (default is 10).
@@ -37,7 +38,8 @@ class TakeExposures(Experiment):
         :param position_list: (list) Postion(s) of the camera
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
-        self.dm_command_object = dm_command_object
+        self.dm1_command_object = dm1_command_object
+        self.dm2_command_object = dm2_command_object
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.camera_type = camera_type
@@ -49,7 +51,8 @@ class TakeExposures(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-        take_exposures(self.dm_command_object,
+        take_exposures(self.dm1_command_object,
+                       self.dm2_command_object,
                        self.exposure_time,
                        self.num_exposures,
                        self.camera_type,
@@ -61,7 +64,8 @@ class TakeExposures(Experiment):
                        **self.kwargs)
 
 
-def take_exposures(dm_command_object,
+def take_exposures(dm1_command_object,
+                   dm2_command_object,
                    exposure_time,
                    num_exposures,
                    camera_type,
@@ -92,9 +96,9 @@ def take_exposures(dm_command_object,
     with testbed.laser_source() as laser:
         laser.set_current(laser_current)
 
-        if dm_command_object:
+        if dm1_command_object or dm2_command_object:
             with testbed.dm_controller() as dm:
-                dm.apply_shape(dm_command_object, dm_command_object.dm_num)
+                dm.apply_shape_to_both(dm1_command_object, dm2_command_object)
                 testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position, path=path,
                                           filename=filename,
                                           exposure_set_name=exposure_set_name,
