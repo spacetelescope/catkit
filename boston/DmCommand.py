@@ -12,7 +12,8 @@ from hicat import util as hicat_util
 
 
 class DmCommand(object):
-    def __init__(self, data, dm_num, flat_map=False, bias=False, as_voltage_percentage=False, sin_specification=None):
+    def __init__(self, data, dm_num, flat_map=False, bias=False, as_voltage_percentage=False,
+                 as_volts=False, sin_specification=None):
         """
         Understands the many different formats of dm commands that we have, and returns an object that allows you to
         reliably craft and save commands for the correct DM.
@@ -25,6 +26,7 @@ class DmCommand(object):
         self.flat_map = flat_map
         self.bias = bias
         self.as_voltage_percentage = as_voltage_percentage
+        self.as_volts = as_volts
 
         if sin_specification is None:
             self.sin_specification = []
@@ -76,10 +78,11 @@ class DmCommand(object):
 
         # Otherwise convert nanometers to volts and apply appropriate corrections and bias.
         else:
-            # Convert nanometers to volts.
-            script_dir = os.path.dirname(__file__)
-            nm_to_volts_map = fits.getdata(os.path.join(script_dir, "meters_to_volts_dm1.fits"))
-            dm_command = hicat_util.safe_divide(self.data, nm_to_volts_map)
+            if not self.as_volts:
+                # Convert nanometers to volts.
+                script_dir = os.path.dirname(__file__)
+                nm_to_volts_map = fits.getdata(os.path.join(script_dir, "meters_to_volts_dm1.fits"))
+                dm_command = hicat_util.safe_divide(self.data, nm_to_volts_map)
 
             # Apply bias.
             if self.bias:
@@ -149,7 +152,7 @@ class DmCommand(object):
         hicat_util.write_fits(self.data, os.path.join(dir_path, "dm_command_2d_noflat"))
 
 
-def load_dm_command(path, dm_num=1, flat_map=False, bias=False):
+def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
     """
     Loads a DM command fits file from disk and returns a DmCommand object.
     :param path: Path to the "2d_noflat" dm command.
@@ -159,4 +162,4 @@ def load_dm_command(path, dm_num=1, flat_map=False, bias=False):
     :return: DmCommand object representing the dm command fits file.
     """
     data = fits.getdata(path)
-    return DmCommand(data, dm_num, flat_map=flat_map, bias=bias)
+    return DmCommand(data, dm_num, flat_map=flat_map, bias=bias, as_volts=as_volts)
