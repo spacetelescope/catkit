@@ -6,10 +6,8 @@ from builtins import *
 
 from .Experiment import Experiment
 from ..hicat_types import *
-from .. import util
-from ..hardware import testbed
-from ..config import CONFIG_INI
 from ..hardware.boston.commands import flat_command
+from .modules.general import take_exposures
 
 
 class TakeExposures(Experiment):
@@ -62,55 +60,3 @@ class TakeExposures(Experiment):
                        self.filename,
                        self.exposure_set_name,
                        **self.kwargs)
-
-
-def take_exposures(dm1_command_object,
-                   dm2_command_object,
-                   exposure_time,
-                   num_exposures,
-                   camera_type,
-                   coronograph,
-                   pipeline,
-                   path,
-                   filename,
-                   exposure_set_name,
-                   **kwargs):
-
-    # Wait to set the path until the experiment starts (rather than the constructor)
-    if path is None:
-        path = util.create_data_path(suffix="take_exposures_data")
-
-    # Establish image type and set the FPM position and laser current
-    if coronograph:
-        fpm_position = FpmPosition.coron
-        laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
-        if exposure_set_name is None:
-            exposure_set_name = "coron"
-    else:
-        fpm_position = FpmPosition.direct
-        laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
-        if exposure_set_name is None:
-            exposure_set_name = "direct"
-
-    # Take data
-    with testbed.laser_source() as laser:
-        laser.set_current(laser_current)
-
-        if dm1_command_object or dm2_command_object:
-            with testbed.dm_controller() as dm:
-                dm.apply_shape_to_both(dm1_command_object, dm2_command_object)
-                testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position, path=path,
-                                          filename=filename,
-                                          exposure_set_name=exposure_set_name,
-                                          camera_type=camera_type,
-                                          pipeline=pipeline,
-                                          **kwargs)
-        else:
-            testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position, path=path,
-                                      filename=filename,
-                                      exposure_set_name=exposure_set_name,
-                                      camera_type=camera_type,
-                                      pipeline=pipeline,
-                                      **kwargs)
-
-    return path
