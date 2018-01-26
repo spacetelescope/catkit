@@ -25,7 +25,7 @@ def take_exposures_dm_commands(dm2_command_list,
                                centering=ImageCentering.custom_apodizer_spots):
     for command in dm2_command_list:
         if list_of_paths:
-            dm2_command_object = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2)
+            dm2_command_object = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2, as_volts=True)
             filename = os.path.basename(os.path.dirname(command))
         else:
             dm2_command_object = command[0]
