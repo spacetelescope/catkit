@@ -86,7 +86,7 @@ def take_phase_retrieval_data(bias,
     if path is None:
         suffix = "phase_retrieval_data" if suffix is None else "phase_retrieval_data_" + suffix
         path = util.create_data_path(suffix=suffix)
-        util.setup_hicat_logging(path, "phase_retrieval_data", level=logging.WARNING)
+        util.setup_hicat_logging(path, "phase_retrieval_data")
 
 
     # Get the selected camera's current focus from the ini.

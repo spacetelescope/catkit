@@ -69,7 +69,7 @@ class DoubleSinRemoveCrossterm(Experiment):
         # Wait to set the path until the experiment starts (rather than the constructor)
         if self.path is None:
             self.path = util.create_data_path(suffix="double_sin")
-            util.setup_hicat_logging(self.path, "double_sin", level=logging.WARNING)
+            util.setup_hicat_logging(self.path, "double_sin")
 
         coron_dirname = "coron"
         direct_dirname = "direct"

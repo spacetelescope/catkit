@@ -29,7 +29,7 @@ def take_auto_focus_data(bias,
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         path = util.create_data_path(suffix="focus")
-        util.setup_hicat_logging(path, "focus", level=logging.WARNING)
+        util.setup_hicat_logging(path, "focus")
 
 
     camera_motor = testbed.get_camera_motor_name(camera_type)

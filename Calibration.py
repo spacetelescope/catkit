@@ -73,7 +73,7 @@ class Calibration(Experiment):
             local_data_path = CONFIG_INI.get("optics_lab", "local_data_path")
             cal_data_path = os.path.join(local_data_path, "calibration")
             self.outpath = util.create_data_path(initial_path=cal_data_path)
-            util.setup_hicat_logging(base_path, "calibration", level=logging.WARNING)
+            util.setup_hicat_logging(base_path, "calibration")
 
         cal_dict = self.run_steps()
         filename = 'calibration.csv'
