@@ -21,7 +21,8 @@ def take_exposures_dm_commands(dm2_command_list,
                                list_of_paths=True,
                                num_exposures=10,
                                dm1_command_object=commands.flat_command(bias=False, flat_map=True),
-                               camera_type="imaging_camera"):
+                               camera_type="imaging_camera",
+                               centering=ImageCentering.custom_apodizer_spots):
     for command in dm2_command_list:
         if list_of_paths:
             dm2_command_object = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2)
@@ -41,7 +42,7 @@ def take_exposures_dm_commands(dm2_command_list,
                        experiment_path,
                        filename,
                        "direct",
-                       centering=ImageCentering.custom_apodizer_spots)
+                       centering=centering)
 
         take_exposures(dm1_command_object,
                        dm2_command_object,
@@ -53,7 +54,7 @@ def take_exposures_dm_commands(dm2_command_list,
                        experiment_path,
                        filename,
                        "coron",
-                       centering=ImageCentering.custom_apodizer_spots)
+                       centering=centering)
 
 
 def take_exposures(dm1_command_object,
