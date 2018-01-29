@@ -32,6 +32,7 @@ def take_exposures_dm_commands(dm2_command_list,
             filename = command[1]
         experiment_path = os.path.join(path, exp_set_name, filename)
 
+        # Direct.
         take_exposures(dm1_command_object,
                        dm2_command_object,
                        direct_exp_time,
@@ -42,8 +43,9 @@ def take_exposures_dm_commands(dm2_command_list,
                        experiment_path,
                        filename,
                        "direct",
-                       centering=centering)
+                       centering=ImageCentering.psf)
 
+        # Coron.
         take_exposures(dm1_command_object,
                        dm2_command_object,
                        coron_exp_time,
