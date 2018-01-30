@@ -5,6 +5,7 @@ from __future__ import (absolute_import, division,
 from builtins import *
 
 import numpy as np
+import logging
 import os
 import csv
 from astropy.io import fits
@@ -21,6 +22,7 @@ from .. import dm_calibration_util
 
 class Dm4dFlatMapLoop(Experiment):
     name = "Dm 4d Flat Map Loop"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  mask="dm2_detector.mask",

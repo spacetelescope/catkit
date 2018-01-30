@@ -5,6 +5,7 @@ from __future__ import (absolute_import, division,
 from builtins import *
 
 import os
+import logging
 from glob import glob
 from photutils import find_peaks
 from astropy.io import fits
@@ -21,6 +22,7 @@ from .. hicat_types import quantity, units
 
 class TakeDm4d952PokeData(Experiment):
     name = "Take Dm 4d 952 Poke Data"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  mask="dm2_detector.mask",
@@ -107,7 +109,7 @@ class TakeDm4d952PokeData(Experiment):
             coord = (x_peak, y_peak)
 
             actuator_indices[i] = coord
-            print(i)
+            self.log.debug(i)
 
         csv_list = []
         for key, r in actuator_indices.items():

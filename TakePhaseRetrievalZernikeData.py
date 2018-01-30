@@ -5,6 +5,7 @@ from __future__ import (absolute_import, division,
 from builtins import *
 import os
 from glob import glob
+import logging
 
 from .Experiment import Experiment
 from ..hardware.boston.commands import flat_command
@@ -16,6 +17,7 @@ from ..hardware.boston import DmCommand
 
 class TakePhaseRetrievalZernikeData(Experiment):
     name = "Take Phase Retrieval Zernike Data"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  exposure_time=quantity(250, units.microsecond),

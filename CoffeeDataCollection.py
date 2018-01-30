@@ -4,13 +4,11 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-import os
 from glob import glob
+import logging
 
 from .Experiment import Experiment
 from ..hardware.boston import commands
-from ..hardware.boston import DmCommand
-from .modules.general import take_exposures
 from ..hicat_types import units, quantity, ImageCentering
 from .. import util
 from .modules.general import take_exposures_dm_commands
@@ -18,6 +16,7 @@ from .modules.general import take_exposures_dm_commands
 
 class CoffeeDataCollection(Experiment):
     name = "Coffee Data Collection"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  num_exposures=10,

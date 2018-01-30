@@ -7,6 +7,7 @@ from builtins import *
 import numpy as np
 import os
 import csv
+import logging
 from poppy import zernike
 from astropy.io import fits
 
@@ -23,6 +24,7 @@ from .. import dm_calibration_util
 
 class Dm4dZernikeLoop(Experiment):
     name = "Dm 4d Zernike Loop"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  zernike_index=5,
