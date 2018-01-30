@@ -49,13 +49,13 @@ class TakePhaseRetrievalZernikeData(Experiment):
             self.path = util.create_data_path(suffix="phase_retrieval_zernikes")
 
         # All pure zernikes at 4 different amplitudes.
-        path_list = ["z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T15-13-01_4d_zernike_loop_spherical/",
-                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T15-13-01_4d_zernike_loop_trefoil_x/",
-                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T15-13-01_4d_zernike_loop_trefoil_y/",
-                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T15-13-01_4d_zernike_loop_coma_x/",
-                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T15-13-01_4d_zernike_loop_coma_y/",
-                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T15-13-01_4d_zernike_loop_astigmatism_0/",
-                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T15-13-01_4d_zernike_loop_astigmatism_45/"]
+        path_list = [#"z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T15-13-01_4d_zernike_loop_spherical/",
+                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T14-41-48_4d_zernike_loop_trefoilx",
+                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T14-10-45_4d_zernike_loop_trefoily",
+                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T13-39-31_4d_zernike_loop_comax",
+                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T13-08-00_4d_zernike_loop_comay",
+                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T12-37-21_4d_zernike_loop_astigmatism0",
+                     "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T12-07-16_4d_zernike_loop_astigmatism45"]
 
         p2v_strings = ["20_nm_p2v", "40_nm_p2v", "80_nm_p2v", "160_nm_p2v"]
         for zernike_path in path_list:
