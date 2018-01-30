@@ -1,9 +1,10 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
 import numpy as np
+import logging
 
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed_state
@@ -14,6 +15,9 @@ from .lib import XPS_Q8_drivers
 
 
 class NewportMotorController(MotorController):
+
+    log = logging.getLogger(__name__)
+
     def initialize(self, initialize_to_nominal=True):
         """Creates an instance of the controller library and opens a connection."""
 
@@ -29,11 +33,12 @@ class NewportMotorController(MotorController):
         socket_id = myxps.TCP_ConnectToServer(ip_address, port, timeout)
 
         if self.socket_id == -1:
+            self.log.error("Invalid socket")
             raise Exception("Connection to XPS failed, check IP & Port")
 
         self.socket_id = socket_id
         self.motor_controller = myxps
-        print("Initializing Newport XPS Motor Controller " + self.config_id + "...")
+        self.log.info("Initializing Newport XPS Motor Controller " + self.config_id + "...")
 
         # Initialize and move to nominal positions.
         if initialize_to_nominal:
@@ -63,7 +68,7 @@ class NewportMotorController(MotorController):
         current_position = self.get_position(motor_id)
         if not np.isclose(current_position, position, atol=.001):
             # Move.
-            print("Moving positioner " + positioner + " to " + str(position) + "...")
+            self.log.info("Moving positioner " + positioner + " to " + str(position) + "...")
             error_code, return_string = self.motor_controller.GroupMoveAbsolute(self.socket_id, positioner, [position])
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupMoveAbsolute')
@@ -81,7 +86,7 @@ class NewportMotorController(MotorController):
         self.__ensure_initialized(group)
 
         # Move.
-        print("Moving positioner " + positioner + " by " + str(distance) + "...")
+        self.log.info("Moving positioner " + positioner + " by " + str(distance) + "...")
         error_code, return_string = self.motor_controller.GroupMoveRelative(self.socket_id, positioner, [distance])
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupMoveRelative')
@@ -114,7 +119,7 @@ class NewportMotorController(MotorController):
             error_code, return_string = self.motor_controller.GroupKill(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupKill')
-            print("Killed group " + group + " because it was not in state 11, 12, or 7")
+            self.log.warning("Killed group " + group + " because it was not in state 11, 12, or 7")
 
             # Update the status.
             error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
@@ -127,7 +132,7 @@ class NewportMotorController(MotorController):
             error_code, return_string = self.motor_controller.GroupInitialize(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupInitialize')
-            print("Initialized group " + group)
+            self.log.info("Initialized group " + group)
 
             # Update the status
             error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
@@ -139,14 +144,14 @@ class NewportMotorController(MotorController):
             error_code, return_string = self.motor_controller.GroupHomeSearch(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupHomeSearch')
-            print("Homed group " + group)
+            self.log.info("Homed group " + group)
 
     def __move_to_nominal(self, group_config_id):
         self.__ensure_initialized(CONFIG_INI.get(group_config_id, "group_name"))
         nominal = CONFIG_INI.getfloat(group_config_id, "nominal")
         self.absolute_move(group_config_id, nominal)
 
-    # Migrated from Newport demo code, now raises exceptions instead of print statements.
+    # Migrated from Newport demo code, now raises exceptions and does logging elsewhere.
     def __raise_exceptions(self, error_code, api_name):
         if (error_code != -2) and (error_code != -108):
             error_code2, error_string = self.motor_controller.ErrorStringGet(self.socket_id, error_code)

@@ -1,5 +1,5 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
@@ -9,6 +9,7 @@ from hicat.interfaces.DeformableMirrorController import DeformableMirrorControll
 from .sdk import bmc
 from hicat.config import CONFIG_INI
 import numpy as np
+import logging
 
 """Interface for Boston Micro-machines deformable mirror controller that can control 2 DMs.  
    It does so by interpreting the first half of the command for DM1, and the second for DM2.
@@ -16,9 +17,12 @@ import numpy as np
 
 
 class BostonDmController(DeformableMirrorController):
+
+    log = logging.getLogger(__name__)
+
     def initialize(self, *args, **kwargs):
         """Opens connection with dm and returns the dm manufacturer specific object."""
-
+        self.log.info("Opening DM commection")
         # Connect to DM.
         dm = bmc.BmcDm()
         serial_num = CONFIG_INI.get(self.config_id, "serial_num")
@@ -39,6 +43,8 @@ class BostonDmController(DeformableMirrorController):
 
     def close(self):
         """Close dm connection safely."""
+        self.log.info("Closing DM commection")
+
         command_length = self.dm_controller.num_actuators()
 
         # Set the DM to zeros.
@@ -51,6 +57,7 @@ class BostonDmController(DeformableMirrorController):
 
     def apply_shape_to_both(self, dm1_command_object, dm2_command_object):
         """Combines both commands and sends to the controller to produce a shape on each DM."""
+        self.log.info("Applying shape to both DMs")
 
         # Ensure that the correct dm_num is set.
         dm1_command_object.dm_num = 1
@@ -73,6 +80,7 @@ class BostonDmController(DeformableMirrorController):
         self.__update_dm_state(dm2_command_object)
 
     def apply_shape(self, dm_command_object, dm_num):
+        self.log.info("Applying shape to DM " + str(dm_num))
         """Forms a command for a single DM, and re-sends the existing shape to other DM."""
 
         # Ensure the dm_num is correct.

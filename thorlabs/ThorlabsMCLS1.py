@@ -1,9 +1,10 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
 from ctypes import cdll
+import logging
 import os
 import re
 import time
@@ -17,6 +18,7 @@ from ...hardware import testbed_state
 
 class ThorlabsMLCS1(LaserSource):
     SLEEP_TIME = 2  # Number of seconds to sleep after turning on laser or changing current.
+    log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):
         """
@@ -70,7 +72,7 @@ class ThorlabsMLCS1(LaserSource):
         """Sets the current on a given channel."""
 
         if self.get_current() != value:
-            print("Laser is changing amplitude...")
+            self.log.info("Laser is changing amplitude...")
             self.set_active_channel(self.channel)
             current_command_string = b"current={}\r".format(value)
             self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
@@ -115,7 +117,7 @@ class ThorlabsMLCS1(LaserSource):
         enable_command_string = b"enable={}\r".format(value)
         self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
         if value == 1:
-            print("Laser is enabling channel " + str(channel) + "...")
+            self.log.info("Laser is enabling channel " + str(channel) + "...")
             time.sleep(self.SLEEP_TIME)
 
     def set_system_enable(self, value):

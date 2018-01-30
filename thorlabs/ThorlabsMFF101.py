@@ -1,5 +1,5 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
@@ -7,6 +7,7 @@ from builtins import *
 import ftd2xx
 import ftd2xx.defines as constants
 import time
+import logging
 from ...interfaces.FlipMotor import FlipMotor
 from ...config import CONFIG_INI
 from ...hardware import testbed_state
@@ -15,6 +16,7 @@ from ...hardware import testbed_state
 
 
 class ThorlabsMFF101(FlipMotor):
+    log = logging.getLogger(__name__)
 
     def initialize(self, *args, **kwargs):
         """Creates an instance of the controller library and opens a connection."""
@@ -40,6 +42,7 @@ class ThorlabsMFF101(FlipMotor):
 
     def move_to_position1(self):
         """Implements a move to the "up" position."""
+        self.log.info("Moving to 'up' position")
         up_command = b"\x6A\x04\x00\x01\x21\x01"
         self.motor.write(up_command)
         testbed_state.background = True
@@ -47,10 +50,12 @@ class ThorlabsMFF101(FlipMotor):
 
     def move_to_position2(self):
         """Implements a move to "down" position """
+        self.log.info("Moving to 'down' position")
         down_command = b"\x6A\x04\x00\x02\x21\x01"
         self.motor.write(down_command)
         testbed_state.background = False
         time.sleep(1)
 
     def blink_led(self):
+        self.log.info(".blink.")
         self.motor.write(b"\x23\x02\x00\x00\x21\x01")

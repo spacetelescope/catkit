@@ -1,9 +1,10 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 # noinspection PyUnresolvedReferences
 from builtins import *
 
 import os
+import logging
 from glob import glob
 import numpy as np
 
@@ -156,6 +157,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     :return: Defaults returns the path of the final calibrated image provided by the data pipeline.
     """
 
+    log = logging.getLogger()
     # Initialize all motors and move Focal Plane Mask and Lyot Stop (will skip if already in correct place).
     if init_motors:
         initialize_motors(fpm_position=fpm_position, lyot_stop_position=lyot_stop_position)
@@ -172,13 +174,13 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         circle_mask = None
         if auto_exposure_mask_size:
-            print(fpm_position)
+            log.info("fpm position is " + fpm_position)
             if fpm_position == fpm_position.coron:
                 circle_mask = util.create_psf_mask((subarray_size, subarray_size), auto_exposure_mask_size)
-                print("using auto-expose circular mask, radius (lambda/d): ", auto_exposure_mask_size)
+                log.info("using auto-expose circular mask, radius (lambda/d): " + auto_exposure_mask_size)
             else:
                 circle_mask = None
-                print("not using the circular mask in direct mode")
+                log.info("not using the circular mask in direct mode")
 
         exposure_time = auto_exp_time_no_shape(exposure_time,
                                                min_counts,
@@ -216,10 +218,10 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         bg_metadata = None
         if take_background_exposures:
             if use_background_cache and not file_mode:
-                print("Warning: Turning off exposure cache feature because it is only supported with file_mode=True")
+                log.warning("Warning: Turning off exposure cache feature because it is only supported with file_mode=True")
                 use_background_cache = False
             if use_background_cache and raw_skip != 0:
-                print("Warning: Setting use_background_cache=False, cannot be used with raw_skip")
+                log.warning("Warning: Setting use_background_cache=False, cannot be used with raw_skip")
                 use_background_cache = False
 
             if use_background_cache:
@@ -227,7 +229,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
                 # Cache hit - populate the bg_list with the path to
                 if bg_cache_path is not None:
-                    print("Using cached background exposures: " + bg_cache_path)
+                    log.info("Using cached background exposures: " + bg_cache_path)
                     bg_list = glob(os.path.join(bg_cache_path, "*.fits"))
 
                     # Leave a small text file in background directory that points to real exposures.
@@ -298,13 +300,14 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
 
 def move_beam_dump(beam_dump_position):
+    log = logging.getLogger()
     """A safe method to move the beam dump."""
     in_beam = True if beam_dump_position.value == BeamDumpPosition.in_beam.value else False
 
     # Check the internal state of the beam dump before moving it.
     if testbed_state.background is None or (testbed_state.background != in_beam):
         with beam_dump() as bd:
-            print("Moving beam dump " + beam_dump_position.name)
+            log.info("Moving beam dump " + beam_dump_position.name)
             if beam_dump_position.value == BeamDumpPosition.in_beam.value:
                 bd.move_to_position1()
             elif beam_dump_position.value == BeamDumpPosition.out_of_beam.value:
@@ -373,6 +376,7 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
     :param pipeline: Boolean for whether to use the pipeline or not.
     :return: The correct exposure time to use, or in the failure case, the start exposure time passed in.
     """
+    log = logging.getLogger()
     move_beam_dump(BeamDumpPosition.out_of_beam)
     with get_camera(camera_type) as img_cam:
 
@@ -390,11 +394,11 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
         # Hack to use the same pint registry across processes.
         upper_bound = quantity(start_exp_time.m, start_exp_time.u)
         lower_bound = quantity(0, upper_bound.u)
-        print("Starting exposure time calibration...")
+        log.info("Starting exposure time calibration...")
 
         if min_counts <= img_max <= max_counts:
-            print("\tExposure time " + str(start_exp_time) + " yields " + str(img_max) + " counts ")
-            print("\tReturning exposure time " + str(start_exp_time))
+            log.info("\tExposure time " + str(start_exp_time) + " yields " + str(img_max) + " counts ")
+            log.info("\tReturning exposure time " + str(start_exp_time))
             return start_exp_time
 
         best = start_exp_time
@@ -412,7 +416,7 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
             img_max = __get_max_pixel_count(image, mask=mask)
 
 
-            print("\tExposure time " + str(upper_bound) + " yields " + str(img_max) + " counts ")
+            log.info("\tExposure time " + str(upper_bound) + " yields " + str(img_max) + " counts ")
 
         for i in range(num_tries):
             test = .5 * (upper_bound + lower_bound)
@@ -427,17 +431,17 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
                 image = img_list[0]
             img_max = __get_max_pixel_count(image, mask=mask)
 
-            print("\tExposure time " + str(test) + " yields " + str(img_max) + " counts ")
+            log.info("\tExposure time " + str(test) + " yields " + str(img_max) + " counts ")
 
             if min_counts <= img_max <= max_counts:
-                print("\tReturning exposure time " + str(test))
+                log.info("\tReturning exposure time " + str(test))
                 return test
 
             if img_max < min_counts:
-                print("\tNew lower bound " + str(test))
+                log.info("\tNew lower bound " + str(test))
                 lower_bound = test
             elif img_max > max_counts:
-                print("\tNew upper bound " + str(test))
+                log.info("\tNew upper bound " + str(test))
                 upper_bound = test
             best = test
         # If we run out of tries, return the best so far.

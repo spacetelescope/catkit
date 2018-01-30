@@ -1,5 +1,5 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
@@ -13,6 +13,7 @@ from ...hardware import testbed_state
 from astropy.io import fits
 from time import sleep
 import numpy as np
+import logging
 import os
 import requests
 import sys
@@ -33,6 +34,8 @@ class SbigCamera(Camera):
 
     NO_IMAGE_AVAILABLE = 0
     IMAGE_AVAILABLE = 1
+
+    log = logging.getLogger(__name__)
 
     def initialize(self, *args, **kwargs):
         """Loads the SBIG config information and verifies that the camera is idle.
@@ -149,7 +152,7 @@ class SbigCamera(Camera):
 
             # If Resume is enabled, continue if the file already exists on disk.
             if resume and os.path.isfile(full_path):
-                print("File already exists: " + full_path)
+                self.log.info("File already exists: " + full_path)
                 img_list.append(full_path)
                 continue
 
@@ -180,17 +183,17 @@ class SbigCamera(Camera):
             # Add testbed state metadata.
             for entry in meta_data:
                 if len(entry.name_8chars) > 8:
-                    print("Fits Header Keyword: " + entry.name_8chars +
+                    self.log.warning("Fits Header Keyword: " + entry.name_8chars +
                           " is greater than 8 characters and will be truncated.")
                 if len(entry.comment) > 47:
-                    print("Fits Header comment for " + entry.name_8chars +
+                    self.log.warning("Fits Header comment for " + entry.name_8chars +
                           " is greater than 47 characters and will be truncated.")
                 hdu.header[entry.name_8chars[:8]] = (entry.value, entry.comment)
 
             # Create a HDUList to contain the newly created primary HDU, and write to a new file.
             fits.HDUList([hdu])
             hdu.writeto(full_path, overwrite=True)
-            print("wrote " + full_path)
+            self.log.info("wrote " + full_path)
             if raw_skip == 0:
                 img_list.append(full_path)
 
@@ -205,7 +208,7 @@ class SbigCamera(Camera):
         """Applies control values found in the config.ini unless overrides are passed in, and does error checking.
            Makes HTTP requests to set the imager settings.  Will raise an exception for an HTTP error."""
 
-        print("Setting up control values")
+        self.log.info("Setting up control values")
         # Load values from config.ini into variables, and override with keyword args when applicable.
         self.cooler_state = CONFIG_INI.getint(self.config_id, 'cooler_state')
         self.subarray_x = subarray_x if subarray_x is not None else CONFIG_INI.getint(self.config_id, 'subarray_x')
@@ -222,7 +225,7 @@ class SbigCamera(Camera):
         detector_max_y = CONFIG_INI.getint(self.config_id, 'detector_length')
 
         if self.full_image:
-            print("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
+            self.log.info("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
             fi_params = {'StartX': '0', 'StartY': '0',
                          'NumX': str(detector_max_x), 'NumY': str(detector_max_y),
                          'CoolerState': str(self.cooler_state)}
@@ -230,7 +233,7 @@ class SbigCamera(Camera):
             r.raise_for_status()
             return
 
-        # Check for errors, print them all out before exiting.
+        # Check for errors, log before exiting.
         error_flag = False
 
         # Unlike ZWO, width and height are in camera pixels, unaffected by bins
@@ -247,23 +250,23 @@ class SbigCamera(Camera):
         derived_end_y = self.subarray_y + (self.height // 2)
 
         if derived_start_x > detector_max_x or derived_start_x < 0:
-            print("Derived start x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_start_x)
+            self.log.error("Derived start x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_start_x)
             error_flag = True
 
         if derived_start_y > detector_max_y or derived_start_y < 0:
-            print("Derived start y coordinate is off the detector ( max", detector_max_y - 1, "):", derived_start_y)
+            self.log.error("Derived start y coordinate is off the detector ( max", detector_max_y - 1, "):", derived_start_y)
             error_flag = True
 
         if derived_end_x > detector_max_x or derived_end_x < 0:
-            print("Derived end x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_end_x)
+            self.log.error("Derived end x coordinate is off the detector ( max", detector_max_x - 1, "):", derived_end_x)
             error_flag = True
 
         if derived_end_y > detector_max_y or derived_end_y < 0:
-            print("Derived end y coordinate is off the detector ( max", detector_max_y - 1, "):", derived_end_y)
+            self.log.error("Derived end y coordinate is off the detector ( max", detector_max_y - 1, "):", derived_end_y)
             error_flag = True
 
         if self.full_image:
-            print("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
+            self.log.info("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
             fi_params = {'StartX': '0', 'StartY': '0',
                          'NumX': str(detector_max_x), 'NumY': str(detector_max_y),
                          'CoolerState': '0'}
@@ -317,13 +320,13 @@ class SbigCamera(Camera):
             imager_state = self.__check_imager_state()
             if imager_state == self.IMAGER_STATE_ERROR:
                 # an error has occurred
-                print('Imager error during exposure')
+                self.log.error('Imager error during exposure')
                 raise Exception("Camera reported error during exposure.")
 
         # at loop exit, the image should be available
         image_status = self.__check_image_status()
         if image_status <> self.IMAGE_AVAILABLE:
-            print('No image after exposure')
+            self.log.error('No image after exposure')
             raise Exception("Camera reported no image available after exposure.")
 
         # get the image
