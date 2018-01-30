@@ -1,5 +1,5 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
@@ -10,6 +10,7 @@ from .. config import CONFIG_INI
 from .. import util
 from .SafetyTest import UpsSafetyTest, HumidityTemperatureTest, SafetyException
 import time
+import logging
 
 """Abstract base class that instills safety monitoring into any class that inherits it."""
 
@@ -18,6 +19,7 @@ class Experiment(object):
     __metaclass__ = ABCMeta
     name = None
 
+    log = logging.getLogger(__name__)
     interval = CONFIG_INI.getint("safety", "check_interval")
     safety_tests = [UpsSafetyTest(), HumidityTemperatureTest()]
 
@@ -32,20 +34,21 @@ class Experiment(object):
         """
         experiment_process = None
         try:
-            print("Running safety tests...")
+
+            self.log.info("Running safety tests...")
             # Check tests before starting experiment.
             for safety_test in self.safety_tests:
                 status, msg = safety_test.check()
-                print(msg)
+                self.log.info(msg)
                 if not status:
-                    print(safety_test.name + " reports unsafe conditions. Aborting experiment...")
+                    self.log.error(safety_test.name + " reports unsafe conditions. Aborting experiment...")
                     raise SafetyException()
-            print("Safety tests passed!")
-            print("Creating separate process to run experiment...")
+            self.log.info("Safety tests passed!")
+            self.log.info("Creating separate process to run experiment...")
             # Spin off and start the process to run the experiment.
             experiment_process = Process(target=self.run_experiment)
             experiment_process.start()
-            print(self.name + " process started")
+            self.log.info(self.name + " process started")
 
             while experiment_process.is_alive():
 
@@ -53,18 +56,18 @@ class Experiment(object):
                     status, message = safety_test.check()
                     if status:
                         # Check passed, clear any warning that might be set and proceed to sleep until next iteration.
-                        print(message)
+                        self.log.info(message)
                         safety_test.warning = False
 
                     elif safety_test.warning:
                             # Shut down the experiment (but allow context managers to exit properly).
-                            print(message)
+                            self.log.error(message)
                             util.soft_kill(experiment_process)
                             raise SafetyException()
 
                     else:
-                        print(message)
-                        print("Warning issued for " + safety_test.name +
+                        self.log.warning(message)
+                        self.log.warning("Warning issued for " + safety_test.name +
                               ". Experiment will be softly killed if safety check fails again.")
                         safety_test.warning = True
 
@@ -72,14 +75,15 @@ class Experiment(object):
                 if not self.__smart_sleep(self.interval, experiment_process):
                     # Experiment ended before the next check interval, exit the while loop.
                     break
+                    self.log.info("Experment ended before check interval; exiting.")
         except KeyboardInterrupt:
-            print("Parent process: caught ctrl-c, raising exception.")
+            self.log.exception("Parent process: caught ctrl-c, raising exception.")
             raise
         except SafetyException:
+            self.log.exception("Safety exception.")
             raise
         except Exception as e:
-            print("Monitoring process caught an unexpected problem.")
-            print(e.args)
+            self.log.exception("Monitoring process caught an unexpected problem.")
             # Shut down the experiment (but allow context managers to exit properly).
             if experiment_process is not None:
                 util.soft_kill(experiment_process)
@@ -90,7 +94,7 @@ class Experiment(object):
         try:
             self.experiment()
         except KeyboardInterrupt:
-            print("Child process: caught ctrl-c, raising exception.")
+            self.log.warn("Child process: caught ctrl-c, raising exception.")
             raise
 
     @staticmethod

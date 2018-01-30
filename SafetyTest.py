@@ -1,9 +1,10 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
 import psutil
+import logging
 from abc import ABCMeta, abstractmethod
 from ..hardware import testbed
 from .. config import CONFIG_INI
@@ -23,18 +24,21 @@ class SafetyTest(object):
 
 class UpsSafetyTest(SafetyTest):
 
+    log = logging.getLogger(__name__)
     name = "White UPS Safety Test"
 
     # Create a SnmpUPS object to monitor the White UPS.
     ups = testbed.backup_power()
 
     def check(self):
+        self.log.debug("Checking UPS power up")
         return self.ups.is_power_ok(return_status_msg=True)
 
 
 class HumidityTemperatureTest(SafetyTest):
 
     name = "Thorlabs Humidity and Temperature Sensor Safety Test"
+    log = logging.getLogger(__name__)
 
     min_humidity = CONFIG_INI.getint("safety", "min_humidity")
     max_humidity = CONFIG_INI.getint("safety", "max_humidity")
@@ -45,6 +49,7 @@ class HumidityTemperatureTest(SafetyTest):
         if "TSP01GUI.exe" in (p.name() for p in psutil.process_iter()):
             status_msg = "Humidity and Temperature test failed: Close the Thorlabs GUI and run again. " \
                          "It interferes with our code."
+            self.log.error(status_msg)
             return False, status_msg
 
         temp, humidity = ThorlabsTSP01.get_temp_humidity("thorlabs_tsp01_1")
@@ -53,18 +58,22 @@ class HumidityTemperatureTest(SafetyTest):
         if temp_ok:
             status_msg = "Temperature test passed: {} falls between {} and {}.".format(
                 temp, self.min_temp, self.max_temp)
+            self.log.debug(status_msg)
         else:
             status_msg = "Temperature test failed: {} is outside of {} and {}.".format(
                 temp, self.min_temp, self.max_temp)
+            self.log.warning(status_msg)
 
         humidity_ok = self.min_humidity <= humidity <= self.max_humidity
 
         if humidity_ok:
             status_msg += "\nHumidity test passed: {} falls between {} and {}.".format(
                 humidity, self.min_humidity, self.max_humidity)
+            self.log.debug(status_msg)
         else:
             status_msg += "\nHumidity test failed: {} is outside of {} and {}.".format(
                 humidity, self.min_humidity, self.max_humidity)
+            self.log.warning(status_msg)
 
         return temp_ok and humidity_ok, status_msg
 

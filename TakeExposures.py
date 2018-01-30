@@ -1,8 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 
 from .Experiment import Experiment
 from ..hicat_types import *

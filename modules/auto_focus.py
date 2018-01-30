@@ -1,11 +1,12 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
 
 from shutil import copyfile
 
+import logging
 import os
 from glob import glob
 
@@ -24,9 +25,12 @@ def take_auto_focus_data(bias,
                          path,
                          camera_type,
                          **kwargs):
+    log = logging.getLogger(__name__)
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         path = util.create_data_path(suffix="focus")
+        util.setup_hicat_logging(path, "focus")
+
 
     camera_motor = testbed.get_camera_motor_name(camera_type)
 
@@ -36,7 +40,7 @@ def take_auto_focus_data(bias,
 
         with testbed.motor_controller():
             # Initialize motors.
-            print("Initialized motors for Auto Focus once, and will now only move the camera motor.")
+            log.info("Initialized motors for Auto Focus once, and will now only move the camera motor.")
 
         with testbed.dm_controller() as dm:
             dm_command_object = flat_command(bias=bias, flat_map=flat_map)

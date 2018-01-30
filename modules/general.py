@@ -74,6 +74,7 @@ def take_exposures(dm1_command_object,
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         path = util.create_data_path(suffix="take_exposures_data")
+        util.setup_hicat_logging(path, "take_exposures_data")
 
     # Establish image type and set the FPM position and laser current
     if coronograph:

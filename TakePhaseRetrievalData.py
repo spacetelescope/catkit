@@ -1,8 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 
 from .Experiment import Experiment
 from ..hicat_types import quantity, units, MetaDataEntry, FpmPosition
@@ -12,6 +13,7 @@ from ..hardware.boston.commands import flat_command
 
 class TakePhaseRetrievalData(Experiment):
     name = "Take Phase Retrieval Data"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  exposure_time=quantity(250, units.microsecond),
@@ -55,5 +57,3 @@ class TakePhaseRetrievalData(Experiment):
                                   dm2_command=self.dm2_command,
                                   suffix=self.suffix,
                                   **self.kwargs)
-
-

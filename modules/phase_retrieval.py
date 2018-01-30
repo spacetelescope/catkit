@@ -4,6 +4,7 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 import numpy as np
+import logging
 
 from ...config import CONFIG_INI
 from ...hardware import testbed
@@ -22,6 +23,9 @@ def take_phase_retrieval_data(exposure_time,
                               dm2_command=flat_command(False,True,dm_num=2),
                               suffix=None,
                               **kwargs):
+
+    log = logging.getLogger(__name__)
+
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         suffix = "phase_retrieval_data" if suffix is None else "phase_retrieval_data_" + suffix
@@ -41,7 +45,7 @@ def take_phase_retrieval_data(exposure_time,
         position_list.extend(top_steps.tolist())
         position_list = [round(elem, 2) for elem in position_list]
         position_list = sorted(position_list)
-    print(position_list)
+    log.debug("position list: " + str(position_list))
 
     with testbed.laser_source() as laser:
         direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
@@ -49,7 +53,7 @@ def take_phase_retrieval_data(exposure_time,
 
         with testbed.motor_controller():
             # Initialize motors.
-            print("Initialized motors once, and will now only move the camera motor.")
+            log.info("Initialized motors once, and will now only move the camera motor.")
 
         with testbed.dm_controller() as dm:
             dm.apply_shape_to_both(dm1_command, dm2_command)

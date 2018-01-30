@@ -1,7 +1,8 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 import os
+import logging
 
 # noinspection PyUnresolvedReferences
 from builtins import *
@@ -68,6 +69,7 @@ class DoubleSinRemoveCrossterm(Experiment):
         # Wait to set the path until the experiment starts (rather than the constructor)
         if self.path is None:
             self.path = util.create_data_path(suffix="double_sin")
+            util.setup_hicat_logging(self.path, "double_sin")
 
         coron_dirname = "coron"
         direct_dirname = "direct"

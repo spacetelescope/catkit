@@ -1,9 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
-
+import logging
 import numpy as np
 
 from .Experiment import Experiment
@@ -14,6 +14,7 @@ from ..hicat_types import *
 
 class AutoFocus(Experiment):
     name = "Auto Focus"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  bias=False,
@@ -43,4 +44,4 @@ class AutoFocus(Experiment):
                                                       self.camera_type,
                                                       **self.kwargs)
         auto_focus.collect_final_images(output_path)
-        print(wolfram_wrappers.run_auto_focus(output_path))
+        self.log.info(wolfram_wrappers.run_auto_focus(output_path))

@@ -1,7 +1,8 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 import os
+import logging
 
 import numpy as np
 # noinspection PyUnresolvedReferences
@@ -56,6 +57,7 @@ class TakeDmPlateScaleData(Experiment):
         # Wait to set the path until the experiment starts (rather than the constructor)
         if self.path is None:
             self.path = util.create_data_path(suffix="dm_plate_scale")
+            util.setup_hicat_logging(self.path, "dm_plate_scale")
 
         with testbed.laser_source() as laser:
             coron_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")

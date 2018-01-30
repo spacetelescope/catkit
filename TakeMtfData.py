@@ -1,8 +1,9 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 
 from .Experiment import Experiment
 from ..hardware.boston.commands import flat_command
@@ -15,6 +16,7 @@ from ..wolfram_wrappers import run_mtf
 
 class TakeMtfData(Experiment):
     name = "Take MTF Data"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  bias=False,
@@ -34,6 +36,7 @@ class TakeMtfData(Experiment):
         # Wait to set the path until the experiment starts (rather than the constructor).
         if self.path is None:
             self.path = util.create_data_path(suffix="mtf_calibration")
+            util.setup_hicat_logging(self.path, "mtf_calibration")
 
         # Create a flat dm command.
         flat_command_object, flat_file_name = flat_command(flat_map=self.flat_map,
@@ -53,4 +56,4 @@ class TakeMtfData(Experiment):
                                                           path=self.path, exposure_set_name="direct",
                                                           filename=flat_file_name, camera_type=self.camera_type)
         ps_wo_focus, ps_w_focus, focus = run_mtf(cal_file_path)
-        print(ps_wo_focus, ps_w_focus, focus)
+        self.log.info("ps_wo_focus=" + str(ps_wo_focus) + " ps_w_focus=" +str(ps_w_focus) + " focus=" +str(focus) )

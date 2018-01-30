@@ -1,10 +1,11 @@
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        unicode_literals)
 
 from collections import OrderedDict
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
 import os
 import numpy as np
 
@@ -20,6 +21,8 @@ from ..config import CONFIG_INI
 
 class Calibration(Experiment):
     name = "Calibration"
+    log = logging.getLogger(__name__)
+
 
     def __init__(self,
                  cam_orientation=True,
@@ -60,16 +63,17 @@ class Calibration(Experiment):
         self.plot = plot
 
     def experiment(self):
-        print("Calibration steps to be completed: \n")
+        self.log.info("Calibration steps to be completed: \n")
         for step in self.steps.keys():
             if self.steps[step][0]['process']:
-                print('    {}\n'.format(step))
+                self.log.info('    {}\n'.format(step))
 
         # Wait to set the path until the experiment starts (rather than the constructor)
         if self.outpath is None:
             local_data_path = CONFIG_INI.get("optics_lab", "local_data_path")
             cal_data_path = os.path.join(local_data_path, "calibration")
             self.outpath = util.create_data_path(initial_path=cal_data_path)
+            util.setup_hicat_logging(base_path, "calibration")
 
         cal_dict = self.run_steps()
         filename = 'calibration.csv'
@@ -87,9 +91,9 @@ class Calibration(Experiment):
         # define list of valid steps
         for step in self.steps.keys():
             if self.steps[step][0]['process']:
-                print("CALIBRATION: Calculating {} ...".format(step))
+                self.log.info("CALIBRATION: Calculating {} ...".format(step))
                 self.steps[step][1]()
-                print("CALIBRATION: Calculation of {} COMPLETE".format(step))
+                self.log.info("CALIBRATION: Calculation of {} COMPLETE".format(step))
 
         return self.cal_dict
 
