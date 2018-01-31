@@ -174,10 +174,10 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         circle_mask = None
         if auto_exposure_mask_size:
-            log.info("fpm position is " + fpm_position)
+            log.info("fpm position is " + fpm_position.name)
             if fpm_position == fpm_position.coron:
                 circle_mask = util.create_psf_mask((subarray_size, subarray_size), auto_exposure_mask_size)
-                log.info("using auto-expose circular mask, radius (lambda/d): " + auto_exposure_mask_size)
+                log.info("using auto-expose circular mask, radius (lambda/d): " + str(auto_exposure_mask_size))
             else:
                 circle_mask = None
                 log.info("not using the circular mask in direct mode")
