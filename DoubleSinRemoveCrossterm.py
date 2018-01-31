@@ -13,6 +13,7 @@ from .Experiment import Experiment
 from .. import util
 from ..config import CONFIG_INI
 from ..hardware import testbed
+from ..hardware.boston.commands import flat_command
 from ..hardware.boston.sin_command import sin_command
 from ..hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition
 
@@ -101,8 +102,11 @@ class DoubleSinRemoveCrossterm(Experiment):
                                                                     return_shortname=True)
                     with testbed.dm_controller() as dm:
 
+                        # Flat for DM2.
+                        dm2_command = flat_command(bias=self.bias, flat_map=self.flat_map, dm_num=2)
+
                         # Postive sin wave.
-                        dm.apply_shape(sin_command_object, 1)
+                        dm.apply_shape_to_both(sin_command_object, dm2_command)
                         testbed.run_hicat_imaging(self.direct_exposure_time, self.direct_nexps,
                                                   FpmPosition.direct,
                                                   path=p2v_path, exposure_set_name=direct_dirname,
