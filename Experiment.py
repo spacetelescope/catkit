@@ -8,7 +8,7 @@ from abc import *
 from multiprocessing import Process
 from .. config import CONFIG_INI
 from .. import util
-from .SafetyTest import UpsSafetyTest, HumidityTemperatureTest, SafetyException
+from .SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
 import time
 import logging
 
@@ -21,7 +21,7 @@ class Experiment(object):
 
     log = logging.getLogger(__name__)
     interval = CONFIG_INI.getint("safety", "check_interval")
-    safety_tests = [UpsSafetyTest(), HumidityTemperatureTest()]
+    safety_tests = [UpsSafetyTest(), HumidityTemperatureTest(), WeatherWarningTest()]
 
     @abstractmethod
     def experiment(self):
