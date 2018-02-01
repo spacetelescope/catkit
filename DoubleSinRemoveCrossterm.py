@@ -1,12 +1,12 @@
 from __future__ import (absolute_import, division,
                         unicode_literals)
 
-import os
-import logging
 
 # noinspection PyUnresolvedReferences
 from builtins import *
 
+import os
+import logging
 from hicat.hicat_types import ImageCentering
 from .modules import double_sine
 from .Experiment import Experiment
@@ -19,6 +19,7 @@ from ..hicat_types import units, quantity, FpmPosition, SinSpecification, LyotSt
 
 class DoubleSinRemoveCrossterm(Experiment):
     name = "Double Sin Remove Crossterm"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  path=None,

@@ -7,6 +7,7 @@ from builtins import *
 import numpy as np
 import os
 import csv
+import logging
 from poppy import zernike
 from astropy.io import fits
 
@@ -23,6 +24,7 @@ from .. import dm_calibration_util
 
 class Dm4dMultiZernikeLoop(Experiment):
     name = "Dm 4d Zernike Loop"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  first_zernike=5,
@@ -93,7 +95,7 @@ class Dm4dMultiZernikeLoop(Experiment):
 
             dm.apply_shape(command_object, self.dm_num)
 
-            print("Taking initial image...")
+            self.log.info("Taking initial image...")
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 initial_file_name = "initial_bias"
                 image_path = four_d.take_measurement(path=os.path.join(self.path, initial_file_name),
@@ -131,7 +133,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                         # Using the actuator_map, find the intensities at each actuator pixel value.
                         image = fits.getdata(image_path)
 
-                        print("Finding intensities...")
+                        self.log.info("Finding intensities...")
                         for key, value in actuator_index.items():
 
                             # Create a small circle mask around index, and take the median.
@@ -152,14 +154,14 @@ class Dm4dMultiZernikeLoop(Experiment):
                         intensity_values = np.array(list(actuator_intensities.values()))
                         diff = intensity_values - combined_zernike_1d
                         std_deviation = np.std(diff)
-                        print("Standard deviation: ", std_deviation)
+                        self.log.info("Standard deviation: ", std_deviation)
 
                         if best_std_deviation is None or std_deviation < best_std_deviation:
                             best_std_deviation = std_deviation
                             best_zernike_command = i
 
                         # Generate the correction values.
-                        print("Generating corrections...")
+                        self.log.info("Generating corrections...")
                         corrected_values = []
                         for key, value in actuator_intensities.items():
                             correction = quantity(value - combined_zernike_1d[key], units.nanometer).to_base_units().m
@@ -174,7 +176,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                         # Apply the new command.
                         dm.apply_shape(command_object, dm_num=self.dm_num)
 
-                        print("Taking exposures with 4D...")
+                        self.log.info("Taking exposures with 4D...")
                         file_name = "iteration{}".format(i)
 
                         iteration_path = os.path.join(self.path, first_folder, second_folder, file_name)
