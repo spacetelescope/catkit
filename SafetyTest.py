@@ -95,6 +95,7 @@ class WeatherWarningTest(SafetyTest):
         wx_data.close()
         root = tree.getroot()
         currentDT = arrow.utcnow()
+        current_event = None
 
         for child in root:
             if 'entry' in str(child.tag):
@@ -106,13 +107,14 @@ class WeatherWarningTest(SafetyTest):
                     if 'expires' in wx_entry.tag:
                         end_time = wx_entry.text
 
-                self.log.info("Event " + current_event + " from " + start_time + " to " + end_time)
-                if current_event in wx_warning_list:
-                    startDT = arrow.get(start_time)
-                    endDT = arrow.get(end_time)
-                    if currentDT > startDT and currentDT < endDT:
-                        self.log.warning("Weather warning: " + current_event + " from " + start_time + " to " + end_time )
-                        warning_count += 1
+                if current_event:
+                    self.log.info("Event " + current_event + " from " + start_time + " to " + end_time)
+                    if current_event in wx_warning_list:
+                        startDT = arrow.get(start_time)
+                        endDT = arrow.get(end_time)
+                        if currentDT > startDT and currentDT < endDT:
+                            self.log.warning("Weather warning: " + current_event + " from " + start_time + " to " + end_time )
+                            warning_count += 1
 
         if warning_count > 0:
             status_msg = "Weather warnings detected at " + wx_url
