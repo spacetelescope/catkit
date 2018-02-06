@@ -22,7 +22,7 @@ class BostonDmController(DeformableMirrorController):
 
     def initialize(self, *args, **kwargs):
         """Opens connection with dm and returns the dm manufacturer specific object."""
-        self.log.info("Opening DM commection")
+        self.log.info("Opening DM connection")
         # Connect to DM.
         dm = bmc.BmcDm()
         serial_num = CONFIG_INI.get(self.config_id, "serial_num")
@@ -43,7 +43,7 @@ class BostonDmController(DeformableMirrorController):
 
     def close(self):
         """Close dm connection safely."""
-        self.log.info("Closing DM commection")
+        self.log.info("Closing DM connection")
 
         command_length = self.dm_controller.num_actuators()
 
