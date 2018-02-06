@@ -25,6 +25,7 @@ class TakeExposures(Experiment):
                  path=None,
                  exposure_set_name=None,
                  filename=None,
+                 suffix=None,
                  **kwargs):
         """
         Takes a set of data with any camera, any DM command, any exposure time, etc.
@@ -47,6 +48,7 @@ class TakeExposures(Experiment):
         self.path = path
         self.exposure_set_name = exposure_set_name
         self.filename = filename
+        self.suffix = suffix
         self.kwargs = kwargs
 
     def experiment(self):
@@ -60,4 +62,5 @@ class TakeExposures(Experiment):
                        self.path,
                        self.filename,
                        self.exposure_set_name,
+                       self.suffix,
                        **self.kwargs)

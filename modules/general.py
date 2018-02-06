@@ -69,11 +69,13 @@ def take_exposures(dm1_command_object,
                    path,
                    filename,
                    exposure_set_name,
+                   suffix,
                    **kwargs):
 
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
-        path = util.create_data_path(suffix="take_exposures_data")
+        suffix = "take_exposures_data" if suffix is None else "take_exposures_data_" + suffix
+        path = util.create_data_path(suffix=suffix)
         util.setup_hicat_logging(path, "take_exposures_data")
 
     # Establish image type and set the FPM position and laser current
@@ -92,21 +94,12 @@ def take_exposures(dm1_command_object,
     with testbed.laser_source() as laser:
         laser.set_current(laser_current)
 
-        if dm1_command_object or dm2_command_object:
-            with testbed.dm_controller() as dm:
-                dm.apply_shape_to_both(dm1_command_object, dm2_command_object)
-                testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position, path=path,
-                                          filename=filename,
-                                          exposure_set_name=exposure_set_name,
-                                          camera_type=camera_type,
-                                          pipeline=pipeline,
-                                          **kwargs)
-        else:
+        with testbed.dm_controller() as dm:
+            dm.apply_shape_to_both(dm1_command_object, dm2_command_object)
             testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position, path=path,
                                       filename=filename,
                                       exposure_set_name=exposure_set_name,
                                       camera_type=camera_type,
                                       pipeline=pipeline,
                                       **kwargs)
-
     return path
