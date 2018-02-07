@@ -9,10 +9,12 @@ from .Experiment import Experiment
 from ..hicat_types import *
 from ..hardware.boston.commands import flat_command
 from .modules.general import take_exposures
+from .. import util
 
 
 class TakeExposures(Experiment):
     name = "Take Exposures"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  dm1_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
