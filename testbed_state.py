@@ -22,6 +22,10 @@ dm2_command_object = None
 # Initialize exposure background cache table.
 background_cache = {}
 
+# Reference image for global alignment.
+reference_image = None
+global_alignment_mask = None
+
 
 def add_background_to_cache(time_quantity, num_exps, path):
     background_cache[(time_quantity.to(units.microsecond).m, num_exps)] = path
