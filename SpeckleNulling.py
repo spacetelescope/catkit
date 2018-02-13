@@ -6,6 +6,8 @@ from builtins import *
 import logging
 import os
 import numpy as np
+from glob import glob
+from astropy.io import fits
 
 from .Experiment import Experiment
 from ..hardware.boston.sin_command import sin_command
@@ -16,6 +18,7 @@ from ..hicat_types import units, quantity, FpmPosition, SinSpecification, LyotSt
 from ..hardware import testbed
 from ..hardware.boston import DmCommand
 from ..config import CONFIG_INI
+from ..hardware import testbed_state
 from .. import util
 
 
@@ -36,6 +39,7 @@ class SpeckleNulling(Experiment):
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
                  centering=ImageCentering.auto,
+                 reference_centering=ImageCentering.custom_apodizer_spots,
                  **kwargs):
         self.num_iterations = num_iterations
         self.bias = bias
@@ -49,6 +53,7 @@ class SpeckleNulling(Experiment):
         self.fpm_position = fpm_position
         self.lyot_stop_position = lyot_stop_position
         self.centering = centering
+        self.reference_centering = reference_centering
         self.kwargs = kwargs
 
     def experiment(self):
@@ -112,17 +117,29 @@ class SpeckleNulling(Experiment):
                         lyot_stop_position=self.lyot_stop_position,
                         centering=self.centering)
 
+                    # Global alignment reference centering (optional).
+                    centering = self.centering
+                    if i == 0 and self.centering.value == ImageCentering.global_cross_correlation.value:
+                        centering = self.reference_centering
+
                     # Take coronographic data, with backgrounds.
                     iteration_path = os.path.join(self.path, "iteration" + str(i))
                     testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                               lyot_stop_position=self.lyot_stop_position,
-                                              centering=self.centering,
+                                              centering=centering,
                                               path=iteration_path, auto_exposure_time=False,
                                               exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + file_name,
                                               **self.kwargs)
 
-                    # Run sensing.
+                    # Store first image as reference image for global alignment (optional).
                     coron_path = os.path.join(iteration_path, exp_set_name)
+                    if i == 0 and self.centering.value == ImageCentering.global_cross_correlation.value:
+                        image_path = glob(os.path.join(coron_path, "*_cal.fits"))[0]
+                        testbed_state.reference_image = fits.getdata(image_path)
+                        testbed_state.global_alignment_mask = \
+                            self.__make_global_alignment_mask(testbed_state.reference_image)
+
+                    # Run sensing.
                     ncycles_new, angle_deg_new, peak_to_valley_new = speckle_nulling.speckle_sensing(coron_path)
 
                     # Generate a list of sin_commands at different phases, and take data for each.
@@ -185,3 +202,12 @@ class SpeckleNulling(Experiment):
                                           path=self.path,
                                           exposure_set_name="final", filename="final_dark_zone.fits",
                                           simulator=False, **self.kwargs)
+
+    @staticmethod
+    def __make_global_alignment_mask(image):
+        center_x = int(round(image.shape[0] / 2))
+        center_y = int(round(image.shape[1] / 2))
+        radius = CONFIG_INI.getint("speckle_nulling", "global_alignment_mask_radius")
+
+        # Make a mask as big as the CNT apodizer's natural dark zone.
+        return util.circular_mask((center_x, center_y), radius, image.shape)
