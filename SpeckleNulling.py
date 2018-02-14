@@ -114,14 +114,13 @@ class SpeckleNulling(Experiment):
                     centering = self.centering
                     if i == 0 and self.centering.value == ImageCentering.global_cross_correlation.value:
                         centering = self.reference_centering
-                        testbed_state.global_alignment_mask = \
-                            self.__make_global_alignment_mask(testbed_state.reference_image)
+                        testbed_state.global_alignment_mask = self.__make_global_alignment_mask()
                         auto_exposure_time = testbed.auto_exp_time_no_shape(auto_exposure_time,
-                                                       40000,
-                                                       50000,
-                                                       mask=testbed_state.global_alignment_mask,
-                                                       centering=centering,
-                                                       pipeline=True)
+                                                                            40000,
+                                                                            50000,
+                                                                            mask=np.invert(testbed_state.global_alignment_mask),
+                                                                            centering=centering,
+                                                                            pipeline=True)
 
                         # Take coronographic data, with backgrounds.
                         ref_path = os.path.join(self.path, "reference")
@@ -132,7 +131,7 @@ class SpeckleNulling(Experiment):
                                                   exposure_set_name=exp_set_name,
                                                   filename="itr" + str(i) + "_" + file_name,
                                                   **self.kwargs)
-                        image_path = glob(os.path.join(ref_path, "*_cal.fits"))[0]
+                        image_path = glob(os.path.join(ref_path, "coron", "*_cal.fits"))[0]
                         testbed_state.reference_image = fits.getdata(image_path)
 
                     # Tests the dark zone intensity and updates exposure time if needed, or just returns itself.
@@ -217,10 +216,13 @@ class SpeckleNulling(Experiment):
                                           simulator=False, **self.kwargs)
 
     @staticmethod
-    def __make_global_alignment_mask(image):
-        center_x = int(round(image.shape[0] / 2))
-        center_y = int(round(image.shape[1] / 2))
+    def __make_global_alignment_mask():
         radius = CONFIG_INI.getint("speckle_nulling", "global_alignment_mask_radius")
+        camera = CONFIG_INI.get("testbed", "imaging_camera")
+        width = CONFIG_INI.getint(camera, "width")
+        height = CONFIG_INI.getint(camera, "height")
+        center_x = int(round(width / 2))
+        center_y = int(round(height / 2))
 
         # Make a mask as big as the CNT apodizer's natural dark zone.
-        return util.circular_mask((center_x, center_y), radius, image.shape)
+        return util.circular_mask((center_x, center_y), radius, (width, height))
