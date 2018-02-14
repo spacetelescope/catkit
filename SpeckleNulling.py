@@ -110,17 +110,17 @@ class SpeckleNulling(Experiment):
                 for i in range(0, self.num_iterations):
                     dm.apply_shape(current_command_object, 1)
 
+                    # Global alignment reference centering (optional).
+                    centering = self.centering
+                    if i == 0 and self.centering.value == ImageCentering.global_cross_correlation.value:
+                        centering = self.reference_centering
+
                     # Tests the dark zone intensity and updates exposure time if needed, or just returns itself.
                     auto_exposure_time = speckle_nulling.test_dark_zone_intensity(
                         auto_exposure_time, 2,
                         fpm_position=self.fpm_position,
                         lyot_stop_position=self.lyot_stop_position,
-                        centering=self.centering)
-
-                    # Global alignment reference centering (optional).
-                    centering = self.centering
-                    if i == 0 and self.centering.value == ImageCentering.global_cross_correlation.value:
-                        centering = self.reference_centering
+                        centering=centering)
 
                     # Take coronographic data, with backgrounds.
                     iteration_path = os.path.join(self.path, "iteration" + str(i))
@@ -157,7 +157,7 @@ class SpeckleNulling(Experiment):
                         testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                                   lyot_stop_position=self.lyot_stop_position,
                                                   path=phase_path, auto_exposure_time=False,
-                                                  centering=self.centering,
+                                                  centering=centering,
                                                   exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + name,
                                                   simulator=False, **self.kwargs)
 
@@ -181,7 +181,7 @@ class SpeckleNulling(Experiment):
 
                         testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                                   lyot_stop_position=self.lyot_stop_position,
-                                                  centering=self.centering,
+                                                  centering=centering,
                                                   path=amplitude_path, auto_exposure_time=False,
                                                   exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + name,
                                                   simulator=False, **self.kwargs)
@@ -197,7 +197,7 @@ class SpeckleNulling(Experiment):
 
                 # Take a final (non-saturated) image using auto exposure without the dark zone mask.
                 testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, self.fpm_position,
-                                          centering=self.centering,
+                                          centering=centering,
                                           lyot_stop_position=self.lyot_stop_position,
                                           path=self.path,
                                           exposure_set_name="final", filename="final_dark_zone.fits",
