@@ -38,7 +38,7 @@ class SpeckleNulling(Experiment):
                  suffix=None,
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
-                 centering=ImageCentering.auto,
+                 centering=ImageCentering.global_cross_correlation,
                  reference_centering=ImageCentering.custom_apodizer_spots,
                  **kwargs):
         self.num_iterations = num_iterations
@@ -114,6 +114,26 @@ class SpeckleNulling(Experiment):
                     centering = self.centering
                     if i == 0 and self.centering.value == ImageCentering.global_cross_correlation.value:
                         centering = self.reference_centering
+                        testbed_state.global_alignment_mask = \
+                            self.__make_global_alignment_mask(testbed_state.reference_image)
+                        auto_exposure_time = testbed.auto_exp_time_no_shape(auto_exposure_time,
+                                                       40000,
+                                                       50000,
+                                                       mask=testbed_state.global_alignment_mask,
+                                                       centering=centering,
+                                                       pipeline=True)
+
+                        # Take coronographic data, with backgrounds.
+                        ref_path = os.path.join(self.path, "reference")
+                        testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
+                                                  lyot_stop_position=self.lyot_stop_position,
+                                                  centering=centering,
+                                                  path=ref_path, auto_exposure_time=False,
+                                                  exposure_set_name=exp_set_name,
+                                                  filename="itr" + str(i) + "_" + file_name,
+                                                  **self.kwargs)
+                        image_path = glob(os.path.join(ref_path, "*_cal.fits"))[0]
+                        testbed_state.reference_image = fits.getdata(image_path)
 
                     # Tests the dark zone intensity and updates exposure time if needed, or just returns itself.
                     auto_exposure_time = speckle_nulling.test_dark_zone_intensity(
@@ -126,20 +146,13 @@ class SpeckleNulling(Experiment):
                     iteration_path = os.path.join(self.path, "iteration" + str(i))
                     testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                               lyot_stop_position=self.lyot_stop_position,
-                                              centering=centering,
+                                              centering=self.centering,
                                               path=iteration_path, auto_exposure_time=False,
                                               exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + file_name,
                                               **self.kwargs)
 
-                    # Store first image as reference image for global alignment (optional).
-                    coron_path = os.path.join(iteration_path, exp_set_name)
-                    if i == 0 and self.centering.value == ImageCentering.global_cross_correlation.value:
-                        image_path = glob(os.path.join(coron_path, "*_cal.fits"))[0]
-                        testbed_state.reference_image = fits.getdata(image_path)
-                        testbed_state.global_alignment_mask = \
-                            self.__make_global_alignment_mask(testbed_state.reference_image)
-
                     # Run sensing.
+                    coron_path = os.path.join(iteration_path, exp_set_name)
                     ncycles_new, angle_deg_new, peak_to_valley_new = speckle_nulling.speckle_sensing(coron_path)
 
                     # Generate a list of sin_commands at different phases, and take data for each.
@@ -157,7 +170,7 @@ class SpeckleNulling(Experiment):
                         testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                                   lyot_stop_position=self.lyot_stop_position,
                                                   path=phase_path, auto_exposure_time=False,
-                                                  centering=centering,
+                                                  centering=self.centering,
                                                   exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + name,
                                                   simulator=False, **self.kwargs)
 
@@ -181,7 +194,7 @@ class SpeckleNulling(Experiment):
 
                         testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                                   lyot_stop_position=self.lyot_stop_position,
-                                                  centering=centering,
+                                                  centering=self.centering,
                                                   path=amplitude_path, auto_exposure_time=False,
                                                   exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + name,
                                                   simulator=False, **self.kwargs)
@@ -197,7 +210,7 @@ class SpeckleNulling(Experiment):
 
                 # Take a final (non-saturated) image using auto exposure without the dark zone mask.
                 testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, self.fpm_position,
-                                          centering=centering,
+                                          centering=self.centering,
                                           lyot_stop_position=self.lyot_stop_position,
                                           path=self.path,
                                           exposure_set_name="final", filename="final_dark_zone.fits",
