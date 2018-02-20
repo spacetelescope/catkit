@@ -18,11 +18,12 @@ class TestPrDmCommands(Experiment):
     name = "PR Test DM Command Data Collection"
     log = logging.getLogger(__name__)
 
-    def __init__(self,
+    def __init__(self, commands_path,
                  num_exposures=10,
                  coron_exp_time=quantity(100, units.millisecond),
                  direct_exp_time=quantity(1, units.millisecond),
                  centering=ImageCentering.custom_apodizer_spots):
+        self.commands_path = commands_path
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
         self.direct_exp_time = direct_exp_time
@@ -31,11 +32,8 @@ class TestPrDmCommands(Experiment):
     def experiment(self):
         local_path = util.create_data_path(suffix="test_pr_dm_data")
 
-        # # Pure Focus Zernike loop.
-        command_paths = glob("z:/Testbeds/hicat_dev/calibration/pr_dm_commands/pr_flat_command_dm2*.fits")
-
         # DM1 Flat, DM2 PR WF correction command.
-        take_exposures_dm_commands(command_paths, local_path, "pr_flats", self.coron_exp_time,
+        take_exposures_dm_commands(self.commands_path, local_path, "pr_flats", self.coron_exp_time,
                                    self.direct_exp_time, list_of_paths=True,
                                    num_exposures=self.num_exposures,
                                    centering=self.centering)
