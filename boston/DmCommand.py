@@ -128,7 +128,7 @@ class DmCommand(object):
 
     def export_fits(self, path, folder_name="dm_command"):
         """
-        Saves the dm command in two different formats:  
+        Saves the dm command in two different formats:
             - 2D representation of the command with no padding (34 x 34).
             - 2D command with the flat/bias removed (34 x 34).
         :param path: Path to a directory to create a folder named "dm_command" and save the 3 files.
