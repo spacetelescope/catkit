@@ -11,6 +11,7 @@ import numpy as np
 from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity, ImageCentering
 from . import testbed_state
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
+from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from .. import data_pipeline
 from .. import util
 from .. import wolfram_wrappers
@@ -81,8 +82,12 @@ def beam_dump():
 
 
 def laser_source():
-    # return ThorlabsMLCS1("thorlabs_source_mcls1")
-    return DummyLaserSource("dummy")
+    laser_name = CONFIG_INI.get("testbed", "laser_source")
+    use_dummy = CONFIG_INI.getboolean(laser_name, "use_dummy")
+    if use_dummy:
+        return DummyLaserSource("dummy")
+    else:
+        return ThorlabsMLCS1(laser_name)
 
 
 def backup_power():
