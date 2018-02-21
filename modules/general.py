@@ -26,7 +26,7 @@ def take_exposures_dm_commands(dm2_command_list,
     for command in dm2_command_list:
         if list_of_paths:
             dm2_command_object = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2, as_volts=True)
-            filename = os.path.basename(command)
+            filename = os.path.basename(command).split('.')[0]
         else:
             dm2_command_object = command[0]
             filename = command[1]

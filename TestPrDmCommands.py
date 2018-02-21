@@ -39,9 +39,10 @@ class TestPrDmCommands(Experiment):
                                    centering=self.centering)
 
         # DM1 Flat, DM2 Flat.
-        dm2_command = commands.flat_command(bias=False, flat_map=True, dm_num=2, return_shortname=True)
+        dm2_command = commands.flat_command(bias=False, flat_map=True, dm_num=2,
+                                            return_shortname=True)
         take_exposures_dm_commands([dm2_command],
                                    local_path, "pr_flats", self.coron_exp_time,
-                                   self.direct_exp_time, list_of_paths=True,
+                                   self.direct_exp_time, list_of_paths=False,
                                    num_exposures=self.num_exposures,
                                    centering=self.centering)
