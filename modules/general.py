@@ -26,7 +26,7 @@ def take_exposures_dm_commands(dm2_command_list,
     for command in dm2_command_list:
         if list_of_paths:
             dm2_command_object = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2, as_volts=True)
-            filename = os.path.basename(os.path.dirname(command))
+            filename = os.path.basename(command)
         else:
             dm2_command_object = command[0]
             filename = command[1]
@@ -43,6 +43,7 @@ def take_exposures_dm_commands(dm2_command_list,
                        experiment_path,
                        filename,
                        "direct",
+                       suffix=None,
                        centering=ImageCentering.psf)
 
         # Coron.
@@ -56,6 +57,7 @@ def take_exposures_dm_commands(dm2_command_list,
                        experiment_path,
                        filename,
                        "coron",
+                       suffix=None,
                        centering=centering)
 
 
