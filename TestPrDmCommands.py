@@ -8,7 +8,7 @@ from glob import glob
 import logging
 
 from .Experiment import Experiment
-from ..hardware.boston import commands
+from ..hardware.boston import commands, DmCommand
 from ..hicat_types import units, quantity, ImageCentering
 from .. import util
 from .modules.general import take_exposures_dm_commands
@@ -32,15 +32,19 @@ class TestPrDmCommands(Experiment):
     def experiment(self):
         local_path = util.create_data_path(suffix="test_pr_dm_data")
 
-        # DM1 Flat, DM2 PR WF correction command.
-        take_exposures_dm_commands(self.commands_path, local_path, "pr_flats", self.coron_exp_time,
-                                   self.direct_exp_time, list_of_paths=True,
-                                   num_exposures=self.num_exposures,
-                                   centering=self.centering)
-
-        # DM1 Flat, DM2 Flat.
         dm2_command = commands.flat_command(bias=False, flat_map=True, dm_num=2,
                                             return_shortname=True)
+        # DM1 Flat, DM2 PR WF correction command.
+        for command in self.commands_path:
+            dm1_command_object = DmCommand.load_dm_command(command, dm_num=1, flat_map=True)
+
+            take_exposures_dm_commands([dm2_command], local_path, "pr_flats", self.coron_exp_time,
+                                       self.direct_exp_time, list_of_paths=False,
+                                       num_exposures=self.num_exposures,
+                                       dm1_command_object=dm1_command_object,
+                                       centering=self.centering)
+
+        # DM1 Flat, DM2 Flat.
         take_exposures_dm_commands([dm2_command],
                                    local_path, "pr_flats", self.coron_exp_time,
                                    self.direct_exp_time, list_of_paths=False,
