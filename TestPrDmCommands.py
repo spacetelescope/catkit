@@ -33,9 +33,9 @@ class TestPrDmCommands(Experiment):
         local_path = util.create_data_path(suffix="test_pr_dm_data")
 
         dm2_command = commands.flat_command(bias=False, flat_map=True, dm_num=2,
-                                            return_shortname=True)
+                                            return_shortname=False)
         # DM2 Flat, DM1 PR WF correction command.
-        take_exposures_both_dm_commands(dm2_command,
+        take_exposures_both_dm_commands([dm2_command],
                                         self.commands_path,
                                         local_path,
                                         "pr_flats",

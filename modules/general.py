@@ -82,8 +82,8 @@ def take_exposures_both_dm_commands(dm2_command_list,
                                                            dm_num=1, as_volts=True)
             filename1 = os.path.basename(command1).split('.')[0]
         else:
-            dm1_command_object = command1[0]
-            filename1 = command1[1]
+            dm1_command_object = command1
+            filename1 = "flats"
 
         for command2 in dm2_command_list:
             if dm2_list_of_paths:
@@ -92,8 +92,8 @@ def take_exposures_both_dm_commands(dm2_command_list,
                                                                dm_num=2, as_volts=True)
                 filename2 = os.path.basename(command2).split('.')[0]
             else:
-                dm2_command_object = command2[0]
-                filename2 = command2[1]
+                dm2_command_object = command2
+                filename2 = "flat"
             experiment_path = os.path.join(path, exp_set_name, "dm1_{}_dm2_{}".format(filename1,
                                                                                       filename2))
 
@@ -106,7 +106,7 @@ def take_exposures_both_dm_commands(dm2_command_list,
                            False,
                            True,
                            experiment_path,
-                           filename,
+                           "dm1_{}_dm2_{}".format(filename1, filename2),
                            "direct",
                            suffix=None,
                            centering=ImageCentering.psf)
@@ -120,7 +120,7 @@ def take_exposures_both_dm_commands(dm2_command_list,
                            True,
                            True,
                            experiment_path,
-                           filename,
+                           "dm1_{}_dm2_{}".format(filename1, filename2),
                            "coron",
                            suffix=None,
                            centering=centering)
