@@ -11,7 +11,7 @@ from .Experiment import Experiment
 from ..hardware.boston import commands, DmCommand
 from ..hicat_types import units, quantity, ImageCentering
 from .. import util
-from .modules.general import take_exposures_dm_commands
+from .modules.general import take_exposures_dm_commands, take_exposures_both_dm_commands
 
 
 class TestPrDmCommands(Experiment):
@@ -35,9 +35,9 @@ class TestPrDmCommands(Experiment):
         dm2_command = commands.flat_command(bias=False, flat_map=True, dm_num=2,
                                             return_shortname=True)
         # DM2 Flat, DM1 PR WF correction command.
-        take_exposures_both_dm_commands(dm2_command_list,
+        take_exposures_both_dm_commands(dm2_command,
                                         self.commands_path,
-                                        loca_path,
+                                        local_path,
                                         "pr_flats",
                                         self.coron_exp_time,
                                         self.direct_exp_time,
@@ -47,7 +47,7 @@ class TestPrDmCommands(Experiment):
                                         dm1_list_of_paths=True,
                                         num_exposures=self.num_exposures,
                                         camera_type="imaging_camera",
-                                        centering=self.centering):
+                                        centering=self.centering)
 
         # DM1 Flat, DM2 Flat.
         take_exposures_dm_commands([dm2_command],
