@@ -21,7 +21,7 @@ class TestPrDmCommands(Experiment):
     def __init__(self, commands_path,
                  num_exposures=10,
                  coron_exp_time=quantity(100, units.millisecond),
-                 direct_exp_time=quantity(1, units.millisecond),
+                 direct_exp_time=quantity(250, units.microsecond),
                  centering=ImageCentering.custom_apodizer_spots):
         self.commands_path = commands_path
         self.num_exposures = num_exposures
@@ -34,15 +34,20 @@ class TestPrDmCommands(Experiment):
 
         dm2_command = commands.flat_command(bias=False, flat_map=True, dm_num=2,
                                             return_shortname=True)
-        # DM1 Flat, DM2 PR WF correction command.
-        for command in self.commands_path:
-            dm1_command_object = DmCommand.load_dm_command(command, dm_num=1, flat_map=True)
-
-            take_exposures_dm_commands([dm2_command], local_path, "pr_flats", self.coron_exp_time,
-                                       self.direct_exp_time, list_of_paths=False,
-                                       num_exposures=self.num_exposures,
-                                       dm1_command_object=dm1_command_object,
-                                       centering=self.centering)
+        # DM2 Flat, DM1 PR WF correction command.
+        take_exposures_both_dm_commands(dm2_command_list,
+                                        self.commands_path,
+                                        loca_path,
+                                        "pr_flats",
+                                        self.coron_exp_time,
+                                        self.direct_exp_time,
+                                        dm2_flat_map=False,
+                                        dm1_flat_map=True,
+                                        dm2_list_of_paths=False,
+                                        dm1_list_of_paths=True,
+                                        num_exposures=self.num_exposures,
+                                        camera_type="imaging_camera",
+                                        centering=self.centering):
 
         # DM1 Flat, DM2 Flat.
         take_exposures_dm_commands([dm2_command],

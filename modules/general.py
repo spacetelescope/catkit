@@ -61,6 +61,70 @@ def take_exposures_dm_commands(dm2_command_list,
                        centering=centering)
 
 
+def take_exposures_both_dm_commands(dm2_command_list,
+                                    dm1_command_list,
+                                    path,
+                                    exp_set_name,
+                                    coron_exp_time,
+                                    direct_exp_time,
+                                    dm2_flat_map=False,
+                                    dm1_flat_map=False,
+                                    dm2_list_of_paths=True,
+                                    dm1_list_of_paths=True,
+                                    num_exposures=10,
+                                    camera_type="imaging_camera",
+                                    centering=ImageCentering.custom_apodizer_spots):
+
+    for command1 in dm1_command_list:
+        if dm1_list_of_paths:
+            dm1_command_object = DmCommand.load_dm_command(command1, bias=False,
+                                                           flat_map=dm1_flat_map,
+                                                           dm_num=1, as_volts=True)
+            filename1 = os.path.basename(command1).split('.')[0]
+        else:
+            dm1_command_object = command1[0]
+            filename1 = command1[1]
+
+        for command2 in dm2_command_list:
+            if dm2_list_of_paths:
+                dm2_command_object = DmCommand.load_dm_command(command2, bias=False,
+                                                               flat_map=dm2_flat_map,
+                                                               dm_num=2, as_volts=True)
+                filename2 = os.path.basename(command2).split('.')[0]
+            else:
+                dm2_command_object = command2[0]
+                filename2 = command2[1]
+            experiment_path = os.path.join(path, exp_set_name, "dm1_{}_dm2_{}".format(filename1,
+                                                                                      filename2))
+
+            # Direct.
+            take_exposures(dm1_command_object,
+                           dm2_command_object,
+                           direct_exp_time,
+                           num_exposures,
+                           camera_type,
+                           False,
+                           True,
+                           experiment_path,
+                           filename,
+                           "direct",
+                           suffix=None,
+                           centering=ImageCentering.psf)
+
+            # Coron.
+            take_exposures(dm1_command_object,
+                           dm2_command_object,
+                           coron_exp_time,
+                           num_exposures,
+                           camera_type,
+                           True,
+                           True,
+                           experiment_path,
+                           filename,
+                           "coron",
+                           suffix=None,
+                           centering=centering)
+
 def take_exposures(dm1_command_object,
                    dm2_command_object,
                    exposure_time,
