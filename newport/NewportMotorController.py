@@ -18,8 +18,9 @@ class NewportMotorController(MotorController):
 
     log = logging.getLogger(__name__)
 
-    def initialize(self, initialize_to_nominal=True):
+    def initialize(self, initialize_to_nominal=True, use_testbed_state=True):
         """Creates an instance of the controller library and opens a connection."""
+        self.use_testbed_state = use_testbed_state
 
         # Create an instance of the XPS controller.
         myxps = XPS_Q8_drivers.XPS()
@@ -47,8 +48,8 @@ class NewportMotorController(MotorController):
                 self.__move_to_nominal(motor_name)
 
         # Update the testbed_state for the FPM and Lyot Stop.
-        self.__update_testbed_state("motor_lyot_stop_x", self.get_position("motor_lyot_stop_x"))
-        self.__update_testbed_state("motor_FPM_Y", self.get_position("motor_FPM_Y"))
+        self.__update_testbed_state("motor_lyot_stop_x")
+        self.__update_testbed_state("motor_FPM_Y")
         return myxps
 
     def close(self):
@@ -73,7 +74,7 @@ class NewportMotorController(MotorController):
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupMoveAbsolute')
             else:
-                self.__update_testbed_state(motor_id, position)
+                self.__update_testbed_state(motor_id)
 
     def relative_move(self, motor_id, distance):
         """
@@ -91,7 +92,7 @@ class NewportMotorController(MotorController):
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupMoveRelative')
         else:
-            self.__update_testbed_state(motor_id, self.get_position(motor_id))
+            self.__update_testbed_state(motor_id)
 
     def get_position(self, motor_id):
         """
@@ -166,12 +167,13 @@ class NewportMotorController(MotorController):
                 raise Exception(api_name + ': The TCP/IP connection was closed by an administrator')
         raise Exception("Unknown error_code returned from Newport Motor Controller.")
 
-    # Only a few of the motor IDs have testbed state entries.  
-    @staticmethod
-    def __update_testbed_state(motorid, position):
-        if motorid == "motor_lyot_stop_x":
-            ini_value = CONFIG_INI.getfloat(motorid, "in_beam")
-            testbed_state.lyot_stop = True if np.isclose(ini_value, position, atol=.001) else False
-        elif motorid == "motor_FPM_Y":
-            ini_value = CONFIG_INI.getfloat(motorid, "default_coron")
-            testbed_state.coronograph = True if np.isclose(ini_value, position, atol=.001) else False
+    # Only a few of the motor IDs have testbed state entries.
+    def __update_testbed_state(self, motorid):
+        if self.use_testbed_state:
+            position = self.get_position(motorid)
+            if motorid == "motor_lyot_stop_x":
+                ini_value = CONFIG_INI.getfloat(motorid, "in_beam")
+                testbed_state.lyot_stop = True if np.isclose(ini_value, position, atol=.001) else False
+            elif motorid == "motor_FPM_Y":
+                ini_value = CONFIG_INI.getfloat(motorid, "default_coron")
+                testbed_state.coronograph = True if np.isclose(ini_value, position, atol=.001) else False

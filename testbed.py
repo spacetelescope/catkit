@@ -68,13 +68,15 @@ def dm_controller():
     return BostonDmController("boston_kilo952")
 
 
-def motor_controller(initialize_to_nominal=True):
+def motor_controller(initialize_to_nominal=True, use_testbed_state=True):
     """
     Proper way to control the motor controller. Using this function keeps the scripts future-proof.
     Use the "with" keyword to take advantage of the built-in context manager for safely closing the connection.
     :return: An instance of the MotorController.py interface.
     """
-    return NewportMotorController("newport_xps_q8", initialize_to_nominal=initialize_to_nominal)
+    return NewportMotorController("newport_xps_q8",
+                                  initialize_to_nominal=initialize_to_nominal,
+                                  use_testbed_state=use_testbed_state)
 
 
 def beam_dump():
