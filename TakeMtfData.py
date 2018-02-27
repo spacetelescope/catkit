@@ -24,13 +24,15 @@ class TakeMtfData(Experiment):
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=100,
                  path=None,
-                 camera_type="imaging_camera"):
+                 camera_type="imaging_camera",
+                 **kwargs):
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.path = path
         self.camera_type = camera_type
+        self.kwargs = kwargs
 
     def experiment(self):
         # Wait to set the path until the experiment starts (rather than the constructor).
@@ -60,6 +62,7 @@ class TakeMtfData(Experiment):
                 dm.apply_shape_to_both(flat_command_object1, flat_command_object2)
                 cal_file_path = testbed.run_hicat_imaging(direct_exp_time, num_exposures, FpmPosition.direct,
                                                           path=self.path, exposure_set_name="direct",
-                                                          filename=flat_file_name, camera_type=self.camera_type)
+                                                          filename=flat_file_name, camera_type=self.camera_type,
+                                                          **self.kwargs)
         ps_wo_focus, ps_w_focus, focus = run_mtf(cal_file_path)
         self.log.info("ps_wo_focus=" + str(ps_wo_focus) + " ps_w_focus=" +str(ps_w_focus) + " focus=" +str(focus) )
