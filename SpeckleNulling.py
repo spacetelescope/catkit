@@ -40,6 +40,7 @@ class SpeckleNulling(Experiment):
                  lyot_stop_position=LyotStopPosition.in_beam,
                  centering=ImageCentering.global_cross_correlation,
                  reference_centering=ImageCentering.custom_apodizer_spots,
+                 hold=False,
                  **kwargs):
         self.num_iterations = num_iterations
         self.bias = bias
@@ -54,6 +55,7 @@ class SpeckleNulling(Experiment):
         self.lyot_stop_position = lyot_stop_position
         self.centering = centering
         self.reference_centering = reference_centering
+        self.hold
         self.kwargs = kwargs
 
     def experiment(self):
@@ -214,6 +216,22 @@ class SpeckleNulling(Experiment):
                                           path=self.path,
                                           exposure_set_name="final", filename="final_dark_zone.fits",
                                           simulator=False, **self.kwargs)
+                if self.hold:
+                    keep_holding = True
+                    while keep_holding :
+                        user_input = input("Name for image folder, or type \"quit\":")
+                        if user_input.lower() == "quit":
+                            keep_holding = False
+                        else:
+                            # Take coronographic data, with backgrounds.
+                            iteration_path = os.path.join(self.path, user_input)
+                            testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
+                                                      lyot_stop_position=self.lyot_stop_position,
+                                                      centering=self.centering,
+                                                      path=iteration_path, auto_exposure_time=False,
+                                                      exposure_set_name=exp_set_name,
+                                                      filename="itr" + str(i) + "_" + file_name,
+                                                      **self.kwargs)
 
     @staticmethod
     def __make_global_alignment_mask():
