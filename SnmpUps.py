@@ -16,7 +16,6 @@ class SnmpUps(BackupPower):
     log = logging.getLogger(__name__)
 
     def get_status(self):
-
         ip = CONFIG_INI.get(self.config_id, "ip")
         port = CONFIG_INI.getint(self.config_id, "port")
         snmp_oid = CONFIG_INI.get(self.config_id, "snmp_oid")
