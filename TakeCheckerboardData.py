@@ -94,4 +94,4 @@ class TakeCheckerboardData(Experiment):
                     # Save the DM_Command used.
                     command.export_fits(os.path.join(self.path, file_name))
 
-            return self.path
+            #return self.path
