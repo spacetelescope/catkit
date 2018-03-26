@@ -26,6 +26,7 @@ class TakeCheckerboardData(Experiment):
                  num_frames=2,
                  path=None,
                  camera_type="imaging_camera",
+                 coron=False,
                  **kwargs):
 
         self.amplitude = amplitude
@@ -33,6 +34,7 @@ class TakeCheckerboardData(Experiment):
         self.num_frames = num_frames
         self.path = path
         self.camera_type = camera_type
+        self.coron=coron
         self.kwargs = kwargs
 
     def experiment(self):
@@ -50,8 +52,8 @@ class TakeCheckerboardData(Experiment):
                                             exposure_time=self.exp_time,
                                             num_exposures=1,
                                             camera_type=self.camera_type,
-                                            coronograph=False,
-                                            pipeline=True,
+                                            coronograph=self.coron,
+                                            pipeline=False,
                                             path=self.path,
                                             filename="reference",
                                             exposure_set_name=None,
@@ -70,7 +72,7 @@ class TakeCheckerboardData(Experiment):
                                                 exposure_time=self.exp_time,
                                                 num_exposures=self.num_frames,
                                                 camera_type=self.camera_type,
-                                                coronograph=False,
+                                                coronograph=self.coron,
                                                 pipeline=True,
                                                 path=self.path,
                                                 filename=file_name,
@@ -88,6 +90,7 @@ class TakeCheckerboardData(Experiment):
 
                     reference = fits.getdata(reference_path)
                     image = fits.getdata(image_path)
+
                     # Subtract the reference from image.
                     util.write_fits(reference - image,
                                     os.path.join(self.path, file_name + "_subtracted"),
