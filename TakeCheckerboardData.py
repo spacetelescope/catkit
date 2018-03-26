@@ -5,18 +5,16 @@ from __future__ import (absolute_import, division,
 from builtins import *
 
 import os
-from glob import glob
 from astropy.io import fits
 
-from hicat import dm_calibration_util
 from hicat.hicat_types import MetaDataEntry
 from .Experiment import Experiment
-from ..hardware.boston.commands import poke_letter_f_command, poke_command, checkerboard_command, flat_command
+from ..hardware.boston.commands import checkerboard_command, flat_command
 from ..hardware import testbed
-from ..hardware.FourDTechnology.Accufiz import Accufiz
 from ..config import CONFIG_INI
 from .. import util
 from ..hicat_types import units, quantity, FpmPosition
+from .modules.general import take_exposures
 
 
 class TakeCheckerboardData(Experiment):
@@ -44,20 +42,21 @@ class TakeCheckerboardData(Experiment):
             self.path = util.create_data_path(initial_path=central_store_path,
                                               suffix="checkerboard_" + self.camera_type)
         dm_num = 1
-        fpm_position = FpmPosition.direct
-
         with testbed.dm_controller() as dm:
-
             # Reference flat image.
             flat_dm_command = flat_command(bias=False, flat_map=True)
-            dm.apply_shape_to_both(flat_dm_command, flat_dm_command)
-            reference_path = testbed.run_hicat_imaging(self.exp_time, num_exposures=1,
-                                                       fpm_position=fpm_position,
-                                                       path=self.path,
-                                                       filename="reference",
-                                                       camera_type=self.camera_type,
-                                                       pipeline=True,
-                                                       **self.kwargs)
+            reference_path = take_exposures(dm1_command_object=flat_dm_command,
+                                            dm2_command_object=flat_dm_command,
+                                            exposure_time=self.exp_time,
+                                            num_exposures=1,
+                                            camera_type=self.camera_type,
+                                            coronograph=False,
+                                            pipeline=True,
+                                            path=self.path,
+                                            filename="reference",
+                                            exposure_set_name=None,
+                                            suffix=None,
+                                            **self.kwargs)
 
             # Generate the 16 permutations of checkerboards, and add the commands to a list.
             for i in range(0, 4):
@@ -66,15 +65,18 @@ class TakeCheckerboardData(Experiment):
                     command = checkerboard_command(dm_num=dm_num, offset_x=i, offset_y=j,
                                                    amplitude=self.amplitude,
                                                    bias=False, flat_map=True)
-                    dm.apply_shape(command, dm_num)
-                    image_path = testbed.run_hicat_imaging(self.exp_time,
-                                                           self.num_frames,
-                                                           fpm_position,
-                                                           path=self.path,
-                                                           filename=file_name,
-                                                           camera_type=self.camera_type,
-                                                           pipeline=True,
-                                                           **self.kwargs)
+                    image_path = take_exposures(dm1_command_object=command,
+                                                dm2_command_object=flat_dm_command,
+                                                exposure_time=self.exp_time,
+                                                num_exposures=self.num_frames,
+                                                camera_type=self.camera_type,
+                                                coronograph=False,
+                                                pipeline=True,
+                                                path=self.path,
+                                                filename=file_name,
+                                                exposure_set_name=None,
+                                                suffix=None,
+                                                **self.kwargs)
 
                     # Create metadata.
                     metadata = [MetaDataEntry("offset_x", "offset_x", i, "Checkerboard offset x-axis")]
