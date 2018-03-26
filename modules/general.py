@@ -13,23 +13,19 @@ from ...hardware.boston import commands
 from ...hardware.boston import DmCommand
 
 
-def take_exposures_dm_commands(dm2_command_list,
-                               path,
-                               exp_set_name,
-                               coron_exp_time,
-                               direct_exp_time,
-                               list_of_paths=True,
-                               num_exposures=10,
-                               dm1_command_object=commands.flat_command(bias=False, flat_map=True),
-                               camera_type="imaging_camera",
-                               centering=ImageCentering.custom_apodizer_spots):
+def take_coffee_data_set(dm2_command_list,
+                         path,
+                         exp_set_name,
+                         coron_exp_time,
+                         direct_exp_time,
+                         num_exposures=10,
+                         dm1_command_object=commands.flat_command(bias=False, flat_map=True),
+                         camera_type="imaging_camera",
+                         centering=ImageCentering.custom_apodizer_spots):
     for command in dm2_command_list:
-        if list_of_paths:
-            dm2_command_object = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2, as_volts=True)
-            filename = os.path.basename(os.path.dirname(command))
-        else:
-            dm2_command_object = command[0]
-            filename = command[1]
+
+        dm2_command_object = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2, as_volts=True)
+        filename = os.path.basename(os.path.dirname(command))
         experiment_path = os.path.join(path, exp_set_name, filename)
 
         # Direct.
@@ -43,6 +39,7 @@ def take_exposures_dm_commands(dm2_command_list,
                        experiment_path,
                        filename,
                        "direct",
+                       None,
                        centering=ImageCentering.psf)
 
         # Coron.
@@ -56,6 +53,7 @@ def take_exposures_dm_commands(dm2_command_list,
                        experiment_path,
                        filename,
                        "coron",
+                       None,
                        centering=centering)
 
 
@@ -71,13 +69,12 @@ def take_exposures(dm1_command_object,
                    exposure_set_name,
                    suffix,
                    **kwargs):
-
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         suffix = "take_exposures_data" if suffix is None else "take_exposures_data_" + suffix
         path = util.create_data_path(suffix=suffix)
 
-    util.setup_hicat_logging(path, "take_exposures_data")
+    #util.setup_hicat_logging(path, "take_exposures_data")
 
     # Establish image type and set the FPM position and laser current
     if coronograph:
@@ -97,10 +94,10 @@ def take_exposures(dm1_command_object,
 
         with testbed.dm_controller() as dm:
             dm.apply_shape_to_both(dm1_command_object, dm2_command_object)
-            testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position, path=path,
-                                      filename=filename,
-                                      exposure_set_name=exposure_set_name,
-                                      camera_type=camera_type,
-                                      pipeline=pipeline,
-                                      **kwargs)
+            path = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position, path=path,
+                                             filename=filename,
+                                             exposure_set_name=exposure_set_name,
+                                             camera_type=camera_type,
+                                             pipeline=pipeline,
+                                             **kwargs)
     return path
