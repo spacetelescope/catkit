@@ -77,7 +77,7 @@ def take_exposures(dm1_command_object,
         suffix = "take_exposures_data" if suffix is None else "take_exposures_data_" + suffix
         path = util.create_data_path(suffix=suffix)
 
-    #util.setup_hicat_logging(path, "take_exposures_data")
+    util.setup_hicat_logging(path, "take_exposures_data")
 
     # Establish image type and set the FPM position and laser current
     if coronograph:

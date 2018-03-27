@@ -43,26 +43,26 @@ class CoffeeDataCollection(Experiment):
                              centering=self.centering)
 
         # Multi astigmatsm+focus loop.
-        multi_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee_commands/astigmastism_80nm"
-        multi_zernike_command_paths = glob(multi_zernike_data_path + "/*/*.fits")
-
-        take_coffee_data_set(multi_zernike_command_paths, local_path,
-                             "astigmatism_80nm", self.coron_exp_time,
-                             self.direct_exp_time, num_exposures=self.num_exposures,
-                             centering=self.centering)
+        # multi_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee_commands/astigmastism_80nm"
+        # multi_zernike_command_paths = glob(multi_zernike_data_path + "/*/*.fits")
+        #
+        # take_coffee_data_set(multi_zernike_command_paths, local_path,
+        #                      "astigmatism_80nm", self.coron_exp_time,
+        #                      self.direct_exp_time, num_exposures=self.num_exposures,
+        #                      centering=self.centering)
 
         # DM1 Letter F, DM2 focus loop.
-        letter_f = commands.poke_letter_f_command(dm_num=1)
-        take_coffee_data_set(focus_zernike_command_paths, local_path, "letter_f", self.coron_exp_time,
-                             self.direct_exp_time, num_exposures=self.num_exposures,
-                             dm1_command_object=letter_f, centering=self.centering)
+        # letter_f = commands.poke_letter_f_command(dm_num=1)
+        # take_coffee_data_set(focus_zernike_command_paths, local_path, "letter_f", self.coron_exp_time,
+        #                      self.direct_exp_time, num_exposures=self.num_exposures,
+        #                      dm1_command_object=letter_f, centering=self.centering)
 
         # DM1 Center 4 actuators.
-        actuators = [458, 459, 492, 493]
-        center_command_dm1 = commands.poke_command(actuators, dm_num=1, amplitude=quantity(250, units.nanometers))
-        take_coffee_data_set(focus_zernike_command_paths, local_path, "center_poke", self.coron_exp_time,
-                             self.direct_exp_time, num_exposures=self.num_exposures,
-                             dm1_command_object=center_command_dm1, centering=self.centering)
+        # actuators = [458, 459, 492, 493]
+        # center_command_dm1 = commands.poke_command(actuators, dm_num=1, amplitude=quantity(250, units.nanometers))
+        # take_coffee_data_set(focus_zernike_command_paths, local_path, "center_poke", self.coron_exp_time,
+        #                      self.direct_exp_time, num_exposures=self.num_exposures,
+        #                      dm1_command_object=center_command_dm1, centering=self.centering)
 
 
         # DM1 OFF and DM2 focus loop.
