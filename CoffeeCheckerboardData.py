@@ -74,7 +74,7 @@ class CoffeeCheckerboardData(Experiment):
                 focus_zernike_command_paths = glob(self.focus_zernike_data_path + "/*p2v/*.fits")
                 take_coffee_data_set(focus_zernike_command_paths,
                                      self.path,
-                                           "focus",
+                                     file_name,
                                      self.coron_exp_time,
                                      self.direct_exp_time,
                                      dm1_command_object=command,

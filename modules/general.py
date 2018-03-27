@@ -21,7 +21,8 @@ def take_coffee_data_set(dm2_command_list,
                          num_exposures=10,
                          dm1_command_object=commands.flat_command(bias=False, flat_map=True),
                          camera_type="imaging_camera",
-                         centering=ImageCentering.custom_apodizer_spots):
+                         centering=ImageCentering.custom_apodizer_spots,
+                         **kwargs):
     for command in dm2_command_list:
 
         dm2_command_object = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2, as_volts=True)
@@ -40,7 +41,8 @@ def take_coffee_data_set(dm2_command_list,
                        filename,
                        "direct",
                        None,
-                       centering=ImageCentering.psf)
+                       centering=ImageCentering.psf,
+                       **kwargs)
 
         # Coron.
         take_exposures(dm1_command_object,
@@ -54,7 +56,8 @@ def take_coffee_data_set(dm2_command_list,
                        filename,
                        "coron",
                        None,
-                       centering=centering)
+                       centering=centering,
+                       **kwargs)
 
 
 def take_exposures(dm1_command_object,
