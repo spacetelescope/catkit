@@ -40,7 +40,8 @@ class CoffeeDataCollection(Experiment):
                              self.coron_exp_time,
                              self.direct_exp_time,
                              num_exposures=self.num_exposures,
-                             centering=self.centering)
+                             centering=self.centering,
+                             raw_skip=100)
 
         # Multi astigmatsm+focus loop.
         # multi_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee_commands/astigmastism_80nm"
