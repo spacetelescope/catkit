@@ -78,7 +78,7 @@ class UpdateSubarray(Experiment):
         # Find the brightest peak (should be the core of the psf).
         mean, median, std = sigma_clipped_stats(psf_image, sigma=3)
         threshold = median + 10 * std
-        box_size = int(round(.05 * psf_image.shape[0]))
+        box_size = int(round(.02 * psf_image.shape[0]))
         peak_table = find_peaks(psf_image, threshold, box_size=box_size, npeaks=1)
 
         # Extract coordinates from photutils table.
