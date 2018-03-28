@@ -11,6 +11,7 @@ import numpy as np
 from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity, ImageCentering
 from . import testbed_state
 from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
+from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from .. import data_pipeline
 from .. import util
 from .. import wolfram_wrappers
@@ -67,13 +68,15 @@ def dm_controller():
     return BostonDmController("boston_kilo952")
 
 
-def motor_controller(initialize_to_nominal=True):
+def motor_controller(initialize_to_nominal=True, use_testbed_state=True):
     """
     Proper way to control the motor controller. Using this function keeps the scripts future-proof.
     Use the "with" keyword to take advantage of the built-in context manager for safely closing the connection.
     :return: An instance of the MotorController.py interface.
     """
-    return NewportMotorController("newport_xps_q8", initialize_to_nominal=initialize_to_nominal)
+    return NewportMotorController("newport_xps_q8",
+                                  initialize_to_nominal=initialize_to_nominal,
+                                  use_testbed_state=use_testbed_state)
 
 
 def beam_dump():
@@ -81,8 +84,12 @@ def beam_dump():
 
 
 def laser_source():
-    # return ThorlabsMLCS1("thorlabs_source_mcls1")
-    return DummyLaserSource("dummy")
+    laser_name = CONFIG_INI.get("testbed", "laser_source")
+    use_dummy = CONFIG_INI.getboolean(laser_name, "use_dummy")
+    if use_dummy:
+        return DummyLaserSource("dummy")
+    else:
+        return ThorlabsMLCS1(laser_name)
 
 
 def backup_power():
