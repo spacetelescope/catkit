@@ -261,7 +261,8 @@ class ZwoCamera(Camera):
         detector_max_y = cam_info['MaxHeight']
 
         if full_image:
-            self.log.info("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
+            #self.log.info("Taking full", detector_max_x, "x", detector_max_y, "image, ignoring region of interest params.")
+            self.log.info("Taking full image, ignoring region of interest params.")
             return
 
         # Check for errors, log them all before exiting.
