@@ -1,23 +1,23 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import logging
+import os
+from glob import glob
+
+import matplotlib.pyplot as plt
+from astropy.io import fits
 # noinspection PyUnresolvedReferences
 from builtins import *
-
-import os
-import logging
-from glob import glob
 from photutils import find_peaks
-from astropy.io import fits
-import matplotlib.pyplot as plt
 
 from .Experiment import Experiment
-from ..hardware.boston.commands import poke_command
+from .. import util
+from ..config import CONFIG_INI
 from ..hardware import testbed
 from ..hardware.FourDTechnology.Accufiz import Accufiz
-from ..config import CONFIG_INI
-from .. import util
-from .. hicat_types import quantity, units
+from ..hardware.boston.commands import poke_command, flat_command
+from ..hicat_types import quantity, units
 
 
 class TakeDm4d952PokeData(Experiment):
@@ -33,6 +33,7 @@ class TakeDm4d952PokeData(Experiment):
                  fliplr=False,
                  show_plot=False,
                  overwrite_csv=False,
+                 start_actuator=0,
                  **kwargs):
 
         self.mask = mask
@@ -43,6 +44,7 @@ class TakeDm4d952PokeData(Experiment):
         self.fliplr = fliplr
         self.show_plot = show_plot
         self.overwrite_csv = overwrite_csv
+        self.start_actuator = start_actuator
         self.kwargs = kwargs
 
     def experiment(self):
@@ -53,18 +55,23 @@ class TakeDm4d952PokeData(Experiment):
 
         mask = "dm2_detector.mask" if self.dm_num == 2 else "dm1_detector.mask"
 
-        with Accufiz("4d_accufiz", mask=mask) as four_d:
-            # Reference image.
-            reference_path = four_d.take_measurement(path=self.path,
-                                                     filename="reference",
-                                                     rotate=self.rotate,
-                                                     fliplr=self.fliplr)
-
         with testbed.dm_controller() as dm:
 
+            command = flat_command(bias=False,
+                                   flat_map=True,
+                                   return_shortname=False,
+                                   dm_num=self.dm_num)
+
+            dm.apply_shape(command, self.dm_num)
+            with Accufiz("4d_accufiz", mask=mask) as four_d:
+                # Reference image.
+                reference_path = four_d.take_measurement(path=self.path,
+                                                         filename="reference",
+                                                         rotate=self.rotate,
+                                                         fliplr=self.fliplr)
             # Poke every actuator, one at a time.
             num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
-            for i in range(0, num_actuators):
+            for i in range(self.start_actuator, num_actuators):
                 file_name = "poke_actuator_{}".format(i)
                 command = poke_command(i, amplitude=quantity(800, units.nanometers), dm_num=self.dm_num)
 
@@ -95,7 +102,6 @@ class TakeDm4d952PokeData(Experiment):
         actuator_indices = {}
         num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
         for i in range(num_actuators):
-
             # Open the correct poke file.
             poke_file = glob(os.path.join(self.path, "*_" + str(i) + "_subtracted.fits"))[0]
 
