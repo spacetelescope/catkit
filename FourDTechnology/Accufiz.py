@@ -60,33 +60,43 @@ class Accufiz(FizeauInterferometer):
         ip = CONFIG_INI.get(self.config_id, "ip")
         parammeas = {"count": int(num_frames)}
 
-        measres = requests.post('http://{}/WebService4D/WebService4D.asmx/AverageMeasure'.format(ip), data=parammeas)
+        try_counter = 0
+        tries = 5
+        while try_counter < tries:
+            measres = requests.post('http://{}/WebService4D/WebService4D.asmx/AverageMeasure'.format(ip), data=parammeas)
 
-        pathfile = os.path.join(path, filename)
+            pathfile = os.path.join(path, filename)
 
-        #  This line is here because when sent through webservice slashes tend
-        #  to disappear. If we sent in parameter a path with only one slash,
-        #  they disappear
-        pathfile = pathfile.replace('\\',
-                                    '/')
+            #  This line is here because when sent through webservice slashes tend
+            #  to disappear. If we sent in parameter a path with only one slash,
+            #  they disappear
+            pathfile = pathfile.replace('\\',
+                                        '/')
 
-        pathfile = pathfile.replace('/',
-                                    '\\\\')
+            pathfile = pathfile.replace('/',
+                                        '\\\\')
 
-        paramsave = {"fileName": pathfile}
+            paramsave = {"fileName": pathfile}
 
-        if 'success' in measres.text:
-            if not os.path.exists(path):
-                os.makedirs(path)
-            r = requests.post("http://{}/WebService4D/WebService4D.asmx/SaveMeasurement".format(ip), data=paramsave)
-            time.sleep(1)
-            if glob(pathfile + '.h5'):
-                print('SUCCESS IN SAVING ' + pathfile)
-                return self.__convert_h5_to_fits(path, pathfile, rotate, fliplr)
+            if 'success' in measres.text:
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                r = requests.post("http://{}/WebService4D/WebService4D.asmx/SaveMeasurement".format(ip), data=paramsave)
+                time.sleep(1)
+                if glob(pathfile + '.h5'):
+                    print('SUCCESS IN SAVING ' + pathfile)
+                    return self.__convert_h5_to_fits(path, pathfile, rotate, fliplr)
+                else:
+                    try_counter += 1
+                    print("FAIL1 IN SAVING MEASUREMENT " + pathfile + ".h5")
+                    if try_counter < tries:
+                        print("Trying again..")
             else:
-                print("FAIL IN SAVING MEASUREMENT " + pathfile + ".h5")
-        else:
-            print("FAIL IN MEASUREMENT " + pathfile + ".h5")
+                try_counter += 1
+                print("FAIL2 IN MEASUREMENT " + pathfile + ".h5")
+                if try_counter < tries:
+                    print("Trying again..")
+
 
     @staticmethod
     def __get_mask_path(mask):
