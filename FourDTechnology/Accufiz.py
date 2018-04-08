@@ -61,7 +61,7 @@ class Accufiz(FizeauInterferometer):
         parammeas = {"count": int(num_frames)}
 
         try_counter = 0
-        tries = 5
+        tries = 10
         while try_counter < tries:
             measres = requests.post('http://{}/WebService4D/WebService4D.asmx/AverageMeasure'.format(ip), data=parammeas)
 
@@ -94,6 +94,7 @@ class Accufiz(FizeauInterferometer):
             else:
                 try_counter += 1
                 print("FAIL2 IN MEASUREMENT " + pathfile + ".h5")
+                print(measres.text)
                 if try_counter < tries:
                     print("Trying again..")
 
