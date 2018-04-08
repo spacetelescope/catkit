@@ -34,6 +34,7 @@ class TakeDm4d952PokeData(Experiment):
                  show_plot=False,
                  overwrite_csv=False,
                  start_actuator=0,
+                 reference=True,
                  **kwargs):
 
         self.mask = mask
@@ -45,6 +46,7 @@ class TakeDm4d952PokeData(Experiment):
         self.show_plot = show_plot
         self.overwrite_csv = overwrite_csv
         self.start_actuator = start_actuator
+        self.reference = reference
         self.kwargs = kwargs
 
     def experiment(self):
@@ -65,18 +67,20 @@ class TakeDm4d952PokeData(Experiment):
             dm.apply_shape(command, self.dm_num)
             with Accufiz("4d_accufiz", mask=mask) as four_d:
                 # Reference image.
-                reference_path = four_d.take_measurement(path=self.path,
-                                                         filename="reference",
-                                                         rotate=self.rotate,
-                                                         fliplr=self.fliplr)
-            # Poke every actuator, one at a time.
-            num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
-            for i in range(self.start_actuator, num_actuators):
-                file_name = "poke_actuator_{}".format(i)
-                command = poke_command(i, amplitude=quantity(800, units.nanometers), dm_num=self.dm_num)
+                if self.reference:
+                    reference_path = four_d.take_measurement(path=self.path,
+                                                             filename="reference",
+                                                             rotate=self.rotate,
+                                                             fliplr=self.fliplr)
+                else:
+                    reference_path = glob(os.path.join(self.path, "reference.fits"))[0]
+                # Poke every actuator, one at a time.
+                num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
+                for i in range(self.start_actuator, num_actuators):
+                    file_name = "poke_actuator_{}".format(i)
+                    command = poke_command(i, amplitude=quantity(800, units.nanometers), dm_num=self.dm_num)
 
-                dm.apply_shape(command, self.dm_num)
-                with Accufiz("4d_accufiz", mask=mask) as four_d:
+                    dm.apply_shape(command, self.dm_num)
                     image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
                                                          num_frames=self.num_frames,
                                                          filename=file_name,
