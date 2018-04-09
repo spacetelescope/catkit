@@ -12,6 +12,7 @@ from astropy.io import fits
 
 from .Experiment import Experiment
 from ..hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
+from ..hardware.boston import DmCommand
 from ..hardware import testbed
 from ..hardware.FourDTechnology.Accufiz import Accufiz
 from ..config import CONFIG_INI
@@ -35,6 +36,7 @@ class Dm4dFlatMapLoop(Experiment):
                  iterations=20,
                  damping_ratio=.6,
                  create_flat_map=True,
+                 initial_command_path=None,
                  **kwargs):
 
         if filename is None:
@@ -50,6 +52,7 @@ class Dm4dFlatMapLoop(Experiment):
         self.iterations = iterations
         self.damping_ratio = damping_ratio
         self.create_flat_map = create_flat_map
+        self.initial_command_path = initial_command_path
         self.kwargs = kwargs
 
     def experiment(self):
@@ -71,11 +74,15 @@ class Dm4dFlatMapLoop(Experiment):
         # Start with a bias on the DM.
         actuator_intensities = {}
         with testbed.dm_controller() as dm:
-
-            command_object = flat_command(bias=True,
-                                               flat_map=False,
-                                               return_shortname=False,
-                                               dm_num=2)
+            if self.initial_command_path is None:
+                command_object = flat_command(bias=True,
+                                                   flat_map=False,
+                                                   return_shortname=False,
+                                                   dm_num=self.dm_num)
+            else:
+                command_object = DmCommand.load_dm_command(self.initial_command_path,
+                                                               bias=True,
+                                                               flat_map=False)
             dm.apply_shape(command_object, self.dm_num)
 
             print("Taking initial image...")
@@ -151,7 +158,7 @@ class Dm4dFlatMapLoop(Experiment):
                     command_object.export_fits(os.path.join(self.path, file_name))
 
                 if self.create_flat_map:
-                    iteration_folder_name = "best" + str(best_flat_map)
+                    iteration_folder_name = "iteration" + str(best_flat_map)
                     full_path = os.path.join(self.path, iteration_folder_name, "dm_command", "dm_command_2d.fits")
                     dm_command_data = fits.getdata(full_path)
 
