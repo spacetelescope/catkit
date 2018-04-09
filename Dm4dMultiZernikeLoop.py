@@ -29,7 +29,7 @@ class Dm4dMultiZernikeLoop(Experiment):
     def __init__(self,
                  first_zernike=5,
                  second_zernike=4,
-                 first_p2v=[20,40,80,160],
+                 first_p2v=[20,40,80,160,320],
                  second_p2v=range(-500, 550, 50),
                  mask="dm1_detector.mask",
                  num_frames=2,
