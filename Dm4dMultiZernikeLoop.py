@@ -30,7 +30,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                  first_zernike=5,
                  second_zernike=4,
                  first_p2v=[20,40,80,160,320],
-                 second_p2v=range(-500, 550, 50),
+                 second_p2v=[20,40,80,160,320],
                  mask="dm1_detector.mask",
                  num_frames=2,
                  path=None,
@@ -38,8 +38,8 @@ class Dm4dMultiZernikeLoop(Experiment):
                  dm_num=1,
                  rotate=180,
                  fliplr=False,
-                 iterations=30,
-                 damping_ratio=.6,
+                 iterations=10,
+                 damping_ratio=.8,
                  create_zernike_map=True,
                  **kwargs):
 
@@ -95,7 +95,7 @@ class Dm4dMultiZernikeLoop(Experiment):
 
             dm.apply_shape(command_object, self.dm_num)
 
-            self.log.info("Taking initial image...")
+            print("Taking initial image...")
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 initial_file_name = "initial_bias"
                 image_path = four_d.take_measurement(path=os.path.join(self.path, initial_file_name),
@@ -133,7 +133,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                         # Using the actuator_map, find the intensities at each actuator pixel value.
                         image = fits.getdata(image_path)
 
-                        self.log.info("Finding intensities...")
+                        print("Finding intensities...")
                         for key, value in actuator_index.items():
 
                             # Create a small circle mask around index, and take the median.
@@ -154,14 +154,14 @@ class Dm4dMultiZernikeLoop(Experiment):
                         intensity_values = np.array(list(actuator_intensities.values()))
                         diff = intensity_values - combined_zernike_1d
                         std_deviation = np.std(diff)
-                        self.log.info("Standard deviation: ", std_deviation)
+                        print("Standard deviation: ", std_deviation)
 
                         if best_std_deviation is None or std_deviation < best_std_deviation:
                             best_std_deviation = std_deviation
                             best_zernike_command = i
 
                         # Generate the correction values.
-                        self.log.info("Generating corrections...")
+                        print("Generating corrections...")
                         corrected_values = []
                         for key, value in actuator_intensities.items():
                             correction = quantity(value - combined_zernike_1d[key], units.nanometer).to_base_units().m
@@ -176,7 +176,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                         # Apply the new command.
                         dm.apply_shape(command_object, dm_num=self.dm_num)
 
-                        self.log.info("Taking exposures with 4D...")
+                        print("Taking exposures with 4D...")
                         file_name = "iteration{}".format(i)
 
                         iteration_path = os.path.join(self.path, first_folder, second_folder, file_name)
