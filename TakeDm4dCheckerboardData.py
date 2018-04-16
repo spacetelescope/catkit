@@ -64,17 +64,16 @@ class TakeDm4dCheckerboardData(Experiment):
                                                          rotate=self.rotate,
                                                          fliplr=self.fliplr)
 
-            # Generate the 16 permutations of checkerboards, and add the commands to a list.
-            for i in range(0, 4):
-                for j in range(0, 4):
+                # Generate the 16 permutations of checkerboards, and add the commands to a list.
+                for i in range(0, 4):
+                    for j in range(0, 4):
 
-                    for k in self.amplitude_range:
-                        file_name = "checkerboard_{}_{}_{}nm".format(i, j, k)
-                        command = checkerboard_command(dm_num=2, offset_x=i, offset_y=j,
-                                                       amplitude=quantity(k, units.nanometers),
-                                                       bias=False, flat_map=True)
-                        dm.apply_shape(command, self.dm_num)
-                        with Accufiz("4d_accufiz", mask=mask) as four_d:
+                        for k in self.amplitude_range:
+                            file_name = "checkerboard_{}_{}_{}nm".format(i, j, k)
+                            command = checkerboard_command(dm_num=2, offset_x=i, offset_y=j,
+                                                           amplitude=quantity(k, units.nanometers),
+                                                           bias=False, flat_map=True)
+                            dm.apply_shape(command, self.dm_num)
                             image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
                                                                  filename=file_name,
                                                                  rotate=self.rotate,
