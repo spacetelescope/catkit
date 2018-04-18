@@ -34,6 +34,7 @@ class Take4dImageDmCommand(Experiment):
                  rotate=180,
                  fliplr=False,
                  command=flat_command(flat_map=True),
+                 reference_command=None,
                  suffix="",
                  **kwargs):
 
@@ -48,6 +49,7 @@ class Take4dImageDmCommand(Experiment):
         self.rotate = rotate
         self.fliplr = fliplr
         self.command = command
+        self.reference_command = reference_command
         self.suffix = suffix
         self.kwargs = kwargs
 
@@ -55,7 +57,8 @@ class Take4dImageDmCommand(Experiment):
 
         if self.path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="Take4dImageDmCommand" + self.suffix)
+            self.path = util.create_data_path(initial_path=central_store_path,
+                                              suffix="Take4dImageDmCommand" + self.suffix)
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
@@ -74,11 +77,26 @@ class Take4dImageDmCommand(Experiment):
             print("Taking 4D image...")
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 file_name = "4dImage" if self.suffix == "" else "4dImage_" + self.suffix
-                image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
+                image_path = four_d.take_measurement(path=os.path.join(self.path, "raw"),
                                                      filename=file_name,
                                                      rotate=self.rotate,
                                                      num_frames=self.num_frames,
                                                      fliplr=self.fliplr)
 
-                # Save the DM_Command used.
-                self.command.export_fits(os.path.join(self.path, file_name))
+                # Take a reference image and subtract.
+                if self.reference_command is not None:
+                    print("Taking reference image...")
+                    dm.apply_shape(self.reference_command, self.dm_num)
+                    reference_path = four_d.take_measurement(path=os.path.join(self.path, "reference"),
+                                                             filename="reference_flat",
+                                                             rotate=self.rotate,
+                                                             num_frames=self.num_frames,
+                                                             fliplr=self.fliplr)  # Open fits files and subtract.
+                    reference = fits.getdata(reference_path)
+                    image = fits.getdata(image_path)
+
+                    # Subtract the reference from image.
+                    util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"))
+
+            # Save the DM_Command used.
+            self.command.export_fits(os.path.join(self.path, file_name))

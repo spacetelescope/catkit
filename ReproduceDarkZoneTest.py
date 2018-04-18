@@ -1,0 +1,98 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+import logging
+import os
+from glob import glob
+
+from astropy.io import fits
+# noinspection PyUnresolvedReferences
+from builtins import *
+import numpy as np
+import time
+
+from .Experiment import Experiment
+from .. import util
+from ..config import CONFIG_INI
+from ..hardware import testbed
+from ..hardware.FourDTechnology.Accufiz import Accufiz
+from ..hardware.boston.DmCommand import DmCommand
+from ..hardware.boston.commands import flat_command
+
+
+class ReproduceDarkZoneTest(Experiment):
+    name = "Reproduce Dark Zone Test"
+    log = logging.getLogger(__name__)
+
+    def __init__(self,
+                 darkzone_command_path="Z:/Testbeds/hicat_dev/data/2018-02-27T14-12-04_speckle_nulling/iteration427/coron/dm_command/dm_command_2d.fits",
+                 iterations=10,
+                 mask="dm1_detector.mask",
+                 num_frames=10,
+                 path=None,
+                 filename=None,
+                 dm_num=1,
+                 rotate=180,
+                 fliplr=False,
+                 **kwargs):
+
+        self.darkzone_command_path = darkzone_command_path
+        self.iterations = iterations
+        self.mask = mask
+        self.num_frames = num_frames
+        self.path = path
+        self.filename = filename
+        self.dm_num = dm_num
+        self.rotate = rotate
+        self.fliplr = fliplr
+        self.kwargs = kwargs
+
+    def experiment(self):
+
+        if self.path is None:
+            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
+            self.path = util.create_data_path(initial_path=central_store_path, suffix="ReproduceDarkZoneTest")
+
+        # Open darkzone command fits file.
+        data = fits.getdata(self.darkzone_command_path)
+        data *= 200
+
+        print("Taking 4D images...")
+        with Accufiz("4d_accufiz", mask=self.mask) as four_d:
+
+            # Start with a bias on the DM.
+            with testbed.dm_controller() as dm:
+
+                    # Take a reference flat.
+                    dm.apply_shape(flat_command(flat_map=True), self.dm_num)
+                    four_d.take_measurement(path=self.path,
+                                            filename="reference_flat",
+                                            rotate=self.rotate,
+                                            num_frames=self.num_frames,
+                                            fliplr=self.fliplr)
+
+                    # Get DM Command fits and convert to volts.
+                    data = fits.getdata(self.darkzone_command_path)
+                    data *= 200
+
+                    # Create DmCommand object and apply the shape to the DM.
+                    current_command_object = DmCommand(data, 1, flat_map=False, bias=False, as_volts=True)
+                    zeros_command = DmCommand(np.zeros(data.shape), 1, flat_map=False, bias=False, as_volts=True)
+
+                    # Save the DM_Command used.
+                    current_command_object.export_fits(self.path)
+                    for i in range(self.iterations):
+                        print("Dark zone iteration " + str(i))
+                        dm.apply_shape(current_command_object, self.dm_num)
+
+                        # Take 4d Image.
+                        four_d.take_measurement(path=os.path.join(self.path, "iteration" + str(i)),
+                                                filename="darkzone",
+                                                rotate=self.rotate,
+                                                num_frames=self.num_frames,
+                                                fliplr=self.fliplr)
+
+                        # Zero out the Dm and pause for a few seconds.
+                        dm.apply_shape(zeros_command, self.dm_num)
+                        print("DM set to 0V")
+                        time.sleep(5)
