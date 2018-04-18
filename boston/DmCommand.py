@@ -163,3 +163,20 @@ def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
     """
     data = fits.getdata(path)
     return DmCommand(data, dm_num, flat_map=flat_map, bias=bias, as_volts=as_volts)
+
+def get_flat_map_volts(dm_num):
+    script_dir = os.path.dirname(__file__)
+    if dm_num == 1:
+        flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
+        flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+        return flat_map_volts[0].data
+    else:
+        flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
+        flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+        return flat_map_volts[0].data
+
+def convert_volts_to_nm(data):
+    # Convert nanometers to volts.
+    script_dir = os.path.dirname(__file__)
+    nm_to_volts_map = fits.getdata(os.path.join(script_dir, "meters_to_volts_dm1.fits"))
+    return data * nm_to_volts_map

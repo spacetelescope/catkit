@@ -88,12 +88,12 @@ class Accufiz(FizeauInterferometer):
                     return self.__convert_h5_to_fits(path, pathfile, rotate, fliplr)
                 else:
                     try_counter += 1
-                    print("FAIL1 IN SAVING MEASUREMENT " + pathfile + ".h5")
+                    print("FAIL IN SAVING MEASUREMENT " + pathfile + ".h5")
                     if try_counter < tries:
                         print("Trying again..")
             else:
                 try_counter += 1
-                print("FAIL2 IN MEASUREMENT " + pathfile + ".h5")
+                print("FAIL IN MEASUREMENT " + pathfile + ".h5")
                 print(measres.text)
                 if try_counter < tries:
                     print("Trying again..")
