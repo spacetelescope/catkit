@@ -96,7 +96,7 @@ class Dm4dShapeLoop(Experiment):
                                                      fliplr=self.fliplr)
 
                 # Store reference data for subration.
-                reference = fits.getdata(reference_image_path)
+                image_path = fits.getdata(reference_image_path)
 
                 # Save the DM_Command used.
                 command_object.export_fits(os.path.join(self.path, initial_file_name))
@@ -112,20 +112,11 @@ class Dm4dShapeLoop(Experiment):
                     # Normalize and multiply peak to valley.
                     renormalized_shape = (self.shape / (np.nanmax(self.shape) - np.nanmin(self.shape))) * p2v
 
-                    # Get flat map in nanometers.
-                    flat_map_nm = convert_volts_to_nm(get_flat_map_volts(self.dm_num))
-                    renormalized_shape += flat_map_nm
-
                     # Create the 1d shape.
                     shape_1d = util.convert_dm_image_to_command(renormalized_shape)
 
                     for i in range(self.iterations):
-                        # Using the actuator_map, find the intensities at each actuator pixel value.
-                        if i == 0:
-                            image = fits.getdata(reference_image_path)
-                        else:
-                            image = fits.getdata(image_path)
-
+                        image = fits.getdata(image_path)
 
                         print("Finding intensities...")
                         for key, value in actuator_index.items():
@@ -137,6 +128,11 @@ class Dm4dShapeLoop(Experiment):
 
                             # Add to intensity dictionary.
                             actuator_intensities[key] = actuator_intensity
+
+                        # Find the median of all the intensities and bias the zernike.
+                        if i == 0:
+                            flat_value = np.median(np.array(list(actuator_intensities.values())))
+                            shape_1d += flat_value
 
                         # Calculate and print the variance and standard deviation.
                         intensity_values = np.array(list(actuator_intensities.values()))
@@ -176,6 +172,7 @@ class Dm4dShapeLoop(Experiment):
 
                         # Subtract the reference from image.
                         raw_image = fits.getdata(image_path)
+                        reference = fits.getdata(reference_image_path)
                         util.write_fits(raw_image - reference,
                                         os.path.join(self.path, p2v_string, file_name, file_name + "_subtracted"))
 
