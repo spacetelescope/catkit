@@ -89,14 +89,14 @@ class Dm4dShapeLoop(Experiment):
             print("Taking initial image...")
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 initial_file_name = "initial_flat"
-                image_path = four_d.take_measurement(path=os.path.join(self.path, initial_file_name),
+                reference_image_path = four_d.take_measurement(path=os.path.join(self.path, initial_file_name),
                                                      filename=initial_file_name,
                                                      rotate=self.rotate,
                                                      num_frames=self.num_frames,
                                                      fliplr=self.fliplr)
 
                 # Store reference data for subration.
-                reference = fits.getdata(image_path)
+                reference = fits.getdata(reference_image_path)
 
                 # Save the DM_Command used.
                 command_object.export_fits(os.path.join(self.path, initial_file_name))
@@ -121,7 +121,11 @@ class Dm4dShapeLoop(Experiment):
 
                     for i in range(self.iterations):
                         # Using the actuator_map, find the intensities at each actuator pixel value.
-                        image = fits.getdata(image_path)
+                        if i == 0:
+                            image = fits.getdata(reference_image_path)
+                        else:
+                            image = fits.getdata(image_path)
+
 
                         print("Finding intensities...")
                         for key, value in actuator_index.items():
@@ -171,8 +175,8 @@ class Dm4dShapeLoop(Experiment):
                                                              fliplr=self.fliplr)
 
                         # Subtract the reference from image.
-                        image = fits.getdata(image_path)
-                        util.write_fits(reference - image,
+                        raw_image = fits.getdata(image_path)
+                        util.write_fits(raw_image - reference,
                                         os.path.join(self.path, p2v_string, file_name, file_name + "_subtracted"))
 
 
