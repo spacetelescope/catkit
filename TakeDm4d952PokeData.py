@@ -10,6 +10,7 @@ from astropy.io import fits
 # noinspection PyUnresolvedReferences
 from builtins import *
 from photutils import find_peaks
+import shutil
 
 from .Experiment import Experiment
 from .. import util
@@ -28,7 +29,7 @@ class TakeDm4d952PokeData(Experiment):
                  mask="dm2_detector.mask",
                  num_frames=3,
                  path=None,
-                 dm_num=2,
+                 dm_num=1,
                  rotate=0,
                  fliplr=False,
                  show_plot=False,
@@ -78,7 +79,7 @@ class TakeDm4d952PokeData(Experiment):
                 num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
                 for i in range(self.start_actuator, num_actuators):
                     file_name = "poke_actuator_{}".format(i)
-                    command = poke_command(i, amplitude=quantity(800, units.nanometers), dm_num=self.dm_num)
+                    command = poke_command(i, amplitude=quantity(200, units.nanometers), dm_num=self.dm_num)
 
                     dm.apply_shape(command, self.dm_num)
                     image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
@@ -101,7 +102,7 @@ class TakeDm4d952PokeData(Experiment):
 
     def create_actuator_index(self):
         csv_filename = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
-        csv_file = os.path.join(self.path, csv_filename)
+        csv_file_path = os.path.join(self.path, csv_filename)
 
         actuator_indices = {}
         num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
@@ -133,7 +134,7 @@ class TakeDm4d952PokeData(Experiment):
             plt.title("Number of actuators: {}".format(len(actuator_indices)))
             plt.show()
 
-        with open(csv_file, "wb") as csvfile:
+        with open(csv_file_path, "wb") as csvfile:
             csvfile.write(str("actuator,x_coord,y_coord\n"))
             for row in csv_list:
                 csvfile.write(row + "\n")
@@ -141,7 +142,5 @@ class TakeDm4d952PokeData(Experiment):
         if self.overwrite_csv:
             root_dir = util.find_package_location()
             package_csv_file = os.path.join(root_dir, csv_filename)
-            with open(package_csv_file, "wb") as csv:
-                csv.write(str("actuator,x_coord,y_coord\n"))
-                for row in csv_list:
-                    csv.write(row + "\n")
+            shutil.copy(csv_file_path, package_csv_file)
+

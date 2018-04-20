@@ -29,7 +29,7 @@ class Dm4dShapeLoop(Experiment):
 
     def __init__(self,
                  shape,
-                 peak2valley=[100],
+                 amplitude=[100],
                  mask="dm1_detector.mask",
                  num_frames=2,
                  path=None,
@@ -46,7 +46,7 @@ class Dm4dShapeLoop(Experiment):
             filename = "4d_"
 
         self.shape = shape
-        self.peak2valley = peak2valley
+        self.amplitude = amplitude
         self.mask = mask
         self.num_frames = num_frames
         self.path = path
@@ -82,35 +82,32 @@ class Dm4dShapeLoop(Experiment):
             command_object = flat_command(bias=False,
                                           flat_map=True,
                                           return_shortname=False,
-                                          dm_num=2)
+                                          dm_num=self.dm_num)
 
             dm.apply_shape(command_object, self.dm_num)
 
             print("Taking initial image...")
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 initial_file_name = "initial_flat"
-                reference_image_path = four_d.take_measurement(path=os.path.join(self.path, initial_file_name),
+                image_path = four_d.take_measurement(path=os.path.join(self.path, initial_file_name),
                                                      filename=initial_file_name,
                                                      rotate=self.rotate,
                                                      num_frames=self.num_frames,
                                                      fliplr=self.fliplr)
 
-                # Store reference data for subration.
-                image_path = fits.getdata(reference_image_path)
-
                 # Save the DM_Command used.
                 command_object.export_fits(os.path.join(self.path, initial_file_name))
 
-                if isinstance(self.peak2valley, int):
-                    self.peak2valley = [self.peak2valley]
+                if isinstance(self.amplitude, int):
+                    self.amplitude = [self.amplitude]
 
-                for p2v in self.peak2valley:
+                for amp_nm in self.amplitude:
                     best_std_deviation = None
                     best_command = None
-                    p2v_string = str(p2v) + "_nm_p2v"
+                    p2v_string = str(amp_nm) + "_nm_amplitude"
 
                     # Normalize and multiply peak to valley.
-                    renormalized_shape = (self.shape / (np.nanmax(self.shape) - np.nanmin(self.shape))) * p2v
+                    renormalized_shape = self.shape * amp_nm
 
                     # Create the 1d shape.
                     shape_1d = util.convert_dm_image_to_command(renormalized_shape)
@@ -129,14 +126,15 @@ class Dm4dShapeLoop(Experiment):
                             # Add to intensity dictionary.
                             actuator_intensities[key] = actuator_intensity
 
-                        # Find the median of all the intensities and bias the zernike.
+                        # Find the median of all the intensities and bias the shape.
                         if i == 0:
                             flat_value = np.median(np.array(list(actuator_intensities.values())))
+                            print("FLAT Value " + str(flat_value))
                             shape_1d += flat_value
 
                         # Calculate and print the variance and standard deviation.
                         intensity_values = np.array(list(actuator_intensities.values()))
-                        diff = intensity_values - shape_1d
+                        diff = shape_1d - intensity_values
                         print("Variance: ", np.var(diff))
                         std_deviation = np.std(diff)
                         print("Standard deviation: ", std_deviation)
@@ -149,11 +147,13 @@ class Dm4dShapeLoop(Experiment):
                         print("Generating corrections...")
                         corrected_values = []
                         for key, value in actuator_intensities.items():
+
                             correction = quantity(value - shape_1d[key], units.nanometer).to_base_units().m
 
                             # Apply damping ratio.
                             correction *= self.damping_ratio
                             corrected_values.append(correction)
+
 
                         # Update the DmCommand.
                         command_object.data += util.convert_dm_command_to_image(corrected_values)
@@ -163,6 +163,8 @@ class Dm4dShapeLoop(Experiment):
 
                         print("Taking exposures with 4D...")
                         file_name = "iteration{}".format(i)
+                        util.write_fits(util.convert_dm_command_to_image([i * 1e9 for i in corrected_values]),
+                                        os.path.join(self.path, p2v_string, file_name, "correction"))
 
                         image_path = four_d.take_measurement(path=os.path.join(self.path, p2v_string, file_name),
                                                              filename=file_name,
@@ -170,19 +172,32 @@ class Dm4dShapeLoop(Experiment):
                                                              num_frames=self.num_frames,
                                                              fliplr=self.fliplr)
 
-                        # Subtract the reference from image.
-                        raw_image = fits.getdata(image_path)
-                        reference = fits.getdata(reference_image_path)
-                        util.write_fits(raw_image - reference,
-                                        os.path.join(self.path, p2v_string, file_name, file_name + "_subtracted"))
-
-
                         # Save the DM_Command used.
                         command_object.export_fits(os.path.join(self.path, p2v_string, file_name))
 
+                    # Subtract the reference from image.
+                    dm.apply_shape(flat_command(bias=False,
+                                                flat_map=True,
+                                                return_shortname=False,
+                                                dm_num=self.dm_num),
+                                   self.dm_num)
+
+                    print("Taking reference image to make final subtracted fits file...")
+                    reference_image_path = four_d.take_measurement(
+                        path=os.path.join(self.path, p2v_string),
+                        filename="final_reference",
+                        rotate=self.rotate,
+                        num_frames=self.num_frames,
+                        fliplr=self.fliplr)
+                    raw_image = fits.getdata(image_path)
+                    reference = fits.getdata(reference_image_path)
+                    util.write_fits(raw_image - reference,
+                                    os.path.join(self.path, p2v_string, file_name + "_subtracted"))
+
                 if self.create_command:
                     iteration_folder_name = "iteration" + str(best_command)
-                    full_path = os.path.join(self.path, p2v_string, iteration_folder_name, "dm_command", "dm_command_2d.fits")
+                    full_path = os.path.join(self.path, p2v_string, iteration_folder_name, "dm_command",
+                                             "dm_command_2d.fits")
                     dm_command_data = fits.getdata(full_path)
 
                     # Convert the dm command units to volts.
