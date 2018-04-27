@@ -40,6 +40,7 @@ class Dm4dShapeLoop(Experiment):
                  iterations=15,
                  damping_ratio=.6,
                  create_command=True,
+                 suffix="",
                  **kwargs):
 
         if filename is None:
@@ -57,13 +58,14 @@ class Dm4dShapeLoop(Experiment):
         self.iterations = iterations
         self.damping_ratio = damping_ratio
         self.create_command = create_command
+        self.suffix = suffix
         self.kwargs = kwargs
 
     def experiment(self):
 
         if self.path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_shape_loop")
+            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_shape_loop" + self.suffix)
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
