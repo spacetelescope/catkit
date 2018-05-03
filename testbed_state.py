@@ -7,6 +7,9 @@ from builtins import *
 from hicat.hicat_types import MetaDataEntry, units
 from hicat.config import CONFIG_INI
 
+# Are we using the real hardware or simulating it?
+simulation = False
+
 # Initialize State Variables.
 background = None
 lyot_stop = None

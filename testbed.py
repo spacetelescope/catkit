@@ -11,19 +11,26 @@ from astropy.io import fits
 
 from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity, ImageCentering
 from . import testbed_state
-from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
-from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
 from .. import data_pipeline
 from .. import util
 from .. import wolfram_wrappers
 from ..config import CONFIG_INI
-from ..hardware.SnmpUps import SnmpUps
-from ..hardware.boston.BostonDmController import BostonDmController
-from ..hardware.newport.NewportMotorController import NewportMotorController
-from ..hardware.zwo.ZwoCamera import ZwoCamera
+
+if not testbed_state.simulation:
+    # Don't try to import the hardware drivers if we are pre-configured into simulation
+    # mode. This allows running the simulator on computers that don't have all the
+    # necessary driver files installed.
+    from ..hardware.SnmpUps import SnmpUps
+    from ..hardware.boston.BostonDmController import BostonDmController
+    from ..hardware.newport.NewportMotorController import NewportMotorController
+    from ..hardware.zwo.ZwoCamera import ZwoCamera
+    from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
+    from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
+
 from ..interfaces.DummyLaserSource import DummyLaserSource
 from ..hardware.FilterWheelAssembly import FilterWheelAssembly
 
+from .. import simulators
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -36,7 +43,10 @@ def imaging_camera():
     :return: An instance of the Camera.py interface.
     """
     camera_name = CONFIG_INI.get("testbed", "imaging_camera")
-    return ZwoCamera(camera_name)
+    if testbed_state.simulation:
+        return simulators.SimZwoCamera(camera_name)
+    else:
+        return ZwoCamera(camera_name)
 
 
 def phase_retrieval_camera():
@@ -46,7 +56,10 @@ def phase_retrieval_camera():
     :return: An instance of the Camera.py interface.
     """
     camera_name = CONFIG_INI.get("testbed", "phase_retrieval_camera")
-    return ZwoCamera(camera_name)
+    if testbed_state.simulation:
+        return simulators.SimZwoCamera(camera_name)
+    else:
+        return ZwoCamera(camera_name)
 
 
 def pupil_camera():
@@ -56,7 +69,10 @@ def pupil_camera():
         :return: An instance of the Camera.py interface.
         """
     camera_name = CONFIG_INI.get("testbed", "pupil_camera")
-    return ZwoCamera(camera_name)
+    if testbed_state.simulation:
+        return simulators.SimZwoCamera(camera_name)
+    else:
+        return ZwoCamera(camera_name)
 
 
 def dm_controller():
@@ -67,7 +83,10 @@ def dm_controller():
     the other DM will still get commanded to all zeros.
     :return: An instance of the DeformableMirrorController.py interface.
     """
-    return BostonDmController("boston_kilo952")
+    if testbed_state.simulation:
+        return simulators.SimBostonDmController("boston_kilo952")
+    else:
+        return BostonDmController("boston_kilo952")
 
 
 def motor_controller(initialize_to_nominal=True, use_testbed_state=True):
@@ -76,13 +95,22 @@ def motor_controller(initialize_to_nominal=True, use_testbed_state=True):
     Use the "with" keyword to take advantage of the built-in context manager for safely closing the connection.
     :return: An instance of the MotorController.py interface.
     """
-    return NewportMotorController("newport_xps_q8",
+    if testbed_state.simulation:
+        return simulators.SimNewportMotorController("newport_xps_q8",
+                                  initialize_to_nominal=initialize_to_nominal,
+                                  use_testbed_state=use_testbed_state)
+    else:
+         return NewportMotorController("newport_xps_q8",
                                   initialize_to_nominal=initialize_to_nominal,
                                   use_testbed_state=use_testbed_state)
 
 
+
 def beam_dump():
-    return ThorlabsMFF101("thorlabs_mff101_1")
+    if testbed_state.simulation:
+        return simulators.SimThorlabsMFF101("thorlabs_mff101_1")
+    else:
+        return ThorlabsMFF101("thorlabs_mff101_1")
 
 
 def laser_source():
@@ -91,11 +119,17 @@ def laser_source():
     if use_dummy:
         return DummyLaserSource("dummy")
     else:
-        return ThorlabsMLCS1(laser_name)
+        if testbed_state.simulation:
+            return simulators.SimThorlabsMLCS1(laser_name)
+        else:
+            return ThorlabsMLCS1(laser_name)
 
 
 def backup_power():
-    return SnmpUps("blue_ups")
+    if testbed_state.simulation:
+        return simulators.SimSnmpUps("blue_ups")
+    else:
+        return SnmpUps("bluee_ups")
 
 
 def get_camera(camera_type):
