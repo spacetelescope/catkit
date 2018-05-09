@@ -93,7 +93,7 @@ def laser_source():
 
 
 def backup_power():
-    return SnmpUps("white_ups")
+    return SnmpUps("blue_ups")
 
 
 def get_camera(camera_type):
