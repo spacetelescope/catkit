@@ -80,10 +80,10 @@ class SinglePhaseRetrievalCommand(Experiment):
         print("Finding intensities...")
         for key, value in actuator_index.items():
             # Create a small circle mask around index, and take the median.
-            actuator_mask = dm_calibration_util.circle_mask(image, value[0], value[1], 3)
+            actuator_mask = dm_calibration_util.circle_mask(image, value[0], value[1], 5)
 
             # Find the median within the mask. Throw away values of zero, because they probably outside of the image.
-            actuator_intensity = np.median(np.nonzero(image[actuator_mask]))
+            actuator_intensity = np.mean(image[actuator_mask])
 
             # Add to intensity dictionary.
             actuator_intensities[key] = actuator_intensity
