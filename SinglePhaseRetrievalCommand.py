@@ -99,7 +99,7 @@ class SinglePhaseRetrievalCommand(Experiment):
             corrected_values.append(correction)
 
         # Update the DmCommand.
-        pr_command = DmCommand(util.convert_dm_command_to_image(corrected_values))
+        pr_command = DmCommand(util.convert_dm_command_to_image(corrected_values), 1)
 
         print("Starting phase retrieval data set...")
         take_phase_retrieval_data(self.exposure_time,
