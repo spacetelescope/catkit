@@ -83,10 +83,10 @@ class SinglePhaseRetrievalCommand(Experiment):
         print("Finding intensities...")
         for key, value in actuator_index.items():
             # Create a small circle mask around index, and take the median.
-            actuator_mask = dm_calibration_util.circle_mask(image, value[0], value[1], 5)
+            actuator_mask = dm_calibration_util.circle_mask(image, value[0], value[1], 3)
 
             # Find the median within the mask. Throw away values of zero, because they probably outside of the image.
-            actuator_intensity = np.mean(image[actuator_mask])
+            actuator_intensity = np.median(image[actuator_mask])
 
             # Add to intensity dictionary.
             actuator_intensities[key] = actuator_intensity
@@ -98,7 +98,7 @@ class SinglePhaseRetrievalCommand(Experiment):
             correction = quantity(value, units.nanometer).to_base_units().m
 
             # Apply the factor of 2 for the DM reflection.
-            opd_scaling_dm = .5
+            opd_scaling_dm = 1
             correction *= opd_scaling_dm
 
             # Apply damping ratio.
@@ -106,7 +106,7 @@ class SinglePhaseRetrievalCommand(Experiment):
             corrected_values.append(correction)
 
         # Update the DmCommand.
-        pr_command = DmCommand(util.convert_dm_command_to_image(corrected_values), 1)
+        pr_command = DmCommand(util.convert_dm_command_to_image(corrected_values), 1, flat_map=True)
 
         print("Starting phase retrieval data set...")
         take_phase_retrieval_data(self.exposure_time,
