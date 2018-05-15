@@ -77,6 +77,9 @@ class SinglePhaseRetrievalCommand(Experiment):
         # Apply rotates and flips.
         image = util.rotate_and_flip_image(image, self.rotate, self.fliplr)
 
+        # Apply a -1 to the pr data.
+        # image *= -1
+
         print("Finding intensities...")
         for key, value in actuator_index.items():
             # Create a small circle mask around index, and take the median.
@@ -93,6 +96,10 @@ class SinglePhaseRetrievalCommand(Experiment):
         corrected_values = []
         for key, value in actuator_intensities.items():
             correction = quantity(value, units.nanometer).to_base_units().m
+
+            # Apply the factor of 2 for the DM reflection.
+            opd_scaling_dm = .5
+            correction *= opd_scaling_dm
 
             # Apply damping ratio.
             correction *= self.damping_ratio
@@ -112,4 +119,3 @@ class SinglePhaseRetrievalCommand(Experiment):
                                   dm2_command=flat_command(False, True, dm_num=2),
                                   suffix=self.suffix,
                                   **self.kwargs)
-
