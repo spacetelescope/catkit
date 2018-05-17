@@ -57,7 +57,7 @@ class SinglePhaseRetrievalCommand(Experiment):
 
         if self.path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="brute_force")
+            self.path = util.create_data_path(initial_path=central_store_path, suffix="brute_force_18mm")
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
