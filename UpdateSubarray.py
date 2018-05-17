@@ -72,7 +72,7 @@ class UpdateSubarray(Experiment):
                               **self.kwargs)
 
         # Open the raw image and use the PSF to find the center.
-        file_path = glob(os.path.join(path, "direct", "raw", "images", "*.fits"))[0]
+        file_path = path[0]
         psf_image = util.read_fits(file_path, return_header=False)
 
         # Find the brightest peak (should be the core of the psf).
