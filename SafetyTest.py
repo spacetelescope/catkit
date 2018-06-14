@@ -89,7 +89,6 @@ class WeatherWarningTest(SafetyTest):
         wx_warning_list = CONFIG_INI.get("nws", "wx_warning_list")
         wx_url = CONFIG_INI.get("nws", "wx_url")
         warning_count = 0
-        print(wx_url)
         wx_data = urllib.urlopen(wx_url)
         tree = ET.parse(wx_data)
         wx_data.close()
@@ -107,12 +106,13 @@ class WeatherWarningTest(SafetyTest):
                         end_time = wx_entry.text
 
                 if current_event:
-                    self.log.error("Event " + current_event + " from " + start_time + " to " + end_time)
+                    self.log.info("Event " + current_event + " from " + start_time + " to " + end_time)
                     if current_event in wx_warning_list:
-                        startDT = datetime.strptime(start_time.strip(":00") + "00","%Y-%m-%dT%H:%M:%S%z")
-                        endDT = datetime.strptime(end_time.strip(":00") + "00","%Y-%m-%dT%H:%M:%S%z")
+                        # assume we're in our own timezone.
+                        startDT = datetime.strptime(start_time[:-6], "%Y-%m-%dT%H:%M:%S")
+                        endDT = datetime.strptime(end_time[:-6], "%Y-%m-%dT%H:%M:%S")
                         if currentDT > startDT and currentDT < endDT:
-                            self.log.error("Weather warning: " + current_event + " from " + start_time + " to " + end_time )
+                            self.log.warning("Weather warning: " + current_event + " from " + start_time + " to " + end_time )
                             warning_count += 1
 
         if warning_count > 0:
