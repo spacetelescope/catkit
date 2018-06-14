@@ -85,26 +85,17 @@ class WeatherWarningTest(SafetyTest):
 
     name = "National Weather Service MDC510 Warnings Safety Test"
     log = logging.getLogger(__name__)
-    print("starting wx")
     def check(self):
-        print("in get data")
         wx_warning_list = CONFIG_INI.get("nws", "wx_warning_list")
-        wx_url = CONFIG_INI.get("nws", "ws_url")
+        wx_url = CONFIG_INI.get("nws", "wx_url")
         warning_count = 0
-        print("get url")
         print(wx_url)
-        print(urllib.urlopen(wx_url))
-        print("failing transaction")
         wx_data = urllib.urlopen(wx_url)
-        print("got url")
         tree = ET.parse(wx_data)
-        print("got tree")
         wx_data.close()
-        print("parsed")
         root = tree.getroot()
         currentDT = datetime.now()
         current_event = None
-        print("wx data parsed")
         for child in root:
             if 'entry' in str(child.tag):
                 for wx_entry in child:
