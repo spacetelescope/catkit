@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division,
 from builtins import *
 import psutil
 import logging
-import arrow
+from datetime import datetime
 import urllib
 import xml.etree.cElementTree as ET
 from abc import ABCMeta, abstractmethod
@@ -94,7 +94,7 @@ class WeatherWarningTest(SafetyTest):
         tree = ET.parse(wx_data)
         wx_data.close()
         root = tree.getroot()
-        currentDT = arrow.utcnow()
+        currentDT = datetime.now()
         current_event = None
 
         for child in root:
@@ -108,12 +108,12 @@ class WeatherWarningTest(SafetyTest):
                         end_time = wx_entry.text
 
                 if current_event:
-                    self.log.info("Event " + current_event + " from " + start_time + " to " + end_time)
+                    self.log.error("Event " + current_event + " from " + start_time + " to " + end_time)
                     if current_event in wx_warning_list:
-                        startDT = arrow.get(start_time)
-                        endDT = arrow.get(end_time)
+                        startDT = datetime.strptime(start_time.strip(":00") + "00","%Y-%m-%dT%H:%M:%S%z")
+                        endDT = datetime.strptime(end_time.strip(":00") + "00","%Y-%m-%dT%H:%M:%S%z")
                         if currentDT > startDT and currentDT < endDT:
-                            self.log.warning("Weather warning: " + current_event + " from " + start_time + " to " + end_time )
+                            self.log.error("Weather warning: " + current_event + " from " + start_time + " to " + end_time )
                             warning_count += 1
 
         if warning_count > 0:
