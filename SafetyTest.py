@@ -6,7 +6,7 @@ from builtins import *
 import psutil
 import logging
 from datetime import datetime
-import urllib
+import urllib2
 import xml.etree.cElementTree as ET
 from abc import ABCMeta, abstractmethod
 from ..hardware import testbed
@@ -89,7 +89,7 @@ class WeatherWarningTest(SafetyTest):
         wx_warning_list = CONFIG_INI.get("nws", "wx_warning_list")
         wx_url = CONFIG_INI.get("nws", "wx_url")
         warning_count = 0
-        wx_data = urllib.urlopen(wx_url)
+        wx_data = urllib2.urlopen(wx_url)
         tree = ET.parse(wx_data)
         wx_data.close()
         root = tree.getroot()
@@ -106,13 +106,13 @@ class WeatherWarningTest(SafetyTest):
                         end_time = wx_entry.text
 
                 if current_event:
-                    self.log.info("Event " + current_event + " from " + start_time + " to " + end_time)
+                    self.log.error("Event " + current_event + " from " + start_time + " to " + end_time)
                     if current_event in wx_warning_list:
                         # assume we're in our own timezone.
                         startDT = datetime.strptime(start_time[:-6], "%Y-%m-%dT%H:%M:%S")
                         endDT = datetime.strptime(end_time[:-6], "%Y-%m-%dT%H:%M:%S")
                         if currentDT > startDT and currentDT < endDT:
-                            self.log.warning("Weather warning: " + current_event + " from " + start_time + " to " + end_time )
+                            self.log.error("Weather warning: " + current_event + " from " + start_time + " to " + end_time )
                             warning_count += 1
 
         if warning_count > 0:
