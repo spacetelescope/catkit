@@ -11,7 +11,7 @@ from .Experiment import Experiment
 from ..hardware.boston import commands
 from ..hicat_types import units, quantity, ImageCentering
 from .. import util
-from .modules.general import take_exposures_dm_commands
+from .modules.general import take_coffee_data_set
 
 
 class CoffeeDataCollection(Experiment):
@@ -32,29 +32,41 @@ class CoffeeDataCollection(Experiment):
         local_path = util.create_data_path(suffix="coffee_data")
 
         # # Pure Focus Zernike loop.
-        focus_zernike_data_path = "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T09-34-00_4d_zernike_loop_focus/"
+        focus_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee_commands/focus"
         focus_zernike_command_paths = glob(focus_zernike_data_path + "/*p2v/*.fits")
-        take_exposures_dm_commands(focus_zernike_command_paths, local_path, "focus", self.coron_exp_time,
-                                   self.direct_exp_time,
-                                   num_exposures=self.num_exposures,
-                                   centering=self.centering)
+        # take_coffee_data_set(focus_zernike_command_paths,
+        #                      local_path,
+        #                      "focus",
+        #                      self.coron_exp_time,
+        #                      self.direct_exp_time,
+        #                      num_exposures=self.num_exposures,
+        #                      centering=self.centering,
+        #                      raw_skip=100)
 
         # Multi astigmatsm+focus loop.
-        multi_zernike_data_path = "z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T15-44-32_4d_multi_zernike_loop_astigmatism_45_focus/astigmatism_45_40_nm/"
-        multi_zernike_command_paths = glob(multi_zernike_data_path + "/*/*.fits")
-
-        take_exposures_dm_commands(multi_zernike_command_paths, local_path,
-                                   "astigmatism45_40nm_and_focus", self.coron_exp_time,
-                                   self.direct_exp_time, num_exposures=self.num_exposures,
-                                   centering=self.centering)
+        # multi_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee_commands/astigmastism_80nm"
+        # multi_zernike_command_paths = glob(multi_zernike_data_path + "/*/*.fits")
+        #
+        # take_coffee_data_set(multi_zernike_command_paths, local_path,
+        #                      "astigmatism_80nm", self.coron_exp_time,
+        #                      self.direct_exp_time, num_exposures=self.num_exposures,
+        #                      centering=self.centering)
 
         # DM1 Letter F, DM2 focus loop.
-        letter_f = commands.poke_letter_f_command(dm_num=1)
-        take_exposures_dm_commands(focus_zernike_command_paths, local_path, "letter_f_and_focus", self.coron_exp_time,
-                                   self.direct_exp_time, list_of_paths=True, num_exposures=self.num_exposures,
-                                   dm1_command_object=letter_f, centering=self.centering)
+        # letter_f = commands.poke_letter_f_command(dm_num=1)
+        # take_coffee_data_set(focus_zernike_command_paths, local_path, "letter_f", self.coron_exp_time,
+        #                      self.direct_exp_time, num_exposures=self.num_exposures,
+        #                      dm1_command_object=letter_f, centering=self.centering)
+
+        # DM1 Spaced Center 4 actuators.
+        actuators = [558, 388, 393, 563]
+        center_command_dm1 = commands.poke_command(actuators, dm_num=1, amplitude=quantity(250, units.nanometers))
+        take_coffee_data_set(focus_zernike_command_paths, local_path, "spaced_center_poke", self.coron_exp_time,
+                             self.direct_exp_time, num_exposures=self.num_exposures,
+                             dm1_command_object=center_command_dm1, centering=self.centering)
+
 
         # DM1 OFF and DM2 focus loop.
-        take_exposures_dm_commands(focus_zernike_command_paths, local_path, "focus_dm1_off", self.coron_exp_time,
-                                   self.direct_exp_time, dm1_command_object=commands.flat_command(bias=False, flat_map=False),
-                                   num_exposures=self.num_exposures, centering=self.centering)
+        # take_coffee_data_set(focus_zernike_command_paths, local_path, "focus_dm1_off", self.coron_exp_time,
+        #                      self.direct_exp_time, dm1_command_object=commands.flat_command(bias=False, flat_map=False),
+        #                      num_exposures=self.num_exposures, centering=self.centering)

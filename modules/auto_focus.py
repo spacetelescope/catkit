@@ -58,6 +58,7 @@ def take_auto_focus_data(bias,
                                           extra_metadata=metadata,
                                           init_motors=False,
                                           camera_type=camera_type,
+                                          simulator=False,
                                           **kwargs)
     return path
 

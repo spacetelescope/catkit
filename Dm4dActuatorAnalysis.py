@@ -68,13 +68,12 @@ class Dm4dActuatorAnalysis(Experiment):
                                                          rotate=self.rotate,
                                                          fliplr=self.fliplr)
 
-            for i in self.amplitude_range:
-                file_name = "poke_amplitude_{}_nm".format(i)
-                command = poke_command(self.actuators,
-                                       amplitude=quantity(i, self.amplitude_range_units), dm_num=self.dm_num)
+                for i in self.amplitude_range:
+                    file_name = "poke_amplitude_{}_nm".format(i)
+                    command = poke_command(self.actuators,
+                                           amplitude=quantity(i, self.amplitude_range_units), dm_num=self.dm_num)
 
-                dm.apply_shape(command, self.dm_num)
-                with Accufiz("4d_accufiz", mask=self.mask) as four_d:
+                    dm.apply_shape(command, self.dm_num)
                     image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
                                                          filename=file_name,
                                                          rotate=self.rotate,

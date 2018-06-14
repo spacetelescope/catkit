@@ -8,6 +8,7 @@ import os
 import numpy as np
 from glob import glob
 from astropy.io import fits
+import time
 
 from .Experiment import Experiment
 from ..hardware.boston.sin_command import sin_command
@@ -115,10 +116,12 @@ class SpeckleNulling(Experiment):
                     if i == 0 and self.centering.value == ImageCentering.global_cross_correlation.value:
                         centering = self.reference_centering
                         testbed_state.global_alignment_mask = self.__make_global_alignment_mask()
+                        testbed.move_fpm(FpmPosition.coron)
                         auto_exposure_time = testbed.auto_exp_time_no_shape(auto_exposure_time,
                                                                             40000,
                                                                             50000,
-                                                                            mask=np.invert(testbed_state.global_alignment_mask),
+                                                                            mask=np.invert(
+                                                                                testbed_state.global_alignment_mask),
                                                                             centering=centering,
                                                                             pipeline=True)
 
@@ -207,14 +210,32 @@ class SpeckleNulling(Experiment):
                                                                             new_phase))
                     current_command_object.data += phase_correction_command.data
 
-                # Take a final (non-saturated) image using auto exposure without the dark zone mask.
-                testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, self.fpm_position,
-                                          centering=self.centering,
-                                          lyot_stop_position=self.lyot_stop_position,
-                                          path=self.path,
-                                          exposure_set_name="final", filename="final_dark_zone.fits",
-                                          simulator=False, **self.kwargs)
+                folder_names = ["pos1_632.8nm_1nm_.15",
+                                "pos2_632.8nm_3nm_.47",
+                                "pos3_632.8nm_10nm_1.6",
+                                "pos4_632nm_22nm_3.5",
+                                "pos5_631nm_36nm_5.7",
+                                "pos6_open"
+                                ]
+                for foldername in folder_names:
+                    print("WAKE UP!!! Pause and change wavelength to " + foldername)
+                    time.sleep(30)
+                    folder_string = "broadband_" + foldername + "_nm"
+                    testbed.run_hicat_imaging(self.exposure_time, 12, self.fpm_position,
+                                              centering=ImageCentering.cross_correlation,
+                                              lyot_stop_position=self.lyot_stop_position,
+                                              path=os.path.join(self.path + "broadband"),
+                                              exposure_set_name=folder_string + "_coron",
+                                              filename=folder_string + ".fits",
+                                              simulator=False, **self.kwargs)
 
+                    testbed.run_hicat_imaging(self.exposure_time, 12, FpmPosition.direct,
+                                              centering=ImageCentering.cross_correlation,
+                                              lyot_stop_position=self.lyot_stop_position,
+                                              path=os.path.join(self.path + "broadband"),
+                                              exposure_set_name=folder_string + "_direct",
+                                              filename=folder_string + ".fits",
+                                              simulator=False, **self.kwargs)
 
     @staticmethod
     def __make_global_alignment_mask():

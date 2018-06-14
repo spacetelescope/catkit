@@ -40,6 +40,7 @@ class Experiment(object):
             for safety_test in self.safety_tests:
                 status, msg = safety_test.check()
                 self.log.info(msg)
+                print(msg)
                 if not status:
                     self.log.error(safety_test.name + " reports unsafe conditions. Aborting experiment...")
                     raise SafetyException()

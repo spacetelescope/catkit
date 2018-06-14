@@ -24,6 +24,7 @@ def take_phase_retrieval_data(exposure_time,
                               suffix=None,
                               **kwargs):
 
+    util.setup_hicat_logging(path, "take_phase_retrieval_data")
     log = logging.getLogger(__name__)
 
     # Wait to set the path until the experiment starts (rather than the constructor)

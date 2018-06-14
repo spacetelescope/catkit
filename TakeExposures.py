@@ -9,10 +9,12 @@ from .Experiment import Experiment
 from ..hicat_types import *
 from ..hardware.boston.commands import flat_command
 from .modules.general import take_exposures
+from .. import util
 
 
 class TakeExposures(Experiment):
     name = "Take Exposures"
+    log = logging.getLogger(__name__)
 
     def __init__(self,
                  dm1_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
@@ -25,6 +27,7 @@ class TakeExposures(Experiment):
                  path=None,
                  exposure_set_name=None,
                  filename=None,
+                 suffix=None,
                  **kwargs):
         """
         Takes a set of data with any camera, any DM command, any exposure time, etc.
@@ -47,6 +50,7 @@ class TakeExposures(Experiment):
         self.path = path
         self.exposure_set_name = exposure_set_name
         self.filename = filename
+        self.suffix = suffix
         self.kwargs = kwargs
 
     def experiment(self):
@@ -60,4 +64,5 @@ class TakeExposures(Experiment):
                        self.path,
                        self.filename,
                        self.exposure_set_name,
+                       self.suffix,
                        **self.kwargs)

@@ -24,11 +24,11 @@ class TakeDm4dCheckerboardData(Experiment):
 
     def __init__(self,
                  amplitude_range=range(-2200, 850, 200),
-                 mask="dm2_detector.mask",
+                 mask="dm1_detector.mask",
                  num_frames=2,
                  path=None,
-                 dm_num=2,
-                 rotate=0,
+                 dm_num=1,
+                 rotate=180,
                  fliplr=False,
                  show_plot=False,
                  overwrite_csv=False,
@@ -64,17 +64,16 @@ class TakeDm4dCheckerboardData(Experiment):
                                                          rotate=self.rotate,
                                                          fliplr=self.fliplr)
 
-            # Generate the 16 permutations of checkerboards, and add the commands to a list.
-            for i in range(0, 4):
-                for j in range(0, 4):
+                # Generate the 16 permutations of checkerboards, and add the commands to a list.
+                for i in range(0, 4):
+                    for j in range(0, 4):
 
-                    for k in self.amplitude_range:
-                        file_name = "checkerboard_{}_{}_{}nm".format(i, j, k)
-                        command = checkerboard_command(dm_num=2, offset_x=i, offset_y=j,
-                                                       amplitude=quantity(k, units.nanometers),
-                                                       bias=False, flat_map=True)
-                        dm.apply_shape(command, self.dm_num)
-                        with Accufiz("4d_accufiz", mask=mask) as four_d:
+                        for k in self.amplitude_range:
+                            file_name = "checkerboard_{}_{}_{}nm".format(i, j, k)
+                            command = checkerboard_command(dm_num=2, offset_x=i, offset_y=j,
+                                                           amplitude=quantity(k, units.nanometers),
+                                                           bias=False, flat_map=True)
+                            dm.apply_shape(command, self.dm_num)
                             image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
                                                                  filename=file_name,
                                                                  rotate=self.rotate,
@@ -96,9 +95,10 @@ class TakeDm4dCheckerboardData(Experiment):
                             # Save the DM_Command used.
                             command.export_fits(os.path.join(self.path, file_name))
 
-        files_path = glob(os.path.join(self.path, file_name.split("_")[0] + "*_subtracted.fits"))
-        dm_calibration_util.create_actuator_index(self.dm_num, path=self.path,
-                                                  files=files_path,
-                                                  reffiles=reference_path,
-                                                  show_plot=self.show_plot,
-                                                  overwrite_csv=self.overwrite_csv)
+        # Old experimental code for creating an actuator index from checkerboards.
+        # files_path = glob(os.path.join(self.path, file_name.split("_")[0] + "*_subtracted.fits"))
+        # dm_calibration_util.create_actuator_index(self.dm_num, path=self.path,
+        #                                           files=files_path,
+        #                                           reffiles=reference_path,
+        #                                           show_plot=self.show_plot,
+        #                                           overwrite_csv=self.overwrite_csv)
