@@ -24,7 +24,6 @@ def take_coffee_data_set(dm2_command_list,
                          centering=ImageCentering.custom_apodizer_spots,
                          **kwargs):
     for command in dm2_command_list:
-
         dm2_command_object = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2, as_volts=True)
         filename = os.path.basename(os.path.dirname(command))
         experiment_path = os.path.join(path, exp_set_name, filename)
@@ -59,6 +58,70 @@ def take_coffee_data_set(dm2_command_list,
                        centering=centering,
                        **kwargs)
 
+
+def take_exposures_both_dm_commands(dm2_command_list,
+                                    dm1_command_list,
+                                    path,
+                                    exp_set_name,
+                                    coron_exp_time,
+                                    direct_exp_time,
+                                    dm2_flat_map=False,
+                                    dm1_flat_map=False,
+                                    dm2_list_of_paths=True,
+                                    dm1_list_of_paths=True,
+                                    num_exposures=10,
+                                    camera_type="imaging_camera",
+                                    centering=ImageCentering.custom_apodizer_spots):
+
+    for command1 in dm1_command_list:
+        if dm1_list_of_paths:
+            dm1_command_object = DmCommand.load_dm_command(command1, bias=False,
+                                                           flat_map=dm1_flat_map,
+                                                           dm_num=1, as_volts=True)
+            filename1 = os.path.basename(command1).split('.')[0]
+        else:
+            dm1_command_object = command1
+            filename1 = "flats"
+
+        for command2 in dm2_command_list:
+            if dm2_list_of_paths:
+                dm2_command_object = DmCommand.load_dm_command(command2, bias=False,
+                                                               flat_map=dm2_flat_map,
+                                                               dm_num=2, as_volts=True)
+                filename2 = os.path.basename(command2).split('.')[0]
+            else:
+                dm2_command_object = command2
+                filename2 = "flat"
+            experiment_path = os.path.join(path, exp_set_name, "dm1_{}_dm2_{}".format(filename1,
+                                                                                      filename2))
+
+            # Direct.
+            take_exposures(dm1_command_object,
+                           dm2_command_object,
+                           direct_exp_time,
+                           num_exposures,
+                           camera_type,
+                           False,
+                           True,
+                           experiment_path,
+                           "dm1_{}_dm2_{}".format(filename1, filename2),
+                           "direct",
+                           suffix=None,
+                           centering=ImageCentering.psf)
+
+            # Coron.
+            take_exposures(dm1_command_object,
+                           dm2_command_object,
+                           coron_exp_time,
+                           num_exposures,
+                           camera_type,
+                           True,
+                           True,
+                           experiment_path,
+                           "dm1_{}_dm2_{}".format(filename1, filename2),
+                           "coron",
+                           suffix=None,
+                           centering=centering)
 
 def take_exposures(dm1_command_object,
                    dm2_command_object,
