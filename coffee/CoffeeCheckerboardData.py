@@ -11,13 +11,13 @@ from astropy.io import fits
 
 from hicat.hicat_types import MetaDataEntry
 
-from .Experiment import Experiment
-from ..hardware.boston.commands import checkerboard_command, flat_command
-from ..hardware import testbed
-from ..config import CONFIG_INI
-from .. import util
-from ..hicat_types import units, quantity, FpmPosition, ImageCentering
-from .modules.general import take_exposures, take_coffee_data_set
+from experiments.Experiment import Experiment
+from hardware.boston.commands import checkerboard_command, flat_command
+from hardware import testbed
+from config import CONFIG_INI
+from hicat import util
+from hicat_types import units, quantity, FpmPosition, ImageCentering
+from experiments.modules.general import take_exposures, take_coffee_data_set
 
 
 class CoffeeCheckerboardData(Experiment):
