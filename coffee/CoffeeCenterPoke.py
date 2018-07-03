@@ -7,11 +7,13 @@ from builtins import *
 from glob import glob
 import logging
 
-from experiments.Experiment import Experiment
-from hardware.boston import commands
-from hicat_types import units, quantity, ImageCentering
-from hicat import util
-from experiments.modules.general import take_coffee_data_set
+from ..Experiment import Experiment
+from ...hardware.boston import commands
+from ...hardware import testbed
+from ...config import CONFIG_INI
+from ... import util
+from ...hicat_types import units, quantity, FpmPosition, ImageCentering, MetaDataEntry
+from ..modules.general import take_exposures, take_coffee_data_set
 
 
 class CoffeeCenterPoke(Experiment):

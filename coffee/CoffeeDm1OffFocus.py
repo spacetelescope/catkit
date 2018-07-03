@@ -7,11 +7,11 @@ from builtins import *
 from glob import glob
 import logging
 
-from experiments.Experiment import Experiment
-from hardware.boston import commands
-from hicat_types import units, quantity, ImageCentering
-from hicat import util
-from experiments.modules.general import take_coffee_data_set
+from ..Experiment import Experiment
+from ...hardware.boston import commands
+from ... import util
+from ...hicat_types import units, quantity, ImageCentering
+from ..modules.general import take_coffee_data_set
 
 
 class CoffeeDm1OffFocus(Experiment):
