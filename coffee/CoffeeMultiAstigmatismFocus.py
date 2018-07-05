@@ -22,12 +22,14 @@ class CoffeeMultiAstigmatismFocus(Experiment):
                  num_exposures=10,
                  coron_exp_time=quantity(100, units.millisecond),
                  direct_exp_time=quantity(1, units.millisecond),
-                 centering=ImageCentering.custom_apodizer_spots):
+                 centering=ImageCentering.custom_apodizer_spots,
+                 **kwargs):
         self.path = path
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
         self.direct_exp_time = direct_exp_time
         self.centering = centering
+        self.kwargs = kwargs
 
     def experiment(self):
         if self.path is None:
@@ -42,4 +44,4 @@ class CoffeeMultiAstigmatismFocus(Experiment):
         take_coffee_data_set(multi_zernike_command_paths, self.path,
                              "astigmatism_80nm", self.coron_exp_time,
                              self.direct_exp_time, num_exposures=self.num_exposures,
-                             centering=self.centering)
+                             centering=self.centering, **self.kwargs)

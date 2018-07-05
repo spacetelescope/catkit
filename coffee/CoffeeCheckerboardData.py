@@ -26,7 +26,7 @@ class CoffeeCheckerboardData(Experiment):
                  num_exposures=10,
                  path=None,
                  camera_type="imaging_camera",
-                 focus_zernike_data_path="z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T09-34-00_4d_zernike_loop_focus/",
+                 focus_zernike_data_path="Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/focus/",
                  centering=ImageCentering.custom_apodizer_spots,
                  **kwargs):
 
@@ -75,6 +75,7 @@ class CoffeeCheckerboardData(Experiment):
                                      dm1_command_object=command,
                                      num_exposures=self.num_exposures,
                                      centering=self.centering,
-                                     extra_metadata=metadata)
+                                     extra_metadata=metadata,
+                                     **self.kwargs)
 
 

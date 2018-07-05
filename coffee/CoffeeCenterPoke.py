@@ -25,12 +25,14 @@ class CoffeeCenterPoke(Experiment):
                  num_exposures=10,
                  coron_exp_time=quantity(100, units.millisecond),
                  direct_exp_time=quantity(1, units.millisecond),
-                 centering=ImageCentering.custom_apodizer_spots):
+                 centering=ImageCentering.custom_apodizer_spots,
+                 **kwargs):
         self.path = path
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
         self.direct_exp_time = direct_exp_time
         self.centering = centering
+        self.kwargs = kwargs
 
     def experiment(self):
         if self.path is None:
@@ -39,7 +41,7 @@ class CoffeeCenterPoke(Experiment):
             util.setup_hicat_logging(self.path, "coffee_center_poke")
 
         # # Pure Focus Zernike loop.
-        focus_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/"
+        focus_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/focus/"
         focus_zernike_command_paths = glob(focus_zernike_data_path + "/*p2v/*.fits")
 
         # DM1 Spaced Center 4 actuators.
@@ -47,4 +49,4 @@ class CoffeeCenterPoke(Experiment):
         center_command_dm1 = commands.poke_command(actuators, dm_num=1, amplitude=quantity(250, units.nanometers))
         take_coffee_data_set(focus_zernike_command_paths, self.path, "spaced_center_poke", self.coron_exp_time,
                              self.direct_exp_time, num_exposures=self.num_exposures,
-                             dm1_command_object=center_command_dm1, centering=self.centering)
+                             dm1_command_object=center_command_dm1, centering=self.centering, **self.kwargs)
