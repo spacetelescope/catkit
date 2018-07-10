@@ -129,8 +129,8 @@ class DmCommand(object):
     def export_fits(self, path, folder_name="dm_command"):
         """
         Saves the dm command in two different formats:
-            - 2D representation of the command with no padding (34 x 34).
-            - 2D command with the flat/bias removed (34 x 34).
+        - 2D representation of the command with no padding (34 x 34).
+        - 2D command with the flat/bias removed (34 x 34).
         :param path: Path to a directory to create a folder named "dm_command" and save the 3 files.
         :param folder_name: Optional parameter to specify a folder to store the fits file to.
         """
@@ -164,6 +164,7 @@ def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
     data = fits.getdata(path)
     return DmCommand(data, dm_num, flat_map=flat_map, bias=bias, as_volts=as_volts)
 
+
 def get_flat_map_volts(dm_num):
     script_dir = os.path.dirname(__file__)
     if dm_num == 1:
@@ -174,6 +175,7 @@ def get_flat_map_volts(dm_num):
         flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
         flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
         return flat_map_volts[0].data
+
 
 def convert_volts_to_nm(data):
     # Convert nanometers to volts.

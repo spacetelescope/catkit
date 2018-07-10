@@ -87,7 +87,8 @@ class ZwoCamera(Camera):
                        subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
                        bins=None):
         """
-        Low level method to take exposures using a Zwo camera. By default keeps image data in
+        Low level method to take exposures using a Zwo camera. By default keeps image data in.
+
         :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
         :param num_exposures: Number of exposures.
         :param file_mode: If true fits file will be written to disk
@@ -222,10 +223,12 @@ class ZwoCamera(Camera):
     def flash_id(self, new_id):
         """
         Flashes the camera memory to append a string at the end of the camera name.
-        :param new_id: Ascii value of the string you want to append.
-                       Passing the value 49 will append (1) to the name.
-                       Passing the value 50 will append (2) to the name.
+        :param new_id:
+        Ascii value of the string you want to append.
+        Passing the value 49 will append (1) to the name.
+        Passing the value 50 will append (2) to the name.
         """
+
         camera_info_before = self.camera.get_camera_property()
         self.log.info("Before Flash:")
         self.log.info(camera_info_before["Name"])

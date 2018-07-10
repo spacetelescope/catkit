@@ -6,10 +6,15 @@ from builtins import *
 
 from hicat.hardware import testbed_state
 from hicat.interfaces.DeformableMirrorController import DeformableMirrorController
-from .sdk import bmc
 from hicat.config import CONFIG_INI
 import numpy as np
 import logging
+
+# BMC is Boston's library and it only works on windows.
+try:
+    from .sdk import bmc
+except ImportError:
+    pass
 
 """Interface for Boston Micro-machines deformable mirror controller that can control 2 DMs.  
    It does so by interpreting the first half of the command for DM1, and the second for DM2.
