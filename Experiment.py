@@ -12,10 +12,13 @@ from .SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTe
 import time
 import logging
 
-"""Abstract base class that instills safety monitoring into any class that inherits it."""
-
 
 class Experiment(object):
+    """
+    Abstract base class that instills safety monitoring into any class that inherits it.  Subclasses
+    need to implement a function called "experiment()", which is designated as an abstractmethod here.
+    """
+
     __metaclass__ = ABCMeta
     name = None
 
@@ -25,7 +28,9 @@ class Experiment(object):
 
     @abstractmethod
     def experiment(self):
-        """This is where the experiment gets implemented. All child classes must implement this."""
+        """
+        This is where the experiment gets implemented. All child classes must implement this.
+        """
 
     def start(self):
         """
@@ -91,7 +96,9 @@ class Experiment(object):
             raise SafetyException()
 
     def run_experiment(self):
-        """Wrapper for experiment to catch the softkill function's KeyboardInterrupt signal more gracefully."""
+        """
+        Wrapper for experiment to catch the softkill function's KeyboardInterrupt signal more gracefully.
+        """
         try:
             self.experiment()
         except KeyboardInterrupt:
