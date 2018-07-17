@@ -18,7 +18,7 @@ from ..hardware.FourDTechnology.Accufiz import Accufiz
 from ..config import CONFIG_INI
 from .. import util
 from ..hicat_types import units, quantity
-from .. import dm_calibration_util
+from .. import wavefront_correction
 
 
 class Take4dImageDmCommand(Experiment):
