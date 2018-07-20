@@ -23,12 +23,14 @@ class CoffeeFlat(Experiment):
                  coron_exp_time=quantity(100, units.millisecond),
                  direct_exp_time=quantity(1, units.millisecond),
                  centering=ImageCentering.custom_apodizer_spots,
+                 pipeline=True,
                  **kwargs):
         self.path = path
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
         self.direct_exp_time = direct_exp_time
         self.centering = centering
+        self.pipeline = pipeline
         self.kwargs = kwargs
 
     def experiment(self):
@@ -47,4 +49,5 @@ class CoffeeFlat(Experiment):
                              self.direct_exp_time,
                              num_exposures=self.num_exposures,
                              centering=self.centering,
+                             pipeline=self.pipeline,
                              **self.kwargs)
