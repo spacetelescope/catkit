@@ -11,7 +11,7 @@ from .Experiment import Experiment
 from ..hardware.boston import commands, DmCommand
 from ..hicat_types import units, quantity, ImageCentering
 from .. import util
-from .modules.general import take_exposures_dm_commands, take_exposures_both_dm_commands
+from .modules.general import take_exposures_both_dm_commands
 
 
 class TestPrDmCommands(Experiment):
@@ -36,23 +36,23 @@ class TestPrDmCommands(Experiment):
                                             return_shortname=False)
         # DM2 Flat, DM1 PR WF correction command.
         for command in self.commands_path:
-        take_exposures_both_dm_commands([dm2_command],
-                                        self.commands_path,
-                                        local_path,
-                                        "pr_flats",
-                                        self.coron_exp_time,
-                                        self.direct_exp_time,
-                                        dm2_flat_map=False,
-                                        dm1_flat_map=True,
-                                        dm2_list_of_paths=False,
-                                        dm1_list_of_paths=True,
-                                        num_exposures=self.num_exposures,
-                                        camera_type="imaging_camera",
-                                        centering=self.centering)
+            take_exposures_both_dm_commands([dm2_command],
+                                            self.commands_path,
+                                            local_path,
+                                            "pr_flats",
+                                            self.coron_exp_time,
+                                            self.direct_exp_time,
+                                            dm2_flat_map=False,
+                                            dm1_flat_map=True,
+                                            dm2_list_of_paths=False,
+                                            dm1_list_of_paths=True,
+                                            num_exposures=self.num_exposures,
+                                            camera_type="imaging_camera",
+                                            centering=self.centering)
 
-        # DM1 Flat, DM2 Flat.
-        take_exposures_dm_commands([dm2_command],
-                                   local_path, "pr_flats", self.coron_exp_time,
-                                   self.direct_exp_time, list_of_paths=False,
-                                   num_exposures=self.num_exposures,
-                                   centering=self.centering)
+        # # DM1 Flat, DM2 Flat.
+        # take_exposures_dm_commands([dm2_command],
+        #                            local_path, "pr_flats", self.coron_exp_time,
+        #                            self.direct_exp_time, list_of_paths=False,
+        #                            num_exposures=self.num_exposures,
+        #                            centering=self.centering)

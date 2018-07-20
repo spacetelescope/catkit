@@ -15,10 +15,6 @@ from ...hardware import testbed
 from ...util import write_fits, read_fits
 from ...hicat_types import LyotStopPosition, SinSpecification, quantity, units
 
-"""
-This module contains the double_sine_remove_crossterm function, which will take the data neccesary to compute
-a final image with no crossterm.  
-"""
 
 positive_sin_dirname = "positive_sin"
 negative_sin_dirname = "negative_sin"
@@ -100,8 +96,9 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     :param resume: (Boolean) Primitive way to resume an experiment that was incomplete, file_mode=True only.
     :param centering: (ImageCentering) Mode pipeline will use to find the center of images and recenter them.
     :param kwargs: Specific keyword arguments passed to the Camera interface.
-    :return: If file_mode=False: Numpy image data for final image with crossterm removed.
-             If file_mode=True: Nothing is returned.
+    :return:
+    If file_mode=False: Numpy image data for final image with crossterm removed.
+    If file_mode=True: Nothing is returned.
     """
 
     # Aligment speckle specification, only used when alignment_speckle param is True.

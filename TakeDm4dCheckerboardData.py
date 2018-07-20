@@ -8,7 +8,7 @@ import os
 from glob import glob
 from astropy.io import fits
 
-from hicat import dm_calibration_util
+from hicat import wavefront_correction
 from hicat.hicat_types import MetaDataEntry
 from .Experiment import Experiment
 from ..hardware.boston.commands import poke_letter_f_command, poke_command, checkerboard_command, flat_command
@@ -97,7 +97,7 @@ class TakeDm4dCheckerboardData(Experiment):
 
         # Old experimental code for creating an actuator index from checkerboards.
         # files_path = glob(os.path.join(self.path, file_name.split("_")[0] + "*_subtracted.fits"))
-        # dm_calibration_util.create_actuator_index(self.dm_num, path=self.path,
+        # wavefront_correction.create_actuator_index(self.dm_num, path=self.path,
         #                                           files=files_path,
         #                                           reffiles=reference_path,
         #                                           show_plot=self.show_plot,

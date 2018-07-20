@@ -18,7 +18,7 @@ from ..hardware.FourDTechnology.Accufiz import Accufiz
 from ..config import CONFIG_INI
 from .. import util
 from ..hicat_types import units, quantity
-from .. import dm_calibration_util
+from .. import wavefront_correction
 
 
 class Dm4dFlatMapLoop(Experiment):
@@ -108,7 +108,7 @@ class Dm4dFlatMapLoop(Experiment):
                     for key, value in actuator_index.items():
 
                         # Create a small circle mask around index, and take the median.
-                        actuator_mask = dm_calibration_util.circle_mask(image, value[0], value[1], 3)
+                        actuator_mask = wavefront_correction.circle_mask(image, value[0], value[1], 3)
 
                         # Find the median within the mask.
                         actuator_intensity = np.median(image[actuator_mask])
