@@ -28,7 +28,7 @@ class SafetyTest(object):
 class UpsSafetyTest(SafetyTest):
 
     log = logging.getLogger(__name__)
-    name = "White UPS Safety Test"
+    name = "UPS Safety Test"
 
     # Create a SnmpUPS object to monitor the White UPS.
     ups = testbed.backup_power()
