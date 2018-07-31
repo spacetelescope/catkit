@@ -20,10 +20,10 @@ class ThorlabsFW102C(FilterWheel):
         rm = visa.ResourceManager('@py')
         # Windows ASRLCOM3::INSTR
         return rm.open_resource('ASRL/dev/cu.usbserial-TP01517280-7417::INSTR',
-                                baud_rate=115200,
-                                data_bits=8,
-                                write_termination='\r',
-                                read_termination='\r')
+                                           baud_rate=115200,
+                                           data_bits=8,
+                                           write_termination='\r',
+                                           read_termination='\r')
 
     def close(self):
         self.instrument.close()
