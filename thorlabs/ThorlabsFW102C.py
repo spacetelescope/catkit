@@ -5,6 +5,8 @@ from __future__ import (absolute_import, division,
 from builtins import *
 import logging
 import visa
+import platform
+from ...config import CONFIG_INI
 from pyvisa.constants import StatusCode
 
 from ...interfaces.FilterWheel import FilterWheel
@@ -18,12 +20,20 @@ class ThorlabsFW102C(FilterWheel):
     def initialize(self, *args, **kwargs):
 
         rm = visa.ResourceManager('@py')
-        # Windows ASRLCOM3::INSTR
-        return rm.open_resource('ASRL/dev/cu.usbserial-TP01517280-7417::INSTR',
-                                           baud_rate=115200,
-                                           data_bits=8,
-                                           write_termination='\r',
-                                           read_termination='\r')
+
+        # Determine the os, and load the correct filter ID from the ini file.
+        if platform.system().lower() == "darwin":
+            visa_id = CONFIG_INI.get(self.config_id, "mac_resource_name")
+        elif platform.system().lower() == "windows":
+            visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
+        else:
+            visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
+
+        return rm.open_resource(visa_id,
+                                baud_rate=115200,
+                                data_bits=8,
+                                write_termination='\r',
+                                read_termination='\r')
 
     def close(self):
         self.instrument.close()
@@ -50,3 +60,10 @@ class ThorlabsFW102C(FilterWheel):
             self.instrument.read()
         else:
             raise Exception("Filter wheel " + self.config_id + " returned an unexpected response: " + out[1])
+
+    def ask(self, write_string):
+        out = self.instrument.write(write_string)
+
+    def read(self):
+        return self.instrument.read()
+

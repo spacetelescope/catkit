@@ -29,10 +29,10 @@ class FilterWheelAssembly(Instrument):
         # Initialize each filter wheel
         try:
             fw1_device = ThorlabsFW102C(self.__fw_1_id)
-            #fw2_device = ThorlabsFW102C(self.__fw_2_id)
+            fw2_device = ThorlabsFW102C(self.__fw_2_id)
 
             # Create a dictionary to hold both filter wheels, since it isn't just one instrument.
-            instrument_dict = {self.__FW1: fw1_device}#, self.__FW2: fw2_device}
+            instrument_dict = {self.__FW1: fw1_device, self.__FW2: fw2_device}
             return instrument_dict
         except SerialException, exp:
             print("One or both of the filter wheels aren't responding")
@@ -43,7 +43,7 @@ class FilterWheelAssembly(Instrument):
         # Close filter wheels stored in the self.instrument as a dictionary.
         if self.instrument is not None:
             self.instrument[self.__FW1].close()
-            # self.instrument[self.__FW2].close()
+            self.instrument[self.__FW2].close()
 
     def set_filters(self, config_filter_name):
 
@@ -56,16 +56,16 @@ class FilterWheelAssembly(Instrument):
 
         # TODO: See if these can move in parallel.
         self.instrument[self.__FW1].set_position(pos1)
-        #self.instrument[self.__FW2].set_position(pos2)
+        self.instrument[self.__FW2].set_position(pos2)
 
     def get_filters(self):
         pos1 = self.instrument[self.__FW1].get_position()
-        #pos2 = self.instrument[self.__FW2].get_position()
+        pos2 = self.instrument[self.__FW2].get_position()
 
         # Reverse lookup.
         filters_1 = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_1")
                    if entry[0].startswith("filter_")}
-        filters_2 = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_1")
+        filters_2 = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_2")
                    if entry[0].startswith("filter_")}
 
-        return filters_1[pos1]#, filters_2[pos2]
+        return filters_1[pos1], filters_2[pos2]
