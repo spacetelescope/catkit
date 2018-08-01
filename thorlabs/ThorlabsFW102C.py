@@ -67,3 +67,6 @@ class ThorlabsFW102C(FilterWheel):
     def read(self):
         return self.instrument.read()
 
+    def flush(self):
+        self.instrument.clear()
+
