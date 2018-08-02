@@ -8,6 +8,7 @@ import visa
 import platform
 from ...config import CONFIG_INI
 from pyvisa import constants
+import time
 
 from ...interfaces.FilterWheel import FilterWheel
 
@@ -57,6 +58,7 @@ class ThorlabsFW102C(FilterWheel):
 
         if out[1] == constants.StatusCode.success:
             self.instrument.read()
+            time.sleep(3)
         else:
             raise Exception("Filter wheel " + self.config_id + " returned an unexpected response: " + out[1])
 
