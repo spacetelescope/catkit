@@ -60,10 +60,8 @@ class BroadbandTakeExposures(Experiment):
     def experiment(self):
         # Wait to set the path until the experiment starts (rather than the constructor)
         if self.path is None:
-            suffix = "take_exposures_data" if self.suffix is None else "take_exposures_data_" + self.suffix
+            suffix = "broadband" if self.suffix is None else "broadband_" + self.suffix
             self.path = util.create_data_path(suffix=suffix)
-
-        util.setup_hicat_logging(self.path, "take_exposures_data")
 
         # Establish image type and set the FPM position and laser current
         if self.coronograph:
@@ -93,7 +91,7 @@ class BroadbandTakeExposures(Experiment):
                 with testbed.dm_controller() as dm:
                     dm.apply_shape_to_both(self.dm1_command_object, self.dm2_command_object)
                     path = testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, fpm_position,
-                                                     path=os.path.join(self.path,filter_name),
+                                                     path=os.path.join(self.path, filter_name),
                                                      filename=self.filename,
                                                      exposure_set_name=self.exposure_set_name,
                                                      camera_type=self.camera_type,
