@@ -7,7 +7,7 @@ import logging
 import visa
 import platform
 from ...config import CONFIG_INI
-from pyvisa.constants import StatusCode
+from pyvisa import constants
 
 from ...interfaces.FilterWheel import FilterWheel
 
@@ -41,7 +41,7 @@ class ThorlabsFW102C(FilterWheel):
     def get_position(self):
         out = self.instrument.write("pos?")
 
-        if out[1] == StatusCode.success:
+        if out[1] == constants.StatusCode.success:
 
             # First read the echo to clear the buffer.
             self.instrument.read()
@@ -56,17 +56,16 @@ class ThorlabsFW102C(FilterWheel):
         string2 = unicode("pos=" + str(new_position))
         out = self.instrument.write(string2)
 
-        if out[1] == StatusCode.success:
+        if out[1] == constants.StatusCode.success:
             self.instrument.read()
         else:
             raise Exception("Filter wheel " + self.config_id + " returned an unexpected response: " + out[1])
 
     def ask(self, write_string):
-        out = self.instrument.write(write_string)
+        self.instrument.write(write_string)
 
     def read(self):
         return self.instrument.read()
 
     def flush(self):
-        self.instrument.clear()
-
+        print(self.instrument.read_bytes(1))
