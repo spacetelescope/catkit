@@ -21,15 +21,16 @@ class BroadbandTakeExposures(Experiment):
     log = logging.getLogger(__name__)
 
     def __init__(self,
+                 filter_positions=range(1,7),
                  dm1_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
                  dm2_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
                  exposure_time=quantity(250, units.microsecond),
+                 fpm=FpmPosition.direct,
                  num_exposures=5,
                  camera_type="imaging_camera",
-                 coronograph=False,
+                 exposure_set_name="direct",
                  pipeline=True,
                  path=None,
-                 exposure_set_name=None,
                  filename=None,
                  suffix=None,
                  **kwargs):
@@ -44,15 +45,16 @@ class BroadbandTakeExposures(Experiment):
         :param position_list: (list) Postion(s) of the camera
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
+        self.filter_positions = filter_positions
         self.dm1_command_object = dm1_command_object
         self.dm2_command_object = dm2_command_object
         self.exposure_time = exposure_time
+        self.exposure_set_name = exposure_set_name
+        self.fpm = fpm
         self.num_exposures = num_exposures
         self.camera_type = camera_type
-        self.coronograph = coronograph
         self.pipeline = pipeline
         self.path = path
-        self.exposure_set_name = exposure_set_name
         self.filename = filename
         self.suffix = suffix
         self.kwargs = kwargs
@@ -63,38 +65,32 @@ class BroadbandTakeExposures(Experiment):
             suffix = "broadband" if self.suffix is None else "broadband_" + self.suffix
             self.path = util.create_data_path(suffix=suffix)
 
+        util.setup_hicat_logging(self.path, "broadband")
+
         # Establish image type and set the FPM position and laser current
-        if self.coronograph:
-            fpm_position = FpmPosition.coron
-            laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
-            if self.exposure_set_name is None:
-                self.exposure_set_name = "coron"
-        else:
-            fpm_position = FpmPosition.direct
-            laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
-            if self.exposure_set_name is None:
-                self.exposure_set_name = "direct"
+
+        coron_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
+        direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
 
         # Take data at each filter wheel position.
         with testbed.laser_source() as laser, ThorlabsFW102C("thorlabs_fw102c_2") as filter_wheel:
-            laser.set_current(laser_current)
 
-            for position in range(1,7):
-                
+            for position in self.filter_positions:
                 filter_wheel.set_position(position)
 
                 # Reverse lookup.
-                filters_ini = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_1")
-                             if entry[0].startswith("filter_")}
+                filters_ini = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_2")
+                               if entry[0].startswith("filter_")}
                 filter_name = filters_ini[position]
 
                 with testbed.dm_controller() as dm:
                     dm.apply_shape_to_both(self.dm1_command_object, self.dm2_command_object)
-                    path = testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, fpm_position,
-                                                     path=os.path.join(self.path, filter_name),
-                                                     filename=self.filename,
-                                                     exposure_set_name=self.exposure_set_name,
-                                                     camera_type=self.camera_type,
-                                                     pipeline=self.pipeline,
-                                                     **self.kwargs)
-                    return path
+
+                    laser.set_current(direct_laser_current)
+                    testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, self.fpm,
+                                              path=os.path.join(self.path, filter_name),
+                                              filename=self.filename,
+                                              exposure_set_name=self.exposure_set_name,
+                                              camera_type=self.camera_type,
+                                              pipeline=self.pipeline,
+                                              **self.kwargs)
