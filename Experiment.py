@@ -24,7 +24,7 @@ class Experiment(object):
 
     log = logging.getLogger(__name__)
     interval = CONFIG_INI.getint("safety", "check_interval")
-    safety_tests = [UpsSafetyTest(), HumidityTemperatureTest(), WeatherWarningTest()]
+    safety_tests = [UpsSafetyTest(), HumidityTemperatureTest()]#, WeatherWarningTest()]
 
     @abstractmethod
     def experiment(self):
