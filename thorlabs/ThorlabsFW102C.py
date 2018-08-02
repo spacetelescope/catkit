@@ -52,9 +52,8 @@ class ThorlabsFW102C(FilterWheel):
             raise Exception("Filter wheel " + self.config_id + " returned an unexpected response: " + out[1])
 
     def set_position(self, new_position):
-        string1 = "pos=1"
-        string2 = unicode("pos=" + str(new_position))
-        out = self.instrument.write(string2)
+        command = unicode("pos=" + str(new_position))
+        out = self.instrument.write(command)
 
         if out[1] == constants.StatusCode.success:
             self.instrument.read()
