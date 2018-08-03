@@ -7,6 +7,8 @@ from builtins import *
 import logging
 import os
 
+from ..hardware.FilterWheelAssembly import FilterWheelAssembly
+
 from .Experiment import Experiment
 from ..hicat_types import *
 from ..hardware.boston.commands import flat_command
@@ -21,7 +23,7 @@ class BroadbandTakeExposures(Experiment):
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 filter_positions=range(1,7),
+                 filter_positions=None,
                  dm1_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
                  dm2_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
                  exposure_time=quantity(250, units.microsecond),
@@ -67,28 +69,28 @@ class BroadbandTakeExposures(Experiment):
 
         util.setup_hicat_logging(self.path, "broadband")
 
-        # Establish image type and set the FPM position and laser current
+        # Establish image type and set the FPM position and laser current.
 
         coron_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
         direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
 
         # Take data at each filter wheel position.
-        with testbed.laser_source() as laser, ThorlabsFW102C("thorlabs_fw102c_2") as filter_wheel:
+        with testbed.laser_source() as laser, FilterWheelAssembly as filter_wheels:
 
             for position in self.filter_positions:
-                filter_wheel.set_position(position)
+                filter_wheels.set_filters(position)
 
                 # Reverse lookup.
-                filters_ini = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_2")
-                               if entry[0].startswith("filter_")}
-                filter_name = filters_ini[position]
+                # filters_ini = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_2")
+                #                if entry[0].startswith("filter_")}
+                # filter_name = filters_ini[position]
 
                 with testbed.dm_controller() as dm:
                     dm.apply_shape_to_both(self.dm1_command_object, self.dm2_command_object)
 
                     laser.set_current(direct_laser_current)
                     testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, self.fpm,
-                                              path=os.path.join(self.path, filter_name),
+                                              path=os.path.join(self.path, position),
                                               filename=self.filename,
                                               exposure_set_name=self.exposure_set_name,
                                               camera_type=self.camera_type,
