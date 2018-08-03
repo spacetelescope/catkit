@@ -75,11 +75,11 @@ class BroadbandTakeExposures(Experiment):
         direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
 
         # Take data at each filter wheel position.
-        with testbed.laser_source() as laser, FilterWheelAssembly as filter_wheels:
+        with testbed.laser_source() as laser, FilterWheelAssembly("filter_wheel_assembly") as filter_wheels:
 
             for position in self.filter_positions:
                 filter_wheels.set_filters(position)
-                metadata = MetaDataEntry("FILTERS", "Filter Combination Name", position, "Filter combination")
+                metadata = MetaDataEntry("Filter Combination Name", "FILTERS", position, "Filter combination")
                 # Reverse lookup.
                 # filters_ini = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_2")
                 #                if entry[0].startswith("filter_")}
