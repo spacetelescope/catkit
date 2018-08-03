@@ -79,7 +79,7 @@ class BroadbandTakeExposures(Experiment):
 
             for position in self.filter_positions:
                 filter_wheels.set_filters(position)
-
+                metadata = MetaDataEntry("FILTERS", "Filter Combintation Name", position, "Filter combination")
                 # Reverse lookup.
                 # filters_ini = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_2")
                 #                if entry[0].startswith("filter_")}
@@ -95,4 +95,5 @@ class BroadbandTakeExposures(Experiment):
                                               exposure_set_name=self.exposure_set_name,
                                               camera_type=self.camera_type,
                                               pipeline=self.pipeline,
+                                              extra_metadata=metadata,
                                               **self.kwargs)
