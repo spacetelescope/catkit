@@ -10,6 +10,7 @@ from ...config import CONFIG_INI
 from pyvisa import constants
 import time
 
+from.. import testbed_state
 from ...interfaces.FilterWheel import FilterWheel
 
 
@@ -30,6 +31,7 @@ class ThorlabsFW102C(FilterWheel):
         else:
             visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
 
+        # These values took a while to figure out, careful changing them.
         return rm.open_resource(visa_id,
                                 baud_rate=115200,
                                 data_bits=8,
@@ -58,6 +60,9 @@ class ThorlabsFW102C(FilterWheel):
 
         if out[1] == constants.StatusCode.success:
             self.instrument.read()
+
+            # Update testbed state.
+            testbed_state.filter_wheels[self.config_id] = new_position
             time.sleep(3)
         else:
             raise Exception("Filter wheel " + self.config_id + " returned an unexpected response: " + out[1])
