@@ -116,6 +116,12 @@ def get_camera_motor_name(camera_type):
 
 # Convenience functions.
 def run_hicat_imaging_broadband(filter_set, *args, **kwargs):
+    """
+    Convenience function that cycles through a set of filter combos and produces an image cube.
+
+    :param filter_set: Name of the set of filter combinations, should map to the ini (eg bb_direct_set)
+    :return: If file_mode is trure: Path to data cube, otherwise it is a list of the outputs.
+    """
 
     broadband_filter_combos = CONFIG_INI.get("light_source_assembly", filter_set).split(",")
     original_path = kwargs.get("path", None)
@@ -217,9 +223,9 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     if not testbed_state.filter_wheels and source_name == "light_source_assembly":
         with FilterWheelAssembly("light_source_assembly") as filter_wheels:
             if fpm_position == FpmPosition.coron:
-                filter_wheels.set_filters("bb_620_coron")
+                filter_wheels.set_filters("bb_640_coron")
             else:
-                filter_wheels.set_filters("bb_620_direct")
+                filter_wheels.set_filters("bb_640_direct")
 
     # Auto Exposure.
     if auto_exposure_time:
