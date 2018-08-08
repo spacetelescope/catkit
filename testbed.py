@@ -7,6 +7,7 @@ import os
 import logging
 from glob import glob
 import numpy as np
+from astropy import fits
 
 from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity, ImageCentering
 from . import testbed_state
@@ -21,6 +22,7 @@ from ..hardware.boston.BostonDmController import BostonDmController
 from ..hardware.newport.NewportMotorController import NewportMotorController
 from ..hardware.zwo.ZwoCamera import ZwoCamera
 from ..interfaces.DummyLaserSource import DummyLaserSource
+from ..hardware.FilterWheelAssembly import FilterWheelAssembly
 
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
@@ -113,6 +115,53 @@ def get_camera_motor_name(camera_type):
 
 
 # Convenience functions.
+def run_hicat_imaging_broadband(filter_set=None, *args, **kwargs):
+
+    if filter_set is None and testbed_state.coronograph is None:
+        raise Exception("No filter set provided, see config.ini under filter combinations (ex: bb_direct_set)")
+
+    # Detect coron or direct from testbed_state.
+    if filter_set is None and testbed_state.coronograph:
+        broadband_filter_combos = CONFIG_INI.get("filter_combinations", "bb_coron_set").split(",")
+    else:
+        broadband_filter_combos = CONFIG_INI.get("filter_combinations", "bb_direct_set").split(",")
+
+    original_path = kwargs.get("path", None)
+
+    with FilterWheelAssembly("filter_wheel_assembly") as wheels:
+
+        output_list = []
+        for i, filter_combo in enumerate(broadband_filter_combos):
+            wheels.set_filters(filter_combo)
+
+            # Extend the path one level using the name of the filter_combo.
+            if original_path is not None:
+                filter_combo_path = os.path.join(original_path, filter_combo)
+                kwargs["path"] = filter_combo_path
+
+            output_list.append(run_hicat_imaging(*args, **kwargs))
+
+    # Make data cube.
+    if kwargs.get("pipeline", True) and kwargs.get("file_mode", True):
+        cube_filename = os.path.join(original_path, "broadband_cube.fits")
+
+        # Updated fits header for cube to have entries for each filter set (eg filters1, filters2).
+        data = []
+        header = None
+        for i, path in enumerate(output_list):
+            data.append(fits.getdata(path))
+            new_header = fits.getheader(path)
+            value = new_header["FILTERS"]
+            if i == 0:
+                header = new_header
+                header.remove("FILTERS")
+            header.append(("FILTERS" + str(i), value + str(i)))
+
+        return util.write_fits(data, cube_filename, header=header)
+    else:
+        return output_list
+
+
 def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_position=LyotStopPosition.in_beam,
                       file_mode=True, raw_skip=0, path=None, exposure_set_name=None, filename=None,
                       take_background_exposures=True, use_background_cache=True,

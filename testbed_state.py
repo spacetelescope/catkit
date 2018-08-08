@@ -13,7 +13,7 @@ lyot_stop = None
 coronograph = None
 laser_source = None
 laser_value = None
-filter_wheels = {}  # Key: ini name, Value: filter name.
+filter_wheels = {}  # Key: ini name, Value: filter position.
 
 # DM1 command object currently being applied.
 dm1_command_object = None
@@ -51,13 +51,16 @@ def create_metadata():
         metadata.append(MetaDataEntry("laser_value", "src_val", laser_value, "Laser source value (milliAmps)"))
 
     if filter_wheels:
+        filter_names = []
         for i, key, value in enumerate(filter_wheels.items()):
 
             # Resolve name of filter from ini.
-            filter_name = {int(entry[1]): entry[0] for entry in CONFIG_INI.items(key)
-                            if entry[0].startswith("filter_")}[value]
+            filter_names.append({int(entry[1]): entry[0] for entry in CONFIG_INI.items(key)
+                            if entry[0].startswith("filter_")}[value])
 
-            metadata.append(MetaDataEntry(key, "filter" + str(i), filter_name, "Using filter wheel " + key))
+        filter_string = ','.join(map(str, filter_names))
+
+        metadata.append(MetaDataEntry("filters", "filters", filter_string, "Names of filters used"))
 
     # Only write DM specific metadata if there is a shape applied.
     if dm1_command_object is not None:
