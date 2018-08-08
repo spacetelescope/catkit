@@ -52,7 +52,7 @@ def create_metadata():
 
     if filter_wheels:
         filter_names = []
-        for i, key, value in enumerate(filter_wheels.items()):
+        for key, value in filter_wheels.items():
 
             # Resolve name of filter from ini.
             filter_names.append({int(entry[1]): entry[0] for entry in CONFIG_INI.items(key)

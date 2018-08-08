@@ -7,7 +7,7 @@ import os
 import logging
 from glob import glob
 import numpy as np
-from astropy import fits
+from astropy.io import fits
 
 from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity, ImageCentering
 from . import testbed_state
@@ -115,20 +115,11 @@ def get_camera_motor_name(camera_type):
 
 
 # Convenience functions.
-def run_hicat_imaging_broadband(filter_set=None, *args, **kwargs):
+def run_hicat_imaging_broadband(filter_set, *args, **kwargs):
 
-    if filter_set is None and testbed_state.coronograph is None:
-        raise Exception("No filter set provided, see config.ini under filter combinations (ex: bb_direct_set)")
-
-    # Detect coron or direct from testbed_state.
-    if filter_set is None and testbed_state.coronograph:
-        broadband_filter_combos = CONFIG_INI.get("filter_combinations", "bb_coron_set").split(",")
-    else:
-        broadband_filter_combos = CONFIG_INI.get("filter_combinations", "bb_direct_set").split(",")
-
+    broadband_filter_combos = CONFIG_INI.get("light_source_assembly", filter_set).split(",")
     original_path = kwargs.get("path", None)
-
-    with FilterWheelAssembly("filter_wheel_assembly") as wheels:
+    with FilterWheelAssembly("light_source_assembly") as wheels:
 
         output_list = []
         for i, filter_combo in enumerate(broadband_filter_combos):
@@ -155,7 +146,7 @@ def run_hicat_imaging_broadband(filter_set=None, *args, **kwargs):
             if i == 0:
                 header = new_header
                 header.remove("FILTERS")
-            header.append(("FILTERS" + str(i), value + str(i)))
+            header.append(("FILTERS" + str(i + 1), value))
 
         return util.write_fits(data, cube_filename, header=header)
     else:
@@ -221,6 +212,15 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         move_fpm(fpm_position)
         move_lyot_stop(lyot_stop_position)
 
+    # If light_source_assembly is in use, make sure we initialize to something reasonable.
+    source_name = CONFIG_INI.get("testbed", "laser_source")
+    if not testbed_state.filter_wheels and source_name == "light_source_assembly":
+        with FilterWheelAssembly("light_source_assembly") as filter_wheels:
+            if fpm_position == FpmPosition.coron:
+                filter_wheels.set_filters("bb_620_coron")
+            else:
+                filter_wheels.set_filters("bb_620_direct")
+
     # Auto Exposure.
     if auto_exposure_time:
         camera_name = CONFIG_INI.get("testbed", camera_type)
@@ -249,10 +249,10 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     if file_mode:
         # Combine exposure set into filename.
         filename = "image" if filename is None else filename
-        filename = "{}_{}".format(exposure_set_name, filename)
+        filename = "{}_{}".format(exposure_set_name if exposure_set_name is not None else fpm_position.name, filename)
 
         # Create the standard directory structure.
-        exp_path = os.path.join(path, exposure_set_name)
+        exp_path = os.path.join(path, exposure_set_name if exposure_set_name is not None else fpm_position.name)
         raw_path = os.path.join(exp_path, "raw")
         img_path = os.path.join(raw_path, "images")
         bg_path = os.path.join(raw_path, "backgrounds")

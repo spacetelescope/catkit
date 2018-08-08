@@ -23,8 +23,8 @@ class FilterWheelAssembly(Instrument):
     def initialize(self, *args, **kwargs):
 
         # Look up which filter wheels to use.
-        self.__fw_1_id = CONFIG_INI.get("filter_wheel_assembly", self.__FW1)
-        self.__fw_2_id = CONFIG_INI.get("filter_wheel_assembly", self.__FW2)
+        self.__fw_1_id = CONFIG_INI.get("light_source_assembly", self.__FW1)
+        self.__fw_2_id = CONFIG_INI.get("light_source_assembly", self.__FW2)
 
         # Initialize each filter wheel
         try:
