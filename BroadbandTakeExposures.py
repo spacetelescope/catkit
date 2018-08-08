@@ -23,14 +23,13 @@ class BroadbandTakeExposures(Experiment):
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 filter_positions=None,
+                 broadband_filter_set="bb_direct_set",
                  dm1_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
                  dm2_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
                  exposure_time=quantity(250, units.microsecond),
                  fpm=FpmPosition.direct,
                  num_exposures=5,
                  camera_type="imaging_camera",
-                 exposure_set_name="direct",
                  pipeline=True,
                  path=None,
                  filename=None,
@@ -47,11 +46,10 @@ class BroadbandTakeExposures(Experiment):
         :param position_list: (list) Postion(s) of the camera
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
-        self.filter_positions = filter_positions
+        self.broadband_filter_set = broadband_filter_set
         self.dm1_command_object = dm1_command_object
         self.dm2_command_object = dm2_command_object
         self.exposure_time = exposure_time
-        self.exposure_set_name = exposure_set_name
         self.fpm = fpm
         self.num_exposures = num_exposures
         self.camera_type = camera_type
@@ -69,31 +67,13 @@ class BroadbandTakeExposures(Experiment):
 
         util.setup_hicat_logging(self.path, "broadband")
 
-        # Establish image type and set the FPM position and laser current.
+        with testbed.dm_controller() as dm:
+            dm.apply_shape_to_both(self.dm1_command_object, self.dm2_command_object)
 
-        coron_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
-        direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
-
-        # Take data at each filter wheel position.
-        with testbed.laser_source() as laser, FilterWheelAssembly("filter_wheel_assembly") as filter_wheels:
-
-            for position in self.filter_positions:
-                filter_wheels.set_filters(position)
-                metadata = MetaDataEntry("Filter Combination Name", "FILTERS", position, "Filter combination")
-                # Reverse lookup.
-                # filters_ini = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_2")
-                #                if entry[0].startswith("filter_")}
-                # filter_name = filters_ini[position]
-
-                with testbed.dm_controller() as dm:
-                    dm.apply_shape_to_both(self.dm1_command_object, self.dm2_command_object)
-
-                    laser.set_current(direct_laser_current)
-                    testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, self.fpm,
-                                              path=os.path.join(self.path, position),
-                                              filename=self.filename,
-                                              exposure_set_name=self.exposure_set_name,
-                                              camera_type=self.camera_type,
-                                              pipeline=self.pipeline,
-                                              extra_metadata=metadata,
-                                              **self.kwargs)
+            testbed.run_hicat_imaging_broadband(self.broadband_filter_set,
+                                                self.exposure_time, self.num_exposures, self.fpm,
+                                                path=self.path,
+                                                filename=self.filename,
+                                                camera_type=self.camera_type,
+                                                pipeline=self.pipeline,
+                                                **self.kwargs)
