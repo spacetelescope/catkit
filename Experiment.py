@@ -44,9 +44,10 @@ class Experiment(object):
             # Check tests before starting experiment.
             for safety_test in self.safety_tests:
                 status, msg = safety_test.check()
-                self.log.info(msg)
                 print(msg)
+                self.log.info(msg)
                 if not status:
+                    print(safety_test.name + " reports unsafe conditions. Aborting experiment...")
                     self.log.error(safety_test.name + " reports unsafe conditions. Aborting experiment...")
                     raise SafetyException()
             self.log.info("Safety tests passed!")
@@ -67,11 +68,15 @@ class Experiment(object):
 
                     elif safety_test.warning:
                             # Shut down the experiment (but allow context managers to exit properly).
+                            print(message)
                             self.log.error(message)
                             util.soft_kill(experiment_process)
                             raise SafetyException()
 
                     else:
+                        print(message)
+                        print("Warning issued for " + safety_test.name +
+                              ". Experiment will be softly killed if safety check fails again.")
                         self.log.warning(message)
                         self.log.warning("Warning issued for " + safety_test.name +
                               ". Experiment will be softly killed if safety check fails again.")
