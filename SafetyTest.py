@@ -43,10 +43,10 @@ class HumidityTemperatureTest(SafetyTest):
     name = "Thorlabs Humidity and Temperature Sensor Safety Test"
     log = logging.getLogger(__name__)
 
-    min_humidity = CONFIG_INI.getint("safety", "min_humidity")
-    max_humidity = CONFIG_INI.getint("safety", "max_humidity")
-    min_temp = CONFIG_INI.getint("safety", "min_temp")
-    max_temp = CONFIG_INI.getint("safety", "max_temp")
+    min_humidity = CONFIG_INI.getfloat("safety", "min_humidity")
+    max_humidity = CONFIG_INI.getfloat("safety", "max_humidity")
+    min_temp = CONFIG_INI.getfloat("safety", "min_temp")
+    max_temp = CONFIG_INI.getfloat("safety", "max_temp")
 
     def check(self):
         if "TSP01GUI.exe" in (p.name() for p in psutil.process_iter()):
