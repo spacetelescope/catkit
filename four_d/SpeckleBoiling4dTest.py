@@ -9,13 +9,13 @@ from astropy.io import fits
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from .Experiment import Experiment
-from .. import util
-from ..config import CONFIG_INI
-from ..hardware import testbed
-from ..hardware.FourDTechnology.Accufiz import Accufiz
-from ..hardware.boston.DmCommand import DmCommand
-from ..hardware.boston.commands import flat_command
+from hicat.experiments.Experiment import Experiment
+from hicat import util
+from hicat.config import CONFIG_INI
+from hicat.hardware import testbed
+from hicat.hardware.FourDTechnology.Accufiz import Accufiz
+from hicat.hardware.boston.DmCommand import DmCommand
+from hicat.hardware.boston.commands import flat_command
 
 class SpeckleBoiling4dTest(Experiment):
     name = "4D Speckle Boiling Test"

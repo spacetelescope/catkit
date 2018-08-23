@@ -11,16 +11,16 @@ import logging
 from poppy import zernike
 from astropy.io import fits
 
-from .modules import zernike as my_zernike_module
-from .Experiment import Experiment
-from ..hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
-from ..hardware.boston.DmCommand import get_flat_map_volts, convert_volts_to_nm
-from ..hardware import testbed
-from ..hardware.FourDTechnology.Accufiz import Accufiz
-from ..config import CONFIG_INI
-from .. import util
-from ..hicat_types import units, quantity
-from .. import wavefront_correction
+from hicat.experiments.modules import zernike as my_zernike_module
+from hicat.experiments.Experiment import Experiment
+from hicat.hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
+from hicat.hardware.boston.DmCommand import get_flat_map_volts, convert_volts_to_nm
+from hicat.hardware import testbed
+from hicat.hardware.FourDTechnology.Accufiz import Accufiz
+from hicat.config import CONFIG_INI
+from hicat import util
+from hicat.hicat_types import units, quantity
+from hicat import wavefront_correction
 
 
 class Dm4dShapeLoop(Experiment):

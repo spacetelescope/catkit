@@ -11,24 +11,26 @@ import logging
 from poppy import zernike
 from astropy.io import fits
 
-from .modules import zernike as my_zernike_module
-from .Experiment import Experiment
-from ..hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
-from ..hardware import testbed
-from ..hardware.FourDTechnology.Accufiz import Accufiz
-from ..config import CONFIG_INI
-from .. import util
-from ..hicat_types import units, quantity
-from .. import wavefront_correction
+from hicat.experiments.Experiment import Experiment
+from hicat.experiments.modules import zernike as my_zernike_module
+from hicat.hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
+from hicat.hardware import testbed
+from hicat.hardware.FourDTechnology.Accufiz import Accufiz
+from hicat.config import CONFIG_INI
+from hicat import util
+from hicat.hicat_types import units, quantity
+from hicat import wavefront_correction
 
 
-class Dm4dZernikeLoop(Experiment):
+class Dm4dMultiZernikeLoop(Experiment):
     name = "Dm 4d Zernike Loop"
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 zernike_index=5,
-                 peak2valley=[100],
+                 first_zernike=5,
+                 second_zernike=4,
+                 first_p2v=[20,40,80,160,320],
+                 second_p2v=[20,40,80,160,320],
                  mask="dm1_detector.mask",
                  num_frames=2,
                  path=None,
@@ -36,16 +38,18 @@ class Dm4dZernikeLoop(Experiment):
                  dm_num=1,
                  rotate=180,
                  fliplr=False,
-                 iterations=15,
-                 damping_ratio=.6,
+                 iterations=10,
+                 damping_ratio=.8,
                  create_zernike_map=True,
                  **kwargs):
 
         if filename is None:
             filename = "4d_"
 
-        self.zernike_index = zernike_index
-        self.peak2valley = peak2valley
+        self.first_zernike = first_zernike
+        self.second_zernike = second_zernike
+        self.first_p2v = first_p2v
+        self.second_p2v = second_p2v
         self.mask = mask
         self.num_frames = num_frames
         self.path = path
@@ -60,10 +64,15 @@ class Dm4dZernikeLoop(Experiment):
 
     def experiment(self):
 
+        # Resolve the names of the zernike indexes, and use them to make paths and filenames.
+        first_zernike_name = zernike.zern_name(self.first_zernike).replace(" ", "_").lower()
+        second_zernike_name = zernike.zern_name(self.second_zernike).replace(" ", "_").lower()
+
+        # Set the path here rather than the constructor, otherwise many experiments end up with the same timestamp.
         if self.path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            zernike_name = zernike.zern_name(self.zernike_index).replace(" ", "_").lower()
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_zernike_loop_" + zernike_name)
+            suffix = "4d_multi_zernike_loop_" + first_zernike_name + "_" + second_zernike_name
+            self.path = util.create_data_path(initial_path=central_store_path, suffix=suffix)
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
@@ -98,23 +107,35 @@ class Dm4dZernikeLoop(Experiment):
                 # Save the DM_Command used.
                 command_object.export_fits(os.path.join(self.path, initial_file_name))
 
-                if isinstance(self.peak2valley, int):
-                    self.peak2valley = [self.peak2valley]
+            # Convert single p2v int values to list form.
+            if isinstance(self.first_p2v, int):
+                self.first_p2v = [self.first_p2v]
 
-                for p2v in self.peak2valley:
+            if isinstance(self.second_p2v, int):
+                self.second_p2v = [self.second_p2v]
+
+            for first_p2v_value in self.first_p2v:
+                for second_p2v_value in self.second_p2v:
                     best_std_deviation = None
                     best_zernike_command = None
-                    p2v_string = str(p2v) + "_nm_p2v"
 
                     # Create the zernike shape.
-                    zernike_1d = util.convert_dm_image_to_command(my_zernike_module.create_zernike(self.zernike_index,p2v))
+                    first_zernike_data = my_zernike_module.create_zernike(self.first_zernike, first_p2v_value)
+                    second_zernike_data = my_zernike_module.create_zernike(self.second_zernike, second_p2v_value)
+                    combined_zernike_1d = util.convert_dm_image_to_command(first_zernike_data + second_zernike_data)
+
+                    # Set up more path strings.
+                    first_folder = first_zernike_name + "_" + str(first_p2v_value) + "_nm"
+                    second_folder = second_zernike_name + "_" + str(second_p2v_value) + "_nm"
 
                     for i in range(self.iterations):
+
                         # Using the actuator_map, find the intensities at each actuator pixel value.
                         image = fits.getdata(image_path)
 
                         print("Finding intensities...")
                         for key, value in actuator_index.items():
+
                             # Create a small circle mask around index, and take the median.
                             actuator_mask = wavefront_correction.circle_mask(image, value[0], value[1], 3)
 
@@ -127,12 +148,11 @@ class Dm4dZernikeLoop(Experiment):
                         # Find the median of all the intensities and bias the zernike.
                         if i == 0:
                             flat_value = np.median(np.array(list(actuator_intensities.values())))
-                            zernike_1d += flat_value
+                            combined_zernike_1d += flat_value
 
-                        # Calculate and print the variance and standard deviation.
+                        # Calculate and print the standard deviation.
                         intensity_values = np.array(list(actuator_intensities.values()))
-                        diff = intensity_values - zernike_1d
-                        print("Variance: ", np.var(diff))
+                        diff = intensity_values - combined_zernike_1d
                         std_deviation = np.std(diff)
                         print("Standard deviation: ", std_deviation)
 
@@ -144,7 +164,7 @@ class Dm4dZernikeLoop(Experiment):
                         print("Generating corrections...")
                         corrected_values = []
                         for key, value in actuator_intensities.items():
-                            correction = quantity(value - zernike_1d[key], units.nanometer).to_base_units().m
+                            correction = quantity(value - combined_zernike_1d[key], units.nanometer).to_base_units().m
 
                             # Apply damping ratio.
                             correction *= self.damping_ratio
@@ -159,25 +179,28 @@ class Dm4dZernikeLoop(Experiment):
                         print("Taking exposures with 4D...")
                         file_name = "iteration{}".format(i)
 
-                        image_path = four_d.take_measurement(path=os.path.join(self.path, p2v_string, file_name),
+                        iteration_path = os.path.join(self.path, first_folder, second_folder, file_name)
+                        image_path = four_d.take_measurement(path=iteration_path,
                                                              filename=file_name,
                                                              rotate=self.rotate,
                                                              num_frames=self.num_frames,
                                                              fliplr=self.fliplr)
 
                         # Save the DM_Command used.
-                        command_object.export_fits(os.path.join(self.path, p2v_string, file_name))
+                        command_object.export_fits(iteration_path)
 
-                if self.create_zernike_map:
-                    iteration_folder_name = "iteration" + str(best_zernike_command)
-                    full_path = os.path.join(self.path, p2v_string, iteration_folder_name, "dm_command", "dm_command_2d.fits")
-                    dm_command_data = fits.getdata(full_path)
+                    if self.create_zernike_map:
+                        iteration_folder_name = "iteration" + str(best_zernike_command)
+                        full_path = os.path.join(self.path, first_folder, second_folder,
+                                                 iteration_folder_name, "dm_command", "dm_command_2d.fits")
+                        dm_command_data = fits.getdata(full_path)
 
-                    # Convert the dm command units to volts.
-                    max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
-                    dm_command_data *= max_volts
+                        # Convert the dm command units to volts.
+                        max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
+                        dm_command_data *= max_volts
 
-                    # Add the Zernike name to the file name.
-                    zernike_name = zernike.zern_name(self.zernike_index) + "_zernike"
-                    filename = zernike_name + "_volts_dm1.fits" if self.dm_num == 1 else zernike_name + "_volts_dm2.fits"
-                    util.write_fits(dm_command_data, os.path.join(self.path, p2v_string, filename))
+                        # Add the Zernike name to the file name.
+                        zernike_name = first_folder + "_" + second_folder
+                        filename = zernike_name + "_dm1" if self.dm_num == 1 else zernike_name + "_dm2"
+                        filename += "_command.fits"
+                        util.write_fits(dm_command_data, os.path.join(self.path, first_folder, second_folder, filename))

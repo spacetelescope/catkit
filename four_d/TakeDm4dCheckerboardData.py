@@ -10,13 +10,13 @@ from astropy.io import fits
 
 from hicat import wavefront_correction
 from hicat.hicat_types import MetaDataEntry
-from .Experiment import Experiment
-from ..hardware.boston.commands import poke_letter_f_command, poke_command, checkerboard_command, flat_command
-from ..hardware import testbed
-from ..hardware.FourDTechnology.Accufiz import Accufiz
-from ..config import CONFIG_INI
-from .. import util
-from ..hicat_types import units, quantity
+from hicat.experiments.Experiment import Experiment
+from hicat.hardware.boston.commands import poke_letter_f_command, poke_command, checkerboard_command, flat_command
+from hicat.hardware import testbed
+from hicat.hardware.FourDTechnology.Accufiz import Accufiz
+from hicat.config import CONFIG_INI
+from hicat import util
+from hicat.hicat_types import units, quantity
 
 
 class TakeDm4dCheckerboardData(Experiment):

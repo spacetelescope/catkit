@@ -12,13 +12,13 @@ from builtins import *
 from photutils import find_peaks
 import shutil
 
-from .Experiment import Experiment
-from .. import util
-from ..config import CONFIG_INI
-from ..hardware import testbed
-from ..hardware.FourDTechnology.Accufiz import Accufiz
-from ..hardware.boston.commands import poke_command, flat_command
-from ..hicat_types import quantity, units
+from hicat.experiments.Experiment import Experiment
+from hicat import util
+from hicat.config import CONFIG_INI
+from hicat.hardware import testbed
+from hicat.hardware.FourDTechnology.Accufiz import Accufiz
+from hicat.hardware.boston.commands import poke_command, flat_command
+from hicat.hicat_types import quantity, units
 
 
 class TakeDm4d952PokeData(Experiment):

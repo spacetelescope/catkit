@@ -8,13 +8,13 @@ import os
 import logging
 from astropy.io import fits
 
-from .Experiment import Experiment
-from ..hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
-from ..hardware import testbed
-from ..hardware.FourDTechnology.Accufiz import Accufiz
-from ..config import CONFIG_INI
-from .. import util
-from ..hicat_types import units, quantity
+from hicat.experiments.Experiment import Experiment
+from hicat.hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
+from hicat.hardware import testbed
+from hicat.hardware.FourDTechnology.Accufiz import Accufiz
+from hicat.config import CONFIG_INI
+from hicat import util
+from hicat.hicat_types import units, quantity
 
 
 class Dm4dActuatorAnalysis(Experiment):
