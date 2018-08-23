@@ -9,14 +9,24 @@ import logging
 
 from ..Experiment import Experiment
 from ...hardware.boston import commands
-from ...hardware import testbed
-from ...config import CONFIG_INI
 from ... import util
-from ...hicat_types import units, quantity, FpmPosition, ImageCentering, MetaDataEntry
-from ..modules.general import take_exposures, take_coffee_data_set
+from ...hicat_types import units, quantity, ImageCentering
+from ..modules.general import take_coffee_data_set
 
 
 class CoffeeCenterPoke(Experiment):
+    """
+    Pokes 4 actuators that stradle the center of the DM, and takes a COFFEE data set.
+
+    Args:
+        path (string): Path to save data set. None will use the default.
+        num_exposures (int): Number of exposures.
+        coron_exp_time (pint quantity): Exposure time for the coronographics data set.
+        direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
+        centering (ImageCentering): Image centering algorithm for the coron data set.
+        **kwargs:
+    """
+
     name = "Coffee Center Poke"
     log = logging.getLogger(__name__)
 
@@ -27,6 +37,7 @@ class CoffeeCenterPoke(Experiment):
                  direct_exp_time=quantity(1, units.millisecond),
                  centering=ImageCentering.custom_apodizer_spots,
                  **kwargs):
+
         self.path = path
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
