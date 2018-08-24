@@ -18,6 +18,22 @@ from hicat.hardware.boston.DmCommand import DmCommand
 from hicat.hardware.boston.commands import flat_command
 
 class SpeckleBoiling4dTest(Experiment):
+    """
+    Loads each iteration of DM commands from a speckle nulling experiemnt, and takes a 4D image.  The data
+    should be analyzed to explore why and when speckle boiling occurs.
+
+    Args:
+        speckle_nulling_path (string): Path to root directory of a speckle nulling experiment.
+        mask (string): Name of mask file located on 4D pc.
+        num_frames (int): Number of frames to take and average on the 4D
+        path (string): Path to store images (default is to central store).
+        filename (string): Filename override
+        dm_num (int): Which DM to apply the pokes to.
+        rotate (int): Amount to rotate images that are returned from 4d (increments of 90).
+        fliplr (bool): Apply a flip left/right to the image returned from the 4d.
+        **kwargs:
+    """
+
     name = "4D Speckle Boiling Test"
     log = logging.getLogger(__name__)
 

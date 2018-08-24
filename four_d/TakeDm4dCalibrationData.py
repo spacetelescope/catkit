@@ -17,6 +17,21 @@ from hicat import util
 
 
 class TakeDm4dCalibrationData(Experiment):
+    """
+    Applies a DM Command and takes a 4D image that also gets a reference subtracted.
+
+    Args:
+        dm_command_object (DmCommand): DmCommand object to apply.
+        mask (string): Name of mask file located on 4D pc.
+        num_frames (int): Number of frames to take and average on the 4D
+        path (string): Path to store images (default is to central store).
+        filename (string): Filename override
+        dm_num (int): Which DM to apply the pokes to.
+        rotate (int): Amount to rotate images that are returned from 4d (increments of 90).
+        fliplr (bool): Apply a flip left/right to the image returned from the 4d.
+        **kwargs: Placeholder.
+    """
+
     name = "Take Dm 4d Calibration Data"
 
     def __init__(self,
@@ -29,6 +44,7 @@ class TakeDm4dCalibrationData(Experiment):
                  rotate=0,
                  fliplr=False,
                  **kwargs):
+
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
             path = util.create_data_path(initial_path=central_store_path, suffix="4d")

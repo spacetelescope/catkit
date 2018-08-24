@@ -9,7 +9,7 @@ import logging
 from astropy.io import fits
 
 from hicat.experiments.Experiment import Experiment
-from hicat.hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
+from hicat.hardware.boston.commands import poke_command, flat_command
 from hicat.hardware import testbed
 from hicat.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
@@ -18,6 +18,25 @@ from hicat.hicat_types import units, quantity
 
 
 class Dm4dActuatorAnalysis(Experiment):
+    """
+    An experiment to collect 4D images of a set of actuators poked at a set of amplitude ranges.  The resulting
+    data could be used to characterize each actuator and create a precise response curve to use in the future
+    as a loop table to apply more realistic commands.  Also would be useful for simulation.
+
+    Args:
+        actuators (list(int)): List of actuators to collect data for.
+        amplitude_range (list(int)): List of amplitudes to iterate over.
+        amplitude_range_units (pint unit): Units of amplitude range (default nanometers)
+        mask (string): Name of mask file located on 4D pc.
+        num_frames (int): Number of frames to take and average on the 4D
+        path (string): Path to store images (default is to central store).
+        filename (string): Filename override
+        dm_num (int): Which DM to apply the pokes to.
+        rotate (int): Amount to rotate images that are returned from 4d (increments of 90).
+        fliplr (bool): Apply a flip left/right to the image returned from the 4d.
+        **kwargs: Placeholder.
+    """
+
     name = "Dm 4d Actuator Analysis"
     log = logging.getLogger(__name__)
 
@@ -33,6 +52,7 @@ class Dm4dActuatorAnalysis(Experiment):
                  rotate=180,
                  fliplr=False,
                  **kwargs):
+
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
             path = util.create_data_path(initial_path=central_store_path, suffix="4d")

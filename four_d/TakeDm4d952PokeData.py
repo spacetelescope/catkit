@@ -22,6 +22,25 @@ from hicat.hicat_types import quantity, units
 
 
 class TakeDm4d952PokeData(Experiment):
+    """
+    Experiment used for creating an actuator mapping used for the other command creating experiments.  Pokes
+    each actuator, takes an image, identifies where the poke occured and generates an index file.
+
+    Args:
+        mask (string): Name of mask file located on 4D pc.
+        num_frames (int): Number of frames to take and average on the 4D
+        path (string): Path to store images (default is to central store).
+        filename (string): Filename override
+        dm_num (int): Which DM to apply the pokes to.
+        rotate (int): Amount to rotate images that are returned from 4d (increments of 90).
+        fliplr (bool): Apply a flip left/right to the image returned from the 4d.
+        show_plot (bool): Plot each of the identified pokes for each iteration.
+        overwrite_csv (bool): Move the newly created index csv file into hicat
+        start_actuator (int): If you wish to resume a crashed experiment, you can skip some actuators with this.
+        reference (bool): Applies a flat and subtracts it from the poked image.
+        **kwargs: Placeholder.
+    """
+
     name = "Take Dm 4d 952 Poke Data"
     log = logging.getLogger(__name__)
 

@@ -22,6 +22,24 @@ from hicat import wavefront_correction
 
 
 class Dm4dFlatMapLoop(Experiment):
+    """
+    Iterates to a flat DM command using the 4D.
+
+    Args:
+        mask (string): Name of mask file located on 4D pc.
+        num_frames (int): Number of frames to take and average on the 4D
+        path (string): Path to store images (default is to central store).
+        filename (string): Filename override
+        dm_num (int): Which DM to apply the pokes to.
+        rotate (int): Amount to rotate images that are returned from 4d (increments of 90).
+        fliplr (bool): Apply a flip left/right to the image returned from the 4d.
+        iterations (int): Number of iterations to flatten the DM.
+        damping_ratio (float): Damping ratio to apply to the flat command applied each iteration.
+        create_flat_map (bool): Create a fits DM command with the best flat map.
+        initial_command_path (string): Path to fits DM command file to load onto the DM as an initial state.
+        **kwargs: Placeholder.
+    """
+
     name = "Dm 4d Flat Map Loop"
     log = logging.getLogger(__name__)
 

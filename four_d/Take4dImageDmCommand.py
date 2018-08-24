@@ -22,6 +22,23 @@ from hicat import wavefront_correction
 
 
 class Take4dImageDmCommand(Experiment):
+    """
+    Simple experiment to load any DMCommand and take a 4D Image.
+
+    Args:
+        mask (string): Name of mask file located on 4D pc.
+        num_frames (int): Number of frames to take and average on the 4D
+        path (string): Path to store images (default is to central store).
+        filename (string): Filename override
+        dm_num (int): Which DM to apply the pokes to.
+        rotate (int): Amount to rotate images that are returned from 4d (increments of 90).
+        fliplr (bool): Apply a flip left/right to the image returned from the 4d.
+        command (DmCommand): DmCommand object to apply.
+        reference_command (DmCommand): DmCommand to use as a reference to subtract from the image.
+        suffix (string): String to append to the folder where the data is stored.
+        **kwargs: Placeholder.
+    """
+
     name = "Take 4d Image DM Command"
     log = logging.getLogger(__name__)
 

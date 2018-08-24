@@ -21,6 +21,23 @@ from hicat.hardware.boston.commands import flat_command
 
 
 class ReproduceDarkZoneTest(Experiment):
+    """
+    Loads a dark zone DM command created by running speckle nulling (or other future experiments), and iterates
+    toward that command in front of a 4D.
+
+    Args:
+        darkzone_command_path (string): Path to a dm command fits that commands a deep dark zone onto the DM.
+        iterations (int): Number of iterations to flatten the DM.
+        mask (string): Name of mask file located on 4D pc.
+        num_frames (int): Number of frames to take and average on the 4D
+        path (string): Path to store images (default is to central store).
+        filename (string): Filename override
+        dm_num (int): Which DM to apply the pokes to.
+        rotate (int): Amount to rotate images that are returned from 4d (increments of 90).
+        fliplr (bool): Apply a flip left/right to the image returned from the 4d.
+        **kwargs: Placeholder
+    """
+
     name = "Reproduce Dark Zone Test"
     log = logging.getLogger(__name__)
 

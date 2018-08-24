@@ -20,6 +20,24 @@ from hicat.hicat_types import units, quantity
 
 
 class TakeDm4dCheckerboardData(Experiment):
+    """
+    Applies a set of 16 checkboard patterns to the DM that in effect pokes every actuator in a more
+    efficient way than the 952 poke experiment.
+
+    Args:
+        amplitude_range (list(int)): list of amplitudes to create commands for.
+        mask (string): Name of mask file located on 4D pc.
+        num_frames (int): Number of frames to take and average on the 4D
+        path (string): Path to store images (default is to central store).
+        filename (string): Filename override
+        dm_num (int): Which DM to apply the pokes to.
+        rotate (int): Amount to rotate images that are returned from 4d (increments of 90).
+        fliplr (bool): Apply a flip left/right to the image returned from the 4d.
+        show_plot (bool): Plot each of the identified pokes for each iteration.
+        overwrite_csv (bool): Move the newly created index csv file into hicat
+        **kwargs: Placeholder.
+    """
+
     name = "Take Dm 4d Checkerboard Data"
 
     def __init__(self,

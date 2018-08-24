@@ -24,6 +24,26 @@ from hicat import wavefront_correction
 
 
 class Dm4dShapeLoop(Experiment):
+    """
+    Iterates to a DM command to match an arbitrary shape (numpy array).
+
+    Args:
+        shape: (numpy array): Numpy shape to iterate the DM to match.
+        amplitude (list(int)): list of amplitudes to create commands for.
+        mask (string): Name of mask file located on 4D pc.
+        num_frames (int): Number of frames to take and average on the 4D
+        path (string): Path to store images (default is to central store).
+        filename (string): Filename override
+        dm_num (int): Which DM to apply the pokes to.
+        rotate (int): Amount to rotate images that are returned from 4d (increments of 90).
+        fliplr (bool): Apply a flip left/right to the image returned from the 4d.
+        iterations (int): Number of iterations to flatten the DM.
+        damping_ratio (float): Damping ratio to apply to the flat command applied each iteration.
+        create_command (bool): Create a fits DM command with the best zernike map.
+        suffix (string): Additional string to append to the folder where the data is stored.
+        **kwargs: Placeholder
+    """
+
     name = "Dm 4d Shape Loop"
     log = logging.getLogger(__name__)
 
