@@ -16,6 +16,22 @@ from ..modules.general import take_coffee_data_set
 
 
 class CoffeeCheckerboardData(Experiment):
+    """
+    Creates a set of checkboard DM commands that will in effect poke every actuator in a more efficient way
+    than poking 1 at a time.
+
+    Args:
+        amplitude (pint quantity): Amplitude to apply to each poke.
+        direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
+        coron_exp_time (pint quantity): Exposure time for the coronographics data set.
+        num_exposures (int): Number of exposures.
+        path (string): Path to save data set. None will use the default.
+        camera_type (string): Which camera to use, matches values in the ini file.
+        focus_zernike_data_path (string): Defaults to high quality focus commands created in front of the 4d.
+        centering (ImageCentering): Image centering algorithm for the coron data set.
+        **kwargs:
+    """
+
     name = "Coffee Checkerboard Data"
     log = logging.getLogger(__name__)
 

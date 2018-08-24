@@ -25,6 +25,17 @@ class CoffeeDm1OffFocus(Experiment):
                  direct_exp_time=quantity(1, units.millisecond),
                  centering=ImageCentering.custom_apodizer_spots,
                  **kwargs):
+        """
+        Takes a coffee data set with DM1 off (no voltage).
+
+        Args:
+            path (string): Path to save data set. None will use the default.
+            num_exposures (int): Number of exposures.
+            coron_exp_time (pint quantity): Exposure time for the coronographics data set.
+            direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
+            centering (ImageCentering): Image centering algorithm for the coron data set.
+            **kwargs: Keyword arguments passed into run_hicat_imaging()
+        """
         self.path = path
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time

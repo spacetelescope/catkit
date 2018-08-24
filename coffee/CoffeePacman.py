@@ -16,7 +16,20 @@ from ..modules.general import take_coffee_data_set
 
 
 class CoffeePacman(Experiment):
-    name = "Coffee Pacman (nom nomn nom)"
+    """
+    Takes COFFEE data sets for an set of PACMAN images based on an animated GIF.
+
+
+    Args:
+        path (string): Path to save data set. None will use the default.
+        num_exposures (int): Number of exposures.
+        coron_exp_time (pint quantity): Exposure time for the coronographics data set.
+        direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
+        centering (ImageCentering): Image centering algorithm for the coron data set.
+        **kwargs: Keyword arguments passed into run_hicat_imaging()
+    """
+
+    name = "Coffee Pacman (nom nom nom)"
     log = logging.getLogger(__name__)
 
     def __init__(self,
@@ -26,6 +39,7 @@ class CoffeePacman(Experiment):
                  direct_exp_time=quantity(1, units.millisecond),
                  centering=ImageCentering.custom_apodizer_spots,
                  **kwargs):
+
         self.path = path
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time

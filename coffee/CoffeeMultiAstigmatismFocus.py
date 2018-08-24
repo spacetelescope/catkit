@@ -14,6 +14,19 @@ from ..modules.general import take_coffee_data_set
 
 
 class CoffeeMultiAstigmatismFocus(Experiment):
+    """
+    Uses a set of high quality commands created in front of the 4d that combined astigmatism and focus into
+    a single DM command.
+
+    Args:
+        path (string): Path to save data set. None will use the default.
+        num_exposures (int): Number of exposures.
+        coron_exp_time (pint quantity): Exposure time for the coronographics data set.
+        direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
+        centering (ImageCentering): Image centering algorithm for the coron data set.
+        **kwargs: Keyword arguments passed into run_hicat_imaging()
+    """
+
     name = "Coffee Multi Astigmatism Focus"
     log = logging.getLogger(__name__)
 
@@ -24,6 +37,7 @@ class CoffeeMultiAstigmatismFocus(Experiment):
                  direct_exp_time=quantity(1, units.millisecond),
                  centering=ImageCentering.custom_apodizer_spots,
                  **kwargs):
+
         self.path = path
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time

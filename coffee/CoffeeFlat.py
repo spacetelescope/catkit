@@ -14,6 +14,19 @@ from ..modules.general import take_coffee_data_set
 
 
 class CoffeeFlat(Experiment):
+    """
+    DM1 is set to it's flatmap, and a COFFEE data set is taken.
+
+    Args:
+        path (string): Path to save data set. None will use the default.
+        num_exposures (int): Number of exposures.
+        coron_exp_time (pint quantity): Exposure time for the coronographics data set.
+        direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
+        centering (ImageCentering): Image centering algorithm for the coron data set.
+        pipeline (bool): Flag that determines whether to run the realtime data pipeline.
+        **kwargs: Keyword arguments passed into run_hicat_imaging()
+    """
+
     name = "Coffee Flat"
     log = logging.getLogger(__name__)
 
@@ -25,6 +38,7 @@ class CoffeeFlat(Experiment):
                  centering=ImageCentering.custom_apodizer_spots,
                  pipeline=True,
                  **kwargs):
+
         self.path = path
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time

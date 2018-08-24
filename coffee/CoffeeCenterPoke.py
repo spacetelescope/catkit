@@ -24,7 +24,7 @@ class CoffeeCenterPoke(Experiment):
         coron_exp_time (pint quantity): Exposure time for the coronographics data set.
         direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
         centering (ImageCentering): Image centering algorithm for the coron data set.
-        **kwargs:
+        **kwargs: Keyword arguments passed into run_hicat_imaging()
     """
 
     name = "Coffee Center Poke"

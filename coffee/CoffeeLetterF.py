@@ -15,6 +15,18 @@ from ..modules.general import take_coffee_data_set
 
 
 class CoffeeLetterF(Experiment):
+    """
+    Applies a command to DM1 in the form of the letter F, and takes a COFFEE data set. Used for orientation.
+
+    Args:
+        path (string): Path to save data set. None will use the default.
+        num_exposures (int): Number of exposures.
+        coron_exp_time (pint quantity): Exposure time for the coronographics data set.
+        direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
+        centering (ImageCentering): Image centering algorithm for the coron data set.
+        **kwargs: Keyword arguments passed into run_hicat_imaging()
+    """
+
     name = "Coffee Letter F"
     log = logging.getLogger(__name__)
 
