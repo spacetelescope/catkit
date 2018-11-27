@@ -64,3 +64,19 @@ def build_message(cmd_func, cmd_type, chan, value=None):
 
     return msg
 
+
+## -- MAIN with ex
+
+if __name__ == "__main__":
+    dev = usb.core.find()
+    assert dev != None, "Turn on the device you knucklehead."
+    
+    read_msg = build_message('loop', 'read', 1)
+    cmd_msg = build_message('loop', 'write', 1, 1)
+
+    dev.write(0x02, read_msg, 100)
+
+
+    # This usually takes three tries actually?
+    dev.read(0x81, 100, 1000)
+
