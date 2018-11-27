@@ -60,7 +60,7 @@ def build_message(cmd_func, cmd_type, chan, value=None):
             
             val = struct.pack('<f', float(value))
 
-        msg = b'\xa2', addr[:4] + val + b'\x55'
+        msg = b'\xa2' + addr[:4] + val + b'\x55'
 
     return msg
 
