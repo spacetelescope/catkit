@@ -71,20 +71,68 @@ def build_message(cmd_func, cmd_type, chan, value=None):
 
 class Controller:
 
+    """Controller connection class. 
+
+    This Controller class acts as a useful connection and storage vehicle 
+    for commands sent to the controller. It has built in functions that 
+    allow for writing commands, checking the status, etc. By instantiating
+    the Controller object you find the connected usb controller and set
+    the default configuration. Memory managers in the back end should
+    close the connection when the time is right.
+
+    """
+
     
     def __init__(self):
+
+        """ Initial function to find device, set the config, make sure 
+        it exists, and start a record of the command history."""
+
         self.dev = usb.core.find()
-        #assert self.dev != None, "Go get the device sorted you knucklehead."
-        #self.dev.set_configuration()
+        assert self.dev != None, "Go get the device sorted you knucklehead."
+        self.dev.set_configuration()
         self.history = {}
 
-
     def check_config(self):
+        """Checks the feasible configurations for the device."""
+        
         for cfg in self.dev:
             print(cfg)
-    
-    
+        
     def build_message(self, cmd_key, cmd_type, chan, value=None):
+        """Builds the message to send to the controller. The messages
+        must be 10 or 6 bytes, in significance increasing order -- which 
+        for some godawful reason means backwards but sorted into bytes. 
+
+        The format of the message to write to a new location is :
+        [1 byte type (0xA2)] [4 byte address] [4 byte int/first half of float] 
+        [1 byte sign off (0x55)]
+        
+        To write something else to the same location :
+        [1 byte type (0xA3)] [4 byte message (second half of float)] 
+        [1 byte sign off]
+
+        To read from a location : 
+        [1 byte type (0xA4)] [4 byte address] [4 byte numReads][1 byte sign off]
+        
+        Parameters
+        ----------
+        cmd_key : str
+            The key to point toward the p/i/d_gain or loop.
+        cmd_type : str  
+            Either "read" to read a message or "write" to write a command.
+        chan : int
+            1 or 2 for which channel.
+        value : int/float, optional
+            If it's writing a command, what value to set it to. This 
+            will fail if it needs a value and is not given one.
+
+        Returns
+        -------
+        message : array of bytes
+            An array of bytes messages. One if it's a simple read/write, 
+            or two if it needs to write a float and use two messages.
+        """
         
         cmd_dict = {'loop': 84, 'p_gain': 720, 'i_gain': 728, 'd_gain': 730}
 
@@ -124,14 +172,35 @@ class Controller:
         
         return message
 
-    
     def send_message(self, msg):
-        
-        self.dev.write(0x02, msg, 100)
-        
+        """Send the message to the controller.
 
-    def read_response(self, timer=False):
+        Parameters
+        ----------
+        msg : array of bytes
+            A controller ready message or messages.
+        """
+        for message in msg:
+            self.dev.write(0x02, msg, 100)
         
+    def read_response(self, timer=False):
+        """Read response from controller.
+
+        Parameters
+        ----------
+        timer : bool, optional 
+            Whether or not to return the tries and timing info.
+
+        Returns
+        -------
+        value : int/float
+            The int or float being sent.
+        time_elapsed : float
+            How long it took to read.
+        tries : int
+            How many times it checked the message.
+        """
+
         resp = ''
         tries = 0
         
@@ -158,9 +227,21 @@ class Controller:
         else:
             return value
 
-
     def check_status(self, chan):
-        
+        """Checks the status of the loop, and p/i/d_gain for 
+        the specified channel.
+
+        Parameters
+        ----------
+        chan : int
+            The channel to check.
+
+        Returns
+        -------
+        value_dict : dict
+            A dictionary with a setting for each parameter.
+        """
+
         read_msg = {'p_gain': build_message('p_gain', 'read', chan),
                     'i_gain': build_message('i_gain', 'read', chan),
                     'd_gain': build_message('d_gain', 'read', chan),
@@ -171,12 +252,35 @@ class Controller:
         for key in read_msg:
             self.send_message(read_msg[key])
             value = self.read_response()
-            print("For parameter : {} the value is {}".format(key, value)
+            print("For parameter : {} the value is {}".format(key, value))
             value_dict[key] = value
-
 
         return value_dict 
 
+    def command(self, cmd_key, chan, value):
+        """Function to send a command to the controller and read back 
+        to make sure it matches. 
+
+        Parameters
+        ----------
+        cmd_key : str
+            Whether to set the "loop" or "p/i/d_gain".
+        chan : int
+            What channel to set.
+        value : int/flot
+            What value to set.
+        """
+
+        write_message = self.build_message(cmd_key, "write", chan, value)
+        read_message = self.build_message(cmd_key, "read", chan, value)
+
+        self.send_message(write_message)
+        self.send_message(read_message)
+        set_value, time_elapsed, tries = self.read_response(timer=True)
+        
+        print('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
+
+        assert set_value == value, "The value set does not match the command sent."
 
 ## -- MAIN with ex
 
