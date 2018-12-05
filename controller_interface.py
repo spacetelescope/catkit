@@ -140,7 +140,8 @@ class Controller:
         addr = '0x{}'.format(addr)
         addr = struct.pack('<Q', int(addr, 16))
 
-        # Now build message or messages []
+        # Now build message or messages 
+        message = []
 
         if cmd_type == 'read':
             if value != None:
@@ -156,16 +157,16 @@ class Controller:
 
                 # Convert to hex
                 val = struct.pack('<I', value)
-                message.append(b'\xa2' + addr[:4] + val + '\x55')
+                message.append(b'\xa2' + addr[:4] + val + b'\x55')
 
-            if cmd_key = ['p_gain', 'i_gain', 'd_gain']:
+            if cmd_key in ['p_gain', 'i_gain', 'd_gain']:
                 
                 
                 # Convert to hex double (64 bit)
                 val = struct.pack('<d', float(value))
 
-                message.append(b'\xa4' + addr[:4] + val[:4] + '\x55')
-                message.append(b'\xa3' + val[4:] + '\x55')
+                message.append(b'\xa4' + addr[:4] + val[:4] + b'\x55')
+                message.append(b'\xa3' + val[4:] + b'\x55')
 
         
         self.history[str(time.time())] = message
@@ -181,7 +182,7 @@ class Controller:
             A controller ready message or messages.
         """
         for message in msg:
-            self.dev.write(0x02, msg, 100)
+            self.dev.write(0x02, message, 100)
         
     def read_response(self, timer=False):
         """Read response from controller.
@@ -207,11 +208,11 @@ class Controller:
         
         start = time.time()
         while len(resp) < 4 and tries < 10:
-            resp = self.dev.read(0x81, 100, 2000)
-        
+            resp = self.dev.read(0x81, 100, 100) 
+            tries += 1 
         time_elapsed = time.time() - start
 
-        addr = rep[3:7]
+        addr = resp[3:7]
         address = struct.unpack('<I', addr)
         val = resp[7:-1]
         if len(val) == 4:
@@ -242,10 +243,10 @@ class Controller:
             A dictionary with a setting for each parameter.
         """
 
-        read_msg = {'p_gain': build_message('p_gain', 'read', chan),
-                    'i_gain': build_message('i_gain', 'read', chan),
-                    'd_gain': build_message('d_gain', 'read', chan),
-                    'loop': build_message('loop', 'read', chan)}
+        read_msg = {'p_gain': self.build_message('p_gain', 'read', chan),
+                    'i_gain': self.build_message('i_gain', 'read', chan),
+                    'd_gain': self.build_message('d_gain', 'read', chan),
+                    'loop': self.build_message('loop', 'read', chan)}
         
         value_dict = {}
         print("For channel {}.".format(chan))
@@ -279,12 +280,11 @@ class Controller:
         set_value, time_elapsed, tries = self.read_response(timer=True)
         
         print('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
-
-        assert set_value == value, "The value set does not match the command sent."
+        print(set_value, value)
+        #assert set_value == value, "The value set does not match the command sent."
 
 ## -- MAIN with ex
-
-if __name__ == "__main__":
+""" if __name__ == "__main__":
     dev = usb.core.find()
     assert dev != None, "Turn on the device you knucklehead."
     
@@ -296,4 +296,4 @@ if __name__ == "__main__":
 
     # This usually takes three tries actually?
     dev.read(0x81, 100, 1000)
-
+"""
