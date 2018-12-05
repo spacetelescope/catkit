@@ -109,7 +109,7 @@ class Controller:
                 # Convert to hex double (64 bit)
                 val = struct.pack('<d', float(value))
 
-                message.append(b'\xa4' + addr[:4] + val[:4] + b'\x55')
+                message.append(b'\xa2' + addr[:4] + val[:4] + b'\x55')
                 message.append(b'\xa3' + val[4:] + b'\x55')
 
         
