@@ -86,7 +86,7 @@ class Controller:
         self.history = {}
     
     @usb_except
-    def check_config(self):
+    def get_config(self):
         """Checks the feasible configurations for the device."""
         
         for cfg in self.dev:
@@ -94,7 +94,7 @@ class Controller:
             self.logger.info(cfg)
         
     @usb_except
-    def build_message(self, cmd_key, cmd_type, chan, value=None):
+    def build_message(self, cmd_key, cmd_type, channel, value=None):
         """Builds the message to send to the controller. The messages
         must be 10 or 6 bytes, in significance increasing order (little 
         endian) -- which 
@@ -116,8 +116,8 @@ class Controller:
         cmd_key : str
             The key to point toward the p/i/d_gain or loop.
         cmd_type : str  
-            Either "read" to read a message or "write" to write a command.
-        chan : int
+            Either "get" to return a message or "set" to write a command.
+        channel : int
             1 or 2 for which channel.
         value : int/float, optional
             If it's writing a command, what value to set it to. This 
@@ -126,26 +126,29 @@ class Controller:
         Returns
         -------
         message : array of bytes
-            An array of bytes messages. One if it's a simple read/write, 
-            or two if it needs to write a float and use two messages.
+            An array of bytes messages. One if it's call to get a value 
+            or a simple int message, or two if it needs to write a float 
+            and use two messages.
         """
         
         cmd_dict = {'loop': 84, 'p_gain': 720, 'i_gain': 728, 'd_gain': 730}
 
-        addr = 11830000 + 1000*chan + cmd_dict[cmd_key]
+        addr = 11830000 + 1000*channel + cmd_dict[cmd_key]
         addr = '0x{}'.format(addr)
+        
+        # Note that the < specifies the little endian/signifigance increasing order here
         addr = struct.pack('<Q', int(addr, 16))
 
         # Now build message or messages 
         message = []
 
-        if cmd_type == 'read':
+        if cmd_type == 'get':
             if value != None:
                 warnings.warn('You specified a value but nothing will happen to it.')
             
             message.append(b'\xa4' + addr[:4] + b'\x02\x00\x00\x00\x55')
 
-        if cmd_type == 'write':
+        elif cmd_type == 'set':
             if value == None:
                 self.logger.error('There was no value set for this command.')
                 raise NameError("Value is required.")
@@ -186,7 +189,7 @@ class Controller:
         for message in msg:
             self.dev.write(0x02, message, 100)
         
-    def read_response(self, loop, return_timer=False):
+    def read_response(self, loop, return_timer=False, max_tries=10):
         """Read response from controller.
 
         Parameters
@@ -196,6 +199,8 @@ class Controller:
             will affect what data type we expect out of it.
         return_timer : bool, optional 
             Whether or not to return the tries and timing info.
+        max_tries : int, optional
+            How many times to check for a response. Set to 10.
 
         Returns
         -------
@@ -212,7 +217,9 @@ class Controller:
         tries = 0
         
         start = time.time()
-        while len(resp) < 4 and tries < 10:
+        
+        # The junk message is 3 characters, so look for a longer one.
+        while len(resp) < 4 and tries < max tries:
             resp = self.dev.read(0x81, 100, 1000) 
             tries += 1 
         time_elapsed = time.time() - start
@@ -235,13 +242,13 @@ class Controller:
             return value
     
     @usb_except
-    def check_status(self, chan):
+    def get_status(self, channel):
         """Checks the status of the loop, and p/i/d_gain for 
         the specified channel.
 
         Parameters
         ----------
-        chan : int
+        channel : int
             The channel to check.
 
         Returns
@@ -250,10 +257,10 @@ class Controller:
             A dictionary with a setting for each parameter.
         """
 
-        read_msg = {'p_gain': self.build_message('p_gain', 'read', chan),
-                    'i_gain': self.build_message('i_gain', 'read', chan),
-                    'd_gain': self.build_message('d_gain', 'read', chan),
-                    'loop': self.build_message('loop', 'read', chan)}
+        read_msg = {'p_gain': self.build_message('p_gain', 'read', channel),
+                    'i_gain': self.build_message('i_gain', 'read', channel),
+                    'd_gain': self.build_message('d_gain', 'read', channel),
+                    'loop': self.build_message('loop', 'read', channel)}
         
         value_dict = {}
         self.logger.info("For channel {}.".format(chan))
@@ -266,7 +273,7 @@ class Controller:
         return value_dict 
 
     @usb_except
-    def command(self, cmd_key, chan, value):
+    def command(self, cmd_key, channel, value):
         """Function to send a command to the controller and read back 
         to make sure it matches. 
 
@@ -274,17 +281,17 @@ class Controller:
         ----------
         cmd_key : str
             Whether to set the "loop" or "p/i/d_gain".
-        chan : int
+        channel : int
             What channel to set.
         value : int/flot
             What value to set.
         """
 
-        write_message = self.build_message(cmd_key, "write", chan, value)
-        read_message = self.build_message(cmd_key, "read", chan, value)
+        set_message = self.build_message(cmd_key, "set", channel, value)
+        get_message = self.build_message(cmd_key, "get", channel, value)
 
-        self.send_message(write_message)
-        self.send_message(read_message)
+        self.send_message(set_message)
+        self.send_message(get_message)
         set_value, time_elapsed, tries = self.read_response(cmd_key=='loop',return_timer=True)
         
         self.logger.info('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
