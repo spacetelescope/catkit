@@ -77,7 +77,7 @@ class Controller:
         self.logger.info('Logging starting up...')
         
         # Instantiate the device
-        self.dev = usb.core.find()
+        self.dev = usb.core.find(idVendor=6014, idProduct=4083)
         if self.dev == None:
             logger.error('There was no device.')
             raise NameError("Go get the device sorted you knucklehead.")
