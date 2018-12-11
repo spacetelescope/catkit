@@ -6,6 +6,7 @@ import struct
 import time
 import warnings
 
+from numpy as import double
 import usb.core
 from usb.core import USBError
 import usb.util
@@ -18,87 +19,77 @@ def usb_except(function):
     """Decorator that catches PyUSB errors."""
 
     @functools.wraps(function)
-    def wrapper(*args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         try:
-            return function(*args, **kwargs)
+            return function(self, *args, **kwargs)
         except USBError as e:
-            args[0].logger.error("There's a timeout or a busy resource.")
-            args[0].logger.error("We'll try to reinstantiate the object.")
-            try:
-                usb.util.dispse_resource(args[0].dev)
-                args[0].dev.clear_halt()
-                args[0].dev.reset()
-                args[0].__init__()
-                args[0].logger.error("We re-initialized the device and it worked!")
-
-            except USBError as e:
-                args[0].logger.error("Alas we are powerless for this reason : {}".format(e))
-                args[0].logger.error("You need to restart the physical controller and start over.")
+            self.logger.error("There's a timeout or a busy resource.")
         
     return wrapper
 
 
-class Controller:
+class Controller(logging_on=True, log_file='controller_interface_log.txt', 
+                 log_to_screen=True):
 
     """Controller connection class. 
 
     This Controller class acts as a useful connection and storage vehicle 
-    for commands sent to the controller. It has built in functions that 
-    allow for writing commands, checking the status, etc. By instantiating
-    the Controller object you find the connected usb controller and set
-    the default configuration. Memory managers in the back end should
-    close the connection when the time is right.
-
+    for commands sent to the nPoint FTID LC400 controller. It has built in 
+    functions that allow for writing commands, checking the status, etc. 
+    By instantiating the Controller object you find the LC400 controller 
+    and set the default configuration. Memory managers in the back end 
+    should close the connection when the time is right.
+    
+    Parameters
+    ----------
+    logging_on : bool, optional
+        Whether or not to turn on logging. Set to True.
+    log_file : str, optional
+        The name of the log file out. Set to 'controller_interface_log.txt'.
+    log_to_screen : bool, optional
+        Whether or not to print logging to the screen as well. Set to True.
+    
     """
 
     @usb_except
-    def __init__(self):
+    def __init__(self, logging_on, log_file, log_to_screen):
 
-        """ Initial function to configure logging, find device, 
-        set the config, make sure 
-        it exists, and start a record of the command history."""
+        """Initial function to configure logging."""
         
-
         # Set up logging
-        self.logger = logging.getLogger()
-        self.logger.setLevel(logging.DEBUG)
+        if logging_on:
+            self.__start_logger(log_file, log_to_screen)
 
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-
-        fh = logging.FileHandler('controller_interface_log.txt')
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
-
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
-        self.logger.info('Logging starting up...')
+    @usb_except
+    def __enter__(self):
+        """ Enter function to find device, set it to the default 
+        configuration, and make sure it exists."""
         
         # Instantiate the device
-        self.dev = usb.core.find(idVendor=6014, idProduct=4083)
+        # Vendor ID and Product ID for our specific controller for now
+        vendor_id = 6014
+        product_id = 4083
+        self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
         if self.dev == None:
             logger.error('There was no device.')
             raise NameError("Go get the device sorted you knucklehead.")
         self.logger.info('Controller instantiated.')
-        self.dev.set_configuration()
-        self.history = {}
+        
+        # Set to default configuration -- for LC400 this is the right one.
+        self.dev.set_configuration(log_file)
     
     @usb_except
-    def get_config(self):
-        """Checks the feasible configurations for the device."""
-        
-        for cfg in self.dev:
-            self.logger.info('Device config : ')
-            self.logger.info(cfg)
-        
+    def __exit__(self):
+        """ Exit function to open loop and do other things someday?"""
+        for channel in [1, 2]:
+            for key in ["loop"] #"p_gain", "i_gain", "d_gain"
+                self.command(key, channel, 0)
+
     @usb_except
-    def build_message(self, cmd_key, cmd_type, channel, value=None):
+    def __build_message(self, cmd_key, cmd_type, channel, value=None):
         """Builds the message to send to the controller. The messages
         must be 10 or 6 bytes, in significance increasing order (little 
-        endian) -- which 
-        for some godawful reason means backwards but sorted into bytes. 
+        endian.) 
 
         The format of the message to write to a new location is :
         [1 byte type (0xA2)] [4 byte address] [4 byte int/first half of float] 
@@ -162,34 +153,23 @@ class Controller:
                 val = struct.pack('<I', value)
                 message.append(b'\xa2' + addr[:4] + val + b'\x55')
 
-            if cmd_key in ['p_gain', 'i_gain', 'd_gain']:
-                if type(value) not in [int, float]:
+            elif cmd_key in ['p_gain', 'i_gain', 'd_gain']:
+                if type(value) not in [int, float, double]:
                     self.logger.error('Gain requires float/int value.')
                     raise TypeError("Int or float value is required for gain.")
                 
                 # Convert to hex double (64 bit)
-                val = struct.pack('<d', float(value))
+                val = struct.pack('<d', value)
 
                 message.append(b'\xa2' + addr[:4] + val[:4] + b'\x55')
                 message.append(b'\xa3' + val[4:] + b'\x55')
         
-        self.history[str(time.time())] = message
+        else:
+            raise ValueError("cmd_type must be 'loop' or 'p/i/d_gain'.")
         
         return message
-
-    @usb_except
-    def send_message(self, msg):
-        """Send the message to the controller.
-
-        Parameters
-        ----------
-        msg : array of bytes
-            A controller ready message or messages.
-        """
-        for message in msg:
-            self.dev.write(0x02, message, 100)
-        
-    def read_response(self, loop, return_timer=False, max_tries=10):
+    
+    def __read_response(self, loop, return_timer=False, max_tries=10):
         """Read response from controller.
 
         Parameters
@@ -219,7 +199,7 @@ class Controller:
         start = time.time()
         
         # The junk message is 3 characters, so look for a longer one.
-        while len(resp) < 4 and tries < max tries:
+        while len(resp) < 4 and tries < max_tries:
             resp = self.dev.read(0x81, 100, 1000) 
             tries += 1 
         time_elapsed = time.time() - start
@@ -242,36 +222,50 @@ class Controller:
             return value
     
     @usb_except
-    def get_status(self, channel):
-        """Checks the status of the loop, and p/i/d_gain for 
-        the specified channel.
+    def __send_message(self, msg):
+        """Send the message to the controller.
 
         Parameters
         ----------
-        channel : int
-            The channel to check.
-
-        Returns
-        -------
-        value_dict : dict
-            A dictionary with a setting for each parameter.
+        msg : array of bytet_
+            A controller ready message or messages.
         """
-
-        read_msg = {'p_gain': self.build_message('p_gain', 'read', channel),
-                    'i_gain': self.build_message('i_gain', 'read', channel),
-                    'd_gain': self.build_message('d_gain', 'read', channel),
-                    'loop': self.build_message('loop', 'read', channel)}
         
-        value_dict = {}
-        self.logger.info("For channel {}.".format(chan))
-        for key in read_msg:
-            self.send_message(read_msg[key])
-            value = self.read_response(key=='loop')
-            self.logger.info("For parameter : {} the value is {}".format(key, value))
-            value_dict[key] = value
+        endpoint = 0x02
+        timeout = 100
+        for message in msg:
+            self.dev.write(endpoint, message, timeout)
+        
+    def __start_logger(self, log_file, log_to_screen):
+        """ Start up logging for the use of the controller class.
 
-        return value_dict 
+        Parameters
+        ----------
+        log_file : str
+            The name of the log file.
+        log_to_screen : bool
+            Whether or not to print logs to the screen.
+        """
+ex
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.DEBUG)
 
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        with logging.FileHandler(log_file) as fh:
+            fh.setLevel(logging.DEBUG)
+            fh.setFormatter(formatter)
+            self.logger.addHandler(fh)
+        
+        if log_to_screen:
+
+            with logging.StreamHandler() as ch:
+                ch.setLevel(logging.DEBUG)
+                ch.setFormatter(formatter)
+                self.logger.addHandler(ch)
+        
+        self.logger.info('Logging starting up...')
+        
+    
     @usb_except
     def command(self, cmd_key, channel, value):
         """Function to send a command to the controller and read back 
@@ -287,12 +281,12 @@ class Controller:
             What value to set.
         """
 
-        set_message = self.build_message(cmd_key, "set", channel, value)
-        get_message = self.build_message(cmd_key, "get", channel, value)
+        set_message = self.__build_message(cmd_key, "set", channel, value)
+        get_message = self.__build_message(cmd_key, "get", channel, value)
 
-        self.send_message(set_message)
-        self.send_message(get_message)
-        set_value, time_elapsed, tries = self.read_response(cmd_key=='loop',return_timer=True)
+        self.__send_message(set_message)
+        self.__send_message(get_message)
+        set_value, time_elapsed, tries = self.__read_response(cmd_key='loop',return_timer=True)
         
         self.logger.info('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
         if value == set_value:
@@ -300,6 +294,46 @@ class Controller:
         else:
             self.logger.info('Command NOT successful : {} != {}.'.format(value, set_value))
         
+    @usb_except
+    def get_config(self):
+        """Checks the feasible configurations for the device."""
+        
+        for cfg in self.dev:
+            self.logger.info('Device config : ')
+            self.logger.info(cfg)
+        
+
+    @usb_except
+    def get_status(self, channel):
+        """Checks the status of the loop, and p/i/d_gain for 
+        the specified channel.
+
+        Parameters
+        ----------
+        channel : int
+            The channel to check.
+
+        Returns
+        -------
+        value_dict : dict
+            A dictionary with a setting for each parameter.
+        """
+
+        read_msg = {'p_gain': self.__build_message('p_gain', 'read', channel),
+                    'i_gain': self.__build_message('i_gain', 'read', channel),
+                    'd_gain': self.__build_message('d_gain', 'read', channel),
+                    'loop': self.__build_message('loop', 'read', channel)}
+        
+        value_dict = {}
+        self.logger.info("For channel {}.".format(chan))
+        for key in read_msg:
+            self.__send_message(read_msg[key])
+            value = self.__read_response(key='loop')
+            self.logger.info("For parameter : {} the value is {}".format(key, value))
+            value_dict[key] = value
+
+        return value_dict 
+
 
 
 ## -- MAIN with ex
