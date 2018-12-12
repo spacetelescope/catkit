@@ -171,6 +171,16 @@ class Controller(logging_on=True, log_file='controller_interface_log.txt',
         return message
     
     def __logger(self, log_type, message):
+        """Adds to the logger if has not been set to None.
+
+        Parameters
+        ----------
+        log_type : str
+            Either "info" or "error" for what kind of log message to record.
+        message : str
+            The message to record.
+        """
+        
         if log_type not in ["info", "error"]:
             raise ValueError("This requires 'info' or 'error' as input.")
         if self.logger != None:
@@ -179,7 +189,6 @@ class Controller(logging_on=True, log_file='controller_interface_log.txt',
             elif log_type == "error":
                 self.logger.error(message)
 
-    
     def __read_response(self, loop, return_timer=False, max_tries=10):
         """Read response from controller.
 
