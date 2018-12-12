@@ -23,7 +23,7 @@ def usb_except(function):
         try:
             return function(self, *args, **kwargs)
         except USBError as e:
-            self.logger.error("There's a timeout or a busy resource.")
+            self.__logger('error', "There's a timeout or a busy resource.")
         
     return wrapper
 
@@ -59,6 +59,7 @@ class Controller(logging_on=True, log_file='controller_interface_log.txt',
         # Set up logging
         if logging_on:
             self.__start_logger(log_file, log_to_screen)
+        self.logger = None
 
     @usb_except
     def __enter__(self):
@@ -71,9 +72,9 @@ class Controller(logging_on=True, log_file='controller_interface_log.txt',
         product_id = 4083
         self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
         if self.dev == None:
-            logger.error('There was no device.')
+           self. __logger('error', 'There was no device.')
             raise NameError("Go get the device sorted you knucklehead.")
-        self.logger.info('Controller instantiated.')
+        self.__logger('info', 'Controller instantiated.')
         
         # Set to default configuration -- for LC400 this is the right one.
         self.dev.set_configuration(log_file)
@@ -141,12 +142,12 @@ class Controller(logging_on=True, log_file='controller_interface_log.txt',
 
         elif cmd_type == 'set':
             if value == None:
-                self.logger.error('There was no value set for this command.')
+                self.__logger('error', 'There was no value set for this command.')
                 raise NameError("Value is required.")
 
             if cmd_key == 'loop':
                 if value not in [1,0]:
-                    self.logger.error('Loop requires a 1/0 value.')
+                    self.__logger('error', 'Loop requires a 1/0 value.')
                     raise ValueError("1 or 0 value is required for loop.")
 
                 # Convert to hex
@@ -155,7 +156,7 @@ class Controller(logging_on=True, log_file='controller_interface_log.txt',
 
             elif cmd_key in ['p_gain', 'i_gain', 'd_gain']:
                 if type(value) not in [int, float, double]:
-                    self.logger.error('Gain requires float/int value.')
+                    self.__logger('error', 'Gain requires float/int value.')
                     raise TypeError("Int or float value is required for gain.")
                 
                 # Convert to hex double (64 bit)
@@ -168,6 +169,16 @@ class Controller(logging_on=True, log_file='controller_interface_log.txt',
             raise ValueError("cmd_type must be 'loop' or 'p/i/d_gain'.")
         
         return message
+    
+    def __logger(self, log_type, message):
+        if log_type not in ["info", "error"]:
+            raise ValueError("This requires 'info' or 'error' as input.")
+        if self.logger != None:
+            if log_type == "info":
+                self.logger.info(message)
+            elif log_type == "error":
+                self.logger.error(message)
+
     
     def __read_response(self, loop, return_timer=False, max_tries=10):
         """Read response from controller.
@@ -263,7 +274,7 @@ ex
                 ch.setFormatter(formatter)
                 self.logger.addHandler(ch)
         
-        self.logger.info('Logging starting up...')
+        self.__logger('info', 'Logging starting up...')
         
     
     @usb_except
@@ -288,19 +299,19 @@ ex
         self.__send_message(get_message)
         set_value, time_elapsed, tries = self.__read_response(cmd_key='loop',return_timer=True)
         
-        self.logger.info('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
+        self.__logger('info', 'It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
         if value == set_value:
-            self.logger.info('Command successful: {} == {}.'.format(value, set_value))
+            self.__logger('info', 'Command successful: {} == {}.'.format(value, set_value))
         else:
-            self.logger.info('Command NOT successful : {} != {}.'.format(value, set_value))
+            self.__logger('info', 'Command NOT successful : {} != {}.'.format(value, set_value))
         
     @usb_except
     def get_config(self):
         """Checks the feasible configurations for the device."""
         
         for cfg in self.dev:
-            self.logger.info('Device config : ')
-            self.logger.info(cfg)
+            self.__logger('info', 'Device config : ')
+            self.__logger('info', cfg)
         
 
     @usb_except
@@ -325,11 +336,11 @@ ex
                     'loop': self.__build_message('loop', 'read', channel)}
         
         value_dict = {}
-        self.logger.info("For channel {}.".format(chan))
+        self.__logger('info', "For channel {}.".format(chan))
         for key in read_msg:
             self.__send_message(read_msg[key])
             value = self.__read_response(key='loop')
-            self.logger.info("For parameter : {} the value is {}".format(key, value))
+            self.__logger('info', "For parameter : {} the value is {}".format(key, value))
             value_dict[key] = value
 
         return value_dict 
