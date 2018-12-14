@@ -336,8 +336,11 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                                                                      return_metadata=True)
 
         # Export the DM Command itself as a fits file.
-        if file_mode and testbed_state.dm1_command_object is not None:
-            testbed_state.dm1_command_object.export_fits(exp_path)
+        if file_mode:
+            if testbed_state.dm1_command_object:
+                testbed_state.dm1_command_object.export_fits(exp_path)
+            if testbed_state.dm2_command_object:
+                testbed_state.dm2_command_object.export_fits(exp_path)
 
         # Store config.ini.
         if file_mode:

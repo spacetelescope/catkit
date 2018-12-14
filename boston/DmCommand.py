@@ -142,14 +142,14 @@ class DmCommand(object):
         dm_command_1d = self.to_dm_command()[0:self.total_actuators] if self.dm_num == 1 \
             else self.to_dm_command()[1024:1024 + self.total_actuators]
 
-        hicat_util.write_fits(self.to_dm_command(), os.path.join(dir_path, "dm_command_1d"))
+        hicat_util.write_fits(self.to_dm_command(), os.path.join(dir_path, "dm{}_command_1d".format(self.dm_num)))
 
         # Save 2D representation of the command with no padding (34 x 34).
         hicat_util.write_fits(hicat_util.convert_dm_command_to_image(dm_command_1d),
-                              os.path.join(dir_path, "dm_command_2d"))
+                              os.path.join(dir_path, "dm{}_command_2d".format(self.dm_num)))
 
         # Save raw data as input to the simulator.
-        hicat_util.write_fits(self.data, os.path.join(dir_path, "dm_command_2d_noflat"))
+        hicat_util.write_fits(self.data, os.path.join(dir_path, "dm{}_command_2d_noflat".format(self.dm_num)))
 
 
 def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
