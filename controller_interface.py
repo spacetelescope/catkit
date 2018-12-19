@@ -68,8 +68,8 @@ class Controller(logging_on=True, log_file='controller_interface_log.txt',
         
         # Instantiate the device
         # Vendor ID and Product ID for our specific controller for now
-        vendor_id = 6014
-        product_id = 4083
+        vendor_id = 1027
+        product_id = 24596
         self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
         if self.dev == None:
            self. __logger('error', 'There was no device.')
