@@ -31,7 +31,7 @@ def usb_except(function):
     return wrapper
 
 
-class Controller:
+class Controller():
 
     """Controller connection class. 
 
@@ -83,7 +83,7 @@ class Controller:
         self.dev.set_configuration()
         return self
 
-    def __exit__(self):
+    def __exit__(self, ex_type, ex_value, traceback):
         """ Exit function to open loop and do other things someday?"""
         for channel in [1, 2]:
             for key in ["loop", "p_gain", "i_gain", "d_gain"]:
@@ -258,11 +258,11 @@ class Controller:
         """
 
         set_message = self.__build_message(cmd_key, "set", channel, value)
-        get_message = self.__build_message(cmd_key, "get", channel, value)
+        get_message = self.__build_message(cmd_key, "get", channel)
 
         self.__send_message(set_message)
         self.__send_message(get_message)
-        set_value, time_elapsed, tries = self.__read_response(cmd_key='loop',return_timer=True)
+        set_value, time_elapsed, tries = self.__read_response(False, return_timer=True)
         
         self.logger.info('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
         if value == set_value:
@@ -304,7 +304,7 @@ class Controller:
         self.logger.info("For channel {}.".format(channel))
         for key in read_msg:
             self.__send_message(read_msg[key])
-            value = self.__read_response(key='loop')
+            value = self.__read_response(True)
             self.logger.info("For parameter : {} the value is {}".format(key, value))
             value_dict[key] = value
 
