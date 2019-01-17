@@ -26,6 +26,7 @@ def usb_except(function):
             return function(self, *args, **kwargs)
         except USBError as e:
             self.logger.error("There's a timeout or a busy resource.")
+            self.logger.error(e)
             raise e
 
     return wrapper
@@ -54,7 +55,6 @@ class Controller():
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         log_file = os.path.join('.', 'controller_interface_log_{}.txt'.format(
             str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')))
-        print(log_file, type(log_file))
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
@@ -207,27 +207,39 @@ class Controller():
         start = time.time()
         
         # The junk message is 3 characters, so look for a longer one.
-        while len(resp) < 4 and tries < max_tries:
-            resp = self.dev.read(0x81, 100, 1000) 
-            tries += 1 
-        time_elapsed = time.time() - start
-
-        addr = resp[3:7]
-        address = struct.unpack('<I', addr)
-        val = resp[7:-1]
-        if loop:
-            value = struct.unpack('<I', val[:4])
-        else:
-            value = struct.unpack('<d', val)
         
-        # Value will be a 1D tuple and we want the value
-        value = value[0]
-
-
-        if return_timer:
-            return value, time_elapsed, tries
+        endpoint = 0x81
+        message_length = 100
+        timeout = 1000
+        while len(resp) < 4 and tries < max_tries:
+            resp = self.dev.read(endpoint, message_length, timeout) 
+            tries += 1 
+        time_elapsed = time.time() - startW
+        
+        if resp < 4:
+            logging.error("No response was ever read.")
+            raise ValueError("No response was ever read.")
+            
         else:
-            return value
+            # Pull the address, which starts after 3 junk characters
+            addr = resp[3:7]
+            address = struct.unpack('<I', addr)
+        
+            # Value is never more than 8 bits, so grab those last ones
+            val = resp[7:-1]
+            if loop:
+                value = struct.unpack('<I', val[:4])
+            else:
+                value = struct.unpack('<d', val)
+        
+            # Value will be a 1D tuple and we want the value
+            value = value[0]
+
+
+            if return_timer:
+                return value, time_elapsed, tries
+            else:
+                return value
     
     @usb_except
     def __send_message(self, msg):
