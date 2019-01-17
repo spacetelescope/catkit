@@ -1,12 +1,14 @@
 ## -- IMPORTS
 
+import datetime
 import functools
 import logging
+import os
 import struct
 import time
 import warnings
 
-from numpy as import double
+from numpy import double
 import usb.core
 from usb.core import USBError
 import usb.util
@@ -50,17 +52,18 @@ class Controller:
         self.logger.setLevel(logging.DEBUG)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = 'controller_interface_log_{}'.format(
-                   str(datetime.datetime.now()))
-        with logging.FileHandler(log_file) as fh:
-            fh.setLevel(logging.DEBUG)
-            fh.setFormatter(formatter)
-            self.logger.addHandler(fh)
+        log_file = os.path.join('.', 'controller_interface_log_{}.txt'.format(
+            str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')))
+        print(log_file, type(log_file))
+        fh = logging.FileHandler(filename=log_file)
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(formatter)
+        self.logger.addHandler(fh)
         
-        with logging.StreamHandler() as ch:
-            ch.setLevel(logging.DEBUG)
-            ch.setFormatter(formatter)
-            self.logger.addHandler(ch)
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)
 
     def __enter__(self):
         """ Enter function to find device, set it to the default 
@@ -77,12 +80,13 @@ class Controller:
         self.logger.info('Controller instantiated.')
         
         # Set to default configuration -- for LC400 this is the right one.
-        self.dev.set_configuration(log_file)
-    
+        self.dev.set_configuration()
+        return self
+
     def __exit__(self):
         """ Exit function to open loop and do other things someday?"""
         for channel in [1, 2]:
-            for key in ["loop", "p_gain", "i_gain", "d_gain"]
+            for key in ["loop", "p_gain", "i_gain", "d_gain"]:
                 self.command(key, channel, 0)
 
     @usb_except
@@ -291,13 +295,13 @@ class Controller:
             A dictionary with a setting for each parameter.
         """
 
-        read_msg = {'p_gain': self.__build_message('p_gain', 'read', channel),
-                    'i_gain': self.__build_message('i_gain', 'read', channel),
-                    'd_gain': self.__build_message('d_gain', 'read', channel),
-                    'loop': self.__build_message('loop', 'read', channel)}
+        read_msg = {'p_gain': self.__build_message('p_gain', 'get', channel),
+                    'i_gain': self.__build_message('i_gain', 'get', channel),
+                    'd_gain': self.__build_message('d_gain', 'get', channel),
+                    'loop': self.__build_message('loop', 'get', channel)}
         
         value_dict = {}
-        self.logger.info("For channel {}.".format(chan))
+        self.logger.info("For channel {}.".format(channel))
         for key in read_msg:
             self.__send_message(read_msg[key])
             value = self.__read_response(key='loop')
