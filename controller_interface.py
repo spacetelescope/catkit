@@ -46,7 +46,7 @@ class Controller():
 
     def __init__(self):
 
-        """Initial function to configure logging."""
+        """Initial function to configure logging and find the device."""
         
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
@@ -64,10 +64,6 @@ class Controller():
         ch.setLevel(logging.DEBUG)
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
-
-    def __enter__(self):
-        """ Enter function to find device, set it to the default 
-        configuration, and make sure it exists."""
         
         # Instantiate the device
         # Vendor ID and Product ID for our specific controller for now
@@ -81,6 +77,10 @@ class Controller():
         
         # Set to default configuration -- for LC400 this is the right one.
         self.dev.set_configuration()
+
+    def __enter__(self):
+        """ Enter function to allow for context management."""
+        
         return self
 
     def __exit__(self, ex_type, ex_value, traceback):
@@ -158,7 +158,10 @@ class Controller():
                 message.append(b'\xa2' + addr[:4] + val + b'\x55')
 
             elif cmd_key in ['p_gain', 'i_gain', 'd_gain']:
-                if type(value) not in [int, float, double]:
+                if type(value) == int:
+                    value = float(int)
+
+                elif type(value) not in [float, double]:
                     self.logger.error('Gain requires float/int value.')
                     raise TypeError("Int or float value is required for gain.")
                 
