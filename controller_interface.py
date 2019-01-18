@@ -226,7 +226,7 @@ class Controller():
         
             # Value is never more than 8 bits, so grab those last ones
             val = resp[7:-1]
-            if loop:
+            if response_type == '<I':
                 value = struct.unpack(response_type, val[:4])
             else:
                 value = struct.unpack(response_type, val)
