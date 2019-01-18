@@ -90,7 +90,7 @@ class Controller():
                 self.command(key, channel, 0)
 
     @usb_except
-    def __build_message(self, cmd_key, cmd_type, channel, value=None):
+    def _build_message(self, cmd_key, cmd_type, channel, value=None):
         """Builds the message to send to the controller. The messages
         must be 10 or 6 bytes, in significance increasing order (little 
         endian.) 
@@ -177,14 +177,13 @@ class Controller():
         return message
     
 
-    def __read_response(self, loop, return_timer=False, max_tries=10):
+    def _read_response(self, response_type, return_timer=False, max_tries=10):
         """Read response from controller.
 
         Parameters
         ----------
-        loop : bool
-            Whether or not the command has to do with the loop, as this 
-            will affect what data type we expect out of it.
+        response_type : str
+            '<I' or '<d', for an integer or double expected response.
         return_timer : bool, optional 
             Whether or not to return the tries and timing info.
         max_tries : int, optional
@@ -228,9 +227,9 @@ class Controller():
             # Value is never more than 8 bits, so grab those last ones
             val = resp[7:-1]
             if loop:
-                value = struct.unpack('<I', val[:4])
+                value = struct.unpack(response_type, val[:4])
             else:
-                value = struct.unpack('<d', val)
+                value = struct.unpack(response_type, val)
         
             # Value will be a 1D tuple and we want the value
             value = value[0]
@@ -242,7 +241,7 @@ class Controller():
                 return value
     
     @usb_except
-    def __send_message(self, msg):
+    def _send_message(self, msg):
         """Send the message to the controller.
 
         Parameters
@@ -272,13 +271,16 @@ class Controller():
             What value to set.
         """
 
-        set_message = self.__build_message(cmd_key, "set", channel, value)
-        get_message = self.__build_message(cmd_key, "get", channel)
+        set_message = self._build_message(cmd_key, "set", channel, value)
+        get_message = self._build_message(cmd_key, "get", channel)
 
-        self.__send_message(set_message)
-        self.__send_message(get_message)
-        # Needs bool to check for whether or not loop or gain message.
-        set_value, time_elapsed, tries = self.__read_response(cmd_key=='loop', return_timer=True)
+        self._send_message(set_message)
+        self._send_message(get_message)
+        if cmd_key == 'loop':
+            response_type = '<I'
+        else:
+            response_type = '<d'
+        set_value, time_elapsed, tries = self._read_response(response_type, return_timer=True)
         
         self.logger.info('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
         if value == set_value:
@@ -311,17 +313,20 @@ class Controller():
             A dictionary with a setting for each parameter.
         """
 
-        read_msg = {'p_gain': self.__build_message('p_gain', 'get', channel),
-                    'i_gain': self.__build_message('i_gain', 'get', channel),
-                    'd_gain': self.__build_message('d_gain', 'get', channel),
-                    'loop': self.__build_message('loop', 'get', channel)}
+        read_msg = {'p_gain': self._build_message('p_gain', 'get', channel),
+                    'i_gain': self._build_message('i_gain', 'get', channel),
+                    'd_gain': self._build_message('d_gain', 'get', channel),
+                    'loop': self._build_message('loop', 'get', channel)}
         
         value_dict = {}
         self.logger.info("For channel {}.".format(channel))
         for key in read_msg:
-            self.__send_message(read_msg[key])
-            # __read_response takes a bool of whether or not the key is loop
-            value = self.__read_response(key=='loop')
+            self._send_message(read_msg[key])
+            if key == 'loop':
+                response_type = '<I'
+            else:
+                response_type = '<d'
+            value = self._read_response(response_type)
             self.logger.info("For parameter : {} the value is {}".format(key, value))
             value_dict[key] = value
 
