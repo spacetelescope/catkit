@@ -277,7 +277,8 @@ class Controller():
 
         self.__send_message(set_message)
         self.__send_message(get_message)
-        set_value, time_elapsed, tries = self.__read_response(False, return_timer=True)
+        # Needs bool to check for whether or not loop or gain message.
+        set_value, time_elapsed, tries = self.__read_response(cmd_key=='loop', return_timer=True)
         
         self.logger.info('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
         if value == set_value:
