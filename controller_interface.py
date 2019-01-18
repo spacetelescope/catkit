@@ -319,7 +319,8 @@ class Controller():
         self.logger.info("For channel {}.".format(channel))
         for key in read_msg:
             self.__send_message(read_msg[key])
-            value = self.__read_response(True)
+            # __read_response takes a bool of whether or not the key is loop
+            value = self.__read_response(key=='loop')
             self.logger.info("For parameter : {} the value is {}".format(key, value))
             value_dict[key] = value
 
