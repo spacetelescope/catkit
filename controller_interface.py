@@ -159,7 +159,7 @@ class Controller():
 
             elif cmd_key in ['p_gain', 'i_gain', 'd_gain']:
                 if type(value) == int:
-                    value = float(int)
+                    value = float(value)
 
                 elif type(value) not in [float, double]:
                     self.logger.error('Gain requires float/int value.')
@@ -214,9 +214,9 @@ class Controller():
         while len(resp) < 4 and tries < max_tries:
             resp = self.dev.read(endpoint, message_length, timeout) 
             tries += 1 
-        time_elapsed = time.time() - startW
+        time_elapsed = time.time() - start
         
-        if resp < 4:
+        if len(resp) < 4:
             logging.error("No response was ever read.")
             raise ValueError("No response was ever read.")
             
