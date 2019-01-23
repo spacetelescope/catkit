@@ -11,25 +11,17 @@ Jules Fowler, 2019
 """
 
 ## -- IMPORTS
+import os
 
-from bs4 import BeautifulSoup
 from http.client import IncompleteRead
-import itertools
 import numpy as np
-import requests
-from requests.exceptions import HTTPError
+from photutils import centroid_2dg
 from urllib.parse import urlencode
 from urllib.request import urlopen
-
-from pyql.logging.logging_functions import configure_logging
-from pyql.logging.logging_functions import log_info
-from pyql.logging.logging_functions import log_fail
-
 
 ## -- Let's go.
 
 def maybe_some_error_handling?
-
 
 class NewportPicomotor:
     """ This class handles all the picomotor stufff. """
@@ -43,14 +35,47 @@ class NewportPicomotor:
 
     def __exit__(self):
         # set dh to zero, zero
-        # set ac to zero, zero
         # prob don't try to reset
         print('Byee.')
 
-    def get_status(self)
-        
+    def get_status(self):
+        return
 
-    def command(self)
+    def command(self):
+
+        set_message = self._build_message(self, cmd_key, 'set', axis, value)
+        get_message = self._build_message(self, cmd_key, 'get', axis)
+        
+        self._send_message(set_message)
+        return
+
+    def reset(self):
+        
+        message = self._build_message(self, 'reset', 'reset')
+    
+
+    def set_to_centroid(self, data, x_center=0, y_center=0, flip=False):
+        """ Sets the home position to the 2d centroid.
+
+        Parameters
+        ----------
+        data : np.array
+            2D image array to check for the centroid position.
+        x_center : float, optional
+            Where the controller thinks the x_0 of the detector is. 
+            Defaults to zero.
+        y_center : float, optional 
+            Where the controller thinks the y_0 of the detector is. 
+            Defaults to zero.
+        flip : bool, optional
+            Whether or not the axis 1/2 is flipped from x/y. Defaults to 
+            False.
+        """
+        if flip:
+            x, y = y, x
+        x, y = centroid_2dg(data)
+        self.command('home_position', 'set', '1', x-x_center)
+        self.command('home_position', 'set', '2', y-y_center)
 
     def _build_message(self, cmd_key, cmd_type, axis=None, value=None):
         """Build a message for the newport picomotor controller.
@@ -58,7 +83,7 @@ class NewportPicomotor:
         Parameters
         ----------
         cmd_key : str
-            The command and hand, like acceleration, position, etc.
+            The command and hand, like position, reset, etc.
         cmd_type : str
             The kind of command, whether to get, set, or reset.
         axis : str of int, optional
@@ -66,9 +91,8 @@ class NewportPicomotor:
         value : str 
             """
 
-        cmd_dict = {'acceleration' : 'AC', 'home_position' : 'DH', 
-                    'exact_move' : 'PA', 'relative_move' : 'PR', 
-                    'reset' : 'RS'}
+        cmd_dict = {'home_position' : 'DH', 'exact_move' : 'PA', 
+                    'relative_move' : 'PR', 'reset' : 'RS'}
         
         address = cmd_dict[cmd_key]
         
@@ -104,7 +128,7 @@ class NewportPicomotor:
         return message
     
 
-    def _send_message(self):
+    def _send_message(self, cmd_type):
         
         form_data = urlencode{'cmd': message, 'submit': 'Send'}
         binary_data = form_data.encode('ascii')
