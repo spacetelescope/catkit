@@ -63,6 +63,7 @@ class TakeMtfData(Experiment):
                 cal_file_path = testbed.run_hicat_imaging(direct_exp_time, num_exposures, FpmPosition.direct,
                                                           path=self.path, exposure_set_name="direct",
                                                           filename=flat_file_name, camera_type=self.camera_type,
+                                                          simulator=False,
                                                           **self.kwargs)
         ps_wo_focus, ps_w_focus, focus = run_mtf(cal_file_path)
         self.log.info("ps_wo_focus=" + str(ps_wo_focus) + " ps_w_focus=" +str(ps_w_focus) + " focus=" +str(focus) )
