@@ -28,4 +28,6 @@ AttributeError: 'NoneType' object has no attribute 'ASIGetNumOfCOnnectedCameras'
 """
 
 
-
+"""
+https://github.com/stevemarple/python-zwoasi/blob/master/zwoasi/__init__.py
+"""
