@@ -30,7 +30,7 @@ plt.savefig('test_img.png')
 # 9418, Git
 
 
-# Fix for SSH config
+## Fix for SSH config
 """
 Host github.com
     User git
