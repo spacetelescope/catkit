@@ -1,4 +1,3 @@
-import os
 
 import matplotlib.pyplot as plt
 import pint
@@ -9,8 +8,8 @@ units = pint.UnitRegistry()
 quantity = units.Qauntity
 
 # Initialize zwo stuff? -- may have to go hunting?
-env_filename = os.getenv('ZWO_ASI_LIB')
-zwoasi.init(env_filename)
+cam_lib_file = 'C:/Users/RMOLStation1s/piezo_tiptilt/hicat-package/hicat/hardware/zwo/lib/windows/ASICamera2.dll'
+zwoasi.init(cam_lib_file)
 
 # Pick out the right camera
 camera_name = 'ZWhatever...'
