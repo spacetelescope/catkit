@@ -1,3 +1,4 @@
+import os
 
 import matplotlib.pyplot as plt
 import pint
@@ -6,6 +7,10 @@ import zwoasi
 # Unit set up?
 units = pint.UnitRegistry()
 quantity = units.Qauntity
+
+# Initialize zwo stuff? -- may have to go hunting?
+env_filename = os.getenv('ZWO_ASI_LIB')
+zwoasi.init(env_filename)
 
 # Pick out the right camera
 camera_name = 'ZWhatever...'
@@ -23,11 +28,3 @@ image = camera.capture(initial_sleep=exposure_time.to(units.second).magnitude, p
 plt.imshow(image)
 plt.savefig('test_img.png')
 
-"""
-AttributeError: 'NoneType' object has no attribute 'ASIGetNumOfCOnnectedCameras'
-"""
-
-
-"""
-https://github.com/stevemarple/python-zwoasi/blob/master/zwoasi/__init__.py
-"""
