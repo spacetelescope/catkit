@@ -23,4 +23,17 @@ image = camera.capture(initial_sleep=exposure_time.to(units.second).magnitude, p
 plt.imshow(image)
 plt.savefig('test_img.png')
 
+# ALSO test these ports : 
+# 443, HTTPS
+# 80, HTTP
+# 22, SSH
+# 9418, Git
 
+
+# Fix for SSH config
+"""
+Host github.com
+    User git
+    Hostname github.com
+    Port 22
+"""
