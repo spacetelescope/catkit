@@ -1,7 +1,11 @@
 
 import matplotlib.pyplot as plt
-import pint.UnitRegistry.Quantitity as quantity
+import pint
 import zwoasi
+
+# Unit set up?
+units = pint.UnitRegistry()
+quantity = units.Qauntity
 
 # Pick out the right camera
 camera_name = 'ZWhatever...'
