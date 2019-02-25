@@ -113,13 +113,14 @@ def __sin_wave(rotate_deg, ncycles, peak_to_valley, phase):
     :param rotate_deg: Angle to rotate 2D sine wave in degrees.
     :param ncycles: Frequency in number of cycles.
     :param peak_to_valley: Amplitude multiplier pint quantity with base units of meters.
-    :param phase: Phase in degrees.
+    :param phase: Phase in degrees. Note: phase = 0 produces a symmetrical cosine. phase = 90 produces a sine.
     :return: 2D numpy array sized by the "dm_length_actuators" parameter in config.ini file.
     """
 
     # Make a linear ramp.
     num_actuators_pupil = CONFIG_INI.getint(dm_config_id, 'dm_length_actuators')
     linear_ramp = np.linspace(-0.5, 0.5, num=num_actuators_pupil, endpoint=False)
+    linear_ramp+= 0.5/num_actuators_pupil
 
     # Convert to radians.
     phase_rad = np.deg2rad(phase)
