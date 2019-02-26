@@ -48,6 +48,16 @@ class Controller():
 
         """Initial function to configure logging and find the device."""
         
+        
+        # Instantiate the device
+        # Vendor ID and Product ID for our specific controller for now
+        vendor_id = 1027
+        product_id = 24596
+        self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
+        if self.dev == None:
+            raise NameError("Go get the device sorted you knucklehead.")
+        
+        # Set up the logging.
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
 
@@ -64,15 +74,7 @@ class Controller():
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
         
-        # Instantiate the device
-        # Vendor ID and Product ID for our specific controller for now
-        vendor_id = 1027
-        product_id = 24596
-        self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
-        if self.dev == None:
-            self. logger.error('There was no device.')
-            raise NameError("Go get the device sorted you knucklehead.")
-        self.logger.info('Controller instantiated.')
+        self.logger.info('Controller instantiated and logging online.')
         
         # Set to default configuration -- for LC400 this is the right one.
         self.dev.set_configuration()
@@ -84,9 +86,7 @@ class Controller():
 
     def __exit__(self, ex_type, ex_value, traceback):
         """ Exit function to open loop and do other things someday?"""
-        for channel in [1, 2]:
-            for key in ["loop", "p_gain", "i_gain", "d_gain"]:
-                self.command(key, channel, 0)
+        self.close_controller()
 
     def _build_message(self, cmd_key, cmd_type, channel, value=None):
         """Builds the message to send to the controller. The messages
@@ -253,7 +253,20 @@ class Controller():
         timeout = 100
         for message in msg:
             self.dev.write(endpoint, message, timeout)
+    
+    @usb_except
+    def close_controller(self):
+        """ Function for the close behavior. Return every parameter to zero
+        and shut down the logging."""
+
+        for channel in [1, 2]:
+            for key in ["loop", "p_gain", "i_gain", "d_gain"]:
+                self.command(key, channel, 0)
         
+        handlers = self.logger.handlers[:]
+        for handler in handlers:
+            handler.close()
+            self.logger.removeHandler(handler)
     
     @usb_except
     def command(self, cmd_key, channel, value):
@@ -286,7 +299,7 @@ class Controller():
             self.logger.info('Command successful: {} == {}.'.format(value, set_value))
         else:
             self.logger.info('Command NOT successful : {} != {}.'.format(value, set_value))
-            raise
+            raise ValueError('Command NOT successful : {} != {}.'.format(value, set_value))
 
     @usb_except
     def get_config(self):
