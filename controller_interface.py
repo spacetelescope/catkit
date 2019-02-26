@@ -118,8 +118,8 @@ class Controller():
 
         Returns
         -------
-        message : array of bytes
-            An array of bytes messages. One if it's call to get a value 
+        message : list of bytes
+            An list of bytes messages. One if it's call to get a value 
             or a simple int message, or two if it needs to write a float 
             and use two messages.
         """
