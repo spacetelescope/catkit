@@ -28,7 +28,7 @@ class NewportPicomotor(Controller):
     """ This class handles all the picomotor stufff. """
 
         
-    def _build_message(self, cmd_key, cmd_type, axis=None, value=None):
+    def build_message(self, cmd_key, cmd_type, axis=None, value=None):
         """Build a message for the newport picomotor controller.
 
         Parameters
@@ -80,7 +80,11 @@ class NewportPicomotor(Controller):
         
     def check_response(self, response, cmd_key, axis, value)
     
-    def close_connection(self)
+    def close_connection(self):
+        """Exit behavior for the Newport controller. 
+        Resets home position and current position to 0 for 
+        both axes. 
+        """
         
         for cmd_key in ('home_position', 'exact_move'):
             for axis in (1,2):
@@ -88,13 +92,52 @@ class NewportPicomotor(Controller):
     
         self.logger.info('Everything has been reset. Enjoy your new life.')
 
-    def controller_except(self, function)
-    
-    def define_status_keys(self)
+    def controller_except(self, function):
+        """Decorator to catch http/web exceptions."""
+
+        @functools.wraps(function)
+        def wrapper(self, *args, **kwargs):
+            try:
+                return function(self, *args, **kwargs)
+            except (IncompleteRead, HTTPError) as e:
+                self.logger.error("The page timed out with : {}.".format(e))
+            raise Exception 
+
+    def define_status_keys(self):
+        """Sets status_keys propoerty on the controller.
+        These keys are provided when ``get_status`` is called.
+        """
+        self.get_status = ['...']
 
     def open_connection(self)
 
     def send_message(self, message, cmd_type)
+        """Sends a message to the controller and retrieves the 
+        response.
+
+        Parameters
+        ----------
+        message : str
+            The url that builds the request.
+        cmd_type : str
+            'get' or 'set' so we know how to interpret the response.
+        
+        Returns
+        -------
+        resp : str
+            The response, interpreted for comparison to the property set.
+        """
+        
+        form_data = urlencode{'cmd': message, 'submit': 'Send'}
+        binary_data = form_data.encode('ascii')
+
+        html = urlopen('{}/cmd_send.cgi'.format(self.ip), cal_data)
+        resp = html.split('Response')[-1]
+        
+        if cmd_type == 'get':
+            # Figure out how this is gonna look to extra the element
+            resp = resp[0]
+            return resp
     
     
 
@@ -106,7 +149,7 @@ class NewportPicomotor(Controller):
         self.__send_message(message, 'set')
         logging.info('Controller reset')
 
-    @http_except
+    @controller_except
     def set_to_centroid(self, data, x_center=0, y_center=0, flip=False):
         """ Sets the home position to the 2d centroid.
 
@@ -134,18 +177,3 @@ class NewportPicomotor(Controller):
         self.command('home_position', 'set', 1, x-x_center)
         self.command('home_position', 'set', 2, y-y_center)
     
-    
-    @http_except
-    def _send_message(self, cmd_type):
-        
-        form_data = urlencode{'cmd': message, 'submit': 'Send'}
-        binary_data = form_data.encode('ascii')
-
-        html = urlopen('{}/cmd_send.cgi'.format(self.ip), cal_data)
-        resp = html.split('Response')[-1]
-        
-        if cmd_type == 'get':
-            # Figure out how this is gonna look to extra the element
-            resp = resp[0]
-            return resp
-        
