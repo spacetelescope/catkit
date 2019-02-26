@@ -286,7 +286,8 @@ class Controller():
             self.logger.info('Command successful: {} == {}.'.format(value, set_value))
         else:
             self.logger.info('Command NOT successful : {} != {}.'.format(value, set_value))
-        
+            raise
+
     @usb_except
     def get_config(self):
         """Checks the feasible configurations for the device."""
