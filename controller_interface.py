@@ -10,7 +10,6 @@ import warnings
 
 from numpy import double
 import usb.core
-from usb.core import USBError
 import usb.util
 
 
@@ -24,7 +23,7 @@ def usb_except(function):
     def wrapper(self, *args, **kwargs):
         try:
             return function(self, *args, **kwargs)
-        except USBError as e:
+        except usb.core.USBError as e:
             self.logger.error("There's a timeout or a busy resource.")
             self.logger.error(e)
             raise e
@@ -89,7 +88,6 @@ class Controller():
             for key in ["loop", "p_gain", "i_gain", "d_gain"]:
                 self.command(key, channel, 0)
 
-    @usb_except
     def _build_message(self, cmd_key, cmd_type, channel, value=None):
         """Builds the message to send to the controller. The messages
         must be 10 or 6 bytes, in significance increasing order (little 
@@ -146,7 +144,7 @@ class Controller():
         elif cmd_type == 'set':
             if value == None:
                 self.logger.error('There was no value set for this command.')
-                raise NameError("Value is required.")
+                raise ValueError("Value is required.")
 
             if cmd_key == 'loop':
                 if value not in [1,0]:
@@ -171,8 +169,10 @@ class Controller():
                 message.append(b'\xa2' + addr[:4] + val[:4] + b'\x55')
                 message.append(b'\xa3' + val[4:] + b'\x55')
         
+            else:
+                raise ValueError("cmd_key must be 'loop' or 'p/i/d_gain'.")
         else:
-            raise ValueError("cmd_type must be 'loop' or 'p/i/d_gain'.")
+            raise NotImplementedError('cmd_type must be get or set.')
         
         return message
     
@@ -240,13 +240,12 @@ class Controller():
             else:
                 return value
     
-    @usb_except
     def _send_message(self, msg):
         """Send the message to the controller.
 
         Parameters
         ----------
-        msg : array of bytes
+        msg : list of bytes
             A controller ready message or messages.
         """
         
