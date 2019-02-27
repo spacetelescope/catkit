@@ -9,7 +9,19 @@ import pint
 
 import zwoasi
 
-## -- CLASS DEFINITION
+## -- CLASSES AND FUNCTIONS
+
+def zwo_except(function):
+    """Decorator that catches ZWO errors."""
+
+    @functools.wraps(function)
+    def wrapper(self, *args, **kwargs):
+        try:
+            return function(self, *args, **kwargs)
+        except (zwo.ZWO_Error, zwo.ZWO_IOError, zwo.ZWO_CaptureError) as e:
+            self.logger.error("There's a ZWO-specific error.")
+            self.logger.error(e)
+            raise e
 
 class ZWOCamera:
     """Class for the ZWOCamera. """
@@ -40,7 +52,7 @@ class ZWOCamera:
         # However, until we decide with certainty which camera (or cameras)
         # we're using I don't see what else to do.
         self.camera = zwoasi.Camera(0)
-        
+                
         # Logging
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
@@ -55,6 +67,8 @@ class ZWOCamera:
 
         ch = logging.StreamHandler()
 
+        self.logger.info('Camera instantiated, and logging online.')
+
 
     def __enter__(self):
         """ Enter function to allow for context management."""
@@ -63,8 +77,9 @@ class ZWOCamera:
     def __exit__(self, ex_type, ex_value, traceback):
         """ Exit function to allow for context management. In this case, closes
         the camera."""
-        self.camera.close()
-
+        self.close_camera()
+    
+    @zwo_except
     def take_exposure(self, exp_time=1000, output_name='camera_test.png'):
         """ Quick function to take a single exposure and write it to the given
         name. 
@@ -103,12 +118,15 @@ class ZWOCamera:
         plt.colorbar()
         plt.savefig(output_name)
         plt.clf()
-        print('Image saved to {}.'.format(output_name))
+        self.logger.info('Image saved to {}.'.format(output_name))
         
         return image
-
+    
+    @zwo_except
     def close_camera(self):
         """Closes the camera if you didn't use context managers."""
+        
         self.camera.close()
+        self.logger.info('Camera connection closed.')
 
 
