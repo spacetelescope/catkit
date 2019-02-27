@@ -120,7 +120,7 @@ def __sin_wave(rotate_deg, ncycles, peak_to_valley, phase):
     # Make a linear ramp.
     num_actuators_pupil = CONFIG_INI.getint(dm_config_id, 'dm_length_actuators')
     linear_ramp = np.linspace(-0.5, 0.5, num=num_actuators_pupil, endpoint=False)
-    linear_ramp+= 0.5/num_actuators_pupil
+    linear_ramp += 0.5/num_actuators_pupil
 
     # Convert to radians.
     phase_rad = np.deg2rad(phase)
