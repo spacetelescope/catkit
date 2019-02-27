@@ -48,15 +48,6 @@ class Controller():
 
         """Initial function to configure logging and find the device."""
         
-        
-        # Instantiate the device
-        # Vendor ID and Product ID for our specific controller for now
-        vendor_id = 1027
-        product_id = 24596
-        self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
-        if self.dev == None:
-            raise NameError("Go get the device sorted you knucklehead.")
-        
         # Set up the logging.
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
@@ -74,10 +65,19 @@ class Controller():
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
         
-        self.logger.info('Controller instantiated and logging online.')
-        
+        # Instantiate the device
+        # Vendor ID and Product ID for our specific controller for now
+        vendor_id = 1027
+        product_id = 24596
+        self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
+        if self.dev == None:
+            self.logger.info('No device to connect to.')
+            raise NameError("Go get the device sorted you knucklehead.")
+             
         # Set to default configuration -- for LC400 this is the right one.
         self.dev.set_configuration()
+        self.logger.info('Controller instantiated and logging online.')
+
 
     def __enter__(self):
         """ Enter function to allow for context management."""
@@ -86,6 +86,9 @@ class Controller():
 
     def __exit__(self, ex_type, ex_value, traceback):
         """ Exit function to open loop and do other things someday?"""
+        self.close_controller()
+    
+    def __del__(self):
         self.close_controller()
 
     def _build_message(self, cmd_key, cmd_type, channel, value=None):
