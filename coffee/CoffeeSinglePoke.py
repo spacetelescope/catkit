@@ -9,14 +9,14 @@ import logging
 
 from ..Experiment import Experiment
 from ...hardware.boston import commands
-from hicat.hardware.boston.sin_command import sin_command
 from ... import util
-from ...hicat_types import units, quantity, ImageCentering, SinSpecification
+from ...hicat_types import units, quantity, ImageCentering
 from ..modules.general import take_coffee_data_set
 
-class CoffeeRipple(Experiment):
+
+class CoffeeSinglePoke(Experiment):
     """
-    Creates a sine ripple and takes a COFFEE data set.
+    Pokes a single actuator, and takes a COFFEE data set. This is used to measure the interaction matrix
 
     Args:
         path (string): Path to save data set. None will use the default.
@@ -24,24 +24,22 @@ class CoffeeRipple(Experiment):
         coron_exp_time (pint quantity): Exposure time for the coronographics data set.
         direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
         centering (ImageCentering): Image centering algorithm for the coron data set.
-        amplitude (pint quantity): PtV amplitude in nm
-        phase (real): phase of the phase ripple (used to make sine vs. cosine)
-        ncycle (int): number of cycles accross the DM for the phase ripple
+        amplitude (pint quantity): requested PtV amplitude in nm calibrated on one actuator (32->10nm; 65->20mm; 160->50nm; 312->100nm)
+        actuator_num (int): index of the actuator (1 through 952)s
         **kwargs: Keyword arguments passed into run_hicat_imaging()
     """
 
-    name = "Coffee Ripple"
+    name = "Coffee Single Poke"
     log = logging.getLogger(__name__)
 
     def __init__(self,
                  path=None,
                  num_exposures=10,
+                 actuator_num=595,
+                 amplitude=quantity(32, units.nanometer),
                  coron_exp_time=quantity(100, units.millisecond),
                  direct_exp_time=quantity(1, units.millisecond),
                  centering=ImageCentering.custom_apodizer_spots,
-                 ncycle=10,
-                 phase = 90,
-                 amplitude = quantity(100,units.nanometer),
                  **kwargs):
 
         self.path = path
@@ -49,24 +47,22 @@ class CoffeeRipple(Experiment):
         self.coron_exp_time = coron_exp_time
         self.direct_exp_time = direct_exp_time
         self.centering = centering
-        self.kwargs = kwargs
-        self.ncycle = ncycle
-        self.phase = phase
+        self.actuator_num = actuator_num
         self.amplitude = amplitude
+        self.kwargs = kwargs
 
     def experiment(self):
         if self.path is None:
-            suffix = "coffee_ripple"
+            suffix = "coffee_single_poke"
             self.path = util.create_data_path(suffix=suffix)
-            util.setup_hicat_logging(self.path, "coffee_ripple")
+            util.setup_hicat_logging(self.path, "coffee_single_poke")
 
         # # Pure Focus Zernike loop.
         focus_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/focus/"
         focus_zernike_command_paths = glob(focus_zernike_data_path + "/*p2v/*.fits")
 
-        # DM1 phase ripple
-        horizontal = SinSpecification(0, self.ncycle, self.amplitude,self.phase)
-        ripple_command_dm1 = sin_command(horizontal,flat_map=True)
-        take_coffee_data_set(focus_zernike_command_paths, self.path, "ripple_cycles{}_amplitude{}_phase{}".format(self.ncycle,self.amplitude.m,self.phase), self.coron_exp_time,
+        # DM1 poked actuator (actuator 595 is calibrated).
+        poke_command_dm1 = commands.poke_command(self.actuator_num, dm_num=1, amplitude=self.amplitude)
+        take_coffee_data_set(focus_zernike_command_paths, self.path, "single_poke_actuator{}_amplitude{}_nm".format(self.actuator_num,self.amplitude.m), self.coron_exp_time,
                              self.direct_exp_time, num_exposures=self.num_exposures,
-                             dm1_command_object=ripple_command_dm1, centering=self.centering, **self.kwargs)
+                             dm1_command_object=poke_command_dm1, centering=self.centering, **self.kwargs)
