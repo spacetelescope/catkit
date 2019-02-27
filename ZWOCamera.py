@@ -32,7 +32,7 @@ class ZWOCamera:
             raise
         
         # And then open the camera connection
-        # THAT THIS IS NOT GREAT! THIS WILL OPEN WHATEVER CAMERA IS FIRST IN LINE
+        # THIS IS NOT GREAT! THIS WILL OPEN WHATEVER CAMERA IS FIRST IN LINE
         # This should be set to only select the camera name with :
         # camera_name = 'ZWO ...'
         # camera_index = zwoasi.list_cameras().index(camera_name)
