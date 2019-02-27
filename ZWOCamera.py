@@ -13,12 +13,15 @@ class ZWOCamera:
         """ Init funciton to set up logging and instantiate the camera."""
 
         # 3 logging 5 me
-        cam_lib_file = 'C:/Users/RMOLStation1s/piezo_tiptilt/hicat-package/hicat/hardware/zwo/lib/windows/ASICamera2.dll'
+        
         try:
-            zwoasi.init(cam_lib_file)
+            if zwoasi.get_num_cameras() == 0:
+                cam_lib_file = 'C:/Users/RMOLStation1s/piezo_tiptilt/hicat-package/hicat/hardware/zwo/lib/windows/ASICamera2.dll'
+                zwoasi.init(cam_lib_file)
             self.camera = zwoasi.Camera(0)
-        except (zwoasi.ZWO_Error, zwoasi.ZWO_IOError, zwoasi.ZWO_CaptureError) as e:
-            
+        except  Exception:
+                raise
+
 
     def __enter__(self):
         """ Enter function to allow for context management."""
