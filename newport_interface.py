@@ -215,4 +215,57 @@ class NewportPicomotor:
             # Figure out how this is gonna look to extra the element
             resp = resp[0]
             return resp
+
+    def convert_move_to_pixel(self, img1, img2, move, axis):
+        """ After two images taken some x_move or y_move apart, calculate how
+        the picomoter move corresponds to pixel move.
         
+        Parameters
+        ----------
+        img1 : np.array
+            Image before move.
+        img2 : np.array
+            Image after move.
+        move : int
+            How much the picomotor moved.
+        axis : int
+            What axis the picomotor moved on.
+        
+        Returns
+        -------
+        r : float
+            The scalar distance of the move in pixels.
+        theta : float
+            The angle from x in radians. 
+        r_ratio : float
+            The ratio of the scalar distance in pixels and the picomotor move. 
+        delta_theta : float
+            The difference between the angle from x and the picomotor axis.
+        """
+
+        x1, y1 = centroid_2dg(img1)
+        x2, y2 = centroid_2dg(img2)
+
+        x_move = x1 - x2
+        y_move = y1 - y2
+        
+        r = np.sqrt(x_move**2 + y_move**2)
+        theta = np.arctan(y_move/x_move)
+        
+        r_ratio = r/move
+        
+        if axis == 1:
+            delta_theta = theta - 0
+        elif axis == 2:
+            delta_theta = theta - np.pi/2
+        else:
+            raise NotImplementedError('Only axis 1 and axis 2 are defined.')
+        
+        self.r_ratio = r_ratio
+        self.delta_theta = delta_theta
+
+        return r, theta, r_ratio, delta_theta
+
+
+
+
