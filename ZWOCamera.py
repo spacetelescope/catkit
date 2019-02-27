@@ -1,6 +1,10 @@
 ## -- IMPORTS 
+import datetime
+import logging
+import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pint
 
 import zwoasi
@@ -14,14 +18,22 @@ class ZWOCamera:
         """ Init function to set up logging and instantiate the camera."""
 
         # Camera set up
+        # First see if the lib is already instantiated
         try:
-            if zwoasi.get_num_cameras() == 0:
-                cam_lib_file = 'C:/Users/RMOLStation1s/piezo_tiptilt/hicat-package/hicat/hardware/zwo/lib/windows/ASICamera2.dll'
-                zwoasi.init(cam_lib_file)
-            self.camera = zwoasi.Camera(0)
-        except  Exception:
-                raise
-
+            zwoasi.get_num_cameras()
+        
+        # If it isn't, read in the library file
+        except AttributeError:
+            cam_lib_file = 'C:/Users/RMOLStation1s/piezo_tiptilt/hicat-package/hicat/hardware/zwo/lib/windows/ASICamera2.dll'
+            zwoasi.init(cam_lib_file)
+        
+        # Unforseen complications.
+        except Exception:
+            raise
+        
+        # And then open the camera connection
+        self.camera = zwoasi.Camera(0)
+        
         # Logging
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
@@ -39,14 +51,14 @@ class ZWOCamera:
 
     def __enter__(self):
         """ Enter function to allow for context management."""
-        return
+        return self
 
-    def __exit__(self, self, ex_type, ex_value, traceback):
+    def __exit__(self, ex_type, ex_value, traceback):
         """ Exit function to allow for context management. In this case, closes
         the camera."""
         self.camera.close()
 
-    def take_exposure(exp_time=1000, output_name='camera_test.png'):
+    def take_exposure(self, exp_time=1000, output_name='camera_test.png'):
         """ Quick function to take a single exposure and write it to the given
         name. 
 
@@ -56,6 +68,11 @@ class ZWOCamera:
             Exposure time for the image in microseconds. Defaults to 1000.
         output_name : str, optional
             What to name the plot out; defaults to "camera_test.png".
+        
+        Returns
+        -------
+        image : np.array
+            Np.array of image data.
         """
 
         # Set up units
@@ -69,17 +86,19 @@ class ZWOCamera:
         
         # Take the image
         image = self.camera.capture(
-                    inital_sleep=exposure_time.to(units.seconds).magnitude,
+                    initial_sleep=exposure_time.to(units.seconds).magnitude,
                     poll=poll.magnitude)
  
         # Save it
         v_min = np.median(image) - 3*np.std(image)
-        v_max = np.median(image) + 3*np.stdimage)
-        plt.imshow(image, vmin=v_min, vmax=v_max, cmap='grey')
+        v_max = np.median(image) + 3*np.std(image)
+        plt.imshow(image, vmin=v_min, vmax=v_max, cmap='gray')
         plt.colorbar()
         plt.savefig(output_name)
         plt.clf()
         print('Image saved to {}.'.format(output_name))
+        
+        return image
 
     def close_camera(self):
         """Closes the camera if you didn't use context managers."""
