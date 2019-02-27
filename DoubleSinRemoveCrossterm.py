@@ -33,7 +33,7 @@ class DoubleSinRemoveCrossterm(Experiment):
                  angle=0,
                  ncycles_range=range(6, 18, 1),
                  peak_to_valley_range=range(5, 55, 5),
-                 phase=0,
+                 phase=90,
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
                  alignment_speckle=False,

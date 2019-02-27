@@ -40,7 +40,7 @@ class CoffeeRipple(Experiment):
                  direct_exp_time=quantity(1, units.millisecond),
                  centering=ImageCentering.custom_apodizer_spots,
                  ncycle=10,
-                 phase = 0,
+                 phase = 90,
                  amplitude = quantity(100,units.nanometer),
                  **kwargs):
 

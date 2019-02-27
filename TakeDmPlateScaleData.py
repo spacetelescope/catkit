@@ -29,7 +29,7 @@ class TakeDmPlateScaleData(Experiment):
                  angle_range=range(0, 100, 10),
                  ncycles_range=np.arange(5.5, 17.5, .5),
                  peak_to_valley=quantity(50, units.nanometer),
-                 phase=0,
+                 phase=90,
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
                  alignment_speckle=False,
