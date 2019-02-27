@@ -27,7 +27,7 @@ class ZWOCamera:
         self.logger.setLevel(logging.DEBUG)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = os.path.join('.', 'controller_interface_log_{}.txt'.format(
+        log_file = os.path.join('.', 'zwo_camera_log_{}.txt'.format(
                                 str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')))
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
