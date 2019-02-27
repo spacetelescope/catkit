@@ -36,7 +36,7 @@ class ZWOCamera:
         
         # If it isn't, read in the library file
         except AttributeError:
-            cam_lib_file = 'C:/Users/RMOLStation1s/piezo_tiptilt/hicat-package/hicat/hardware/zwo/lib/windows/ASICamera2.dll'
+            cam_lib_file = 'libraries/ASICamera2.dll'
             zwoasi.init(cam_lib_file)
         
         # Unforseen complications.
