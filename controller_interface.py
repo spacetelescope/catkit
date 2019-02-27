@@ -26,6 +26,7 @@ def usb_except(function):
         except usb.core.USBError as e:
             self.logger.error("There's a timeout or a busy resource.")
             self.logger.error(e)
+            self.close_logger()
             raise e
 
     return wrapper
@@ -86,10 +87,11 @@ class Controller():
 
     def __exit__(self, ex_type, ex_value, traceback):
         """ Exit function to open loop and do other things someday?"""
-        self.close_controller()
+        self.close()
     
     def __del__(self):
-        self.close_controller()
+        """ Destructor with close behavior."""
+        self.close()
 
     def _build_message(self, cmd_key, cmd_type, channel, value=None):
         """Builds the message to send to the controller. The messages
@@ -258,14 +260,21 @@ class Controller():
             self.dev.write(endpoint, message, timeout)
     
     @usb_except
-    def close_controller(self):
+    def close(self):
         """ Function for the close behavior. Return every parameter to zero
         and shut down the logging."""
+
+
+    def close_controller(self):
+        """Function for the close controller behavior."""
 
         for channel in [1, 2]:
             for key in ["loop", "p_gain", "i_gain", "d_gain"]:
                 self.command(key, channel, 0)
         
+    def close_logger(self):
+        """Function for the close logger behavior."""
+
         handlers = self.logger.handlers[:]
         for handler in handlers:
             handler.close()
