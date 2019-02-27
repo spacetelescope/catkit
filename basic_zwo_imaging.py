@@ -1,29 +1,20 @@
-
+## -- IMPORTS
 import matplotlib.pyplot as plt
 import pint
 import zwoasi
 
-
-def take_exposure(exp_time=1000, camera_key='ZWO', output_name='camera_test.png'):
-    """ Stripping away the protections and pretty arcitecture of HiCAT with a
-    simple function to take an exposure. Saves a plot of the image to whatever
-    name specified.
+## -- Quick convenience functions
+def open_connection(camera_key='ZWO'):
+    """ Function to initialize the camera and open a connection.
+    Until we know the actual camera we're using this will pick the first
+    'ZWO' camera it finds. 
 
     Parameters
     ----------
-    exp_time : int, optinal
-        Exposure time for the image in microseconds. Defaults to 1000.
     camera_key : str, optional
-        Set to 'ZWO' by default. This will need to expand a touch come a
-        complex system or multiple cameras.
-    output_name : str, optional
-        What to name the plot out; defaults to "camera_test.png".
+        What camera to use. Right now defaults to 'ZWO' -- we don't have
+        any other cameras set up at present. 
     """
-
-    # Set up units
-    units = pint.UnitRegistry()
-    quantity = units.Quantity
-
     # Intialize camera.
     # Right now this only works for a single connection to a ZWO camera.
     if camera_key == 'ZWO':
@@ -36,6 +27,28 @@ def take_exposure(exp_time=1000, camera_key='ZWO', output_name='camera_test.png'
         camera = zwoasi.Camera(0)
     else:
         raise ValueError("There's no appropriate camera set up for you at this time.")
+
+    return camera
+
+
+def take_exposure(camera, exp_time=1000, output_name='camera_test.png'):
+    """ Quick function to take a single exposure and write it to the given
+    name. 
+
+    Parameters
+    ----------
+    camera : zwoaslib.camera object 
+        Camera object from the zwoaslib.
+    exp_time : int, optinal
+        Exposure time for the image in microseconds. Defaults to 1000.
+    output_name : str, optional
+        What to name the plot out; defaults to "camera_test.png".
+    """
+
+    # Set up units
+    units = pint.UnitRegistry()
+    quantity = units.Quantity
+
     
     # Set up exposure and poll time with units.
     exposure_time = quantity(exp_time, units.microseconds)
@@ -51,4 +64,22 @@ def take_exposure(exp_time=1000, camera_key='ZWO', output_name='camera_test.png'
     plt.imshow(image)
     plt.savefig(output_name)
     print('Image saved to {}.'.format(output_name))
+
+
+def close_camera(camera):
+    """Closes camera connection so we can live another day.
+
+    camera : zwoasilib.camera object
+        Camera object from the zwoasilib.
+    """
+
+    camera.close()
+
+
+## -- RUN
+if __name__ == "__main__":
+    camera = open_connection()
+    take_exposure(camera)
+    close(camera)
+
 
