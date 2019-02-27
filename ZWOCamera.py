@@ -24,7 +24,7 @@ class ZWOCamera:
         """ Enter function to allow for context management."""
         return
 
-    def __exit__(self):
+    def __exit__(self, self, ex_type, ex_value, traceback):
         """ Exit function to allow for context management. In this case, closes
         the camera."""
         self.camera.close()
