@@ -56,7 +56,7 @@ class CoffeeCenterPoke(Experiment):
         focus_zernike_command_paths = glob(focus_zernike_data_path + "/*p2v/*.fits")
 
         # DM1 Spaced Center 4 actuators.
-        actuators = [558, 388, 393, 563]
+        actuators = [564, 394, 389, 559]
         center_command_dm1 = commands.poke_command(actuators, dm_num=1, amplitude=quantity(250, units.nanometers))
         take_coffee_data_set(focus_zernike_command_paths, self.path, "spaced_center_poke", self.coron_exp_time,
                              self.direct_exp_time, num_exposures=self.num_exposures,
