@@ -26,7 +26,6 @@ def usb_except(function):
         except usb.core.USBError as e:
             self.logger.error("There's a timeout or a busy resource.")
             self.logger.error(e)
-            self.close_logger()
             raise e
 
     return wrapper
@@ -72,7 +71,8 @@ class Controller():
         product_id = 24596
         self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
         if self.dev == None:
-            self.logger.info('No device to connect to.')
+            self.logger.error('No device to connect to.')
+            self.close_logger()
             raise NameError("Go get the device sorted you knucklehead.")
              
         # Set to default configuration -- for LC400 this is the right one.
@@ -259,11 +259,11 @@ class Controller():
         for message in msg:
             self.dev.write(endpoint, message, timeout)
     
-    @usb_except
     def close(self):
         """ Function for the close behavior. Return every parameter to zero
         and shut down the logging."""
-
+        self.close_controller()
+        self.close_logger()
 
     def close_controller(self):
         """Function for the close controller behavior."""
