@@ -37,7 +37,7 @@ def take_exposure(camera, exp_time=1000, output_name='camera_test.png'):
 
     Parameters
     ----------
-    camera : zwoaslib.camera object 
+    camera : zwoasi.camera object 
         Camera object from the zwoaslib.
     exp_time : int, optinal
         Exposure time for the image in microseconds. Defaults to 1000.
@@ -69,7 +69,7 @@ def take_exposure(camera, exp_time=1000, output_name='camera_test.png'):
 def close_camera(camera):
     """Closes camera connection so we can live another day.
 
-    camera : zwoasilib.camera object
+    camera : zwoasi.camera object
         Camera object from the zwoasilib.
     """
 
