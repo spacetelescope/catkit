@@ -9,11 +9,12 @@ import time
 import warnings
 
 from numpy import double
+
 import usb.core
 import usb.util
 
 
-## -- FUNCTIONS and FIDDLING
+## -- FUNCTIONS and FIDDLING (and CLASSES, oh MY!)
 
 # Decorator with error handling
 def usb_except(function):
@@ -32,7 +33,6 @@ def usb_except(function):
 
 
 class Controller():
-
     """Controller connection class. 
 
     This Controller class acts as a useful connection and storage vehicle 
@@ -41,7 +41,6 @@ class Controller():
     By instantiating the Controller object you find the LC400 controller 
     and set the default configuration. Memory managers in the back end 
     should close the connection when the time is right.
-    
     """
 
     def __init__(self):
@@ -86,11 +85,14 @@ class Controller():
         return self
 
     def __exit__(self, ex_type, ex_value, traceback):
-        """ Exit function to open loop and do other things someday?"""
+        """ Exit function to open loop, reset gain parameters to 0, close the
+        logging handler, and maybe someday close the controller intelligently."""
+
         self.close()
     
     def __del__(self):
         """ Destructor with close behavior."""
+        
         self.close()
 
     def _build_message(self, cmd_key, cmd_type, channel, value=None):
@@ -262,6 +264,7 @@ class Controller():
     def close(self):
         """ Function for the close behavior. Return every parameter to zero
         and shut down the logging."""
+
         self.close_controller()
         self.close_logger()
 
@@ -321,7 +324,6 @@ class Controller():
             self.logger.info('Device config : ')
             self.logger.info(cfg)
         
-
     @usb_except
     def get_status(self, channel):
         """Checks the status of the loop, and p/i/d_gain for 
@@ -362,6 +364,28 @@ class Controller():
 ## -- MAIN with ex
 if __name__ == "__main__":
     
-    # Quick demo of doing something..
-    ctrl = Controller()
+    # Quick demo of doing something.
     
+    # Open the controller
+    ctrl = Controller()
+
+    # Check the status for each channel
+    ctrl.get_status(1)
+    ctrl.get_status(2)
+
+    # Set the i_gain for channel 1 to 34.2
+    ctrl.command('i_gain', 34.2, 1)
+    # Set the p_gain for channel 2 to 304.103
+    ctrl.command('p_gain', 304.103, 2)
+
+    # Open the loop for each channel
+    ctrl.command('loop', 1, 1)
+    ctrl.command('loop', 1, 2)
+    
+    # Check the status for each chanel and see if the commands took
+    ctrl.get_status(1)
+    ctrl.get_status(2)
+
+    # Close the controller
+    ctrl.close()
+     
