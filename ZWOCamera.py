@@ -147,8 +147,8 @@ class ZWOCamera:
         
         elif ',' in norm:
             try:
-                v_min = float(norm.split('-')[0])
-                v_max = float(norm.split('-')[1])
+                v_min = float(norm.split(',')[0])
+                v_max = float(norm.split(',')[1])
             except ValueError:
                 self.logger.warning("In order to use the 'x,y' normalization you need two numbers. Try '-2.1,400'")
                 raise ValueError("In order to use the 'x,y' normalization you need two numbers. Try '-2.1,400'")
@@ -186,7 +186,10 @@ class ZWOCamera:
             self.logger.removeHandler(handler)
     
     def close_out(self):
-        """ Closes camera and shuts down logging if you didn't use context managers."""
+        """ Closes camera and shuts down logging if you didn't use context managers.
+        Note that this is named `close_out` and not close because the
+        zwoasi.Camera object also has a close method and I'm trying not to
+        overload it."""
 
         self.close_camera()
         self.close_logging()
