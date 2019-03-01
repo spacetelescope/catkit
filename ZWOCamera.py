@@ -127,7 +127,6 @@ class ZWOCamera:
         
         return image
     
-    @zwo_except
     def close_camera(self):
         """Closes the camera."""
         
