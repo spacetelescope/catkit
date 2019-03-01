@@ -85,16 +85,12 @@ class ZWOCamera:
         self.close_out()
     
     @zwo_except
-    def take_exposure(self, exp_time=1000, output_name='camera_test.png'):
-        """ Quick function to take a single exposure and write it to the given
-        name. 
-
+    def take_exposure(self, exp_time=1000):
+        """ Quick function to take a single exposure.
         Parameters
         ----------
         exp_time : int, optinal
             Exposure time for the image in microseconds. Defaults to 1000.
-        output_name : str, optional
-            What to name the plot out; defaults to "camera_test.png".
         
         Returns
         -------
@@ -116,17 +112,65 @@ class ZWOCamera:
                     initial_sleep=exposure_time.to(units.seconds).magnitude,
                     poll=poll.magnitude)
  
+        return image
+
+    def plot_image(self, image, colors='gray', norm='3-std', output_name='images/camera_test.png'):
+        """ Plots the camera image. 
+        
+        Parameters
+        ----------
+        image : np.array
+            Np.array image output from `take_exposure`.
+        colors : str, optional
+            The colormap to plot it. Takes any `matplotlib.pyplot.imshow` colormap key. 
+            Defaults to 'gray'.
+        norm : str, optional
+            Key for how the color scale should be normalized. Right now will take any
+            key of the form 'x-std' (ex '3-std') for median +/- x stds, 'x,y'
+            for x and y as the min and max of the image, 'min/max' for set to min and 
+            max of the image, and None, for no normalization. Defaults to '3-std'.
+        output_name, str, optional
+            Name of the output image. Includes path. Defaults to
+            'images/camera_test.png'
+        """
+
+        # Set the appropriate scale normalization
+        if 'std' in norm:
+            factor = norm.split('-')[0]
+            if factor.isdigit():
+                factor = int(factor)
+                v_min = np.median(image) - factor*np.std(image)
+                v_max = np.median(image) + factor*np.std(image)
+            else:
+                self.logger.warning("In order to use the 'x-std' normalization you need an int. Try '3-std'.")
+                raise ValueError("In order to use the 'x-std' normalization you need an int. Try '3-std'.")
+        
+        elif ',' in norm:
+            try:
+                v_min = float(norm.split('-')[0])
+                v_max = float(norm.split('-')[1])
+            except ValueError:
+                self.logger.warning("In order to use the 'x,y' normalization you need two numbers. Try '-2.1,400'")
+                raise ValueError("In order to use the 'x,y' normalization you need two numbers. Try '-2.1,400'")
+        
+        elif norm == 'min/max':
+            v_min = np.min(image)
+            v_max = np.max(image)
+
+        elif norm == None:
+            v_min, v_max = None, None
+
+        else:
+            self.logger.warning("The normalization scheme you tried doesn't exist.")
+            raise NotImplementedError("The normalization scheme you tried doesn't exist.")
+
         # Save it
-        v_min = np.median(image) - 3*np.std(image)
-        v_max = np.median(image) + 3*np.std(image)
-        plt.imshow(image, vmin=v_min, vmax=v_max, cmap='gray')
+        plt.imshow(image, vmin=v_min, vmax=v_max, cmap=colors)
         plt.colorbar()
         plt.savefig(output_name)
         plt.clf()
         self.logger.info('Image saved to {}.'.format(output_name))
         
-        return image
-    
     def close_camera(self):
         """Closes the camera."""
         
@@ -150,7 +194,10 @@ class ZWOCamera:
 # MAIN with ex
 if __name__ == "__main__":
     with zwo_cam as ZWOCamera():
-        zwo_cam.take_exposure()
-        zwo_cam.take_exposure(exp_time=10000, output_name='brighter_image.png')
-        zwo_cam.take_exposure(exp_time=100, output_name='fainter_image.png')
-
+        regular = zwo_cam.take_exposure()
+        bright = zwo_cam.take_exposure(exp_time=10000)
+        faint = zwo_cam.take_exposure(exp_time=100)
+        
+        zwo_cam.plot_image(regular, output_name='regular_image.png')
+        zwo_cam.plot_image(bright, output_name='bright_image.png')
+        zwo_cam.plot_image(faint, output_name='faint_image.png')
