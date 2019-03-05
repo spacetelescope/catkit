@@ -58,7 +58,7 @@ class CoffeeSinglePoke(Experiment):
             util.setup_hicat_logging(self.path, "coffee_single_poke")
 
         # # Pure Focus Zernike loop.
-        focus_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/focus/"
+        focus_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/focus/"
         focus_zernike_command_paths = glob(focus_zernike_data_path + "/*p2v/*.fits")
 
         # DM1 poked actuator (actuator 595 is calibrated).

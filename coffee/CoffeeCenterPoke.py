@@ -21,7 +21,7 @@ class CoffeeCenterPoke(Experiment):
     Args:
         path (string): Path to save data set. None will use the default.
         num_exposures (int): Number of exposures.
-        coron_exp_time (pint quantity): Exposure time for the coronographics data set.
+        coron_exp_time (pint quantity): Exposure time for the coronographic data set.
         direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
         centering (ImageCentering): Image centering algorithm for the coron data set.
         **kwargs: Keyword arguments passed into run_hicat_imaging()
@@ -52,7 +52,7 @@ class CoffeeCenterPoke(Experiment):
             util.setup_hicat_logging(self.path, "coffee_center_poke")
 
         # # Pure Focus Zernike loop.
-        focus_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/focus/"
+        focus_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/focus/"
         focus_zernike_command_paths = glob(focus_zernike_data_path + "/*p2v/*.fits")
 
         # DM1 Spaced Center 4 actuators.

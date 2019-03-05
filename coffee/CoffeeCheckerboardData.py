@@ -17,7 +17,7 @@ from ..modules.general import take_coffee_data_set
 
 class CoffeeCheckerboardData(Experiment):
     """
-    Creates a set of checkboard DM commands that will in effect poke every actuator in a more efficient way
+    Creates a set of checkerboard DM commands that will in effect poke every actuator in a more efficient way
     than poking 1 at a time.
 
     Args:
@@ -42,7 +42,7 @@ class CoffeeCheckerboardData(Experiment):
                  num_exposures=10,
                  path=None,
                  camera_type="imaging_camera",
-                 focus_zernike_data_path="Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/focus/",
+                 focus_zernike_data_path="Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/focus/",
                  centering=ImageCentering.custom_apodizer_spots,
                  **kwargs):
 

@@ -52,7 +52,7 @@ class CoffeeMultiAstigmatismFocus(Experiment):
             util.setup_hicat_logging(self.path, "coffee_multi_astigmatism_focus")
 
         # Multi astigmatsm+focus loop.
-        multi_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/astigmastism_80nm"
+        multi_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/astigmastism_80nm"
         multi_zernike_command_paths = glob(multi_zernike_data_path + "/*/*.fits")
 
         take_coffee_data_set(multi_zernike_command_paths, self.path,
