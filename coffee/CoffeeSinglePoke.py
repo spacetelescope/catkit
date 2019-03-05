@@ -20,6 +20,8 @@ class CoffeeSinglePoke(Experiment):
 
     Args:
         path (string): Path to save data set. None will use the default.
+        diversity (string): What diversity to use on DM2. Defocus by default. Options can be found in
+                            /astro/opticslab1/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands
         num_exposures (int): Number of exposures.
         coron_exp_time (pint quantity): Exposure time for the coronographics data set.
         direct_exp_time (pint quantity): Exposure time for the direct PSF data set.
@@ -34,6 +36,7 @@ class CoffeeSinglePoke(Experiment):
 
     def __init__(self,
                  path=None,
+                 diversity="focus",
                  num_exposures=10,
                  actuator_num=595,
                  amplitude=quantity(32, units.nanometer),
@@ -43,6 +46,7 @@ class CoffeeSinglePoke(Experiment):
                  **kwargs):
 
         self.path = path
+        self.diversity = diversity
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
         self.direct_exp_time = direct_exp_time
@@ -57,12 +61,21 @@ class CoffeeSinglePoke(Experiment):
             self.path = util.create_data_path(suffix=suffix)
             util.setup_hicat_logging(self.path, "coffee_single_poke")
 
-        # # Pure Focus Zernike loop.
-        focus_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/focus/"
-        focus_zernike_command_paths = glob(focus_zernike_data_path + "/*p2v/*.fits")
+        # Diversity Zernike commands for DM2.
+        diversity_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/"
+        if self.diversity == 'astigmatism_80nm':
+            diversity_zernike_command_paths = glob(diversity_zernike_data_path + self.diversity + "/*/*.fits")
+        else:
+            diversity_zernike_command_paths = glob(diversity_zernike_data_path + self.diversity + "/*p2v/*.fits")
 
         # DM1 poked actuator (actuator 595 is calibrated).
         poke_command_dm1 = commands.poke_command(self.actuator_num, dm_num=1, amplitude=self.amplitude)
-        take_coffee_data_set(focus_zernike_command_paths, self.path, "single_poke_actuator{}_amplitude{}_nm".format(self.actuator_num,self.amplitude.m), self.coron_exp_time,
-                             self.direct_exp_time, num_exposures=self.num_exposures,
-                             dm1_command_object=poke_command_dm1, centering=self.centering, **self.kwargs)
+        take_coffee_data_set(diversity_zernike_command_paths,
+                             self.path,
+                             "single_poke_actuator{}_amplitude{}_nm".format(self.actuator_num,self.amplitude.m),
+                             self.coron_exp_time,
+                             self.direct_exp_time,
+                             num_exposures=self.num_exposures,
+                             dm1_command_object=poke_command_dm1,
+                             centering=self.centering,
+                             **self.kwargs)
