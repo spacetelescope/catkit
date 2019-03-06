@@ -34,9 +34,9 @@ class FilterWheelAssembly(Instrument):
             # Create a dictionary to hold both filter wheels, since it isn't just one instrument.
             instrument_dict = {self.__FW1: fw1_device, self.__FW2: fw2_device}
             return instrument_dict
-        except SerialException, exp:
+        except SerialException:
             print("One or both of the filter wheels aren't responding")
-            raise exp
+            raise
 
     def close(self):
 
