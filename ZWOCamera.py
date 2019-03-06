@@ -3,6 +3,7 @@ import datetime
 import logging
 import os
 
+from astropy.io import fits
 import matplotlib.pyplot as plt
 import numpy as np
 import pint
@@ -10,7 +11,7 @@ import pint
 import zwoasi
 
 ## -- CLASSES AND FUNCTIONS
-
+# Decorator with error handling.
 def zwo_except(function):
     """Decorator that catches ZWO errors."""
 
@@ -22,6 +23,8 @@ def zwo_except(function):
             self.logger.error("There's a ZWO-specific error.")
             self.logger.error(e)
             raise e
+    return wrapper
+
 
 class ZWOCamera:
     """Class for the ZWOCamera. """
@@ -113,6 +116,31 @@ class ZWOCamera:
                     poll=poll.magnitude)
  
         return image
+    
+    def write_out_image(self, image, output_name='images/camera_test.fits'):
+        """ Writes out the camera image to a FITS file.
+
+        Parameters
+        ----------
+        image : np.array
+            Np.array image output from `take_exposure`.
+        output_name : str, optional
+            Name of the output image. Includes path. Defaults to
+            'images/camera_test.fits'.
+        
+        Notes
+        -----
+        If you don't specify a name and you're taking multiple images you will
+        overwrite them each time.
+        """
+        
+        # Write a header
+        hdr = fits.Header()
+        hdr['WRITE-DATE'] = str(datetime.datetime.now())
+        
+        # Write out the file
+        hdu = fits.PrimaryHDU(data=image, header=hdr)
+        hdu.writeto(output_name)
 
     def plot_image(self, image, colors='gray', norm='3-std', output_name='images/camera_test.png'):
         """ Plots the camera image. 
@@ -192,7 +220,7 @@ class ZWOCamera:
         overload it."""
 
         self.close_camera()
-        self.close_logging()
+        self.close_logger()
 
 # MAIN with ex
 if __name__ == "__main__":
