@@ -129,7 +129,7 @@ def backup_power():
     if testbed_state.simulation:
         return simulators.SimSnmpUps("blue_ups")
     else:
-        return SnmpUps("bluee_ups")
+        return SnmpUps("blue_ups")
 
 
 def get_camera(camera_type):
