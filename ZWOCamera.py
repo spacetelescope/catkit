@@ -64,13 +64,8 @@ class ZWOCamera:
             raise e
         
         # And then open the camera connection
-        # THIS IS NOT GREAT! THIS WILL OPEN WHATEVER CAMERA IS FIRST IN LINE
-        # This should be set to only select the camera name with :
-        # camera_name = 'ZWO ...'
-        # camera_index = zwoasi.list_cameras().index(camera_name)
-        # zwoasi.Camera(camera_index)
-        # However, until we decide with certainty which camera (or cameras)
-        # we're using I don't see what else to do.
+        # This opens whatever connected camera is first in line
+        # If you want a different one specify it with the `open_camera_by_name` method.
         self.camera = zwoasi.Camera(0)
                 
     
@@ -86,7 +81,42 @@ class ZWOCamera:
         """ Exit function to allow for context management. In this case, closes
         the camera."""
         self.close_out()
-    
+ 
+    def close_out(self):
+        """ Closes camera and shuts down logging if you didn't use context managers.
+        Note that this is named `close_out` and not close because the
+        zwoasi.Camera object also has a close method and I'm trying not to
+        overload it."""
+
+        self._close_camera()
+        self._close_logger()
+
+    @zwo_except
+    def open_camera_by_name(self, camera_name):
+        """ Closes the current connection and open one to a specific camera.
+
+        Parameters
+        ----------
+        camera_name : str
+            The name of the specific camera connection.
+        """
+        # First check if we can connect to the given camera
+        if camera_name in zwoasi.list_cameras():
+
+            # First close any exisiting camera connection. 
+            old_camera = self.camera.get_camera_property()
+            self._close_camera()
+            self.logger.info('Connection to {} closed.'.format(old_camera))
+
+            # Then set up connection to new camera
+            camera_index = zwoasi.list_cameras().index(camera_name)
+            self.camera = zwoasi.Camera(camera_index)
+            self.logger.info('New connection to {} created.'.format(camera_name))
+        
+        else:
+            self.logger.error('The camera you specified : {}, is not currently connected.'.format(camera_name))
+            raise NameError('The camera you specified : {}, is not currently connected.'.format(camera_name))
+
     @zwo_except
     def take_exposure(self, exp_time=1000):
         """ Quick function to take a single exposure.
@@ -117,31 +147,6 @@ class ZWOCamera:
  
         return image
     
-    def write_out_image(self, image, output_name='images/camera_test.fits'):
-        """ Writes out the camera image to a FITS file.
-
-        Parameters
-        ----------
-        image : np.array
-            Np.array image output from `take_exposure`.
-        output_name : str, optional
-            Name of the output image. Includes path. Defaults to
-            'images/camera_test.fits'.
-        
-        Notes
-        -----
-        If you don't specify a name and you're taking multiple images you will
-        overwrite them each time.
-        """
-        
-        # Write a header
-        hdr = fits.Header()
-        hdr['WRITE-DATE'] = str(datetime.datetime.now())
-        
-        # Write out the file
-        hdu = fits.PrimaryHDU(data=image, header=hdr)
-        hdu.writeto(output_name)
-
     def plot_image(self, image, colors='gray', norm='3-std', output_name='images/camera_test.png'):
         """ Plots the camera image. 
         
@@ -199,13 +204,38 @@ class ZWOCamera:
         plt.clf()
         self.logger.info('Image saved to {}.'.format(output_name))
         
-    def close_camera(self):
+    def write_out_image(self, image, output_name='images/camera_test.fits'):
+        """ Writes out the camera image to a FITS file.
+
+        Parameters
+        ----------
+        image : np.array
+            Np.array image output from `take_exposure`.
+        output_name : str, optional
+            Name of the output image. Includes path. Defaults to
+            'images/camera_test.fits'.
+        
+        Notes
+        -----
+        If you don't specify a name and you're taking multiple images you will
+        overwrite them each time.
+        """
+        
+        # Write a header
+        hdr = fits.Header()
+        hdr['WRITE-DATE'] = str(datetime.datetime.now())
+        
+        # Write out the file
+        hdu = fits.PrimaryHDU(data=image, header=hdr)
+        hdu.writeto(output_name)
+
+    def _close_camera(self):
         """Closes the camera."""
         
         self.camera.close()
         self.logger.info('Camera connection closed.')
     
-    def close_logger(self):
+    def _close_logger(self):
         """ Closes the logging."""
 
         handlers = self.logger.handlers[:]
@@ -213,15 +243,6 @@ class ZWOCamera:
             handler.close()
             self.logger.removeHandler(handler)
     
-    def close_out(self):
-        """ Closes camera and shuts down logging if you didn't use context managers.
-        Note that this is named `close_out` and not close because the
-        zwoasi.Camera object also has a close method and I'm trying not to
-        overload it."""
-
-        self.close_camera()
-        self.close_logger()
-
 # MAIN with ex
 if __name__ == "__main__":
     with zwo_cam as ZWOCamera():
