@@ -1,5 +1,6 @@
 ## -- IMPORTS 
 import datetime
+import functools
 import logging
 import os
 
@@ -19,7 +20,7 @@ def zwo_except(function):
     def wrapper(self, *args, **kwargs):
         try:
             return function(self, *args, **kwargs)
-        except (zwo.ZWO_Error, zwo.ZWO_IOError, zwo.ZWO_CaptureError) as e:
+        except (zwoasi.ZWO_Error, zwoasi.ZWO_IOError, zwoasi.ZWO_CaptureError) as e:
             self.logger.error("There's a ZWO-specific error.")
             self.logger.error(e)
             raise e
@@ -67,7 +68,7 @@ class ZWOCamera:
         # This opens whatever connected camera is first in line
         # If you want a different one specify it with the `open_camera_by_name` method.
         self.camera = zwoasi.Camera(0)
-                
+        self.name = self.camera.get_camera_property()['Name']
     
     def __del__(self):
         """Destructor to specify close behavior."""
@@ -90,6 +91,21 @@ class ZWOCamera:
 
         self._close_camera()
         self._close_logger()
+    
+    @zwo_except
+    def list_connected_cameras(self):
+        """ Lists currently connected cameras.
+        
+        Returns
+        -------
+        cameras : list of str
+            List of camera names.
+        """
+        
+        cameras = zwoasi.list_cameras()
+        self.logger.info('Currently connected camers : {}'.format(cameras))
+
+        return cameras
 
     @zwo_except
     def open_camera_by_name(self, camera_name):
@@ -104,13 +120,14 @@ class ZWOCamera:
         if camera_name in zwoasi.list_cameras():
 
             # First close any exisiting camera connection. 
-            old_camera = self.camera.get_camera_property()
+            old_camera = self.camera.get_camera_property()['Name']
             self._close_camera()
             self.logger.info('Connection to {} closed.'.format(old_camera))
 
             # Then set up connection to new camera
             camera_index = zwoasi.list_cameras().index(camera_name)
             self.camera = zwoasi.Camera(camera_index)
+            self.name = self.camera.get_camera_property()['Name']
             self.logger.info('New connection to {} created.'.format(camera_name))
         
         else:
@@ -223,11 +240,11 @@ class ZWOCamera:
         
         # Write a header
         hdr = fits.Header()
-        hdr['WRITE-DATE'] = str(datetime.datetime.now())
+        hdr['DATE'] = str(datetime.datetime.now())
         
         # Write out the file
         hdu = fits.PrimaryHDU(data=image, header=hdr)
-        hdu.writeto(output_name)
+        hdu.writeto(output_name, overwrite=True)
 
     def _close_camera(self):
         """Closes the camera."""
@@ -245,7 +262,7 @@ class ZWOCamera:
     
 # MAIN with ex
 if __name__ == "__main__":
-    with zwo_cam as ZWOCamera():
+    with ZWOCamera() as zwo_cam:
         regular = zwo_cam.take_exposure()
         bright = zwo_cam.take_exposure(exp_time=10000)
         faint = zwo_cam.take_exposure(exp_time=100)
