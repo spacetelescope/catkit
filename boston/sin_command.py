@@ -47,7 +47,16 @@ def sin_command(sin_specification,
     if initial_data is not None:
         sin_wave += initial_data
 
+    # Add up the passed sine specifications to one sine wave
     for spec in sin_specification:
+
+        # Make sure the requested command is properly sampled on the DM.
+        if spec.ncycles > 17:
+            raise ValueError("Cannot do more than 17 cycles per pupil on DM with 34 actuators across.")
+
+        elif spec.ncycles >= 17 and spec.phase < 1.:    # I chose 1. here for no specific reason; technically it's
+                                                        # if spec.phase == 0
+            raise ValueError("Cosine (phase ~= 0) will not be sampled correctly at 17 cycles per pupil.")
 
         sin_wave += __sin_wave(spec.angle,
                                spec.ncycles,
