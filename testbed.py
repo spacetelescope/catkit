@@ -30,7 +30,6 @@ if not testbed_state.simulation:
 from ..interfaces.DummyLaserSource import DummyLaserSource
 from ..hardware.FilterWheelAssembly import FilterWheelAssembly
 
-from .. import simulators
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
 
@@ -44,6 +43,7 @@ def imaging_camera():
     """
     camera_name = CONFIG_INI.get("testbed", "imaging_camera")
     if testbed_state.simulation:
+        from .. import simulators
         return simulators.SimZwoCamera(camera_name)
     else:
         return ZwoCamera(camera_name)
@@ -57,6 +57,7 @@ def phase_retrieval_camera():
     """
     camera_name = CONFIG_INI.get("testbed", "phase_retrieval_camera")
     if testbed_state.simulation:
+        from .. import simulators
         return simulators.SimZwoCamera(camera_name)
     else:
         return ZwoCamera(camera_name)
@@ -70,6 +71,7 @@ def pupil_camera():
         """
     camera_name = CONFIG_INI.get("testbed", "pupil_camera")
     if testbed_state.simulation:
+        from .. import simulators
         return simulators.SimZwoCamera(camera_name)
     else:
         return ZwoCamera(camera_name)
@@ -84,6 +86,7 @@ def dm_controller():
     :return: An instance of the DeformableMirrorController.py interface.
     """
     if testbed_state.simulation:
+        from .. import simulators
         return simulators.SimBostonDmController("boston_kilo952")
     else:
         return BostonDmController("boston_kilo952")
@@ -96,6 +99,7 @@ def motor_controller(initialize_to_nominal=True, use_testbed_state=True):
     :return: An instance of the MotorController.py interface.
     """
     if testbed_state.simulation:
+        from .. import simulators
         return simulators.SimNewportMotorController("newport_xps_q8",
                                   initialize_to_nominal=initialize_to_nominal,
                                   use_testbed_state=use_testbed_state)
@@ -108,6 +112,7 @@ def motor_controller(initialize_to_nominal=True, use_testbed_state=True):
 
 def beam_dump():
     if testbed_state.simulation:
+        from .. import simulators
         return simulators.SimThorlabsMFF101("thorlabs_mff101_1")
     else:
         return ThorlabsMFF101("thorlabs_mff101_1")
@@ -120,6 +125,7 @@ def laser_source():
         return DummyLaserSource("dummy")
     else:
         if testbed_state.simulation:
+            from .. import simulators
             return simulators.SimThorlabsMLCS1(laser_name)
         else:
             return ThorlabsMLCS1(laser_name)
@@ -127,6 +133,7 @@ def laser_source():
 
 def backup_power():
     if testbed_state.simulation:
+        from .. import simulators
         return simulators.SimSnmpUps("blue_ups")
     else:
         return SnmpUps("blue_ups")
