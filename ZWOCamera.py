@@ -45,6 +45,9 @@ class ZWOCamera:
         self.logger.addHandler(fh)
 
         ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)
 
         self.logger.info('Camera instantiated, and logging online.')
         
