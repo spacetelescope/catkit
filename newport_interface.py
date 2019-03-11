@@ -62,7 +62,7 @@ class NewportPicomotor:
         self.logger.addHandler(ch)
         
         # Set IP address 
-        self.ip = '192.1168.192.151'
+        self.ip = '192.168.192.151'
         try:
             urlopen('http://{}'.format(self.ip))
         except (IncompleteRead, HTTPError, Exception) as e:
@@ -114,18 +114,19 @@ class NewportPicomotor:
     @http_except
     def command(self, cmd_key, axis, value):
 
-        set_message = self._build_message(self, cmd_key, 'set', axis, value)
-        get_message = self._build_message(self, cmd_key, 'get', axis)
+        set_message = self._build_message(cmd_key, 'set', axis, value)
+        get_message = self._build_message(cmd_key, 'get', axis)
         
         self._send_message(set_message, 'set')
         set_value = self._send_message(get_message, 'get')
-        if cmd_key in ['home_position', 'absolute_move']: 
-            if set_value != value:
-                logging.warn('Something is wrong, {} != {}'.format(set_value, value) 
-        else:
-            logging.warn("There's not good way to check relative moves at this time.")
         
-        logging.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
+        if cmd_key in ['home_position', 'exact_move']: 
+            if float(set_value) != value:
+                self.logger.error('Something is wrong, {} != {}'.format(set_value, value)) 
+        else:
+            self.logger.warning("There's not good way to check relative moves at this time.")
+        
+        self.logger.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
     
     def convert_move_to_pixel(self, img1, img2, move, axis):
         """ After two images taken some x_move or y_move apart, calculate how
@@ -195,7 +196,8 @@ class NewportPicomotor:
         
         state_dict = {}
         for cmd_key in ('home_position', 'exact_move'):
-            message = self._build_message(self, cmd_key, 'get', axis)
+            
+            message = self._build_message(cmd_key, 'get', axis)
             value = self._send_message(message, 'get') 
             state_dict['{}_{}'.format(cmd_key, axis)] = value
             self.logger.info('For axis {}, {} is set to {}'.format(axis, cmd_key, value))
@@ -207,7 +209,7 @@ class NewportPicomotor:
     def reset(self):
         """Resets the controller."""
         
-        message = self._build_message(self, 'reset', 'reset')
+        message = self._build_message('reset', 'reset')
         self._send_message(message, 'set')
         self.logger.info('Controller reset.')
 
@@ -252,12 +254,11 @@ class NewportPicomotor:
             The axis (1-4 are valid) to set. Defaults to None.
         value : str 
         """
-
+        
         cmd_dict = {'home_position' : 'DH', 'exact_move' : 'PA', 
                     'relative_move' : 'PR', 'reset' : 'RS'}
         
         address = cmd_dict[cmd_key]
-        print(address)
 
         if cmd_key == 'reset':
             if axis != None:
@@ -291,17 +292,15 @@ class NewportPicomotor:
             
         return message
     
-    def _send_message(self, message):
+    def _send_message(self, message, cmd_type):
         
         form_data = urlencode({'cmd': message, 'submit': 'Send'})
-        binary_data = form_data.encode('ascii')
-
-        html = urlopen('{}/cmd_send.cgi'.format(self.ip), binary_data)
+        html = urlopen('http://{}/cmd_send.cgi?{}'.format(self.ip, form_data))
         resp = str(html.read())
         
         if cmd_type == 'get':
             # Pull out the response from the html on the page 
             response = resp.split('response')[1].split('-->')[1].split('\\r')[0]
 
-            return resp
+            return response
 
