@@ -63,20 +63,119 @@ class NewportPicomotor:
         
         # Set IP address 
         self.ip = '192.1168.192.151'
+        try:
+            urlopen('http://{}'.format(self.ip))
+        except (IncompleteRead, HTTPError, Exception) as e:
+            self.logger.error('The controller IP address is not responding.')
+            self.close_logger()
+            raise NameError("The controller IP address is not responding.")
+
+        self.logger.info('IP address online, and logging instantiated.')
+
 
     def __enter__(self):
         """ Enter function to allow context management."""
 
         return self
 
-    def __exit__(self):
-        """ Exit function to return all settings to base."""
+    def __exit__(self, ex_type, ex_value, traceback):
+        """ Exit function to open loop, reset gain parameters to 0, close the
+        logging handler, and maybe someday close the controller intelligently."""
+
+        self.close()
+    
+    def __del__(self):
+        """ Destructor with close behavior."""
         
+        self.close()
+
+    def close(self):
+        """ Function for the close behavior. Return every parameter to zero
+        and shut down the logging."""
+
+        self.close_controller()
+        self.close_logger()
+
+    def close_controller(self):
+        """Function for the close controller behavior."""
+
         for cmd_key in ('home_position', 'exact_move'):
             for axis in (1,2):
                 self.command(cmd_key, axis, 0)
         
-        self.logger.info('Everything has been reset. Enjoy your new life.')
+    def close_logger(self):
+        """Function for the close logger behavior."""
+
+        handlers = self.logger.handlers[:]
+        for handler in handlers:
+            handler.close()
+            self.logger.removeHandler(handler)
+
+    @http_except
+    def command(self, cmd_key, axis, value):
+
+        set_message = self._build_message(self, cmd_key, 'set', axis, value)
+        get_message = self._build_message(self, cmd_key, 'get', axis)
+        
+        self._send_message(set_message, 'set')
+        set_value = self._send_message(get_message, 'get')
+        if cmd_key in ['home_position', 'absolute_move']: 
+            if set_value != value:
+                logging.warn('Something is wrong, {} != {}'.format(set_value, value) 
+        else:
+            logging.warn("There's not good way to check relative moves at this time.")
+        
+        logging.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
+    
+    def convert_move_to_pixel(self, img1, img2, move, axis):
+        """ After two images taken some x_move or y_move apart, calculate how
+        the picomoter move corresponds to pixel move.
+        
+        Parameters
+        ----------
+        img1 : np.array
+            Image before move.
+        img2 : np.array
+            Image after move.
+        move : int
+            How much the picomotor moved.
+        axis : int
+            What axis the picomotor moved on.
+        
+        Returns
+        -------
+        r : float
+            The scalar distance of the move in pixels.
+        theta : float
+            The angle from x in radians. 
+        r_ratio : float
+            The ratio of the scalar distance in pixels and the picomotor move. 
+        delta_theta : float
+            The difference between the angle from x and the picomotor axis.
+        """
+
+        x1, y1 = centroid_2dg(img1)
+        x2, y2 = centroid_2dg(img2)
+
+        x_move = x1 - x2
+        y_move = y1 - y2
+        
+        r = np.sqrt(x_move**2 + y_move**2)
+        theta = np.arctan(y_move/x_move)
+        
+        r_ratio = r/move
+        
+        if axis == 1:
+            delta_theta = theta - 0
+        elif axis == 2:
+            delta_theta = theta - np.pi/2
+        else:
+            raise NotImplementedError('Only axis 1 and axis 2 are defined.')
+        
+        self.r_ratio = r_ratio
+        self.delta_theta = delta_theta
+
+        return r, theta, r_ratio, delta_theta
     
     @http_except
     def get_status(self, axis):
@@ -99,33 +198,18 @@ class NewportPicomotor:
             message = self._build_message(self, cmd_key, 'get', axis)
             value = self._send_message(message, 'get') 
             state_dict['{}_{}'.format(cmd_key, axis)] = value
-            logging.info('For axis {}, {} is set to {}'.format(axis, cmd_key, value))
+            self.logger.info('For axis {}, {} is set to {}'.format(axis, cmd_key, value))
         
         return state_dict
     
-    @http_except
-    def command(self, cmd_key, axis, value):
-
-        set_message = self._build_message(self, cmd_key, 'set', axis, value)
-        get_message = self._build_message(self, cmd_key, 'get', axis)
-        
-        self._send_message(set_message, 'set')
-        set_value = self._send_message(get_message, 'get')
-        if cmd_key in ['home_position', 'absolute_move']: 
-            if set_value != value:
-                logging.warn('Something is wrong, {} != {}'.formatset_value, value) 
-        else:
-            logging.warn("There's not good way to check relative moves at this time.")
-        
-        logging.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
         
     @http_except
     def reset(self):
         """Resets the controller."""
         
         message = self._build_message(self, 'reset', 'reset')
-        self.__send_message(message, 'set')
-        logging.info('Controller reset')
+        self._send_message(message, 'set')
+        self.logger.info('Controller reset.')
 
     @http_except
     def set_to_centroid(self, data, x_center=0, y_center=0, flip=False):
@@ -150,7 +234,7 @@ class NewportPicomotor:
         
         x, y = centroid_2dg(data)
         
-        logging.info('Centroid found at ({},{}). Resetting home position.'.format(x, y))
+        self.logger.info('Centroid found at ({},{}). Resetting home position.'.format(x, y))
         
         self.command('home_position', 'set', 1, x-x_center)
         self.command('home_position', 'set', 2, y-y_center)
@@ -207,69 +291,17 @@ class NewportPicomotor:
             
         return message
     
-    def _send_message(self, cmd_type):
+    def _send_message(self, message):
         
         form_data = urlencode({'cmd': message, 'submit': 'Send'})
         binary_data = form_data.encode('ascii')
 
-        html = urlopen('{}/cmd_send.cgi'.format(self.ip), cal_data)
-        resp = html.split('Response')[-1]
+        html = urlopen('{}/cmd_send.cgi'.format(self.ip), binary_data)
+        resp = str(html.read())
         
         if cmd_type == 'get':
-            # Figure out how this is gonna look to extra the element
-            resp = resp[0]
+            # Pull out the response from the html on the page 
+            response = resp.split('response')[1].split('-->')[1].split('\\r')[0]
+
             return resp
-
-    def convert_move_to_pixel(self, img1, img2, move, axis):
-        """ After two images taken some x_move or y_move apart, calculate how
-        the picomoter move corresponds to pixel move.
-        
-        Parameters
-        ----------
-        img1 : np.array
-            Image before move.
-        img2 : np.array
-            Image after move.
-        move : int
-            How much the picomotor moved.
-        axis : int
-            What axis the picomotor moved on.
-        
-        Returns
-        -------
-        r : float
-            The scalar distance of the move in pixels.
-        theta : float
-            The angle from x in radians. 
-        r_ratio : float
-            The ratio of the scalar distance in pixels and the picomotor move. 
-        delta_theta : float
-            The difference between the angle from x and the picomotor axis.
-        """
-
-        x1, y1 = centroid_2dg(img1)
-        x2, y2 = centroid_2dg(img2)
-
-        x_move = x1 - x2
-        y_move = y1 - y2
-        
-        r = np.sqrt(x_move**2 + y_move**2)
-        theta = np.arctan(y_move/x_move)
-        
-        r_ratio = r/move
-        
-        if axis == 1:
-            delta_theta = theta - 0
-        elif axis == 2:
-            delta_theta = theta - np.pi/2
-        else:
-            raise NotImplementedError('Only axis 1 and axis 2 are defined.')
-        
-        self.r_ratio = r_ratio
-        self.delta_theta = delta_theta
-
-        return r, theta, r_ratio, delta_theta
-
-
-
 
