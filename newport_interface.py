@@ -11,6 +11,9 @@ Jules Fowler, 2019
 """
 
 ## -- IMPORTS
+import datetime
+import functools
+import logging
 import os
 
 from http.client import IncompleteRead
@@ -33,6 +36,7 @@ def http_except(function):
             self.logger.error("The page timed out with : {}.".format(e))
             raise Exception 
 
+    return wrapper
 
 class NewportPicomotor:
     """ This class handles all the picomotor stufff. """
@@ -58,7 +62,7 @@ class NewportPicomotor:
         self.logger.addHandler(ch)
         
         # Set IP address 
-        self.ip = ...
+        self.ip = '192.1168.192.151'
 
     def __enter__(self):
         """ Enter function to allow context management."""
@@ -151,7 +155,6 @@ class NewportPicomotor:
         self.command('home_position', 'set', 1, x-x_center)
         self.command('home_position', 'set', 2, y-y_center)
     
-    @htp_except
     def _build_message(self, cmd_key, cmd_type, axis=None, value=None):
         """Build a message for the newport picomotor controller.
 
@@ -170,42 +173,43 @@ class NewportPicomotor:
                     'relative_move' : 'PR', 'reset' : 'RS'}
         
         address = cmd_dict[cmd_key]
-        
+        print(address)
+
         if cmd_key == 'reset':
             if axis != None:
-                # log warn
-                print('Nothing will happen to the specified axis while we reset.')
+                self.logger.info('Nothing will happen to the specified axis while we reset.')
+                
             if value != None:
-                # log warn
-                print('Nothing will happen to the specified value while we reset.')
+                self.logger.info('Nothing will happen to the specified value while we reset.')
 
             message = address 
 
-        if cmd_key == 'get':
+        if cmd_type == 'get':
             if axis == None:
+                self.logger.error("This command requires an axis.")
                 raise ValueError("This command requires an axis.")
             elif value != None:
-                # log warn 
-                print('Nothing will happen to the specified value while we check stuff.')
-            else:
-                message = '{}{}?'.format(int(axis), address)
+                self.logger.info('Nothing will happen to the specified value while we check stuff.')
+            message = '{}{}?'.format(int(axis), address)
         
-        elif cmd_key == 'set': 
-            if aixs == None:
+        elif cmd_type == 'set': 
+            if axis == None:
+                self.logger.error("This command requiers an axis.")
                 raise ValueError("This command requires an axis.")
-            elif value != None:
+            elif value == None:
+                self.logger.error("This command requires a value.")
                 raise ValueError("This command requires a value.")
             elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > 2147483647:
+                self.logger.error('You can only move 2147483647 in any direction.')
                 raise ValueError('You can only move 2147483647 in any direction.')
             else:
                 message = '{}{}{}'.format(int(axis), address, int(value))
             
         return message
     
-    @http_except
     def _send_message(self, cmd_type):
         
-        form_data = urlencode{'cmd': message, 'submit': 'Send'}
+        form_data = urlencode({'cmd': message, 'submit': 'Send'})
         binary_data = form_data.encode('ascii')
 
         html = urlopen('{}/cmd_send.cgi'.format(self.ip), cal_data)
