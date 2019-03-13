@@ -44,13 +44,13 @@ class NewportPicomotor:
     def __init__(self):
         """ Initial function to set up logging and 
         set the IP address for the controller."""
-
-        self.logger = logging.getLogger()
+        
+        str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
+        self.logger = logging.getLogger('newport-{}'.format(str_date))
         self.logger.setLevel(logging.DEBUG)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = os.path.join('.', 'newport_interface_log_{}.txt'.format(
-                   str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')))
+        log_file = os.path.join('logs', 'newport_interface_log_{}.txt'.format(str_date))
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
@@ -113,19 +113,33 @@ class NewportPicomotor:
 
     @http_except
     def command(self, cmd_key, axis, value):
+        """ Function to send a command to the controller.
+
+        Parameters
+        ----------
+        cmd_key : str
+            The parameter to set, presently allows for 'home_position',
+            'exact_move', or 'relative_move'.
+        axis : int
+            Axis 1, 2, (or potentially 3) for x/y/z, tip/tilt/piston.
+        value : int/float/double
+            Given any number (it will be converted to int regardless of type),
+            it will set the command to that value.
+        """
 
         set_message = self._build_message(cmd_key, 'set', axis, value)
         get_message = self._build_message(cmd_key, 'get', axis)
         
-        self._send_message(set_message, 'set')
-        set_value = self._send_message(get_message, 'get')
-        
-        if cmd_key in ['home_position', 'exact_move']: 
-            if float(set_value) != value:
-                self.logger.error('Something is wrong, {} != {}'.format(set_value, value)) 
+        if cmd_key == 'relative_move':
+            init_value = self._send_message(get_message, 'get')
         else:
-            self.logger.warning("There's not good way to check relative moves at this time.")
+            init_value = 0
+        self._send_message(set_message, 'set')
+        set_value = self._send_message(get_message, 'get') - init_value
         
+        if float(set_value) != value:
+            self.logger.error('Something is wrong, {} != {}'.format(set_value, value)) 
+         
         self.logger.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
     
     def convert_move_to_pixel(self, img1, img2, move, axis):
@@ -168,14 +182,15 @@ class NewportPicomotor:
         
         if axis == 1:
             delta_theta = theta - 0
+        self.r_ratio_1 = r_ratio
+        self.delta_theta_1 = delta_theta
         elif axis == 2:
             delta_theta = theta - np.pi/2
+        self.r_ratio_2 = r_ratio
+        self.delta_theta_2 = delta_theta
         else:
             raise NotImplementedError('Only axis 1 and axis 2 are defined.')
         
-        self.r_ratio = r_ratio
-        self.delta_theta = delta_theta
-
         return r, theta, r_ratio, delta_theta
     
     @http_except
@@ -195,7 +210,7 @@ class NewportPicomotor:
         """
         
         state_dict = {}
-        for cmd_key in ('home_position', 'exact_move'):
+        for cmd_key in ('home_position', 'exact_move', 'relative_position'):
             
             message = self._build_message(cmd_key, 'get', axis)
             value = self._send_message(message, 'get') 
@@ -253,6 +268,11 @@ class NewportPicomotor:
         axis : int, optional
             The axis (1-4 are valid) to set. Defaults to None.
         value : str 
+        
+        Returns
+        -------
+        message : str
+            The message to send to the controller site.
         """
         
         cmd_dict = {'home_position' : 'DH', 'exact_move' : 'PA', 
@@ -293,6 +313,21 @@ class NewportPicomotor:
         return message
     
     def _send_message(self, message, cmd_type):
+        """ Sends message to the controller.
+
+        Parameters
+        ----------
+        message : str
+            The message to send to the controller.
+        cmd_type : str
+            Get or set -- for whether to get the value or set the controller.
+
+        Returns
+        -------
+        response : str of int
+            If cmd_type == 'get' (and we want to take a value from the
+            controller), it will return the value.
+        """
         
         form_data = urlencode({'cmd': message, 'submit': 'Send'})
         html = urlopen('http://{}/cmd_send.cgi?{}'.format(self.ip, form_data))
