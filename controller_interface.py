@@ -48,12 +48,12 @@ class Controller():
         """Initial function to configure logging and find the device."""
         
         # Set up the logging.
-        self.logger = logging.getLogger()
+        str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
+        self.logger = logging.getLogger('nPoint-{}'.format(str_date))
         self.logger.setLevel(logging.DEBUG)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = os.path.join('.', 'controller_interface_log_{}.txt'.format(
-            str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')))
+        log_file = os.path.join('logs', 'controller_interface_log_{}.txt'.format(str_date))
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)

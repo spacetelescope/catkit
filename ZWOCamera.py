@@ -31,15 +31,16 @@ class ZWOCamera:
     """Class for the ZWOCamera. """
     
     def __init__(self):
-        """ Init function to set up logging and instantiate the camera."""
+        """ Init function to set up logging and instantiate the camera
+        libraries."""
 
         # Logging
-        self.logger = logging.getLogger()
+        str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
+        self.logger = logging.getLogger('zwoCam-{}'.format(str_date))
         self.logger.setLevel(logging.DEBUG)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = os.path.join('.', 'zwo_camera_log_{}.txt'.format(
-                                str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')))
+        log_file = os.path.join('logs', 'zwo_camera_log_{}.txt'.format(str_date))
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
@@ -50,7 +51,6 @@ class ZWOCamera:
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
 
-        self.logger.info('Camera instantiated, and logging online.')
         
         # Camera set up
         # First see if the lib is already instantiated
@@ -67,11 +67,8 @@ class ZWOCamera:
             logger.error(e)
             raise e
         
-        # And then open the camera connection
-        # This opens whatever connected camera is first in line
-        # If you want a different one specify it with the `open_camera_by_name` method.
-        self.camera = zwoasi.Camera(0)
-        self.name = self.camera.get_camera_property()['Name']
+        self.logger.info('Camera library instantiated and logging online.')
+
     
     def __del__(self):
         """Destructor to specify close behavior."""
@@ -111,31 +108,31 @@ class ZWOCamera:
         return cameras
 
     @zwo_except
-    def open_camera_by_name(self, camera_name):
-        """ Closes the current connection and open one to a specific camera.
-
+    def open_camera(self, camera_name='default'):
+        """ Opens a connection to the camera. 
+        
         Parameters
         ----------
-        camera_name : str
-            The name of the specific camera connection.
+        camera_name : str, optional
+            The name of the camera to connect to. Defaults to whatever camera
+            is first in line.
         """
-        # First check if we can connect to the given camera
-        if camera_name in zwoasi.list_cameras():
-
-            # First close any exisiting camera connection. 
-            old_camera = self.camera.get_camera_property()['Name']
-            self._close_camera()
-            self.logger.info('Connection to {} closed.'.format(old_camera))
-
-            # Then set up connection to new camera
+        if camera_name=='default':
+            # Open first camera connection 
+            self.camera = zwoasi.Camera(0)
+            self.name = self.camera.get_camera_property()['Name']
+        
+        elif camera_name in zwoasi.list_cameras():
+            # Set up connection to named camera
             camera_index = zwoasi.list_cameras().index(camera_name)
             self.camera = zwoasi.Camera(camera_index)
             self.name = self.camera.get_camera_property()['Name']
-            self.logger.info('New connection to {} created.'.format(camera_name))
         
         else:
             self.logger.error('The camera you specified : {}, is not currently connected.'.format(camera_name))
             raise NameError('The camera you specified : {}, is not currently connected.'.format(camera_name))
+    
+        self.logger.info('Connection to {} created.'.format(self.name))
 
     @zwo_except
     def take_exposure(self, exp_time=1000):
