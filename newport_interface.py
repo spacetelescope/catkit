@@ -18,7 +18,7 @@ import os
 
 from http.client import IncompleteRead
 import numpy as np
-from photutils import centroid_2dg
+from photutils import centroid_1dg
 from requests.exceptions import HTTPError
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -169,8 +169,8 @@ class NewportPicomotor:
             The difference between the angle from x and the picomotor axis.
         """
 
-        x1, y1 = centroid_2dg(img1)
-        x2, y2 = centroid_2dg(img2)
+        x1, y1 = centroid_1dg(img1)
+        x2, y2 = centroid_1dg(img2)
 
         x_move = x1 - x2
         y_move = y1 - y2
@@ -257,7 +257,7 @@ class NewportPicomotor:
         if flip:
             x, y = y, x
         
-        x, y = centroid_2dg(data)
+        x, y = centroid_1dg(data)
         
         self.logger.info('Centroid found at ({},{}). Resetting home position.'.format(x, y))
         
