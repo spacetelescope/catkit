@@ -47,7 +47,7 @@ class NewportPicomotor:
         
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
         self.logger = logging.getLogger('newport-{}'.format(str_date))
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         log_file = os.path.join('logs', 'newport_interface_log_{}.txt'.format(str_date))
@@ -126,7 +126,7 @@ class NewportPicomotor:
             Given any number (it will be converted to int regardless of type),
             it will set the command to that value.
         """
-
+        value = round(value)
         set_message = self._build_message(cmd_key, 'set', axis, value)
         get_message = self._build_message(cmd_key, 'get', axis)
         
@@ -135,7 +135,7 @@ class NewportPicomotor:
         else:
             init_value = 0
         self._send_message(set_message, 'set')
-        set_value = self._send_message(get_message, 'get') - init_value
+        set_value = float(self._send_message(get_message, 'get')) - float(init_value)
         
         if float(set_value) != value:
             self.logger.error('Something is wrong, {} != {}'.format(set_value, value)) 
@@ -182,14 +182,22 @@ class NewportPicomotor:
         
         if axis == 1:
             delta_theta = theta - 0
-        self.r_ratio_1 = r_ratio
-        self.delta_theta_1 = delta_theta
+            self.r_ratio_1 = r_ratio
+            self.delta_theta_1 = delta_theta
         elif axis == 2:
             delta_theta = theta - np.pi/2
-        self.r_ratio_2 = r_ratio
-        self.delta_theta_2 = delta_theta
+            self.r_ratio_2 = r_ratio
+            self.delta_theta_2 = delta_theta
+        elif axis == 3:
+            delta_theta = theta - 0
+            self.r_ratio_3 = r_ratio
+            self.delta_theta_3 = delta_theta
+        elif axis ==4:
+            delta_theta = theta - np.pi/2
+            self.r_ratio_4 = r_ratio
+            self.delta_theta_4 = delta_theta
         else:
-            raise NotImplementedError('Only axis 1 and axis 2 are defined.')
+            raise NotImplementedError('Only axis 1 through 4 are defined.')
         
         return r, theta, r_ratio, delta_theta
     
