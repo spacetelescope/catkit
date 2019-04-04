@@ -18,28 +18,33 @@ Example
 Now, we can import the package as `interfaces` and go hamm. 
 
 * nPoint piezo Tip/Tilt Close Loop Controller.
-    
-    >>> from interfaces import npoint_tiptilt
-    >>> tiptilt = npoint_tiptilt.nPointTipTilt()
-    >>> tiptilt.command("p_gain", 1, .003)
-    >>> tiptilt.get_status(1)
-    >>> tiptilt.command("loop", 1, 1)
-    >>> tiptilt.close()
+
+```python  
+from interfaces import npoint_tiptilt
+tiptilt = npoint_tiptilt.nPointTipTilt()
+tiptilt.command("p_gain", 1, .003)
+tiptilt.get_status(1)
+tiptilt.command("loop", 1, 1)
+tiptilt.close()
+```
 
 * Newport Picomotor Controllers.
-    
-    >>> from interfaces import newport_picomotor
-    >>> pico = newport_picomotor.NewportPicomotor()
-    >>> pico.command("relative_move", 1, 400)
-    >>> pico.get_status(1)
-    >>> pico.close()
+
+```python
+from interfaces import newport_picomotor
+pico = newport_picomotor.NewportPicomotor()
+pico.command("relative_move", 1, 400)
+pico.get_status(1)
+pico.close()
+```
 
 * ZWO Cameras.
-    
-    >>> from interfaces import zwo_camera
-    >>> cam = zwo_camera.ZWOCamera()
-    >>> cam.open_camera()
-    >>> print(cam.name)
-    >>> cam.take_exposure(exp_time=100)
-    >>> cam.close()
 
+```python
+ from interfaces import zwo_camera
+ cam = zwo_camera.ZWOCamera()
+ cam.open_camera()
+ print(cam.name)
+ cam.take_exposure(exp_time=100)
+ cam.close()
+```
