@@ -32,13 +32,13 @@ def usb_except(function):
     return wrapper
 
 
-class Controller():
-    """Controller connection class. 
+class nPointTipTilt():
+    """nPointTipTilt connection class. 
 
-    This Controller class acts as a useful connection and storage vehicle 
+    This nPointTipTilt class acts as a useful connection and storage vehicle 
     for commands sent to the nPoint FTID LC400 controller. It has built in 
     functions that allow for writing commands, checking the status, etc. 
-    By instantiating the Controller object you find the LC400 controller 
+    By instantiating the nPointTipTilt object you find the LC400 controller 
     and set the default configuration. Memory managers in the back end 
     should close the connection when the time is right.
     """
@@ -76,7 +76,7 @@ class Controller():
              
         # Set to default configuration -- for LC400 this is the right one.
         self.dev.set_configuration()
-        self.logger.info('Controller instantiated and logging online.')
+        self.logger.info('nPointTipTilt instantiated and logging online.')
 
 
     def __enter__(self):
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     # Quick demo of doing something.
     
     # Open the controller
-    ctrl = Controller()
+    ctrl = nPointTipTilt()
 
     # Check the status for each channel
     ctrl.get_status(1)
