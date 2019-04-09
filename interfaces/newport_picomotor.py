@@ -46,7 +46,7 @@ class NewportPicomotor:
         set the IP address for the controller."""
         
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
-        self.logger = logging.getLogger('newport-{}'.format(str_date))
+        self.logger = logging.getLogger('../logs/newport-{}'.format(str_date))
         self.logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
