@@ -44,7 +44,7 @@ files = glob.glob('../images/*.png')
 for image in files:
     im = imageio.imread(image)
     test_slice = np.array(im[:,:,0][145:350, 83:475])
-    fwcentroid.fwcentroid(test_slice)
+    fwcentroid.fwcentroid(test_slice, halfwidth=[25,25])
 """
 
 print("Test for 1d centroid.")
