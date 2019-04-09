@@ -33,14 +33,22 @@ class ZWOCamera:
     def __init__(self):
         """ Init function to set up logging and instantiate the camera
         libraries."""
+        
+        if os.environ.get("INTERFACES") != None:
+            log_path = os.path.join(os.environ.get("INTERFACES"), "logs")
+            self.img_path = os.path.join(os.environ.get("INTERFACES"), "images")
+            self.lib_path = os.path.join(os.environ.get("INTERFACES"), "libraries")
+            print(self.lib_path)
+        else:
+            raise FileNotFoundError("You need to export the 'INTERFACES' environment variable.")
 
         # Logging
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
-        self.logger = logging.getLogger('../logs/zwoCam-{}'.format(str_date))
+        self.logger = logging.getLogger('ZWO_log_{}'.format(str_date))
         self.logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = os.path.join('logs', 'zwo_camera_log_{}.txt'.format(str_date))
+        log_file = os.path.join(log_path, 'zwo_camera_log_{}.txt'.format(str_date))
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
@@ -59,7 +67,8 @@ class ZWOCamera:
         
         # If it isn't, read in the library file
         except AttributeError:
-            cam_lib_file = '../libraries/ASICamera2.dll'
+            cam_lib_file = os.path.join(self.lib_path, 'ASICamera2.dll')
+            print(cam_lib_file)
             zwoasi.init(cam_lib_file)
         
         # Unforseen complications.
@@ -88,7 +97,6 @@ class ZWOCamera:
         Note that this is named `close_out` and not close because the
         zwoasi.Camera object also has a close method and I'm trying not to
         overload it."""
-
         self._close_camera()
         self._close_logger()
     
@@ -164,7 +172,7 @@ class ZWOCamera:
  
         return image
     
-    def plot_image(self, image, colors='gray', norm='3-std', output_name='images/camera_test.png'):
+    def plot_image(self, image, colors='gray', norm='3-std', output_name='camera_test.png'):
         """ Plots the camera image. 
         
         Parameters
@@ -217,9 +225,9 @@ class ZWOCamera:
         # Save it
         plt.imshow(image, vmin=v_min, vmax=v_max, cmap=colors)
         plt.colorbar()
-        plt.savefig(output_name)
+        plt.savefig(os.path.join(self.img_path, output_name))
         plt.clf()
-        self.logger.info('Image saved to {}.'.format(output_name))
+        self.logger.info('Image saved to {}.'.format(os.path.join(self.img_path, output_name)))
         
     def write_out_image(self, image, output_name='camera_test.fits'):
         """ Writes out the camera image to a FITS file.
@@ -244,13 +252,15 @@ class ZWOCamera:
         
         # Write out the file
         hdu = fits.PrimaryHDU(data=image, header=hdr)
-        hdu.writeto(os.path.join('../images', output_name), overwrite=True)
+        hdu.writeto(os.path.join(self.img_path, output_name), overwrite=True)
 
     def _close_camera(self):
         """Closes the camera."""
-        
-        self.camera.close()
-        self.logger.info('Camera connection closed.')
+        try: 
+            self.camera.close()
+            self.logger.info('Camera connection closed.')
+        except AttributeError:
+            logger.info("There was no connected to camera to close.")
     
     def _close_logger(self):
         """ Closes the logging."""
