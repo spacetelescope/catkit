@@ -59,7 +59,7 @@ class ZWOCamera:
         
         # If it isn't, read in the library file
         except AttributeError:
-            cam_lib_file = 'libraries/ASICamera2.dll'
+            cam_lib_file = '../libraries/ASICamera2.dll'
             zwoasi.init(cam_lib_file)
         
         # Unforseen complications.
@@ -221,7 +221,7 @@ class ZWOCamera:
         plt.clf()
         self.logger.info('Image saved to {}.'.format(output_name))
         
-    def write_out_image(self, image, output_name='images/camera_test.fits'):
+    def write_out_image(self, image, output_name='camera_test.fits'):
         """ Writes out the camera image to a FITS file.
 
         Parameters
@@ -244,7 +244,7 @@ class ZWOCamera:
         
         # Write out the file
         hdu = fits.PrimaryHDU(data=image, header=hdr)
-        hdu.writeto(output_name, overwrite=True)
+        hdu.writeto(os.path.join('../images', output_name), overwrite=True)
 
     def _close_camera(self):
         """Closes the camera."""
