@@ -36,7 +36,7 @@ class ZWOCamera:
 
         # Logging
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
-        self.logger = logging.getLogger('zwoCam-{}'.format(str_date))
+        self.logger = logging.getLogger('../logs/zwoCam-{}'.format(str_date))
         self.logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
