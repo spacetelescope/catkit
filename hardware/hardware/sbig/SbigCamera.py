@@ -2,7 +2,6 @@ from __future__ import (absolute_import, division,
                         unicode_literals)
 
 # noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 import os
 import requests
@@ -45,7 +44,6 @@ class SbigCamera(Camera):
            Uses the config_id to look up parameters in the config.ini"""
 
         # find the SBIG config information
-        camera_name = CONFIG_INI.get(self.config_id, "camera_name")
         self.base_url = CONFIG_INI.get(self.config_id, "base_url")
         self.timeout = CONFIG_INI.getint(self.config_id, "timeout")
         self.min_delay = CONFIG_INI.getfloat(self.config_id, 'min_delay')
@@ -328,7 +326,7 @@ class SbigCamera(Camera):
 
         # at loop exit, the image should be available
         image_status = self.__check_image_status()
-        if image_status <> self.IMAGE_AVAILABLE:
+        if image_status != self.IMAGE_AVAILABLE:
             self.log.error('No image after exposure')
             raise Exception("Camera reported no image available after exposure.")
 

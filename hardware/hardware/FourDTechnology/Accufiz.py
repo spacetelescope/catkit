@@ -2,7 +2,6 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
 # noinspection PyUnresolvedReferences
-from builtins import *
 
 import h5py
 import time
@@ -23,7 +22,6 @@ class Accufiz(FizeauInterferometer):
 
     def initialize(self, mask="dm2_detector.mask", *args, **kwargs):
         """Opens connection with interferometer and returns the camera manufacturer specific object."""
-        orig = time.time()
         ip = CONFIG_INI.get(self.config_id, "ip")
         timeout = CONFIG_INI.getint(self.config_id, "timeout")
 
@@ -76,12 +74,9 @@ class Accufiz(FizeauInterferometer):
             pathfile = pathfile.replace('/',
                                         '\\\\')
 
-            paramsave = {"fileName": pathfile}
-
             if 'success' in measres.text:
                 if not os.path.exists(path):
                     os.makedirs(path)
-                r = requests.post("http://{}/WebService4D/WebService4D.asmx/SaveMeasurement".format(ip), data=paramsave)
                 time.sleep(1)
                 if glob(pathfile + '.h5'):
                     print('SUCCESS IN SAVING ' + pathfile)

@@ -2,7 +2,6 @@ from __future__ import (absolute_import, division,
                         unicode_literals)
 
 # noinspection PyUnresolvedReferences
-from builtins import *
 
 import ftd2xx
 import ftd2xx.defines as constants

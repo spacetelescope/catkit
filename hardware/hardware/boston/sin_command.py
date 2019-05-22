@@ -5,7 +5,6 @@ import math
 
 import numpy as np
 # noinspection PyUnresolvedReferences
-from builtins import *
 from scipy.ndimage.interpolation import rotate
 # noinspection PyPackageRequirements
 from skimage.transform import resize
