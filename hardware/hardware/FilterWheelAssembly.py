@@ -4,13 +4,13 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 import logging
-
 from serial import SerialException
 
-from .thorlabs.ThorlabsFW102C import ThorlabsFW102C
-from ..interfaces.Instrument import Instrument
-from ..config import CONFIG_INI
 
+from hicat.interfaces.Instrument import Instrument
+from hicat.config import CONFIG_INI
+
+from thorlabs.ThorlabsFW102C import ThorlabsFW102C
 
 class FilterWheelAssembly(Instrument):
 

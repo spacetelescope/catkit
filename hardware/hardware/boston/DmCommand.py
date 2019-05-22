@@ -3,8 +3,9 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
-from astropy.io import fits
 import os
+
+from astropy.io import fits
 import numpy as np
 
 from hicat.config import CONFIG_INI

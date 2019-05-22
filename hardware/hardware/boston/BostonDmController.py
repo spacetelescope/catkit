@@ -3,12 +3,13 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
+import logging
+
+import numpy as np
 
 from hicat.hardware import testbed_state
 from hicat.interfaces.DeformableMirrorController import DeformableMirrorController
 from hicat.config import CONFIG_INI
-import numpy as np
-import logging
 
 # BMC is Boston's library and it only works on windows.
 try:

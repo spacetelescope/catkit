@@ -6,12 +6,13 @@ from builtins import *
 import logging
 import visa
 import platform
-from ...config import CONFIG_INI
 from pyvisa import constants
 import time
 
-from.. import testbed_state
-from ...interfaces.FilterWheel import FilterWheel
+from hicat.config import CONFIG_INI
+from hicat.interfaces.FilterWheel import FilterWheel
+
+from hardware import testbed_state
 
 
 class ThorlabsFW102C(FilterWheel):

@@ -6,15 +6,17 @@ from builtins import *
 import os
 import logging
 from glob import glob
-import numpy as np
-from astropy.io import fits
 
-from ..hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity, ImageCentering
-from . import testbed_state
-from .. import data_pipeline
-from .. import util
-from .. import wolfram_wrappers
-from ..config import CONFIG_INI
+from astropy.io import fits
+import numpy as np
+
+from hicat.hicat_types import LyotStopPosition, BeamDumpPosition, FpmPosition, quantity, ImageCentering
+from hicat import data_pipeline
+from hicat import util
+from hicat import wolfram_wrappers
+from hicat.config import CONFIG_INI
+
+import testbed_state
 
 if not testbed_state.simulation:
     # Don't try to import the hardware drivers if we are pre-configured into simulation

@@ -9,7 +9,8 @@ import logging
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed_state
 from hicat.interfaces.MotorController import MotorController
-from .lib import XPS_Q8_drivers
+
+from lib import XPS_Q8_drivers
 
 """Implementation of the Newport motor controller interface."""
 

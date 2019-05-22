@@ -9,9 +9,10 @@ import os
 import re
 import time
 
-from ...interfaces.LaserSource import LaserSource
-from ...config import CONFIG_INI
-from ...hardware import testbed_state
+from hicat.interfaces.LaserSource import LaserSource
+from hicat.config import CONFIG_INI
+
+from hardware import testbed_state
 
 """Interface for a laser source."""
 

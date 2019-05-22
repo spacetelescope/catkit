@@ -6,7 +6,8 @@ from builtins import *
 
 import os
 import subprocess
-from ...config import CONFIG_INI
+
+from hicat.config import CONFIG_INI
 
 
 def get_temp_humidity(config_id):

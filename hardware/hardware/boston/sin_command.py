@@ -10,11 +10,11 @@ from scipy.ndimage.interpolation import rotate
 # noinspection PyPackageRequirements
 from skimage.transform import resize
 
-from ... import util
-from .DmCommand import DmCommand
-from ...hicat_types import units
-from ...config import CONFIG_INI
+from hicat import util
+from hicat.hicat_types import units
+from hicat.config import CONFIG_INI
 
+from DmCommand import DmCommand
 
 dm_config_id = "boston_kilo952"
 

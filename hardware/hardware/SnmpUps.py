@@ -6,8 +6,9 @@ from builtins import *
 import logging
 
 from pysnmp import hlapi
-from ..interfaces.BackupPower import BackupPower
-from ..config import CONFIG_INI
+
+from hicat.interfaces.BackupPower import BackupPower
+from hicat.config import CONFIG_INI
 
 """Implementation of the White UPS using the BackupPower interface."""
 
