@@ -1,7 +1,8 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
+from __future__ import (absolute_import, division, unicode_literals)
 # noinspection PyUnresolvedReferences
 
+from ..hardware.FilterWheelAssembly import FilterWheelAssembly
+from ..interfaces.DummyLaserSource import DummyLaserSource
 import os
 import logging
 from glob import glob
@@ -27,9 +28,6 @@ if not testbed_state.simulation:
     from ..hardware.zwo.ZwoCamera import ZwoCamera
     from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
     from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
-
-from ..interfaces.DummyLaserSource import DummyLaserSource
-from ..hardware.FilterWheelAssembly import FilterWheelAssembly
 
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
@@ -102,13 +100,12 @@ def motor_controller(initialize_to_nominal=True, use_testbed_state=True):
     if testbed_state.simulation:
         from .. import simulators
         return simulators.SimNewportMotorController("newport_xps_q8",
-                                  initialize_to_nominal=initialize_to_nominal,
-                                  use_testbed_state=use_testbed_state)
+                                                    initialize_to_nominal=initialize_to_nominal,
+                                                    use_testbed_state=use_testbed_state)
     else:
-         return NewportMotorController("newport_xps_q8",
-                                  initialize_to_nominal=initialize_to_nominal,
-                                  use_testbed_state=use_testbed_state)
-
+        return NewportMotorController("newport_xps_q8",
+                                      initialize_to_nominal=initialize_to_nominal,
+                                      use_testbed_state=use_testbed_state)
 
 
 def beam_dump():
@@ -165,7 +162,8 @@ def run_hicat_imaging_broadband(filter_set, *args, **kwargs):
     :return: If file_mode is trure: Path to data cube, otherwise it is a list of the outputs.
     """
 
-    broadband_filter_combos = CONFIG_INI.get("light_source_assembly", filter_set).split(",")
+    broadband_filter_combos = CONFIG_INI.get(
+        "light_source_assembly", filter_set).split(",")
     original_path = kwargs.get("path", None)
     with FilterWheelAssembly("light_source_assembly") as wheels:
 
@@ -184,7 +182,8 @@ def run_hicat_imaging_broadband(filter_set, *args, **kwargs):
     if kwargs.get("pipeline", True) and kwargs.get("file_mode", True):
         cube_filename = os.path.join(original_path, "broadband_cube.fits")
 
-        # Updated fits header for cube to have entries for each filter set (eg filters1, filters2).
+        # Updated fits header for cube to have entries for each filter set (eg
+        # filters1, filters2).
         data = []
         header = None
         for i, path in enumerate(output_list):
@@ -253,14 +252,18 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     """
 
     log = logging.getLogger()
-    # Initialize all motors and move Focal Plane Mask and Lyot Stop (will skip if already in correct place).
+    # Initialize all motors and move Focal Plane Mask and Lyot Stop (will skip
+    # if already in correct place).
     if init_motors:
-        initialize_motors(fpm_position=fpm_position, lyot_stop_position=lyot_stop_position)
+        initialize_motors(
+            fpm_position=fpm_position,
+            lyot_stop_position=lyot_stop_position)
     else:
         move_fpm(fpm_position)
         move_lyot_stop(lyot_stop_position)
 
-    # If light_source_assembly is in use, make sure we initialize to something reasonable.
+    # If light_source_assembly is in use, make sure we initialize to something
+    # reasonable.
     source_name = CONFIG_INI.get("testbed", "laser_source")
     if not testbed_state.filter_wheels and source_name == "light_source_assembly":
         with FilterWheelAssembly("light_source_assembly") as filter_wheels:
@@ -280,8 +283,11 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         if auto_exposure_mask_size:
             log.info("fpm position is " + fpm_position.name)
             if fpm_position == fpm_position.coron:
-                circle_mask = util.create_psf_mask((subarray_size, subarray_size), auto_exposure_mask_size)
-                log.info("using auto-expose circular mask, radius (lambda/d): " + str(auto_exposure_mask_size))
+                circle_mask = util.create_psf_mask(
+                    (subarray_size, subarray_size), auto_exposure_mask_size)
+                log.info(
+                    "using auto-expose circular mask, radius (lambda/d): " +
+                    str(auto_exposure_mask_size))
             else:
                 circle_mask = None
                 log.info("not using the circular mask in direct mode")
@@ -297,10 +303,13 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     if file_mode:
         # Combine exposure set into filename.
         filename = "image" if filename is None else filename
-        filename = "{}_{}".format(exposure_set_name if exposure_set_name is not None else fpm_position.name, filename)
+        filename = "{}_{}".format(
+            exposure_set_name if exposure_set_name is not None else fpm_position.name,
+            filename)
 
         # Create the standard directory structure.
-        exp_path = os.path.join(path, exposure_set_name if exposure_set_name is not None else fpm_position.name)
+        exp_path = os.path.join(
+            path, exposure_set_name if exposure_set_name is not None else fpm_position.name)
         raw_path = os.path.join(exp_path, "raw")
         img_path = os.path.join(raw_path, "images")
         bg_path = os.path.join(raw_path, "backgrounds")
@@ -322,23 +331,30 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
         bg_metadata = None
         if take_background_exposures:
             if use_background_cache and not file_mode:
-                log.warning("Warning: Turning off exposure cache feature because it is only supported with file_mode=True")
+                log.warning(
+                    "Warning: Turning off exposure cache feature because it is only supported with file_mode=True")
                 use_background_cache = False
             if use_background_cache and raw_skip != 0:
-                log.warning("Warning: Setting use_background_cache=False, cannot be used with raw_skip")
+                log.warning(
+                    "Warning: Setting use_background_cache=False, cannot be used with raw_skip")
                 use_background_cache = False
 
             if use_background_cache:
-                bg_cache_path = testbed_state.check_background_cache(exposure_time, num_exposures)
+                bg_cache_path = testbed_state.check_background_cache(
+                    exposure_time, num_exposures)
 
                 # Cache hit - populate the bg_list with the path to
                 if bg_cache_path is not None:
-                    log.info("Using cached background exposures: " + bg_cache_path)
+                    log.info(
+                        "Using cached background exposures: " +
+                        bg_cache_path)
                     bg_list = glob(os.path.join(bg_cache_path, "*.fits"))
 
-                    # Leave a small text file in background directory that points to real exposures.
+                    # Leave a small text file in background directory that
+                    # points to real exposures.
                     os.makedirs(bg_path)
-                    cache_file_path = os.path.join(bg_path, "cache_directory.txt")
+                    cache_file_path = os.path.join(
+                        bg_path, "cache_directory.txt")
 
                     with open(cache_file_path, mode=b'w') as cache_file:
                         cache_file.write(bg_cache_path)
@@ -355,14 +371,16 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                                                           **kwargs)
 
                 if use_background_cache:
-                    testbed_state.add_background_to_cache(exposure_time, num_exposures, bg_path)
+                    testbed_state.add_background_to_cache(
+                        exposure_time, num_exposures, bg_path)
 
         # Run data pipeline
         final_output = None
         cal_metadata = None
         if pipeline and file_mode and raw_skip == 0:
             # Output is the path to the cal file.
-            final_output = data_pipeline.standard_file_pipeline(exp_path, centering=centering)
+            final_output = data_pipeline.standard_file_pipeline(
+                exp_path, centering=centering)
 
         if pipeline and raw_skip > 0:
 
@@ -372,7 +390,8 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                                                        bg_metadata=bg_metadata)
         elif pipeline and not file_mode:
 
-            # Output is the numpy data for the cal file, and our metadata updated with centroid information.
+            # Output is the numpy data for the cal file, and our metadata
+            # updated with centroid information.
             final_output, cal_metadata = data_pipeline.data_pipeline(img_list, bg_list, centering,
                                                                      img_metadata=metadata,
                                                                      return_metadata=True)
@@ -390,9 +409,15 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
 
         # Simulator (file-based only).
         if file_mode and simulator:
-            wolfram_wrappers.run_simulator(os.path.join(path, exposure_set_name), filename + ".fits", fpm_position.name)
+            wolfram_wrappers.run_simulator(
+                os.path.join(
+                    path,
+                    exposure_set_name),
+                filename + ".fits",
+                fpm_position.name)
 
-        # When the pipeline is off, return image lists (data or path depending on filemode).
+        # When the pipeline is off, return image lists (data or path depending
+        # on filemode).
         if not pipeline:
             if take_background_exposures:
                 return img_list, bg_list
@@ -412,7 +437,8 @@ def move_beam_dump(beam_dump_position):
     in_beam = True if beam_dump_position.value == BeamDumpPosition.in_beam.value else False
 
     # Check the internal state of the beam dump before moving it.
-    if testbed_state.background is None or (testbed_state.background != in_beam):
+    if testbed_state.background is None or (
+            testbed_state.background != in_beam):
         with beam_dump() as bd:
             log.info("Moving beam dump " + beam_dump_position.name)
             if beam_dump_position.value == BeamDumpPosition.in_beam.value:
@@ -424,9 +450,11 @@ def move_beam_dump(beam_dump_position):
 def initialize_motors(fpm_position=None, lyot_stop_position=None):
     with motor_controller() as mc:
         if fpm_position:
-            mc.absolute_move("motor_FPM_Y", __get_fpm_position_from_ini(fpm_position))
+            mc.absolute_move("motor_FPM_Y",
+                             __get_fpm_position_from_ini(fpm_position))
         if lyot_stop_position:
-            mc.absolute_move("motor_lyot_stop_x", __get_lyot_position_from_ini(lyot_stop_position))
+            mc.absolute_move("motor_lyot_stop_x",
+                             __get_lyot_position_from_ini(lyot_stop_position))
 
 
 def move_fpm(fpm_position):
@@ -461,7 +489,9 @@ def __get_lyot_position_from_ini(lyot_position):
     elif lyot_position.value == LyotStopPosition.out_of_beam.value:
         new_position = CONFIG_INI.getfloat("motor_lyot_stop_x", "out_of_beam")
     else:
-        raise AttributeError("Unknown LyotStopPosition value " + str(lyot_position))
+        raise AttributeError(
+            "Unknown LyotStopPosition value " +
+            str(lyot_position))
     return new_position
 
 
@@ -489,12 +519,16 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
 
         # Take images and backgrounds and run them through the pipeline.
         if pipeline:
-            img_list = img_cam.take_exposures(start_exp_time, 2, file_mode=False)
+            img_list = img_cam.take_exposures(
+                start_exp_time, 2, file_mode=False)
             move_beam_dump(BeamDumpPosition.in_beam)
-            bg_list = img_cam.take_exposures(start_exp_time, 2, file_mode=False)
-            image = data_pipeline.data_pipeline(img_list, bg_list, centering=centering)
+            bg_list = img_cam.take_exposures(
+                start_exp_time, 2, file_mode=False)
+            image = data_pipeline.data_pipeline(
+                img_list, bg_list, centering=centering)
         else:
-            img_list = img_cam.take_exposures(start_exp_time, 1, file_mode=False)
+            img_list = img_cam.take_exposures(
+                start_exp_time, 1, file_mode=False)
             image = img_list[0]
         img_max = __get_max_pixel_count(image, mask=mask)
 
@@ -504,7 +538,12 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
         log.info("Starting exposure time calibration...")
 
         if min_counts <= img_max <= max_counts:
-            log.info("\tExposure time " + str(start_exp_time) + " yields " + str(img_max) + " counts ")
+            log.info(
+                "\tExposure time " +
+                str(start_exp_time) +
+                " yields " +
+                str(img_max) +
+                " counts ")
             log.info("\tReturning exposure time " + str(start_exp_time))
             return start_exp_time
 
@@ -513,32 +552,49 @@ def auto_exp_time_no_shape(start_exp_time, min_counts, max_counts, num_tries=50,
             upper_bound *= 2
             move_beam_dump(BeamDumpPosition.out_of_beam)
             if pipeline:
-                img_list = img_cam.take_exposures(round(upper_bound, 3), 2, file_mode=False)
+                img_list = img_cam.take_exposures(
+                    round(upper_bound, 3), 2, file_mode=False)
                 move_beam_dump(BeamDumpPosition.in_beam)
-                bg_list = img_cam.take_exposures(round(upper_bound, 3), 2, file_mode=False)
-                image = data_pipeline.data_pipeline(img_list, bg_list, centering=centering)
+                bg_list = img_cam.take_exposures(
+                    round(upper_bound, 3), 2, file_mode=False)
+                image = data_pipeline.data_pipeline(
+                    img_list, bg_list, centering=centering)
             else:
-                img_list = img_cam.take_exposures(round(upper_bound, 3), 1, file_mode=False)
+                img_list = img_cam.take_exposures(
+                    round(upper_bound, 3), 1, file_mode=False)
                 image = img_list[0]
             img_max = __get_max_pixel_count(image, mask=mask)
 
-
-            log.info("\tExposure time " + str(upper_bound) + " yields " + str(img_max) + " counts ")
+            log.info(
+                "\tExposure time " +
+                str(upper_bound) +
+                " yields " +
+                str(img_max) +
+                " counts ")
 
         for i in range(num_tries):
             test = .5 * (upper_bound + lower_bound)
             move_beam_dump(BeamDumpPosition.out_of_beam)
             if pipeline:
-                img_list = img_cam.take_exposures(round(test, 3), 2, file_mode=False)
+                img_list = img_cam.take_exposures(
+                    round(test, 3), 2, file_mode=False)
                 move_beam_dump(BeamDumpPosition.in_beam)
-                bg_list = img_cam.take_exposures(round(test, 3), 2, file_mode=False)
-                image = data_pipeline.data_pipeline(img_list, bg_list, centering=centering)
+                bg_list = img_cam.take_exposures(
+                    round(test, 3), 2, file_mode=False)
+                image = data_pipeline.data_pipeline(
+                    img_list, bg_list, centering=centering)
             else:
-                img_list = img_cam.take_exposures(round(test, 3), 1, file_mode=False)
+                img_list = img_cam.take_exposures(
+                    round(test, 3), 1, file_mode=False)
                 image = img_list[0]
             img_max = __get_max_pixel_count(image, mask=mask)
 
-            log.info("\tExposure time " + str(test) + " yields " + str(img_max) + " counts ")
+            log.info(
+                "\tExposure time " +
+                str(test) +
+                " yields " +
+                str(img_max) +
+                " counts ")
 
             if min_counts <= img_max <= max_counts:
                 log.info("\tReturning exposure time " + str(test))

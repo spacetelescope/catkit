@@ -26,7 +26,8 @@ class Accufiz(FizeauInterferometer):
         timeout = CONFIG_INI.getint(self.config_id, "timeout")
 
         # Set the 4D timeout.
-        set_timeout_string = "http://{}/WebService4D/WebService4D.asmx/SetTimeout?timeOut={}".format(ip, timeout)
+        set_timeout_string = "http://{}/WebService4D/WebService4D.asmx/SetTimeout?timeOut={}".format(
+            ip, timeout)
         requests.get(set_timeout_string)
 
         # Set the Mask. This mask has to be local to the 4D computer in this directory.
@@ -49,7 +50,8 @@ class Accufiz(FizeauInterferometer):
 
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d")
+            path = util.create_data_path(
+                initial_path=central_store_path, suffix="4d")
 
         if filename is None:
             filename = "4d_measurement"
@@ -61,7 +63,10 @@ class Accufiz(FizeauInterferometer):
         try_counter = 0
         tries = 10
         while try_counter < tries:
-            measres = requests.post('http://{}/WebService4D/WebService4D.asmx/AverageMeasure'.format(ip), data=parammeas)
+            measres = requests.post(
+                'http://{}/WebService4D/WebService4D.asmx/AverageMeasure'.format(
+                    ip),
+                data=parammeas)
 
             pathfile = os.path.join(path, filename)
 
@@ -80,7 +85,8 @@ class Accufiz(FizeauInterferometer):
                 time.sleep(1)
                 if glob(pathfile + '.h5'):
                     print('SUCCESS IN SAVING ' + pathfile)
-                    return self.__convert_h5_to_fits(path, pathfile, rotate, fliplr)
+                    return self.__convert_h5_to_fits(
+                        path, pathfile, rotate, fliplr)
                 else:
                     try_counter += 1
                     print("FAIL IN SAVING MEASUREMENT " + pathfile + ".h5")
@@ -92,7 +98,6 @@ class Accufiz(FizeauInterferometer):
                 print(measres.text)
                 if try_counter < tries:
                     print("Trying again..")
-
 
     @staticmethod
     def __get_mask_path(mask):
@@ -107,8 +112,10 @@ class Accufiz(FizeauInterferometer):
         pathfile = file
         pathdifits = file[:-3] + '.fits'
 
-        maskinh5 = np.array(h5py.File(pathfile, 'r').get('measurement0').get('Detectormask'))
-        image0 = np.array(h5py.File(pathfile, 'r').get('measurement0').get('genraw').get('data')) * maskinh5
+        maskinh5 = np.array(h5py.File(pathfile, 'r').get(
+            'measurement0').get('Detectormask'))
+        image0 = np.array(h5py.File(pathfile, 'r').get(
+            'measurement0').get('genraw').get('data')) * maskinh5
 
         fits.PrimaryHDU(maskinh5).writeto(pathdifits, overwrite=True)
 
@@ -116,7 +123,7 @@ class Accufiz(FizeauInterferometer):
         center = ndimage.measurements.center_of_mass(maskinh5)
 
         image = np.clip(image0, -10, +10)[np.int(center[0]) - radiusmask:np.int(center[0]) + radiusmask - 1,
-                np.int(center[1]) - radiusmask: np.int(center[1]) + radiusmask - 1]
+                                          np.int(center[1]) - radiusmask: np.int(center[1]) + radiusmask - 1]
 
         # Apply the rotation and flips.
         image = util.rotate_and_flip_image(image, rotate, fliplr)

@@ -31,15 +31,21 @@ class DmCommand(object):
         if sin_specification is None:
             self.sin_specification = []
         else:
-            self.sin_specification = sin_specification if isinstance(sin_specification, list) else [sin_specification]
+            self.sin_specification = sin_specification if isinstance(
+                sin_specification, list) else [sin_specification]
 
         # Load config values once and store as class attributes.
-        self.total_actuators = CONFIG_INI.getint('boston_kilo952', 'number_of_actuators')
-        self.command_length = CONFIG_INI.getint('boston_kilo952', 'command_length')
-        self.pupil_length = CONFIG_INI.getint('boston_kilo952', 'dm_length_actuators')
+        self.total_actuators = CONFIG_INI.getint(
+            'boston_kilo952', 'number_of_actuators')
+        self.command_length = CONFIG_INI.getint(
+            'boston_kilo952', 'command_length')
+        self.pupil_length = CONFIG_INI.getint(
+            'boston_kilo952', 'dm_length_actuators')
         self.max_volts = CONFIG_INI.getint('boston_kilo952', 'max_volts')
-        self.bias_volts_dm1 = CONFIG_INI.getint('boston_kilo952', 'bias_volts_dm1')
-        self.bias_volts_dm2 = CONFIG_INI.getint('boston_kilo952', 'bias_volts_dm2')
+        self.bias_volts_dm1 = CONFIG_INI.getint(
+            'boston_kilo952', 'bias_volts_dm1')
+        self.bias_volts_dm2 = CONFIG_INI.getint(
+            'boston_kilo952', 'bias_volts_dm2')
 
         # Error handling for dm_num.
         if not (dm_num == 1 or dm_num == 2):
@@ -76,12 +82,14 @@ class DmCommand(object):
         if self.as_voltage_percentage:
             self.data *= 2
 
-        # Otherwise convert nanometers to volts and apply appropriate corrections and bias.
+        # Otherwise convert nanometers to volts and apply appropriate
+        # corrections and bias.
         else:
             if not self.as_volts:
                 # Convert nanometers to volts.
                 script_dir = os.path.dirname(__file__)
-                nm_to_volts_map = fits.getdata(os.path.join(script_dir, "meters_to_volts_dm1.fits"))
+                nm_to_volts_map = fits.getdata(os.path.join(
+                    script_dir, "meters_to_volts_dm1.fits"))
                 dm_command = hicat_util.safe_divide(self.data, nm_to_volts_map)
 
             # Apply bias.
@@ -92,12 +100,16 @@ class DmCommand(object):
             elif self.flat_map:
                 script_dir = os.path.dirname(__file__)
                 if self.dm_num == 1:
-                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-                    flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+                    flat_map_file_name = CONFIG_INI.get(
+                        "boston_kilo952", "flat_map_dm1")
+                    flat_map_volts = fits.open(
+                        os.path.join(script_dir, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
                 else:
-                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-                    flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+                    flat_map_file_name = CONFIG_INI.get(
+                        "boston_kilo952", "flat_map_dm2")
+                    flat_map_volts = fits.open(
+                        os.path.join(script_dir, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
 
             # Convert between 0-1.
@@ -107,12 +119,16 @@ class DmCommand(object):
         dm_command = hicat_util.convert_dm_image_to_command(dm_command)
 
         if self.dm_num == 1:
-            dm_command = np.append(dm_command, np.zeros(self.command_length - dm_command.size))
+            dm_command = np.append(
+                dm_command, np.zeros(
+                    self.command_length - dm_command.size))
 
         else:
             zero_buffer = np.zeros(int(self.command_length / 2))
             dm_command = np.append(zero_buffer, dm_command)
-            dm_command = np.append(dm_command, np.zeros(self.command_length - dm_command.size))
+            dm_command = np.append(
+                dm_command, np.zeros(
+                    self.command_length - dm_command.size))
 
         return dm_command
 
@@ -142,17 +158,24 @@ class DmCommand(object):
         dm_command_1d = self.to_dm_command()[0:self.total_actuators] if self.dm_num == 1 \
             else self.to_dm_command()[1024:1024 + self.total_actuators]
 
-        hicat_util.write_fits(self.to_dm_command(), os.path.join(dir_path, "dm{}_command_1d".format(self.dm_num)))
+        hicat_util.write_fits(
+            self.to_dm_command(), os.path.join(
+                dir_path, "dm{}_command_1d".format(
+                    self.dm_num)))
 
         # Save 2D representation of the command with no padding (34 x 34).
         hicat_util.write_fits(hicat_util.convert_dm_command_to_image(dm_command_1d),
                               os.path.join(dir_path, "dm{}_command_2d".format(self.dm_num)))
 
         # Save raw data as input to the simulator.
-        hicat_util.write_fits(self.data, os.path.join(dir_path, "dm{}_command_2d_noflat".format(self.dm_num)))
+        hicat_util.write_fits(
+            self.data, os.path.join(
+                dir_path, "dm{}_command_2d_noflat".format(
+                    self.dm_num)))
 
 
-def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
+def load_dm_command(path, dm_num=1, flat_map=False,
+                    bias=False, as_volts=False):
     """
     Loads a DM command fits file from disk and returns a DmCommand object.
     :param path: Path to the "2d_noflat" dm command.
@@ -162,23 +185,31 @@ def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
     :return: DmCommand object representing the dm command fits file.
     """
     data = fits.getdata(path)
-    return DmCommand(data, dm_num, flat_map=flat_map, bias=bias, as_volts=as_volts)
+    return DmCommand(data, dm_num, flat_map=flat_map,
+                     bias=bias, as_volts=as_volts)
 
 
 def get_flat_map_volts(dm_num):
     script_dir = os.path.dirname(__file__)
     if dm_num == 1:
         flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-        flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+        flat_map_volts = fits.open(
+            os.path.join(
+                script_dir,
+                flat_map_file_name))
         return flat_map_volts[0].data
     else:
         flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-        flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+        flat_map_volts = fits.open(
+            os.path.join(
+                script_dir,
+                flat_map_file_name))
         return flat_map_volts[0].data
 
 
 def convert_volts_to_nm(data):
     # Convert nanometers to volts.
     script_dir = os.path.dirname(__file__)
-    nm_to_volts_map = fits.getdata(os.path.join(script_dir, "meters_to_volts_dm1.fits"))
+    nm_to_volts_map = fits.getdata(os.path.join(
+        script_dir, "meters_to_volts_dm1.fits"))
     return data * nm_to_volts_map

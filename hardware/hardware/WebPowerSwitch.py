@@ -17,7 +17,7 @@ switch.turn_on("motor_controller_outlet")
 
 
 class WebPowerSwitch(RemotePowerSwitch):
-    log=logging.getLogger(__name__)
+    log = logging.getLogger(__name__)
 
     def turn_on(self, outlet_id):
         """
@@ -26,7 +26,11 @@ class WebPowerSwitch(RemotePowerSwitch):
         outlet_num = CONFIG_INI.getint(self.config_id, outlet_id)
         script_line = self.__find_script_line(outlet_num, True)
         self.__http_script_call(script_line)
-        self.log.info("Turning on outlet " + outlet_id + " number " + str(outlet_num))
+        self.log.info(
+            "Turning on outlet " +
+            outlet_id +
+            " number " +
+            str(outlet_num))
 
     def turn_off(self, outlet_id):
         """
@@ -35,7 +39,11 @@ class WebPowerSwitch(RemotePowerSwitch):
         outlet_num = CONFIG_INI.getint(self.config_id, outlet_id)
         script_line = self.__find_script_line(outlet_num, False)
         self.__http_script_call(script_line)
-        self.log.info("Turning off outlet " + outlet_id + " number " + str(outlet_num))
+        self.log.info(
+            "Turning off outlet " +
+            outlet_id +
+            " number " +
+            str(outlet_num))
 
     def all_on(self):
         """

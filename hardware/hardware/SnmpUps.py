@@ -26,7 +26,8 @@ class SnmpUps(BackupPower):
              error_status,
              error_index,
              var_binds) in hlapi.getCmd(hlapi.SnmpEngine(),
-                                        hlapi.CommunityData(community, mpModel=0),
+                                        hlapi.CommunityData(
+                                            community, mpModel=0),
                                         hlapi.UdpTransportTarget((ip, port)),
                                         hlapi.ContextData(),
                                         hlapi.ObjectType(hlapi.ObjectIdentity(snmp_oid))):
@@ -35,7 +36,8 @@ class SnmpUps(BackupPower):
                                 "Error Indication: " + str(error_indication) + "\n" +
                                 "Error Status: " + str(error_status))
             else:
-                # The response is a list saved into var_binds, and our OID is listed first.
+                # The response is a list saved into var_binds, and our OID is
+                # listed first.
                 return var_binds[0][1]
 
     def is_power_ok(self, return_status_msg=False):
@@ -52,7 +54,8 @@ class SnmpUps(BackupPower):
         except Exception as err:
             self.log.exception(err.message)
             if return_status_msg:
-                self.log.error("UPS failed safety test: SNMP interface request failed.")
+                self.log.error(
+                    "UPS failed safety test: SNMP interface request failed.")
                 return False, "UPS failed safety test: SNMP interface request failed."
             else:
                 return False
@@ -62,4 +65,5 @@ class SnmpUps(BackupPower):
         if status == 3:
             return "UPS passed safety test: A value of 3 was returned over the SNMP interface."
         else:
-            return "UPS failed safety test: A value of " + str(status) + " where only 3 is acceptable."
+            return "UPS failed safety test: A value of " + \
+                str(status) + " where only 3 is acceptable."

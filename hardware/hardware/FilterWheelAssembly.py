@@ -11,6 +11,7 @@ from hicat.config import CONFIG_INI
 
 from thorlabs.ThorlabsFW102C import ThorlabsFW102C
 
+
 class FilterWheelAssembly(Instrument):
 
     log = logging.getLogger(__name__)
@@ -30,7 +31,8 @@ class FilterWheelAssembly(Instrument):
             fw1_device = ThorlabsFW102C(self.__fw_1_id)
             fw2_device = ThorlabsFW102C(self.__fw_2_id)
 
-            # Create a dictionary to hold both filter wheels, since it isn't just one instrument.
+            # Create a dictionary to hold both filter wheels, since it isn't
+            # just one instrument.
             instrument_dict = {self.__FW1: fw1_device, self.__FW2: fw2_device}
             return instrument_dict
         except SerialException as exp:
@@ -47,7 +49,8 @@ class FilterWheelAssembly(Instrument):
     def set_filters(self, config_filter_name):
 
         # Look up filter combination.
-        filter_names = CONFIG_INI.get(self.config_id, config_filter_name).split(",")
+        filter_names = CONFIG_INI.get(
+            self.config_id, config_filter_name).split(",")
 
         # Resolve filter name to positions.
         pos1 = CONFIG_INI.getint(self.__fw_1_id, "filter_" + filter_names[0])
@@ -63,8 +66,8 @@ class FilterWheelAssembly(Instrument):
 
         # Reverse lookup.
         filters_1 = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_1")
-                   if entry[0].startswith("filter_")}
+                     if entry[0].startswith("filter_")}
         filters_2 = {int(entry[1]): entry[0] for entry in CONFIG_INI.items("thorlabs_fw102c_2")
-                   if entry[0].startswith("filter_")}
+                     if entry[0].startswith("filter_")}
 
         return filters_1[pos1], filters_2[pos2]

@@ -26,7 +26,10 @@ class ThorlabsMFF101(FlipMotor):
         # noinspection PyArgumentList
         motor = ftd2xx.openEx(bytes(serial, 'utf-8'))
         motor.setBaudRate(115200)
-        motor.setDataCharacteristics(constants.BITS_8, constants.STOP_BITS_1, constants.PARITY_NONE)
+        motor.setDataCharacteristics(
+            constants.BITS_8,
+            constants.STOP_BITS_1,
+            constants.PARITY_NONE)
         time.sleep(.05)
         motor.purge()
         time.sleep(.05)

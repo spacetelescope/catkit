@@ -52,7 +52,11 @@ class ThorlabsFW102C(FilterWheel):
             # Now read the filter position, and convert to an integer.
             return int(self.instrument.read())
         else:
-            raise Exception("Filter wheel " + self.config_id + " returned an unexpected response: " + out[1])
+            raise Exception(
+                "Filter wheel " +
+                self.config_id +
+                " returned an unexpected response: " +
+                out[1])
 
     def set_position(self, new_position):
         command = "pos=" + str(new_position)
@@ -65,7 +69,11 @@ class ThorlabsFW102C(FilterWheel):
             testbed_state.filter_wheels[self.config_id] = new_position
             time.sleep(3)
         else:
-            raise Exception("Filter wheel " + self.config_id + " returned an unexpected response: " + out[1])
+            raise Exception(
+                "Filter wheel " +
+                self.config_id +
+                " returned an unexpected response: " +
+                out[1])
 
     def ask(self, write_string):
         self.instrument.write(write_string)

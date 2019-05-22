@@ -38,7 +38,8 @@ def add_background_to_cache(time_quantity, num_exps, path):
 def check_background_cache(time_quantity, num_exps):
     key = (time_quantity.to(units.microsecond).m, num_exps)
     if key in background_cache:
-        return background_cache[(time_quantity.to(units.microsecond).m, num_exps)]
+        return background_cache[(time_quantity.to(
+            units.microsecond).m, num_exps)]
     else:
         return None
 
@@ -49,8 +50,18 @@ def create_metadata():
                 MetaDataEntry("coronograph", "coron", coronograph, "Focal Plane Mask (coronograph)")]
 
     if laser_source:
-        metadata.append(MetaDataEntry("laser_source", "source", laser_source, "Model of laser source"))
-        metadata.append(MetaDataEntry("laser_value", "src_val", laser_value, "Laser source value (milliAmps)"))
+        metadata.append(
+            MetaDataEntry(
+                "laser_source",
+                "source",
+                laser_source,
+                "Model of laser source"))
+        metadata.append(
+            MetaDataEntry(
+                "laser_value",
+                "src_val",
+                laser_value,
+                "Laser source value (milliAmps)"))
 
     if filter_wheels:
         filter_names = []
@@ -58,11 +69,16 @@ def create_metadata():
 
             # Resolve name of filter from ini.
             filter_names.append({int(entry[1]): entry[0] for entry in CONFIG_INI.items(key)
-                            if entry[0].startswith("filter_")}[value])
+                                 if entry[0].startswith("filter_")}[value])
 
         filter_string = ','.join(map(str, filter_names))
 
-        metadata.append(MetaDataEntry("filters", "filters", filter_string, "Names of filters used"))
+        metadata.append(
+            MetaDataEntry(
+                "filters",
+                "filters",
+                filter_string,
+                "Names of filters used"))
 
     # Only write DM specific metadata if there is a shape applied.
     if dm1_command_object is not None:
@@ -83,22 +99,31 @@ def create_metadata():
             size = len(dm1_command_object.sin_specification)
             for i, sine in enumerate(dm1_command_object.sin_specification):
                 metadata.append(MetaDataEntry("angle" + (str(i + 1) if size > 1 else "") + "_dm1",
-                                              "rot" + (str(i + 1) if size > 1 else "") + "_dm1",
+                                              "rot" +
+                                              (str(i + 1) if size >
+                                               1 else "") + "_dm1",
                                               sine.angle,
                                               "Angle of DM1 sine wave (degrees)"))
 
                 metadata.append(MetaDataEntry("ncycles" + (str(i + 1) if size > 1 else "") + "_dm1",
-                                              "ncyc" + (str(i + 1) if size > 1 else "") + "dm1",
+                                              "ncyc" +
+                                              (str(i + 1) if size >
+                                               1 else "") + "dm1",
                                               sine.ncycles,
                                               "Number of sine wave cycles on DM1"))
 
                 metadata.append(MetaDataEntry("peak_to_valley" + (str(i + 1) if size > 1 else "") + "_dm1",
-                                              "p2v" + (str(i + 1) if size > 1 else "") + "_dm1",
-                                              sine.peak_to_valley.to(units.nanometer).m,
+                                              "p2v" +
+                                              (str(i + 1) if size >
+                                               1 else "") + "_dm1",
+                                              sine.peak_to_valley.to(
+                                                  units.nanometer).m,
                                               "Peak to valley distance (nanometers)"))
 
                 metadata.append(MetaDataEntry("phase" + (str(i + 1) if size > 1 else "") + "_dm1",
-                                              "phase" + (str(i + 1) if size > 1 else "") + "_1",
+                                              "phase" +
+                                              (str(i + 1) if size >
+                                               1 else "") + "_1",
                                               sine.phase,
                                               "Phase of sinewave (degrees) on DM1"))
 
@@ -120,22 +145,31 @@ def create_metadata():
             size = len(dm2_command_object.sin_specification)
             for i, sine in enumerate(dm2_command_object.sin_specification):
                 metadata.append(MetaDataEntry("angle" + (str(i + 1) if size > 1 else "") + "_dm2",
-                                              "rot" + (str(i + 1) if size > 1 else "") + "_dm2",
+                                              "rot" +
+                                              (str(i + 1) if size >
+                                               1 else "") + "_dm2",
                                               sine.angle,
                                               "Angle of DM2 sine wave (degrees)"))
 
                 metadata.append(MetaDataEntry("ncycles" + (str(i + 1) if size > 1 else "") + "_dm2",
-                                              "ncyc" + (str(i + 1) if size > 1 else "") + "dm2",
+                                              "ncyc" +
+                                              (str(i + 1) if size >
+                                               1 else "") + "dm2",
                                               sine.ncycles,
                                               "Number of sine wave cycles on DM2"))
 
                 metadata.append(MetaDataEntry("peak_to_valley" + (str(i + 1) if size > 1 else "") + "_dm2",
-                                              "p2v" + (str(i + 1) if size > 1 else "") + "_dm2",
-                                              sine.peak_to_valley.to(units.nanometer).m,
+                                              "p2v" +
+                                              (str(i + 1) if size >
+                                               1 else "") + "_dm2",
+                                              sine.peak_to_valley.to(
+                                                  units.nanometer).m,
                                               "Number of sine wave cycles on DM2"))
 
                 metadata.append(MetaDataEntry("phase" + (str(i + 1) if size > 1 else "") + "_dm2",
-                                              "phase" + (str(i + 1) if size > 1 else "") + "_2",
+                                              "phase" +
+                                              (str(i + 1) if size >
+                                               1 else "") + "_2",
                                               sine.phase,
                                               "Phase of sinewave (degrees) on DM2"))
 

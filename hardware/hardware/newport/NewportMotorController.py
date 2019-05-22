@@ -39,11 +39,15 @@ class NewportMotorController(MotorController):
 
         self.socket_id = socket_id
         self.motor_controller = myxps
-        self.log.info("Initializing Newport XPS Motor Controller " + self.config_id + "...")
+        self.log.info(
+            "Initializing Newport XPS Motor Controller " +
+            self.config_id +
+            "...")
 
         # Initialize and move to nominal positions.
         if initialize_to_nominal:
-            motors = [s for s in CONFIG_INI.sections() if s.startswith('motor_')]
+            motors = [
+                s for s in CONFIG_INI.sections() if s.startswith('motor_')]
             for motor_name in motors:
                 self.__move_to_nominal(motor_name)
 
@@ -69,8 +73,14 @@ class NewportMotorController(MotorController):
         current_position = self.get_position(motor_id)
         if not np.isclose(current_position, position, atol=.001):
             # Move.
-            self.log.info("Moving positioner " + positioner + " to " + str(position) + "...")
-            error_code, return_string = self.motor_controller.GroupMoveAbsolute(self.socket_id, positioner, [position])
+            self.log.info(
+                "Moving positioner " +
+                positioner +
+                " to " +
+                str(position) +
+                "...")
+            error_code, return_string = self.motor_controller.GroupMoveAbsolute(
+                self.socket_id, positioner, [position])
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupMoveAbsolute')
             else:
@@ -87,8 +97,14 @@ class NewportMotorController(MotorController):
         self.__ensure_initialized(group)
 
         # Move.
-        self.log.info("Moving positioner " + positioner + " by " + str(distance) + "...")
-        error_code, return_string = self.motor_controller.GroupMoveRelative(self.socket_id, positioner, [distance])
+        self.log.info(
+            "Moving positioner " +
+            positioner +
+            " by " +
+            str(distance) +
+            "...")
+        error_code, return_string = self.motor_controller.GroupMoveRelative(
+            self.socket_id, positioner, [distance])
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupMoveRelative')
         else:
@@ -104,58 +120,73 @@ class NewportMotorController(MotorController):
         positioner = CONFIG_INI.get(motor_id, "positioner_name")
         self.__ensure_initialized(group)
 
-        error_code, current_position = self.motor_controller.GroupPositionCurrentGet(self.socket_id, positioner, 1)
+        error_code, current_position = self.motor_controller.GroupPositionCurrentGet(
+            self.socket_id, positioner, 1)
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupPositionCurrentGet')
         else:
             return current_position
 
     def __ensure_initialized(self, group):
-        error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
+        error_code, current_status = self.motor_controller.GroupStatusGet(
+            self.socket_id, group)
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupStatusGet')
 
         # Kill motor if it is not in a known good state.
         if current_status != 11 and current_status != 12 and current_status != 7 and current_status != 42:
-            error_code, return_string = self.motor_controller.GroupKill(self.socket_id, group)
+            error_code, return_string = self.motor_controller.GroupKill(
+                self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupKill')
-            self.log.warning("Killed group " + group + " because it was not in state 11, 12, or 7")
+            self.log.warning(
+                "Killed group " +
+                group +
+                " because it was not in state 11, 12, or 7")
 
             # Update the status.
-            error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
+            error_code, current_status = self.motor_controller.GroupStatusGet(
+                self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupStatusGet')
 
         # Initialize from killed state.
         if current_status == 7:
             # Initialize the group
-            error_code, return_string = self.motor_controller.GroupInitialize(self.socket_id, group)
+            error_code, return_string = self.motor_controller.GroupInitialize(
+                self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupInitialize')
             self.log.info("Initialized group " + group)
 
             # Update the status
-            error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
+            error_code, current_status = self.motor_controller.GroupStatusGet(
+                self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupStatusGet')
 
         # Home search
         if current_status == 42:
-            error_code, return_string = self.motor_controller.GroupHomeSearch(self.socket_id, group)
+            error_code, return_string = self.motor_controller.GroupHomeSearch(
+                self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupHomeSearch')
             self.log.info("Homed group " + group)
 
     def __move_to_nominal(self, group_config_id):
-        self.__ensure_initialized(CONFIG_INI.get(group_config_id, "group_name"))
+        self.__ensure_initialized(
+            CONFIG_INI.get(
+                group_config_id,
+                "group_name"))
         nominal = CONFIG_INI.getfloat(group_config_id, "nominal")
         self.absolute_move(group_config_id, nominal)
 
-    # Migrated from Newport demo code, now raises exceptions and does logging elsewhere.
+    # Migrated from Newport demo code, now raises exceptions and does logging
+    # elsewhere.
     def __raise_exceptions(self, error_code, api_name):
         if (error_code != -2) and (error_code != -108):
-            error_code2, error_string = self.motor_controller.ErrorStringGet(self.socket_id, error_code)
+            error_code2, error_string = self.motor_controller.ErrorStringGet(
+                self.socket_id, error_code)
             if error_code2 != 0:
                 raise Exception(api_name + ': ERROR ' + str(error_code))
             else:
@@ -164,8 +195,10 @@ class NewportMotorController(MotorController):
             if error_code == -2:
                 raise Exception(api_name + ': TCP timeout')
             if error_code == -108:
-                raise Exception(api_name + ': The TCP/IP connection was closed by an administrator')
-        raise Exception("Unknown error_code returned from Newport Motor Controller.")
+                raise Exception(
+                    api_name + ': The TCP/IP connection was closed by an administrator')
+        raise Exception(
+            "Unknown error_code returned from Newport Motor Controller.")
 
     # Only a few of the motor IDs have testbed state entries.
     def __update_testbed_state(self, motorid):
@@ -173,7 +206,9 @@ class NewportMotorController(MotorController):
             position = self.get_position(motorid)
             if motorid == "motor_lyot_stop_x":
                 ini_value = CONFIG_INI.getfloat(motorid, "in_beam")
-                testbed_state.lyot_stop = True if np.isclose(ini_value, position, atol=.001) else False
+                testbed_state.lyot_stop = True if np.isclose(
+                    ini_value, position, atol=.001) else False
             elif motorid == "motor_FPM_Y":
                 ini_value = CONFIG_INI.getfloat(motorid, "default_coron")
-                testbed_state.coronograph = True if np.isclose(ini_value, position, atol=.001) else False
+                testbed_state.coronograph = True if np.isclose(
+                    ini_value, position, atol=.001) else False

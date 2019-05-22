@@ -25,7 +25,8 @@ def read_global(path):
         if clean_first_line[1:3].upper() == "GV":
 
             # Remove white space, and split the values.
-            global_values = clean_first_line.lstrip("[GV:").rstrip("]").split(",")
+            global_values = clean_first_line.lstrip(
+                "[GV:").rstrip("]").split(",")
             global_float = tuple(map(__convert_to_float, global_values))
 
             # If all zeros, then move on to the zernikes.
@@ -35,7 +36,9 @@ def read_global(path):
                 return None
 
         else:
-            raise Exception("Iris AO file formatting problem, can't process the global line:\n" + raw_line)
+            raise Exception(
+                "Iris AO file formatting problem, can't process the global line:\n" +
+                raw_line)
 
 
 def read_zerkines(path):
@@ -52,7 +55,8 @@ def read_zerkines(path):
         while clean_line[1:3].upper() == "MV":
 
             # Parse line and create of tuples (zernike, value).
-            zernike_string_list = clean_line.lstrip("[MV:").rstrip("]").split(",")
+            zernike_string_list = clean_line.lstrip(
+                "[MV:").rstrip("]").split(",")
             zernike_type = int(zernike_string_list[0])
             zernike_value = __convert_to_float(zernike_string_list[1])
 
@@ -82,11 +86,12 @@ def read_segments(path):
         while clean_line[1:3].upper() == "ZV":
 
             # Parse into dictionary {segment: (piston, tip, tilt)}.
-            segment_string_list = clean_line.lstrip("[ZV:").rstrip("]").split(",")
+            segment_string_list = clean_line.lstrip(
+                "[ZV:").rstrip("]").split(",")
             segment_num = int(segment_string_list[0])
             segment_tuple = __convert_to_float(segment_string_list[1]), \
-                            __convert_to_float(segment_string_list[2]), \
-                            __convert_to_float(segment_string_list[3])
+                __convert_to_float(segment_string_list[2]), \
+                __convert_to_float(segment_string_list[3])
 
             if any(segment_tuple):
                 segment_commands[segment_num] = segment_tuple
@@ -103,7 +108,8 @@ def read_segments(path):
 
 def read_file(path, num_segments=37):
 
-    # Read the global portion of the file, and return the command if it's present.
+    # Read the global portion of the file, and return the command if it's
+    # present.
     global_command = read_global(path)
     if global_command is not None:
 

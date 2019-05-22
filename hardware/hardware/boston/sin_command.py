@@ -41,7 +41,8 @@ def sin_command(sin_specification,
         sin_specification = [sin_specification]
 
     # Create an array of zeros.
-    num_actuators_pupil = CONFIG_INI.getint(dm_config_id, 'dm_length_actuators')
+    num_actuators_pupil = CONFIG_INI.getint(
+        dm_config_id, 'dm_length_actuators')
     sin_wave = np.zeros((num_actuators_pupil, num_actuators_pupil))
     if initial_data is not None:
         sin_wave += initial_data
@@ -51,10 +52,12 @@ def sin_command(sin_specification,
 
         # Make sure the requested command is properly sampled on the DM.
         if spec.ncycles > 17:
-            raise ValueError("Cannot do more than 17 cycles per pupil on DM with 34 actuators across.")
+            raise ValueError(
+                "Cannot do more than 17 cycles per pupil on DM with 34 actuators across.")
 
         elif spec.ncycles >= 17 and spec.phase < 90:    # We can only do phase=90 if ncycles=17
-            raise ValueError("Cosine (phase ~= 0) will not be sampled correctly at 17 cycles per pupil.")
+            raise ValueError(
+                "Cosine (phase ~= 0) will not be sampled correctly at 17 cycles per pupil.")
 
         sin_wave += __sin_wave(spec.angle,
                                spec.ncycles,
@@ -66,7 +69,12 @@ def sin_command(sin_specification,
     sin_wave *= mask
 
     # Create the DM Command Object.
-    dm_command_object = DmCommand(sin_wave, dm_num, flat_map=flat_map, bias=bias, sin_specification=sin_specification)
+    dm_command_object = DmCommand(
+        sin_wave,
+        dm_num,
+        flat_map=flat_map,
+        bias=bias,
+        sin_specification=sin_specification)
 
     if return_shortname:
         # Create short_name.
@@ -93,7 +101,8 @@ def __sin_wave_aj_matlab(rotate_deg, ncycles, amplitude_factor):
     fl7 = CONFIG_INI.getfloat('optical_design', 'focal_length7')
 
     # Create Sin Wave.
-    num_actuators_pupil = CONFIG_INI.getint(dm_config_id, 'dm_length_actuators')
+    num_actuators_pupil = CONFIG_INI.getint(
+        dm_config_id, 'dm_length_actuators')
     ddms = num_actuators_pupil * float(300e-6)
     dapod = 1.025 * float(18e-3)
     apod_length = 256
@@ -125,9 +134,13 @@ def __sin_wave(rotate_deg, ncycles, peak_to_valley, phase):
     """
 
     # Make a linear ramp.
-    num_actuators_pupil = CONFIG_INI.getint(dm_config_id, 'dm_length_actuators')
-    linear_ramp = np.linspace(-0.5, 0.5, num=num_actuators_pupil, endpoint=False)
-    linear_ramp += 0.5/num_actuators_pupil
+    num_actuators_pupil = CONFIG_INI.getint(
+        dm_config_id, 'dm_length_actuators')
+    linear_ramp = np.linspace(-0.5,
+                              0.5,
+                              num=num_actuators_pupil,
+                              endpoint=False)
+    linear_ramp += 0.5 / num_actuators_pupil
 
     # Convert to radians.
     phase_rad = np.deg2rad(phase)
@@ -141,5 +154,6 @@ def __sin_wave(rotate_deg, ncycles, peak_to_valley, phase):
     yt = y_mesh * np.sin(theta_rad)
     xyt = xt + yt
     xyf = xyt * float(ncycles) * 2.0 * np.pi
-    sine_wave = (float(peak_to_valley.to_base_units().m) / 2.0) * np.cos(xyf + phase_rad)
+    sine_wave = (float(peak_to_valley.to_base_units().m) / 2.0) * \
+        np.cos(xyf + phase_rad)
     return sine_wave

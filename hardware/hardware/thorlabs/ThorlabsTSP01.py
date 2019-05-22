@@ -13,7 +13,7 @@ def get_temp_humidity(config_id):
     """
     Connects to Thorlabs TSP01 sensor and reads the external temperature and humidity.
     :param: The id of the thorlabs TSP01 in the config.ini file (ex: thorlabs_tsp01_1)
-    :return: Temperature, Humidity as floats. 
+    :return: Temperature, Humidity as floats.
     """
     # Set up the paths.
     serial_number = CONFIG_INI.get(config_id, "serial_number")

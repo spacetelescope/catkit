@@ -17,7 +17,8 @@ from hardware import testbed_state
 
 
 class ThorlabsMLCS1(LaserSource):
-    SLEEP_TIME = 2  # Number of seconds to sleep after turning on laser or changing current.
+    # Number of seconds to sleep after turning on laser or changing current.
+    SLEEP_TIME = 2
     log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):
@@ -33,13 +34,19 @@ class ThorlabsMLCS1(LaserSource):
     def initialize(self, *args, **kwargs):
         """Starts laser at the nominal_current value from config.ini."""
         self.channel = CONFIG_INI.getint(self.config_id, "channel")
-        self.nominal_current = CONFIG_INI.getint(self.config_id, "nominal_current")
-        path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "lib", "uart_library_win64.dll")
+        self.nominal_current = CONFIG_INI.getint(
+            self.config_id, "nominal_current")
+        path = os.path.join(
+            os.path.dirname(
+                os.path.realpath(__file__)),
+            "lib",
+            "uart_library_win64.dll")
 
         # noinspection PyArgumentList
         self.laser = cdll.LoadLibrary(bytes(path, 'utf-8'))
         self.port = self.find_com_port()
-        self.handle = self.laser.fnUART_LIBRARY_open(b"{}".format(self.port), 115200, 3)
+        self.handle = self.laser.fnUART_LIBRARY_open(
+            b"{}".format(self.port), 115200, 3)
 
         # Set the initial current to nominal_current and enable the laser.
         self.set_current(self.nominal_current, sleep=False)
@@ -53,7 +60,8 @@ class ThorlabsMLCS1(LaserSource):
         if self.laser.fnUART_LIBRARY_isOpen(b"{}".format(self.port)) == 1:
             self.set_channel_enable(self.channel, 0)
 
-            # Check if the other channels are enabled before turning off system enable.
+            # Check if the other channels are enabled before turning off system
+            # enable.
             turn_off_system_enable = True
             for i in range(1, 5):
                 if self.is_channel_enabled(i) == 1:
@@ -75,7 +83,8 @@ class ThorlabsMLCS1(LaserSource):
             self.log.info("Laser is changing amplitude...")
             self.set_active_channel(self.channel)
             current_command_string = b"current={}\r".format(value)
-            self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
+            self.laser.fnUART_LIBRARY_Set(
+                self.handle, current_command_string, 32)
             if sleep:
                 time.sleep(self.SLEEP_TIME)
 
@@ -91,7 +100,7 @@ class ThorlabsMLCS1(LaserSource):
         self.laser.fnUART_LIBRARY_Get(self.handle, command, response_buffer)
 
         # Use regex to find the float value in the response.
-        return float(re.findall("\d+\.\d+", response_buffer)[0])
+        return float(re.findall(r"\d+\.\d+", response_buffer)[0])
 
     def find_com_port(self):
         """Queries the dll for the com port it is using."""
@@ -100,7 +109,8 @@ class ThorlabsMLCS1(LaserSource):
         split = response_buffer.split(",")
         for i, thing in enumerate(split):
 
-            # The list has a format of "Port, Device, Port, Device". Once we find device named VCPO, minus 1 for port.
+            # The list has a format of "Port, Device, Port, Device". Once we
+            # find device named VCPO, minus 1 for port.
             if thing == "\\Device\\VCP0":
                 return split[i - 1]
 
@@ -140,5 +150,5 @@ class ThorlabsMLCS1(LaserSource):
         command = b"enable?\r"
         response_buffer = b"0" * 255
         self.laser.fnUART_LIBRARY_Get(self.handle, command, response_buffer)
-        result = int(re.findall("\d+", response_buffer)[0])
+        result = int(re.findall(r"\d+", response_buffer)[0])
         return result
