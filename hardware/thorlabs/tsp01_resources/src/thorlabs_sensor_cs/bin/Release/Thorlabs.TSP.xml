@@ -1,0 +1,816 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Thorlabs.TSP</name>
+    </assembly>
+    <members>
+        <member name="M:Thorlabs.TSP.TLTSP.#ctor(System.IntPtr)">
+            <summary>
+            This function creates an IVI instrument driver session, typically using the C session instrument handle.
+            </summary>
+            <param name="Instrument_Handle">
+            The instrument handle that is used to create an IVI instrument driver session.
+            </param>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.#ctor(System.String,System.Boolean,System.Boolean)">
+            <summary>
+            This function initializes the instrument driver session and performs the following initialization actions:
+            
+            (1) Opens a session to the Default Resource Manager resource and a session to the specified device using the Resource Name  specified.
+            (2) Performs an identification query on the instrument.
+            (3) Resets the instrument to a known state.
+            (4) Sends initialization commands to the instrument.
+            (5) Returns an instrument handle which is used to distinguish between different sessions of this instrument driver.
+            
+            Note:
+            Each time this function is invoked a unique session is opened.  
+            </summary>
+            <param name="Resource_Name">
+            This parameter specifies the device (resource) with which to establish a communication session. The syntax for the Instrument Descriptor is shown below. Optional segments are shown in square brackets ([]). Required segments that must be filled in are denoted by angle brackets (&lt;&gt;).
+            
+            USB[board]::0x1313::product id
+                            ::serial number[::interface number][::INSTR]
+                            
+            Remote Access   visa://hostname[:port]/resource
+            
+            The default values for optional parameters are shown below.
+            
+            Optional Segment          Default Value
+            ---------------------------------------
+            board                     0
+            USB interface number      0
+            
+            The product id codes for supported instruments are shown below.
+            
+            Product ID   Instrument Type
+            -------------------------------------------------
+            0x80F0       TSP01 with DFU interface enabled
+            0x80F8       TSP01 without DFU interface enabled
+            
+            Example Resource Strings:
+            --------------------------------------------------------------
+            USB::0x1313::0x80F8::M12345678::INSTR
+                                  TSP01 with a serial number of
+                                  M12345678.
+            
+            
+            visa://1.2.3.4/USB::0x1313::0x80F8::M23456789::INSTR      
+                                  Remote access to the TSP01 with a serial
+                                  number of M23456789 at the specified IP
+                                  address.
+            
+            visa://hostname/USB::0x1313::0x80F8::M34567890::INSTR
+                                  Remote access to the TSP01 with a
+                                  serial number of M23456789 on the
+                                  specified host.
+            
+            Note: You should use TLTSP_getDeviceResourceString() to get the Resource Name for your device.
+            
+            But you may use VISA &lt;Find Resources&gt; with an appropriate seach pattern to get the Resource Name for your device too. 
+            For TSPxx devices use: "USB?*::0x1313::0x80F?::?*::INSTR" 
+            
+            </param>
+            <param name="ID_Query">
+            This parameter specifies whether an identification query is performed during the initialization process.
+            
+            VI_OFF (0): Skip query.
+            VI_ON  (1): Do query (default).
+            
+            </param>
+            <param name="Reset_Device">
+            This parameter specifies whether the instrument is reset during the initialization process.
+            
+            VI_OFF (0) - no reset 
+            VI_ON  (1) - instrument is reset (default)
+            
+            </param>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.getDeviceCount(System.UInt32@)">
+            <summary>
+            Gets the number of connected devices available in your system that can be 
+            controlled with this driver.
+            instrHdl        This parameter is only needed for IVI compliant. Set to VI_NULL.
+            deviceCount     Receives the number of connected devices.
+            return          Status code. 
+            
+            /*-------------------- Prototype ---------------------*/
+            ViStatus TLTSP_getDeviceCount (ViSession instrHdl, ViPUInt32 deviceCount);
+            </summary>
+            <param name="Device_Count">
+            Returnes the number of connected devices you can control with this driver.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.getDeviceResourceString(System.UInt32,System.Text.StringBuilder)">
+            <summary>
+            Gets resource string of a connected device you can control with this driver.
+            You don't have to open a session with the device with TLTSP_init() before you
+            can use this function. It returns the resource name of a desired device.
+            instrHdl        This parameter is only needed for IVI compliance. Set to VI_NULL.
+            deviceIndex     The device's index to get the resource string from. Valid values range 
+                            from 0 to (number of connected devices - 1) (see TLTSP_getDeviceCount()).
+            resourceName    A 256 byte string buffer to receive the ressource identification 
+                            string. Use this string in function TLTSP_init(). 
+            return          Status code.
+            
+            /*-------------------- Prototype ---------------------*/ 
+            ViStatus TLTSP_getDeviceResourceString (ViSession instrHdl, ViUInt32 deviceIndex, ViChar resourceName[]);
+            </summary>
+            <param name="Device_Index">
+            Index of the connected device you want to get the resource name from (0 to number of connected devices - 1).
+            see TLTSP_getDeviceCount()
+            </param>
+            <param name="Resource_Name">
+            A 256 byte string buffer to receive the ressource identification string. 
+            Use this string in function TLTSP_init().
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.writeRegister(System.Int16,System.Int16)">
+            <summary>
+            This function writes the content of any writable instrument register. Refer to your instrument's user's manual for more details on status structure registers.
+            
+            </summary>
+            <param name="Register_ID">
+            Specifies the register to be used for operation. This parameter can be any of the following constants:
+            
+              TLTSP_REG_SRE         (1): Service Request Enable
+              TLTSP_REG_ESE         (3): Standard Event Enable
+              TLTSP_REG_OPER_ENAB   (6): Operation Event Enable Register
+              TLTSP_REG_OPER_PTR    (7): Operation Positive Transition
+              TLTSP_REG_OPER_NTR    (8): Operation Negative Transition
+              TLTSP_REG_QUES_ENAB  (11): Questionable Event Enable Reg.
+              TLTSP_REG_QUES_PTR   (12): Questionable Positive Transition
+              TLTSP_REG_QUES_NTR   (13): Questionable Negative Transition
+              TLTSP_REG_MEAS_ENAB  (16): Measurement Event Enable Register
+              TLTSP_REG_MEAS_PTR   (17): Measurement Positive Transition
+              TLTSP_REG_MEAS_NTR   (18): Measurement Negative Transition
+              TLTSP_REG_AUX_ENAB   (21): Auxiliary Event Enable Register
+              TLTSP_REG_AUX_PTR    (22): Auxiliary Positive Transition
+              TLTSP_REG_AUX_NTR    (23): Auxiliary Negative Transition 
+            
+            </param>
+            <param name="Value">
+            This parameter specifies the register value.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.readRegister(System.Int16,System.Int16@)">
+            <summary>
+            This function reads the content of any readable instrument register. Refer to your instrument's user's manual for more details on status structure registers.
+            
+            </summary>
+            <param name="Register_ID">
+            Specifies the register to be used for operation. This parameter can be any of the following constants:
+            
+              TLTSP_REG_STB         (0): Status Byte Register
+              TLTSP_REG_SRE         (1): Service Request Enable
+              TLTSP_REG_ESB         (2): Standard Event Status Register
+              TLTSP_REG_ESE         (3): Standard Event Enable
+              TLTSP_REG_OPER_COND   (4): Operation Condition Register
+              TLTSP_REG_OPER_EVENT  (5): Operation Event Register
+              TLTSP_REG_OPER_ENAB   (6): Operation Event Enable Register
+              TLTSP_REG_OPER_PTR    (7): Operation Positive Transition
+              TLTSP_REG_OPER_NTR    (8): Operation Negative Transition
+              TLTSP_REG_QUES_COND   (9): Questionable Condition Register
+              TLTSP_REG_QUES_EVENT (10): Questionable Event Register
+              TLTSP_REG_QUES_ENAB  (11): Questionable Event Enable Reg.
+              TLTSP_REG_QUES_PTR   (12): Questionable Positive Transition
+              TLTSP_REG_QUES_NTR   (13): Questionable Negative Transition
+              TLTSP_REG_MEAS_COND  (14): Measurement Condition Register
+              TLTSP_REG_MEAS_EVENT (15): Measurement Event Register
+              TLTSP_REG_MEAS_ENAB  (16): Measurement Event Enable Register
+              TLTSP_REG_MEAS_PTR   (17): Measurement Positive Transition
+              TLTSP_REG_MEAS_NTR   (18): Measurement Negative Transition
+              TLTSP_REG_AUX_COND   (19): Auxiliary Condition Register
+              TLTSP_REG_AUX_EVENT  (20): Auxiliary Event Register
+              TLTSP_REG_AUX_ENAB   (21): Auxiliary Event Enable Register
+              TLTSP_REG_AUX_PTR    (22): Auxiliary Positive Transition
+              TLTSP_REG_AUX_NTR    (23): Auxiliary Negative Transition 
+            
+            </param>
+            <param name="Value">
+            This parameter returns the register value.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.setTempSensOffset(System.UInt16,System.Double)">
+            <summary>
+            This function sets the sensor's absolute temperature offset in K.
+            
+            Note: 
+            This function is valid for all temperature sensors only (channels 1, 3 and 4).
+            
+            Hint:
+            The offset will be added to the temperature value.
+            </summary>
+            <param name="Channel">
+            This parameter specifies the temperature channel.
+            
+            Note: 
+            This function is valid for all temperature sensors (channels 1, 3 and 4)
+            </param>
+            <param name="Temperature_Offset">
+            This parameter specifies the temperature offset in K.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.getTempSensOffset(System.UInt16,System.Int16,System.Double@)">
+            <summary>
+            This function returns the sensor's absolute temperature offset in K.
+            
+            Note: 
+            This function is valid for all temperature sensors only (channels 1, 3 and 4).
+            
+            Hint:
+            The offset will be added to the temperature value.
+            </summary>
+            <param name="Channel">
+            This parameter specifies the temperature channel.
+            
+            Note: 
+            This function is valid for all temperature sensors only (channels 1, 3 and 4)
+            </param>
+            <param name="Attribute">
+            This parameter specifies the value to be queried.
+            
+            Acceptable values:
+              TLTSP_ATTR_SET_VAL  (0): Set value
+              TLTSP_ATTR_MIN_VAL  (1): Minimum value
+              TLTSP_ATTR_MAX_VAL  (2): Maximum value
+            
+            </param>
+            <param name="Temperature_Offset">
+            This parameter returns the temperature offset in K.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.setThermistorExpParams(System.UInt16,System.Double,System.Double,System.Double)">
+            <summary>
+            This function sets the thermistor exponential method parameters.
+            
+            Note: 
+            This function is valid for external temperature sensors only (thermistor at channels 3 and 4).
+            </summary>
+            <param name="Channel">
+            This parameter specifies the temperature channel.
+            
+            Note: 
+            This function is valid for external temperature sensors only (channels 3 and 4).
+            </param>
+            <param name="R0_value">
+            This parameter specifies the R0 value.
+            
+            </param>
+            <param name="T0_value">
+            This parameter specifies the T0 value.
+            
+            </param>
+            <param name="Beta_value">
+            This parameter specifies the beta value.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.getThermistorExpParams(System.UInt16,System.Int16,System.Double@,System.Double@,System.Double@)">
+            <summary>
+            This function returns the thermistor exponential method parameters.
+            
+            Note: 
+            This function is valid for external temperature sensors only (thermistor at channels 3 and 4).
+            </summary>
+            <param name="Channel">
+            This parameter specifies the temperature channel.
+            
+            Note: 
+            This function is valid for external temperature sensors only (channels 3 and 4).
+            </param>
+            <param name="Attribute">
+            This parameter specifies the value to be queried.
+            
+            Acceptable values:
+              TLTSP_ATTR_SET_VAL  (0): Set value
+              TLTSP_ATTR_MIN_VAL  (1): Minimum value
+              TLTSP_ATTR_MAX_VAL  (2): Maximum value
+              TLTSP_ATTR_DFLT_VAL (3): Default value
+            
+            </param>
+            <param name="R0_Value">
+            This parameter returns the R0 value.
+            </param>
+            <param name="T0_Value">
+            This parameter returns the T0 value.
+            </param>
+            <param name="Beta_Value">
+            This parameter returns the beta value.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.setHumSensOffset(System.Double)">
+            <summary>
+            This function sets the sensor's absolute humidity offset.
+            
+            Hint:
+            The offset will be added to the humidity value.
+            </summary>
+            <param name="Humidity_Offset">
+            This parameter specifies the humidity offset in % r.H.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.getHumSensOffset(System.Int16,System.Double@)">
+            <summary>
+            This function returns the sensor's absolute humidity offset in % r.H.
+            
+            Hint:
+            The offset will be added to the humidity value.
+            </summary>
+            <param name="Attribute">
+            This parameter specifies the value to be queried.
+            
+            Acceptable values:
+              TLTSP_ATTR_SET_VAL  (0): Set value
+              TLTSP_ATTR_MIN_VAL  (1): Minimum value
+              TLTSP_ATTR_MAX_VAL  (2): Maximum value
+            
+            </param>
+            <param name="Humidity_Offset">
+            This parameter returns the humidity offset in % r.H.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.getTemperatureData(System.UInt16,System.Int16,System.Double@)">
+            <summary>
+            This function returns the temperature value of the last temperature measurement in ?C.
+            
+            Note: 
+            This function is valid for all temperature sensors only (channels 1, 3 and 4).
+            </summary>
+            <param name="Channel">
+            This parameter specifies the temperature channel.
+            </param>
+            <param name="Attribute">
+            This parameter specifies the value to be queried.
+            
+            Acceptable values:
+              TLTSP_ATTR_SET_VAL  (0): Set value
+              TLTSP_ATTR_MIN_VAL  (1): Minimum value
+              TLTSP_ATTR_MAX_VAL  (2): Maximum value
+              TLTSP_ATTR_DFLT_VAL (3): Default value
+            
+            </param>
+            <param name="Temperature_Value">
+            This parameter returns the last measured temperature value in ?C.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.getHumidityData(System.Int16,System.Double@)">
+            <summary>
+            This function returns the relative humidity value of the last humidity measurement in % r.H.
+            </summary>
+            <param name="Attribute">
+            This parameter specifies the value to be queried.
+            
+            Acceptable values:
+              TLTSP_ATTR_SET_VAL  (0): Set value
+              TLTSP_ATTR_MIN_VAL  (1): Minimum value
+              TLTSP_ATTR_MAX_VAL  (2): Maximum value
+              TLTSP_ATTR_DFLT_VAL (3): Default value
+            
+            </param>
+            <param name="Humidity_Value">
+            This parameter returns the last measured humidity value in % r.H.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.getThermRes(System.UInt16,System.Int16,System.Double@)">
+            <summary>
+            This function returns the resistance value of the external temperature sensor (thermistor).
+            
+            Note: 
+            This function is valid for the external temperature sensors only (thermistors at channels 3 and 4).
+            </summary>
+            <param name="Channel">
+            This parameter specifies the temperature channel.
+            </param>
+            <param name="Attribute">
+            This parameter specifies the value to be queried.
+            
+            Acceptable values:
+              TLTSP_ATTR_SET_VAL  (0): Set value
+              TLTSP_ATTR_MIN_VAL  (1): Minimum value
+              TLTSP_ATTR_MAX_VAL  (2): Maximum value
+              TLTSP_ATTR_DFLT_VAL (3): Default value
+            
+            </param>
+            <param name="Resistance_in_Ohm">
+            This parameter returns the resistance value in Ohm.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.measTemperature(System.UInt16,System.Double@)">
+            <summary>
+            This function is used to obtain temperature readings from the instrument. 
+            
+            Remark: 
+            This function starts a new measurement cycle and after finishing measurement the result is received. This may take about one second.
+            
+            Note: 
+            This function is valid for all temperature sensors only (channels 1, 3 and 4).
+            </summary>
+            <param name="Channel">
+            This parameter specifies the temperature channel (1, 3 or 4).
+            </param>
+            <param name="Temperature">
+            This parameter returns the temperature in ?C. 
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.measHumidity(System.Double@)">
+            <summary>
+            This function is used to obtain relative humidity readings from the internal sensor.
+            
+            Remark: 
+            This function starts a new measurement cycle and after finishing measurement the result is received. This may take about one second.
+            </summary>
+            <param name="Humidity">
+            This parameter returns the relative humidity in % r.H.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.abort">
+            <summary>
+            This function aborts a measurement in process.
+            
+            </summary>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.configure(System.Int16)">
+            <summary>
+            This function is used to configure a measurement. I.e. set the parameter to be measured.
+            
+            </summary>
+            <param name="Parameter">
+            This parameter specifies the parameter to be measured.
+            
+            Values:
+            TLTSP_MEAS_TEMP      (0)  - Temperature of internal sensor
+            TLTSP_MEAS_HUM       (1)  - relative Humidity of internal sensor
+            TLTSP_MEAS_TEMP_EXT1 (2)  - Temperature of external sensor 1
+            TLTSP_MEAS_TEMP_EXT2 (3)  - Temperature of external sensor 2
+            
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.initiate">
+            <summary>
+            This function starts the configured measurement immediately. 
+            
+            Note: 
+            The measurement is taken from the last configured channel.
+            
+            Remark: 
+            This function starts a new measurement cycle. This may take about one second.
+            </summary>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.fetchTemperature(System.UInt16,System.Double@)">
+            <summary>
+            This function is used to obtain temperature readings from the instrument.
+            
+            Note: 
+            This function is valid for all temperature sensors only (channels 1, 3 and 4).
+            </summary>
+            <param name="Channel">
+            This parameter specifies the temperature channel (1, 3 or 4).
+            </param>
+            <param name="Temperature">
+            This parameter returns the temperature in ?C.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.fetchHumidity(System.Double@)">
+            <summary>
+            This function is used to obtain relative humidity readings from the internal sensor.
+            </summary>
+            <param name="Humidity">
+            This parameter returns the relative humidity in % r.H.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.fetch(System.Double@)">
+            <summary>
+            This function returns last measurement data.
+            
+            Note: 
+            The data is taken from the last configured channel.
+            </summary>
+            <param name="Value">
+            This parameter returns the last measured value.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.read(System.Double@)">
+            <summary>
+            This function initiates a new measurement and reads the result.
+            
+            Note: 
+            The measurement is taken from the last configured channel.
+            
+            Remark: 
+            This fuction may take about one second.
+            
+            </summary>
+            <param name="Value">
+            This parameter returns the read value.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.getConfiguration(System.Int16@)">
+            <summary>
+            This function returns the actual configured measurement parameter.
+            
+            </summary>
+            <param name="Configuration">
+            This parameter returns the actual configured measurement parameter.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.identificationQuery(System.Text.StringBuilder,System.Text.StringBuilder,System.Text.StringBuilder,System.Text.StringBuilder)">
+            <summary>
+            This function returns the device identification information.
+            </summary>
+            <param name="Manufacturer_Name">
+            This parameter returns the manufacturer name.
+            
+            Notes:
+            (1) The array must contain at least 256 elements ViChar[256].
+            (2) You may pass VI_NULL if you do not need this value.
+            
+            </param>
+            <param name="Device_Name">
+            This parameter returns the device name.
+            
+            Notes:
+            (1) The array must contain at least 256 elements ViChar[256].
+            (2) You may pass VI_NULL if you do not need this value.
+            
+            </param>
+            <param name="Serial_Number">
+            This parameter returns the device serial number.
+            
+            Notes:
+            (1) The array must contain at least 256 elements ViChar[256].
+            (2) You may pass VI_NULL if you do not need this value.
+            
+            </param>
+            <param name="Firmware_Revision">
+            This parameter returns the device firmware revision.
+            
+            Notes:
+            (1) The array must contain at least 256 elements ViChar[256].
+            (2) You may pass VI_NULL if you do not need this value.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.calibrationMessage(System.Text.StringBuilder)">
+            <summary>
+            This function returns a human readable calibration message.
+            
+            </summary>
+            <param name="Message">
+            This parameter returns the calibration message.
+            
+            Note: 
+            The array must contain at least 256 elements ViChar[256].
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.reset">
+            <summary>
+            This function resets the device.
+            </summary>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.selfTest(System.Int16@,System.Text.StringBuilder)">
+            <summary>
+            This function runs the device self test routine and returns the test result.
+            </summary>
+            <param name="Self_Test_Result">
+            This parameter contains the value returned from the device self test routine. A retured zero value indicates a successful run, a value other than zero indicates failure.
+            </param>
+            <param name="Description">
+            This parameter returns the interpreted code as an user readable message string.
+            
+            Note:
+            The array must contain at least 256 elements ViChar[256].
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.errorQuery(System.Int32@,System.Text.StringBuilder)">
+            <summary>
+            This function queries the instrument's error queue manually. 
+            Use this function to query the instrument's error queue if the driver's error query mode is set to manual query. 
+            
+            Note: 
+            The returned values are stored in the drivers error store. You may use &lt;Error Message&gt; to get a descriptive text at a later point of time.
+            </summary>
+            <param name="Error_Number">
+            This parameter returns the instrument error number.
+            
+            Note: 
+            You may pass VI_NULL if you don't need this value.
+            
+            </param>
+            <param name="Error_Message">
+            This parameter returns the instrument error message.
+            
+            Notes:
+            (1) The array must contain at least 256 elements ViChar[256].
+            (2) You may pass VI_NULL if you do not need this value.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.revisionQuery(System.Text.StringBuilder,System.Text.StringBuilder)">
+            <summary>
+            This function returns the revision numbers of the instrument driver and the device firmware.
+            </summary>
+            <param name="Instrument_Driver_Revision">
+            This parameter returns the Instrument Driver revision.
+            
+            Notes:
+            (1) The array must contain at least 256 elements ViChar[256].
+            (2) You may pass VI_NULL if you do not need this value.
+            
+            </param>
+            <param name="Firmware_Revision">
+            This parameter returns the device firmware revision. 
+            
+            Notes:
+            (1) The array must contain at least 256 elements ViChar[256].
+            (2) You may pass VI_NULL if you do not need this value.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.setDfuState(System.UInt16)">
+            <summary>
+            DFU state to set
+            
+            TLTSP_DFU_STATE_OFF        (0)   // dfu off
+            TLTSP_DFU_STATE_ON         (1)   // dfu on
+            TLTSP_DFU_STATE_ONCE       (2)   // dfu once (dfu on for one time only - self reseting) 
+            
+            Note: Use TLTSP_DFU_STATE_ONCE if you want to update the TSP01 firmware.
+            
+            /*-------------------- Prototype ---------------------*/ 
+            ViStatus TLTSP_setDfuState (ViSession instrHdl, ViInt16 val); 
+            </summary>
+            <param name="DFU_State">
+            DFU state to set.
+            
+            TLTSP_DFU_STATE_OFF        (0)   // dfu off
+            TLTSP_DFU_STATE_ON         (1)   // dfu on
+            TLTSP_DFU_STATE_ONCE       (2)   // dfu once (dfu on for one time only - self reseting) 
+            
+            Note: Use TLTSP_DFU_STATE_ONCE if you want to update the TSP01 firmware.
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.getDfuState(System.UInt16@)">
+            <summary>
+            Returns the DFU state.
+            
+            TLTSP_DFU_STATE_OFF        (0)   // dfu off
+            TLTSP_DFU_STATE_ON         (1)   // dfu on
+            TLTSP_DFU_STATE_ONCE       (2)   // dfu once (dfu on for one time only - self reseting) 
+            
+            /*-------------------- Prototype ---------------------*/
+            ViStatus TLTSP_getDfuState (ViSession instrHdl, ViPInt16 pVal); 
+            </summary>
+            <param name="DFU_State">
+            Returns the DFU state.
+            
+            TLTSP_DFU_STATE_OFF        (0)   // dfu off
+            TLTSP_DFU_STATE_ON         (1)   // dfu on
+            TLTSP_DFU_STATE_ONCE       (2)   // dfu once (dfu on for one time only - self reseting) 
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.writeRaw(System.String)">
+            <summary>
+            This function writes directly to the instrument.
+            </summary>
+            <param name="Command">
+            Data to send to the instrument.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="M:Thorlabs.TSP.TLTSP.readRaw(System.Text.StringBuilder,System.UInt32,System.UInt32@)">
+            <summary>
+            This function reads directly from the instrument.
+            
+            </summary>
+            <param name="Buffer">
+            Data read from the instrument.
+            </param>
+            <param name="Size">
+            This parameter specifies the buffer size.
+            
+            </param>
+            <param name="Return_Count">
+            Number of bytes actually transferred.
+            
+            Note:
+            You may pass VI_NULL if you don't need this value.
+            
+            </param>
+            <returns>
+            This is the error code returned by the function call. For error codes and descriptions see &lt;Error Message&gt;.
+            </returns>
+        </member>
+        <member name="P:Thorlabs.TSP.TLTSP.Handle">
+            <summary>
+            Gets the instrument handle.
+            </summary>
+            <value>
+            The value is the IntPtr that represents the handle to the instrument.
+            </value>
+        </member>
+    </members>
+</doc>
