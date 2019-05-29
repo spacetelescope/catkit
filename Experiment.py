@@ -95,10 +95,11 @@ class Experiment(object):
             raise
         except Exception as e:
             self.log.exception("Monitoring process caught an unexpected problem.")
+            print("Monitoring process caught an unexpected problem: "+str(e.message))
             # Shut down the experiment (but allow context managers to exit properly).
             if experiment_process is not None:
                 util.soft_kill(experiment_process)
-            raise SafetyException()
+            raise SafetyException("Unexpected Problem: "+e.message)
 
     def run_experiment(self):
         """
