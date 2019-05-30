@@ -76,8 +76,8 @@ class Experiment(object):
                             raise SafetyException(errmessage)
 
                     else:
-                        errmessage = message + "\n" +  "Warning issued for " + safety_test.name +
-                              ". Experiment will be softly killed if safety check fails again."
+                        errmessage = (message + "\n" +  "Warning issued for " + safety_test.name +
+                              ". Experiment will be softly killed if safety check fails again.")
                         print(errmessage)
                         self.log.warning(errmessage)
                         safety_test.warning = True
@@ -106,6 +106,7 @@ class Experiment(object):
         Wrapper for experiment to catch the softkill function's KeyboardInterrupt signal more gracefully.
         """
         try:
+            self.init_experiment_path_and_log()
             self.experiment()
         except KeyboardInterrupt:
             self.log.warn("Child process: caught ctrl-c, raising exception.")
@@ -128,3 +129,15 @@ class Experiment(object):
             if sleep_count == interval:
                 return True
         return False
+
+    def init_experiment_path_and_log(self):
+        """Set up experiment output path and initialize log writing to there
+
+        :return:
+        """
+
+        outname = str(self.name).replace(" ","_").lower()
+        self.experiment_output_path = util.create_data_path(suffix=outname)
+
+        self.log = logging.getLogger(outname)
+        util.setup_hicat_logging(self.experiment_output_path, outname)
