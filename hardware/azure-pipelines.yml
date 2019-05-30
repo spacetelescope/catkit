@@ -1,0 +1,42 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+pr:
+  - master
+  - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+strategy:
+  matrix:
+    Python27:
+      python.version: '2.7'
+    Python37:
+      python.version: '3.7'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '$(python.version)'
+  displayName: 'Use Python $(python.version)'
+
+#- script: |
+#    python -m pip install --upgrade pip
+#    pip install -r requirements.txt
+#  displayName: 'Install dependencies'
+
+- script: |
+    python -m pip install flake8
+    # Linting
+    # Ex[xx] & Wx[xx] := PEP<N> errors and warnings
+    # E1: Indentation
+    # E4: Imports
+    # E7: Statements, e.g. missused comparisons etc
+    # E9: Syntax/runtime errors
+    # W6: Deprecation warnings
+    # F : PyFlake violations, e.g. forward refs, undefineds, redefs etc
+    flake8 --count --statistics --exclude=hicat/hardware --select=E999
+  displayName: 'Lint with Flake8'

@@ -86,13 +86,24 @@ class ZwoCamera(Camera):
         """Close camera connection"""
         self.camera.close()
 
-    def take_exposures(self, exposure_time, num_exposures,
-                       file_mode=False, raw_skip=0, path=None, filename=None,
-                       extra_metadata=None,
-                       resume=False,
-                       return_metadata=False,
-                       subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
-                       bins=None):
+    def take_exposures(
+            self,
+            exposure_time,
+            num_exposures,
+            file_mode=False,
+            raw_skip=0,
+            path=None,
+            filename=None,
+            extra_metadata=None,
+            resume=False,
+            return_metadata=False,
+            subarray_x=None,
+            subarray_y=None,
+            width=None,
+            height=None,
+            gain=None,
+            full_image=None,
+            bins=None):
         """
         Low level method to take exposures using a Zwo camera. By default keeps image data in.
 
@@ -121,8 +132,15 @@ class ZwoCamera(Camera):
             exposure_time = quantity(exposure_time, units.microsecond)
 
         # Set control values on the ZWO camera.
-        self.__setup_control_values(exposure_time, subarray_x=subarray_x, subarray_y=subarray_y, width=width,
-                                    height=height, gain=gain, full_image=full_image, bins=bins)
+        self.__setup_control_values(
+            exposure_time,
+            subarray_x=subarray_x,
+            subarray_y=subarray_y,
+            width=width,
+            height=height,
+            gain=gain,
+            full_image=full_image,
+            bins=bins)
 
         # Create metadata from testbed_state and add extra_metadata input.
         meta_data = [
@@ -235,11 +253,15 @@ class ZwoCamera(Camera):
             # Add testbed state metadata.
             for entry in meta_data:
                 if len(entry.name_8chars) > 8:
-                    self.log.warning("Fits Header Keyword: " + entry.name_8chars +
-                                     " is greater than 8 characters and will be truncated.")
+                    self.log.warning(
+                        "Fits Header Keyword: " +
+                        entry.name_8chars +
+                        " is greater than 8 characters and will be truncated.")
                 if len(entry.comment) > 47:
-                    self.log.warning("Fits Header comment for " + entry.name_8chars +
-                                     " is greater than 47 characters and will be truncated.")
+                    self.log.warning(
+                        "Fits Header comment for " +
+                        entry.name_8chars +
+                        " is greater than 47 characters and will be truncated.")
                 hdu.header[entry.name_8chars[:8]] = (
                     entry.value, entry.comment)
 
@@ -274,8 +296,16 @@ class ZwoCamera(Camera):
         camera_info_after = self.camera.get_camera_property()
         self.log.info(camera_info_after["Name"])
 
-    def __setup_control_values(self, exposure_time, subarray_x=None, subarray_y=None, width=None, height=None,
-                               gain=None, full_image=None, bins=None):
+    def __setup_control_values(
+            self,
+            exposure_time,
+            subarray_x=None,
+            subarray_y=None,
+            width=None,
+            height=None,
+            gain=None,
+            full_image=None,
+            bins=None):
         """Applies control values found in the config.ini unless overrides are passed in, and does error checking."""
 
         # Load values from config.ini into variables, and override with keyword
