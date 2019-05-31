@@ -26,6 +26,12 @@ class Experiment(object):
     interval = CONFIG_INI.getint("safety", "check_interval")
     safety_tests = [UpsSafetyTest(), HumidityTemperatureTest()]#, WeatherWarningTest()]
 
+    def __init__(self, path=None):
+        """ Initialize attributes common to all Experiments.
+        All child classes should implement their own __init__ and call this via super()
+        """
+        self.path = path
+
     @abstractmethod
     def experiment(self):
         """
@@ -104,6 +110,7 @@ class Experiment(object):
     def run_experiment(self):
         """
         Wrapper for experiment to catch the softkill function's KeyboardInterrupt signal more gracefully.
+        Do not override.
         """
         try:
             self.init_experiment_path_and_log()
@@ -118,6 +125,8 @@ class Experiment(object):
         Sleep function that will return false at most 1 second after a process ends.  It sleeps in 1 second increments
         and checks if the process is alive each time.  Rather than sleeping for the entire interval.  This allows
         the master script to end when the experiment is finished.
+        Do not override.
+
         :param interval: check_interval from ini.
         :param process: experiment process to monitor while sleeping.
         :return: True if monitoring should continue, False if the experiment is done.
@@ -131,13 +140,16 @@ class Experiment(object):
         return False
 
     def init_experiment_path_and_log(self):
-        """Set up experiment output path and initialize log writing to there
+        """Set up experiment output path and initialize log writing to there.
+        Called from start() prior to experiment()
 
-        :return:
+        Do not override.
         """
 
         outname = str(self.name).replace(" ","_").lower()
-        self.experiment_output_path = util.create_data_path(suffix=outname)
+
+        if self.path is None:
+            self.path = util.create_data_path(suffix=outname)
 
         self.log = logging.getLogger(outname)
-        util.setup_hicat_logging(self.experiment_output_path, outname)
+        util.setup_hicat_logging(self.path, outname)
