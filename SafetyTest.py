@@ -6,7 +6,11 @@ from builtins import *
 import psutil
 import logging
 from datetime import datetime
-import urllib2
+import sys
+if sys.version_info > (3,0):
+    from urllib.request import urlopen
+else:
+    from urllib2 import urlopen
 import xml.etree.cElementTree as ET
 from abc import ABCMeta, abstractmethod
 from ..hardware import testbed
@@ -88,7 +92,7 @@ class WeatherWarningTest(SafetyTest):
         wx_warning_list = CONFIG_INI.get("nws", "wx_warning_list")
         wx_url = CONFIG_INI.get("nws", "wx_url")
         warning_count = 0
-        wx_data = urllib2.urlopen(wx_url)
+        wx_data = urlopen(wx_url)
         tree = ET.parse(wx_data)
         wx_data.close()
         root = tree.getroot()
