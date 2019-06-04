@@ -11,7 +11,6 @@ import xml.etree.cElementTree as ET
 from abc import ABCMeta, abstractmethod
 from ..hardware import testbed
 from .. config import CONFIG_INI
-from ..hardware.thorlabs import ThorlabsTSP01
 
 
 class SafetyTest(object):
@@ -55,7 +54,7 @@ class HumidityTemperatureTest(SafetyTest):
             self.log.error(status_msg)
             return False, status_msg
 
-        temp, humidity = ThorlabsTSP01.get_temp_humidity("thorlabs_tsp01_1")
+        temp, humidity = testbed.temp_sensor().get_temp_humidity("thorlabs_tsp01_1")
         temp_ok = self.min_temp <= temp <= self.max_temp
 
         if temp_ok:
