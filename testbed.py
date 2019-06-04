@@ -109,13 +109,20 @@ def motor_controller(initialize_to_nominal=True, use_testbed_state=True):
                                   use_testbed_state=use_testbed_state)
 
 
-
 def beam_dump():
     if testbed_state.simulation:
         from .. import simulators
         return simulators.SimThorlabsMFF101("thorlabs_mff101_1")
     else:
         return ThorlabsMFF101("thorlabs_mff101_1")
+
+
+def temp_sensor():
+    if testbed_state.simulation:
+        from .. import simulators
+        return simulators.SimThorlabsTSP01()
+    else:
+        return ThorlabsTSP01()
 
 
 def laser_source():
@@ -258,6 +265,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
     else:
         move_fpm(fpm_position)
         move_lyot_stop(lyot_stop_position)
+
 
     # If light_source_assembly is in use, make sure we initialize to something reasonable.
     source_name = CONFIG_INI.get("testbed", "laser_source")
