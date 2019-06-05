@@ -20,7 +20,7 @@ class ApplyFlatMap(Experiment):
                  dm2_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
                  output_path=None,
                  suffix='apply_flat_map',
-                 **kwargs,
+                 **kwargs
                  ):
         """
         Takes a set of data with any camera, any DM command, any exposure time, etc.

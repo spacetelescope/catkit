@@ -16,7 +16,7 @@ from abc import ABCMeta, abstractmethod
 from ..hardware import testbed
 from .. config import CONFIG_INI
 
-# Note, SafetyTest is in the Experiments directory but is not itself an Experiment subclass. 
+# Note, SafetyTest is in the Experiments directory but is not itself an Experiment subclass.
 # Rather it is part of the infrastructure used to enable running Experiments.
 
 class SafetyTest(object):

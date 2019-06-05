@@ -40,7 +40,7 @@ class TestPrDmCommands(Experiment):
         for command in self.commands_path:
             take_exposures_both_dm_commands([dm2_command],
                                             self.commands_path,
-                                            self.output_path,,
+                                            self.output_path,
                                             "pr_flats",
                                             self.coron_exp_time,
                                             self.direct_exp_time,

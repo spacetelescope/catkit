@@ -46,7 +46,7 @@ class SpeckleBoiling4dTest(Experiment):
                  dm_num=1,
                  rotate=180,
                  fliplr=False,
-                 suffix="4dSpeckleBoilingTest")
+                 suffix="4dSpeckleBoilingTest",
                  **kwargs):
 
         super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
