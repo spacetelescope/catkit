@@ -54,7 +54,7 @@ class HumidityTemperatureTest(SafetyTest):
             self.log.error(status_msg)
             return False, status_msg
 
-        temp, humidity = testbed.temp_sensor().get_temp_humidity("thorlabs_tsp01_1")
+        temp, humidity = testbed.temp_sensor().get_temp_humidity()
         temp_ok = self.min_temp <= temp <= self.max_temp
 
         if temp_ok:
