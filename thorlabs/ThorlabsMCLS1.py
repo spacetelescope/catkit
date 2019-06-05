@@ -16,7 +16,7 @@ from ...hardware import testbed_state
 """Interface for a laser source."""
 
 
-class ThorlabsMLCS1(LaserSource):
+class ThorlabsMCLS1(LaserSource):
     SLEEP_TIME = 2  # Number of seconds to sleep after turning on laser or changing current.
     log = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class ThorlabsMLCS1(LaserSource):
         self.nominal_current = None
         self.handle = None
         self.port = None
-        super(ThorlabsMLCS1, self).__init__(config_id, *args, **kwargs)
+        super(ThorlabsMCLS1, self).__init__(config_id, *args, **kwargs)
 
     def initialize(self, *args, **kwargs):
         """Starts laser at the nominal_current value from config.ini."""

@@ -25,7 +25,7 @@ if not testbed_state.simulation:
     from ..hardware.newport.NewportMotorController import NewportMotorController
     from ..hardware.zwo.ZwoCamera import ZwoCamera
     from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
-    from .thorlabs.ThorlabsMCLS1 import ThorlabsMLCS1
+    from .thorlabs.ThorlabsMCLS1 import ThorlabsMCLS1
 
 from ..interfaces.DummyLaserSource import DummyLaserSource
 from ..hardware.FilterWheelAssembly import FilterWheelAssembly
@@ -126,9 +126,9 @@ def laser_source():
     else:
         if testbed_state.simulation:
             from .. import simulators
-            return simulators.SimThorlabsMLCS1(laser_name)
+            return simulators.SimThorlabsMCLS1(laser_name)
         else:
-            return ThorlabsMLCS1(laser_name)
+            return ThorlabsMCLS1(laser_name)
 
 
 def backup_power():
