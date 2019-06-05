@@ -26,6 +26,7 @@ if not testbed_state.simulation:
     from ..hardware.zwo.ZwoCamera import ZwoCamera
     from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
     from .thorlabs.ThorlabsMCLS1 import ThorlabsMCLS1
+    from .thorlabs.ThorlabsTSP01 import ThorlabsTSP01
 
 from ..interfaces.DummyLaserSource import DummyLaserSource
 from ..hardware.FilterWheelAssembly import FilterWheelAssembly
@@ -120,9 +121,9 @@ def beam_dump():
 def temp_sensor():
     if testbed_state.simulation:
         from .. import simulators
-        return simulators.SimThorlabsTSP01()
+        return simulators.SimThorlabsTSP01("thorlabs_tsp01_1")
     else:
-        return ThorlabsTSP01()
+        return ThorlabsTSP01("thorlabs_tsp01_1")
 
 
 def laser_source():

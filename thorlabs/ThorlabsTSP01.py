@@ -9,19 +9,21 @@ import subprocess
 from ...config import CONFIG_INI
 
 class ThorlabsTSP01():
+    def __init__(self, config_id):
+        self.config_id = config_id
+        self.serial_number = CONFIG_INI.get(self.config_id, "serial_number")
 
-    def get_temp_humidity(self, config_id):
+    def get_temp_humidity(self):
         """
         Connects to Thorlabs TSP01 sensor and reads the external temperature and humidity.
         :param: The id of the thorlabs TSP01 in the config.ini file (ex: thorlabs_tsp01_1)
         :return: Temperature, Humidity as floats. 
         """
-        # Set up the paths.
-        serial_number = CONFIG_INI.get(config_id, "serial_number")
+        # Set up the paths.s
         current_dir = os.path.dirname(os.path.realpath(__file__))
         full_path = os.path.join(current_dir,
                                  "tsp01_resources",
-                                 "src", "thorlabs_sensor_cs", "bin", "Release", "thorlabs_sensor_cs.exe " + serial_number)
+                                 "src", "thorlabs_sensor_cs", "bin", "Release", "thorlabs_sensor_cs.exe " + self.serial_number)
         output = subprocess.check_output(full_path)
 
         # Remove newlines.
