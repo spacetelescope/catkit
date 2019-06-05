@@ -50,7 +50,7 @@ class CoffeeCheckerboardData(Experiment):
         if suffix is None:
             suffix="checkerboard_" + camera_type
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(CoffeeCheckerboardData, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         self.amplitude = amplitude
         self.direct_exp_time = direct_exp_time

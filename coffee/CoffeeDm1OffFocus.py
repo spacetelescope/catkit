@@ -37,7 +37,7 @@ class CoffeeDm1OffFocus(Experiment):
             centering (ImageCentering): Image centering algorithm for the coron data set.
             **kwargs: Keyword arguments passed into run_hicat_imaging()
         """
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(CoffeeDm1OffFocus, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
         self.direct_exp_time = direct_exp_time

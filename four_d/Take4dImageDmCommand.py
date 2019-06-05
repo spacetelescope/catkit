@@ -55,7 +55,7 @@ class Take4dImageDmCommand(Experiment):
                  suffix="Take4dImageDmCommand",
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(Take4dImageDmCommand, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         if filename is None:
             filename = "4d_"
 

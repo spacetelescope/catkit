@@ -35,7 +35,7 @@ class TakePhaseRetrievalData(Experiment):
         :param camera_type: (string) Camera type, maps to the [tested] section in the ini.
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(TakePhaseRetrievalData, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.step = step

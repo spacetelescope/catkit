@@ -39,7 +39,7 @@ class CoffeeMultiAstigmatismFocus(Experiment):
                  suffix = "coffee_multi_astigmatism_focus",
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(CoffeeMultiAstigmatismFocus, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
         self.direct_exp_time = direct_exp_time

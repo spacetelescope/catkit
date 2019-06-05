@@ -22,7 +22,7 @@ class TestMemoryLeaks(Experiment):
     log = logging.getLogger(__name__)
 
     def __init__(self, speckle_nulling_path, output_path=None, **kwargs):
-        super(self, Experiment).__init__(output_path=output_path, **kwargs)
+        super(TestMemoryLeaks, self).__init__(output_path=output_path, **kwargs)
 
         self.speckle_nulling_path = speckle_nulling_path
         self.path = output_path

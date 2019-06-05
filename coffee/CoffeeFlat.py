@@ -43,7 +43,7 @@ class CoffeeFlat(Experiment):
                  suffix = "coffee_flat",
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(CoffeeFlat, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.diversity = diversity
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time

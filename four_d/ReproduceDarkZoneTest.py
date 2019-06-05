@@ -54,7 +54,7 @@ class ReproduceDarkZoneTest(Experiment):
                  suffix="ReproduceDarkZoneTest",
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(ReproduceDarkZoneTest, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.darkzone_command_path = darkzone_command_path
         self.iterations = iterations
         self.mask = mask

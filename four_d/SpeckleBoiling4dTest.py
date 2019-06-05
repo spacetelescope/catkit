@@ -49,7 +49,7 @@ class SpeckleBoiling4dTest(Experiment):
                  suffix="4dSpeckleBoilingTest",
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(SpeckleBoiling4dTest, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.mask = mask
         self.speckle_nulling_path = speckle_nulling_path
         self.num_frames = num_frames

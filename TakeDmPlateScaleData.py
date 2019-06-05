@@ -37,7 +37,7 @@ class TakeDmPlateScaleData(Experiment):
                  auto_exposure_mask_size=None,
                  suffix="dm_plate_scale",
                  **kwargs):
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(TakeDmPlateScaleData, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.bias = bias
         self.flat_map = flat_map
         self.coron_exposure_time = coron_exposure_time

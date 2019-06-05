@@ -54,7 +54,7 @@ class Dm4dActuatorAnalysis(Experiment):
                  suffix='4d',
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(Dm4dActuatorAnalysis, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         if filename is None:
             filename = "4d_"

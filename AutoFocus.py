@@ -25,7 +25,7 @@ class AutoFocus(Experiment):
                  output_path=None,
                  camera_type="imaging_camera",
                  **kwargs):
-        super(self, Experiment).__init__(output_path=output_path, **kwargs)
+        super(AutoFocus, self).__init__(output_path=output_path, **kwargs)
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time

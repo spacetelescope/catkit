@@ -67,7 +67,7 @@ class Dm4dZernikeLoop(Experiment):
         zernike_name = zernike.zern_name(self.zernike_index).replace(" ", "_").lower()
         suffix="4d_zernike_loop_" + zernike_name
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(Dm4dZernikeLoop, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         self.peak2valley = peak2valley
         self.mask = mask

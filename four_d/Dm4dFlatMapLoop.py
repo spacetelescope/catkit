@@ -58,7 +58,7 @@ class Dm4dFlatMapLoop(Experiment):
                  suffix="4d_flat_map_loop",
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(Dm4dFlatMapLoop, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         if filename is None:
             filename = "4d_"
 

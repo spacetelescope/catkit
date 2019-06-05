@@ -63,7 +63,7 @@ class Dm4dShapeLoop(Experiment):
                  suffix="4d_shape_loop" ,
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(Dm4dShapeLoop, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         if filename is None:
             filename = "4d_"
 

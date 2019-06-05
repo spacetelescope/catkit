@@ -44,7 +44,7 @@ class CoffeeStrokeMin(Experiment):
                  suffix = "coffee_strokemin",
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(CoffeeStrokeMin, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.diversity = diversity
         self.path_dm1_corr = path_dm1_corr
         self.num_exposures = num_exposures

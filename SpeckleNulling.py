@@ -41,7 +41,7 @@ class SpeckleNulling(Experiment):
                  centering=ImageCentering.global_cross_correlation,
                  reference_centering=ImageCentering.custom_apodizer_spots,
                  **kwargs):
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(SpeckleNulling, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.num_iterations = num_iterations
         self.bias = bias
         self.flat_map = flat_map

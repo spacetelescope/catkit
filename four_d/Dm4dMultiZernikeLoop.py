@@ -73,7 +73,7 @@ class Dm4dMultiZernikeLoop(Experiment):
 
         suffix = "4d_multi_zernike_loop_" + first_zernike_name + "_" + second_zernike_name
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(Dm4dMultiZernikeLoop, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         if filename is None:
             filename = "4d_"

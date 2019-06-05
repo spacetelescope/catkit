@@ -47,7 +47,7 @@ class TakeDm4dCalibrationData(Experiment):
                  suffix='4d',
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(TakeDm4dCalibrationData, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         if filename is None:
             filename = "4d_"

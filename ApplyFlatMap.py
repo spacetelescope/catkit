@@ -28,7 +28,7 @@ class ApplyFlatMap(Experiment):
         :param dm1_command_object: (DmCommand) DmCommand object to apply on DM2.
 
         """
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, no_output_dir=True, **kwargs)
+        super(ApplyFlatMap, self).__init__(output_path=output_path, suffix=suffix, no_output_dir=True, **kwargs)
         self.dm1_command_object = dm1_command_object
         self.dm2_command_object = dm2_command_object
 

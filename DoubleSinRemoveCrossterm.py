@@ -41,7 +41,7 @@ class DoubleSinRemoveCrossterm(Experiment):
                  auto_exposure_mask_size=5.5,
                  suffix="double_sin",
                  **kwargs):
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(DoubleSinRemoveCrossterm, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.bias = bias
         self.flat_map = flat_map
         self.coron_exposure_time = coron_exposure_time

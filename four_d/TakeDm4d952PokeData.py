@@ -58,7 +58,7 @@ class TakeDm4d952PokeData(Experiment):
                  suffix="4d_952_poke",
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(TakeDm4d952PokeData, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.mask = mask
         self.num_frames = num_frames
         self.dm_num = dm_num

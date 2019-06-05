@@ -54,7 +54,7 @@ class TakeDm4dCheckerboardData(Experiment):
                  suffix="4d_checkerboard",
                  **kwargs):
 
-        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(TakeDm4dCheckerboardData, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.amplitude_range = amplitude_range
         self.mask = mask
         self.num_frames = num_frames
