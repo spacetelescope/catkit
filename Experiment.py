@@ -26,12 +26,6 @@ class Experiment(object):
     interval = CONFIG_INI.getint("safety", "check_interval")
     safety_tests = [UpsSafetyTest(), HumidityTemperatureTest()]#, WeatherWarningTest()]
 
-    def __init__(self, path=None):
-        """ Initialize attributes common to all Experiments.
-        All child classes should implement their own __init__ and call this via super()
-        """
-        self.path = path
-
     @abstractmethod
     def experiment(self):
         """
@@ -53,10 +47,9 @@ class Experiment(object):
                 print(msg)
                 self.log.info(msg)
                 if not status:
-                    errmessage = safety_test.name + " reports unsafe conditions. Aborting experiment before start... Details: {}".format(msg)
-                    print(errmessage)
-                    self.log.error(errmessage)
-                    raise SafetyException(errmessage)
+                    print(safety_test.name + " reports unsafe conditions. Aborting experiment...")
+                    self.log.error(safety_test.name + " reports unsafe conditions. Aborting experiment...")
+                    raise SafetyException()
             self.log.info("Safety tests passed!")
             self.log.info("Creating separate process to run experiment...")
             # Spin off and start the process to run the experiment.
@@ -75,17 +68,18 @@ class Experiment(object):
 
                     elif safety_test.warning:
                             # Shut down the experiment (but allow context managers to exit properly).
-                            errmessage = safety_test.name + " reports unsafe conditions repeatedly. Aborting experiment! Details: {}".format(msg)
-                            print(errmessage)
-                            self.log.error(errmessage)
+                            print(message)
+                            self.log.error(message)
                             util.soft_kill(experiment_process)
-                            raise SafetyException(errmessage)
+                            raise SafetyException()
 
                     else:
-                        errmessage = (message + "\n" +  "Warning issued for " + safety_test.name +
+                        print(message)
+                        print("Warning issued for " + safety_test.name +
                               ". Experiment will be softly killed if safety check fails again.")
-                        print(errmessage)
-                        self.log.warning(errmessage)
+                        self.log.warning(message)
+                        self.log.warning("Warning issued for " + safety_test.name +
+                              ". Experiment will be softly killed if safety check fails again.")
                         safety_test.warning = True
 
                 # Sleep until it is time to check safety again.
@@ -101,19 +95,16 @@ class Experiment(object):
             raise
         except Exception as e:
             self.log.exception("Monitoring process caught an unexpected problem.")
-            print("Monitoring process caught an unexpected problem: "+str(e.message))
             # Shut down the experiment (but allow context managers to exit properly).
             if experiment_process is not None:
                 util.soft_kill(experiment_process)
-            raise SafetyException("Unexpected Problem: "+e.message)
+            raise SafetyException()
 
     def run_experiment(self):
         """
         Wrapper for experiment to catch the softkill function's KeyboardInterrupt signal more gracefully.
-        Do not override.
         """
         try:
-            self.init_experiment_path_and_log()
             self.experiment()
         except KeyboardInterrupt:
             self.log.warn("Child process: caught ctrl-c, raising exception.")
@@ -125,8 +116,6 @@ class Experiment(object):
         Sleep function that will return false at most 1 second after a process ends.  It sleeps in 1 second increments
         and checks if the process is alive each time.  Rather than sleeping for the entire interval.  This allows
         the master script to end when the experiment is finished.
-        Do not override.
-
         :param interval: check_interval from ini.
         :param process: experiment process to monitor while sleeping.
         :return: True if monitoring should continue, False if the experiment is done.
@@ -138,18 +127,3 @@ class Experiment(object):
             if sleep_count == interval:
                 return True
         return False
-
-    def init_experiment_path_and_log(self):
-        """Set up experiment output path and initialize log writing to there.
-        Called from start() prior to experiment()
-
-        Do not override.
-        """
-
-        outname = str(self.name).replace(" ","_").lower()
-
-        if self.path is None:
-            self.path = util.create_data_path(suffix=outname)
-
-        self.log = logging.getLogger(outname)
-        util.setup_hicat_logging(self.path, outname)
