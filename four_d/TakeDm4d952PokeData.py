@@ -47,7 +47,7 @@ class TakeDm4d952PokeData(Experiment):
     def __init__(self,
                  mask="dm2_detector.mask",
                  num_frames=3,
-                 path=None,
+                 output_path=None,
                  dm_num=1,
                  rotate=0,
                  fliplr=False,
@@ -55,11 +55,12 @@ class TakeDm4d952PokeData(Experiment):
                  overwrite_csv=False,
                  start_actuator=0,
                  reference=True,
+                 suffix="4d_952_poke",
                  **kwargs):
 
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.mask = mask
         self.num_frames = num_frames
-        self.path = path
         self.dm_num = dm_num
         self.rotate = rotate
         self.fliplr = fliplr
@@ -70,10 +71,6 @@ class TakeDm4d952PokeData(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_952_poke")
 
         mask = "dm2_detector.mask" if self.dm_num == 2 else "dm1_detector.mask"
 
@@ -88,12 +85,12 @@ class TakeDm4d952PokeData(Experiment):
             with Accufiz("4d_accufiz", mask=mask) as four_d:
                 # Reference image.
                 if self.reference:
-                    reference_path = four_d.take_measurement(path=self.path,
+                    reference_path = four_d.take_measurement(path=self.output_path,
                                                              filename="reference",
                                                              rotate=self.rotate,
                                                              fliplr=self.fliplr)
                 else:
-                    reference_path = glob(os.path.join(self.path, "reference.fits"))[0]
+                    reference_path = glob(os.path.join(self.output_path, "reference.fits"))[0]
                 # Poke every actuator, one at a time.
                 num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
                 for i in range(self.start_actuator, num_actuators):
@@ -101,7 +98,7 @@ class TakeDm4d952PokeData(Experiment):
                     command = poke_command(i, amplitude=quantity(200, units.nanometers), dm_num=self.dm_num)
 
                     dm.apply_shape(command, self.dm_num)
-                    image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
+                    image_path = four_d.take_measurement(path=os.path.join(self.output_path, file_name),
                                                          num_frames=self.num_frames,
                                                          filename=file_name,
                                                          rotate=self.rotate,
@@ -112,22 +109,22 @@ class TakeDm4d952PokeData(Experiment):
                     image = fits.getdata(image_path)
 
                     # Subtract the reference from image.
-                    util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"))
+                    util.write_fits(reference - image, os.path.join(self.output_path, file_name + "_subtracted"))
 
                     # Save the DM_Command used.
-                    command.export_fits(os.path.join(self.path, file_name))
+                    command.export_fits(os.path.join(self.output_path, file_name))
 
         self.create_actuator_index()
 
     def create_actuator_index(self):
         csv_filename = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
-        csv_file_path = os.path.join(self.path, csv_filename)
+        csv_file_path = os.path.join(self.output_path, csv_filename)
 
         actuator_indices = {}
         num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
         for i in range(num_actuators):
             # Open the correct poke file.
-            poke_file = glob(os.path.join(self.path, "*_" + str(i) + "_subtracted.fits"))[0]
+            poke_file = glob(os.path.join(self.output_path, "*_" + str(i) + "_subtracted.fits"))[0]
 
             # Get the data
             data = fits.getdata(poke_file)
@@ -148,7 +145,7 @@ class TakeDm4d952PokeData(Experiment):
 
         if self.show_plot:
             plt.figure(figsize=(10, 8))
-            ref_image = fits.getdata(os.path.join(self.path, "reference.fits"))
+            ref_image = fits.getdata(os.path.join(self.output_path, "reference.fits"))
             plt.imshow(ref_image)
             plt.title("Number of actuators: {}".format(len(actuator_indices)))
             plt.show()

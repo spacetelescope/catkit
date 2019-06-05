@@ -21,7 +21,7 @@ class TakeDmPlateScaleData(Experiment):
     name = "Take DM Plate Scale Data"
 
     def __init__(self,
-                 path=None,
+                 output_path=None,
                  bias=False,
                  flat_map=True,
                  coron_exposure_time=quantity(100, units.millisecond),
@@ -35,8 +35,9 @@ class TakeDmPlateScaleData(Experiment):
                  alignment_speckle=False,
                  centering=ImageCentering.auto,
                  auto_exposure_mask_size=None,
+                 suffix="dm_plate_scale",
                  **kwargs):
-        self.path = path
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.bias = bias
         self.flat_map = flat_map
         self.coron_exposure_time = coron_exposure_time
@@ -54,17 +55,12 @@ class TakeDmPlateScaleData(Experiment):
 
     def experiment(self):
 
-        # Wait to set the path until the experiment starts (rather than the constructor)
-        if self.path is None:
-            self.path = util.create_data_path(suffix="dm_plate_scale")
-            util.setup_hicat_logging(self.path, "dm_plate_scale")
-
         with testbed.laser_source() as laser:
             coron_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "coron_current")
             laser.set_current(coron_laser_current)
 
             for angle in self.angle_range:
-                angles_path = os.path.join(self.path, "angle" + str(angle))
+                angles_path = os.path.join(self.output_path, "angle" + str(angle))
                 for ncycle in self.ncycles_range:
                     sin_spec = SinSpecification(angle, ncycle, self.peak_to_valley, self.phase)
                     ncycle_path = os.path.join(angles_path, "ncycles" + str(ncycle))

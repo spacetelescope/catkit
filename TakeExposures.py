@@ -24,10 +24,10 @@ class TakeExposures(Experiment):
                  camera_type="imaging_camera",
                  coronograph=False,
                  pipeline=True,
-                 path=None,
+                 output_path=None,
                  exposure_set_name=None,
                  filename=None,
-                 suffix=None,
+                 suffix='take_exposures',
                  **kwargs):
         """
         Takes a set of data with any camera, any DM command, any exposure time, etc.
@@ -35,11 +35,12 @@ class TakeExposures(Experiment):
         :param exposure_time: (pint.quantity) Pint quantity for exposure time.
         :param num_exposures: (int) Number of exposures.
         :param step: (int) Step size to use for the motor positions (default is 10).
-        :param path: (string) Path to save data.
+        :param output_path: (string) Path to save data.
         :param camera_type: (string) Camera type, maps to the [tested] section in the ini.
         :param position_list: (list) Postion(s) of the camera
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.dm1_command_object = dm1_command_object
         self.dm2_command_object = dm2_command_object
         self.exposure_time = exposure_time
@@ -47,10 +48,8 @@ class TakeExposures(Experiment):
         self.camera_type = camera_type
         self.coronograph = coronograph
         self.pipeline = pipeline
-        self.path = path
         self.exposure_set_name = exposure_set_name
         self.filename = filename
-        self.suffix = suffix
         self.kwargs = kwargs
 
     def experiment(self):
@@ -61,7 +60,7 @@ class TakeExposures(Experiment):
                        self.camera_type,
                        self.coronograph,
                        self.pipeline,
-                       self.path,
+                       self.output_path,
                        self.filename,
                        self.exposure_set_name,
                        self.suffix,

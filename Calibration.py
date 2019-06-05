@@ -33,8 +33,11 @@ class Calibration(Experiment):
                  clocking=True,
                  mtf=True,
                  write_to_csv=True,
-                 path=None,
+                 suffix="calibration",
+                 output_path=None,
                  plot=True):
+
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         self.write_to_csv = write_to_csv
 
@@ -59,7 +62,6 @@ class Calibration(Experiment):
 
         self.flat_shape = flat_command(bias=True)
         self.cal_dict = {}
-        self.outpath = path
         self.plot = plot
 
     def experiment(self):
@@ -67,13 +69,6 @@ class Calibration(Experiment):
         for step in self.steps.keys():
             if self.steps[step][0]['process']:
                 self.log.info('    {}\n'.format(step))
-
-        # Wait to set the path until the experiment starts (rather than the constructor)
-        if self.outpath is None:
-            local_data_path = CONFIG_INI.get("optics_lab", "local_data_path")
-            cal_data_path = os.path.join(local_data_path, "calibration")
-            self.outpath = util.create_data_path(initial_path=cal_data_path)
-            util.setup_hicat_logging(base_path, "calibration")
 
         cal_dict = self.run_steps()
         filename = 'calibration.csv'
@@ -98,7 +93,7 @@ class Calibration(Experiment):
         return self.cal_dict
 
     def process_focus(self):
-        focus_outpath = os.path.join(self.outpath, 'focus')
+        focus_outpath = os.path.join(self.output_path, 'focus')
         bias = True
         flat_map = False
         num_exposures = 200
@@ -118,7 +113,7 @@ class Calibration(Experiment):
             self.update_cal_dict(["best focus"], [output])
 
     def process_cam_orientation(self):
-        cam_outpath = os.path.join(self.outpath, 'double_sin')
+        cam_outpath = os.path.join(self.output_path, 'double_sin')
         calibration_take_data.run_speckle_experiment(cam_outpath)
         calibration_util.collect_final_images(cam_outpath, "*sin_noxterm.fits")
 
@@ -126,7 +121,7 @@ class Calibration(Experiment):
         calibration_take_data.recenter_subarray(outpath=None, plot=self.plot)
 
     def process_subarray_centering(self):
-        subarray_outpath = os.path.join(self.outpath, 'subarray')
+        subarray_outpath = os.path.join(self.output_path, 'subarray')
         self.data, subarray_x, subarray_y = calibration_take_data.recenter_subarray(outpath=subarray_outpath)
 
         if self.write_to_csv:
@@ -156,7 +151,7 @@ class Calibration(Experiment):
                                  [mean_angle_hori, mean_angle_vert, mean_angle])
 
     def process_mtf(self):
-        mtf_data_path = calibration_take_data.take_mtf_data(self.outpath)
+        mtf_data_path = calibration_take_data.take_mtf_data(self.output_path)
         ps_wo_focus, ps_w_focus, focus = wolfram_wrappers.run_mtf(mtf_data_path)
 
         if self.write_to_csv:

@@ -26,6 +26,26 @@ class Experiment(object):
     interval = CONFIG_INI.getint("safety", "check_interval")
     safety_tests = [UpsSafetyTest(), HumidityTemperatureTest()]#, WeatherWarningTest()]
 
+    def __init__(self, output_path=None, suffix=None, no_output_dir=False):
+        """ Initialize attributes common to all Experiments.
+        All child classes should implement their own __init__ and call this via super()
+
+        :param output_path: Output directory to write all files to (or to subdirectories thereof).
+                     For the vast majority of use cases this should be left as None, in which
+                     case it will be auto-generated based on date-time + suffix.
+        :paran suffix: Descriptive string to include as part of the path.
+        :no_output_dir: Rarely, some Experiment types will intentionally produce no outputs
+                     Set this flag to suppress creation of an output directory for such.
+        :
+        """
+        # Default is to wait to set the path until the experiment starts (rather than the constructor)
+        # but users can optionally pass in a specifc path if they want to do something different in a
+        # particular case.
+        self.output_path = output_path
+        self.suffix = suffix
+
+        self._no_output_dir = no_output_dir   # make this attribute hidden since it is a niche use case.
+
     @abstractmethod
     def experiment(self):
         """
@@ -103,8 +123,10 @@ class Experiment(object):
     def run_experiment(self):
         """
         Wrapper for experiment to catch the softkill function's KeyboardInterrupt signal more gracefully.
+        Do not override.
         """
         try:
+            self.init_experiment_path_and_log()
             self.experiment()
         except KeyboardInterrupt:
             self.log.warn("Child process: caught ctrl-c, raising exception.")
@@ -116,6 +138,8 @@ class Experiment(object):
         Sleep function that will return false at most 1 second after a process ends.  It sleeps in 1 second increments
         and checks if the process is alive each time.  Rather than sleeping for the entire interval.  This allows
         the master script to end when the experiment is finished.
+        Do not override.
+
         :param interval: check_interval from ini.
         :param process: experiment process to monitor while sleeping.
         :return: True if monitoring should continue, False if the experiment is done.
@@ -127,3 +151,21 @@ class Experiment(object):
             if sleep_count == interval:
                 return True
         return False
+
+    def init_experiment_path_and_log(self):
+        """Set up experiment output path and initialize log writing to there.
+        Called from start() prior to experiment()
+
+        Do not override.
+        """
+
+        if self._no_output_dir:
+            return
+
+        if self.suffix is None:
+            self.suffix = str(self.name).replace(" ","_").lower()
+
+        if self.output_path is None:
+            self.output_path = util.create_data_path(suffix=self.suffix)
+
+        util.setup_hicat_logging(self.output_path, self.suffix)

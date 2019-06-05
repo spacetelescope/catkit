@@ -44,18 +44,20 @@ class TakeDm4dCheckerboardData(Experiment):
                  amplitude_range=range(-2200, 850, 200),
                  mask="dm1_detector.mask",
                  num_frames=2,
-                 path=None,
+                 output_path=None,
                  dm_num=1,
                  rotate=180,
                  fliplr=False,
                  show_plot=False,
                  overwrite_csv=False,
+                 output_path=None,
+                 suffix="4d_checkerboard",
                  **kwargs):
 
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.amplitude_range = amplitude_range
         self.mask = mask
         self.num_frames = num_frames
-        self.path = path
         self.dm_num = dm_num
         self.rotate = rotate
         self.fliplr = fliplr
@@ -65,10 +67,6 @@ class TakeDm4dCheckerboardData(Experiment):
 
     def experiment(self):
 
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_checkerboard")
-
         mask = "dm2_detector.mask" if self.dm_num == 2 else "dm1_detector.mask"
 
         with testbed.dm_controller() as dm:
@@ -77,7 +75,7 @@ class TakeDm4dCheckerboardData(Experiment):
             with Accufiz("4d_accufiz", mask=mask) as four_d:
                 flat_dm_command = flat_command(bias=False, flat_map=True)
                 dm.apply_shape(flat_dm_command, dm_num=self.dm_num)
-                reference_path = four_d.take_measurement(path=self.path,
+                reference_path = four_d.take_measurement(path=self.output_path,
                                                          filename="reference",
                                                          rotate=self.rotate,
                                                          fliplr=self.fliplr)
@@ -92,7 +90,7 @@ class TakeDm4dCheckerboardData(Experiment):
                                                            amplitude=quantity(k, units.nanometers),
                                                            bias=False, flat_map=True)
                             dm.apply_shape(command, self.dm_num)
-                            image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
+                            image_path = four_d.take_measurement(path=os.path.join(self.output_path, file_name),
                                                                  filename=file_name,
                                                                  rotate=self.rotate,
                                                                  fliplr=self.fliplr)
@@ -107,11 +105,11 @@ class TakeDm4dCheckerboardData(Experiment):
                             metadata.append(MetaDataEntry("amplitude", "amp", k, "Amplitude in nanometers"))
 
                             # Subtract the reference from image.
-                            util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"),
+                            util.write_fits(reference - image, os.path.join(self.output_path, file_name + "_subtracted"),
                                             metadata=metadata)
 
                             # Save the DM_Command used.
-                            command.export_fits(os.path.join(self.path, file_name))
+                            command.export_fits(os.path.join(self.output_path, file_name))
 
         # Old experimental code for creating an actuator index from checkerboards.
         # files_path = glob(os.path.join(self.path, file_name.split("_")[0] + "*_subtracted.fits"))

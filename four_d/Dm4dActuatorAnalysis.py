@@ -46,16 +46,15 @@ class Dm4dActuatorAnalysis(Experiment):
                  amplitude_range_units=units.nanometer,
                  mask="dm2_detector.mask",
                  num_frames=2,
-                 path=None,
+                 output_path=None,
                  filename=None,
                  dm_num=2,
                  rotate=180,
                  fliplr=False,
+                 suffix='4d',
                  **kwargs):
 
-        if path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d")
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         if filename is None:
             filename = "4d_"
@@ -65,7 +64,6 @@ class Dm4dActuatorAnalysis(Experiment):
         self.amplitude_range_units = amplitude_range_units
         self.mask = mask
         self.num_frames = num_frames
-        self.path = path
         self.filename = filename
         self.dm_num = dm_num
         self.rotate = rotate
@@ -83,7 +81,7 @@ class Dm4dActuatorAnalysis(Experiment):
 
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 # Reference image.
-                reference_path = four_d.take_measurement(path=self.path,
+                reference_path = four_d.take_measurement(path=self.output_path,
                                                          filename="reference",
                                                          rotate=self.rotate,
                                                          fliplr=self.fliplr)
@@ -94,7 +92,7 @@ class Dm4dActuatorAnalysis(Experiment):
                                            amplitude=quantity(i, self.amplitude_range_units), dm_num=self.dm_num)
 
                     dm.apply_shape(command, self.dm_num)
-                    image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
+                    image_path = four_d.take_measurement(path=os.path.join(self.output_path, file_name),
                                                          filename=file_name,
                                                          rotate=self.rotate,
                                                          fliplr=self.fliplr)
@@ -104,7 +102,7 @@ class Dm4dActuatorAnalysis(Experiment):
                     image = fits.getdata(image_path)
 
                     # Subtract the reference from image.
-                    util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"))
+                    util.write_fits(reference - image, os.path.join(self.output_path, file_name + "_subtracted"))
 
                     # Save the DM_Command used.
-                    command.export_fits(os.path.join(self.path, file_name))
+                    command.export_fits(os.path.join(self.output_path, file_name))

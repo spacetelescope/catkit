@@ -33,12 +33,13 @@ class SinglePhaseRetrievalCommand(Experiment):
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=5,
                  step=10,
-                 path=None,
+                 output_path=None,
                  camera_type="phase_retrieval_camera",
                  position_list=None,
-                 suffix=None,
+                 suffix="single_phase_retrieval",
                  **kwargs):
 
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.input_image_path = input_image_path
         self.dm_num = dm_num
         self.rotate = rotate
@@ -47,17 +48,11 @@ class SinglePhaseRetrievalCommand(Experiment):
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.step = step
-        self.path = path
         self.camera_type = camera_type
         self.position_list = position_list
-        self.suffix = suffix
         self.kwargs = kwargs
 
     def experiment(self):
-
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="brute_force_18mm")
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
@@ -112,7 +107,7 @@ class SinglePhaseRetrievalCommand(Experiment):
         take_phase_retrieval_data(self.exposure_time,
                                   self.num_exposures,
                                   self.step,
-                                  self.path,
+                                  self.output_path,
                                   self.camera_type,
                                   position_list=self.position_list,
                                   dm1_command=pr_command,

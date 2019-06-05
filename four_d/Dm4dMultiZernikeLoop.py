@@ -54,7 +54,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                  second_p2v=[20,40,80,160,320],
                  mask="dm1_detector.mask",
                  num_frames=2,
-                 path=None,
+                 output_path=None,
                  filename=None,
                  dm_num=1,
                  rotate=180,
@@ -62,18 +62,26 @@ class Dm4dMultiZernikeLoop(Experiment):
                  iterations=10,
                  damping_ratio=.8,
                  create_zernike_map=True,
+                 suffix=None,
                  **kwargs):
+
+        self.first_zernike = first_zernike
+        self.second_zernike = second_zernike
+        # Resolve the names of the zernike indexes, and use them to make paths and filenames.
+        first_zernike_name = zernike.zern_name(self.first_zernike).replace(" ", "_").lower()
+        second_zernike_name = zernike.zern_name(self.second_zernike).replace(" ", "_").lower()
+
+        suffix = "4d_multi_zernike_loop_" + first_zernike_name + "_" + second_zernike_name
+
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         if filename is None:
             filename = "4d_"
 
-        self.first_zernike = first_zernike
-        self.second_zernike = second_zernike
         self.first_p2v = first_p2v
         self.second_p2v = second_p2v
         self.mask = mask
         self.num_frames = num_frames
-        self.path = path
         self.filename = filename
         self.dm_num = dm_num
         self.rotate = rotate
@@ -84,16 +92,6 @@ class Dm4dMultiZernikeLoop(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-
-        # Resolve the names of the zernike indexes, and use them to make paths and filenames.
-        first_zernike_name = zernike.zern_name(self.first_zernike).replace(" ", "_").lower()
-        second_zernike_name = zernike.zern_name(self.second_zernike).replace(" ", "_").lower()
-
-        # Set the path here rather than the constructor, otherwise many experiments end up with the same timestamp.
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            suffix = "4d_multi_zernike_loop_" + first_zernike_name + "_" + second_zernike_name
-            self.path = util.create_data_path(initial_path=central_store_path, suffix=suffix)
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
@@ -119,14 +117,14 @@ class Dm4dMultiZernikeLoop(Experiment):
             print("Taking initial image...")
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 initial_file_name = "initial_bias"
-                image_path = four_d.take_measurement(path=os.path.join(self.path, initial_file_name),
+                image_path = four_d.take_measurement(path=os.path.join(self.output_path, initial_file_name),
                                                      filename=initial_file_name,
                                                      rotate=self.rotate,
                                                      num_frames=self.num_frames,
                                                      fliplr=self.fliplr)
 
                 # Save the DM_Command used.
-                command_object.export_fits(os.path.join(self.path, initial_file_name))
+                command_object.export_fits(os.path.join(self.output_path, initial_file_name))
 
             # Convert single p2v int values to list form.
             if isinstance(self.first_p2v, int):
@@ -200,7 +198,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                         print("Taking exposures with 4D...")
                         file_name = "iteration{}".format(i)
 
-                        iteration_path = os.path.join(self.path, first_folder, second_folder, file_name)
+                        iteration_path = os.path.join(self.output_path, first_folder, second_folder, file_name)
                         image_path = four_d.take_measurement(path=iteration_path,
                                                              filename=file_name,
                                                              rotate=self.rotate,
@@ -212,7 +210,7 @@ class Dm4dMultiZernikeLoop(Experiment):
 
                     if self.create_zernike_map:
                         iteration_folder_name = "iteration" + str(best_zernike_command)
-                        full_path = os.path.join(self.path, first_folder, second_folder,
+                        full_path = os.path.join(self.output_path, first_folder, second_folder,
                                                  iteration_folder_name, "dm_command", "dm_command_2d.fits")
                         dm_command_data = fits.getdata(full_path)
 
@@ -224,4 +222,4 @@ class Dm4dMultiZernikeLoop(Experiment):
                         zernike_name = first_folder + "_" + second_folder
                         filename = zernike_name + "_dm1" if self.dm_num == 1 else zernike_name + "_dm2"
                         filename += "_command.fits"
-                        util.write_fits(dm_command_data, os.path.join(self.path, first_folder, second_folder, filename))
+                        util.write_fits(dm_command_data, os.path.join(self.output_path, first_folder, second_folder, filename))

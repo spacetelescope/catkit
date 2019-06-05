@@ -52,7 +52,7 @@ class Dm4dShapeLoop(Experiment):
                  amplitude=[100],
                  mask="dm1_detector.mask",
                  num_frames=2,
-                 path=None,
+                 output_path=None,
                  filename=None,
                  dm_num=1,
                  rotate=180,
@@ -60,9 +60,10 @@ class Dm4dShapeLoop(Experiment):
                  iterations=15,
                  damping_ratio=.6,
                  create_command=True,
-                 suffix="",
+                 suffix="4d_shape_loop" ,
                  **kwargs):
 
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         if filename is None:
             filename = "4d_"
 
@@ -70,7 +71,7 @@ class Dm4dShapeLoop(Experiment):
         self.amplitude = amplitude
         self.mask = mask
         self.num_frames = num_frames
-        self.path = path
+        self.path = output_path
         self.filename = filename
         self.dm_num = dm_num
         self.rotate = rotate
@@ -78,14 +79,9 @@ class Dm4dShapeLoop(Experiment):
         self.iterations = iterations
         self.damping_ratio = damping_ratio
         self.create_command = create_command
-        self.suffix = suffix
         self.kwargs = kwargs
 
     def experiment(self):
-
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_shape_loop" + self.suffix)
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"

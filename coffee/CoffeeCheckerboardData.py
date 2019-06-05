@@ -40,17 +40,22 @@ class CoffeeCheckerboardData(Experiment):
                  direct_exp_time=quantity(250, units.microsecond),
                  coron_exp_time=quantity(1, units.millisecond),
                  num_exposures=10,
-                 path=None,
+                 output_path=None,
                  camera_type="imaging_camera",
                  focus_zernike_data_path="Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/focus/",
                  centering=ImageCentering.custom_apodizer_spots,
+                 suffix=None,
                  **kwargs):
+
+        if suffix is None:
+            suffix="checkerboard_" + camera_type
+
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         self.amplitude = amplitude
         self.direct_exp_time = direct_exp_time
         self.coron_exp_time = coron_exp_time
         self.num_exposures = num_exposures
-        self.path = path
         self.camera_type = camera_type
         self.focus_zernike_data_path = focus_zernike_data_path
         self.centering = centering
@@ -58,10 +63,6 @@ class CoffeeCheckerboardData(Experiment):
 
     def experiment(self):
 
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "local_data_path")
-            self.path = util.create_data_path(initial_path=central_store_path,
-                                              suffix="checkerboard_" + self.camera_type)
         dm_num = 1
         flat_dm_command = flat_command(bias=False, flat_map=True)
 
@@ -84,7 +85,7 @@ class CoffeeCheckerboardData(Experiment):
                 # # Pure Focus Zernike loop.
                 focus_zernike_command_paths = glob(self.focus_zernike_data_path + "/*p2v/*.fits")
                 take_coffee_data_set(focus_zernike_command_paths,
-                                     self.path,
+                                     self.output_path,
                                      file_name,
                                      self.coron_exp_time,
                                      self.direct_exp_time,

@@ -35,7 +35,7 @@ class CoffeeSinglePoke(Experiment):
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 path=None,
+                 output_path=None,
                  diversity="focus",
                  num_exposures=10,
                  actuator_num=595,
@@ -43,9 +43,10 @@ class CoffeeSinglePoke(Experiment):
                  coron_exp_time=quantity(100, units.millisecond),
                  direct_exp_time=quantity(1, units.millisecond),
                  centering=ImageCentering.custom_apodizer_spots,
+                 suffix = "coffee_single_poke",
                  **kwargs):
 
-        self.path = path
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.diversity = diversity
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
@@ -56,10 +57,6 @@ class CoffeeSinglePoke(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-        if self.path is None:
-            suffix = "coffee_single_poke"
-            self.path = util.create_data_path(suffix=suffix)
-            util.setup_hicat_logging(self.path, "coffee_single_poke")
 
         # Diversity Zernike commands for DM2.
         diversity_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/"
@@ -71,7 +68,7 @@ class CoffeeSinglePoke(Experiment):
         # DM1 poked actuator (actuator 595 is calibrated).
         poke_command_dm1 = commands.poke_command(self.actuator_num, dm_num=1, amplitude=self.amplitude)
         take_coffee_data_set(diversity_zernike_command_paths,
-                             self.path,
+                             self.output_path,
                              "single_poke_actuator{}_amplitude{}_nm".format(self.actuator_num,self.amplitude.m),
                              self.coron_exp_time,
                              self.direct_exp_time,

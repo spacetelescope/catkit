@@ -46,18 +46,20 @@ class ReproduceDarkZoneTest(Experiment):
                  iterations=10,
                  mask="dm1_detector.mask",
                  num_frames=10,
-                 path=None,
+                 output_path=None,
                  filename=None,
                  dm_num=1,
                  rotate=180,
                  fliplr=False,
+                 suffix="ReproduceDarkZoneTest",
                  **kwargs):
 
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.darkzone_command_path = darkzone_command_path
         self.iterations = iterations
         self.mask = mask
         self.num_frames = num_frames
-        self.path = path
+        self.output_path = output_path
         self.filename = filename
         self.dm_num = dm_num
         self.rotate = rotate
@@ -65,10 +67,6 @@ class ReproduceDarkZoneTest(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="ReproduceDarkZoneTest")
 
         # Open darkzone command fits file.
         data = fits.getdata(self.darkzone_command_path)
@@ -82,7 +80,7 @@ class ReproduceDarkZoneTest(Experiment):
 
                     # Take a reference flat.
                     dm.apply_shape(flat_command(flat_map=True), self.dm_num)
-                    four_d.take_measurement(path=self.path,
+                    four_d.take_measurement(path=self.output_path,
                                             filename="reference_flat",
                                             rotate=self.rotate,
                                             num_frames=self.num_frames,
@@ -97,13 +95,13 @@ class ReproduceDarkZoneTest(Experiment):
                     zeros_command = DmCommand(np.zeros(data.shape), 1, flat_map=False, bias=False, as_volts=True)
 
                     # Save the DM_Command used.
-                    current_command_object.export_fits(self.path)
+                    current_command_object.export_fits(self.output_path)
                     for i in range(self.iterations):
                         print("Dark zone iteration " + str(i))
                         dm.apply_shape(current_command_object, self.dm_num)
 
                         # Take 4d Image.
-                        four_d.take_measurement(path=os.path.join(self.path, "iteration" + str(i)),
+                        four_d.take_measurement(path=os.path.join(self.output_path, "iteration" + str(i)),
                                                 filename="darkzone",
                                                 rotate=self.rotate,
                                                 num_frames=self.num_frames,

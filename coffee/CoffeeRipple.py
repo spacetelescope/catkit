@@ -36,7 +36,7 @@ class CoffeeRipple(Experiment):
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 path=None,
+                 output_path=None,
                  diversity="focus",
                  num_exposures=10,
                  coron_exp_time=quantity(100, units.millisecond),
@@ -45,9 +45,10 @@ class CoffeeRipple(Experiment):
                  ncycle=10,
                  phase=90,
                  amplitude=quantity(100,units.nanometer),
+                 suffix = "coffee_ripple",
                  **kwargs):
 
-        self.path = path
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.diversity = diversity
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
@@ -59,10 +60,6 @@ class CoffeeRipple(Experiment):
         self.amplitude = amplitude
 
     def experiment(self):
-        if self.path is None:
-            suffix = "coffee_ripple"
-            self.path = util.create_data_path(suffix=suffix)
-            util.setup_hicat_logging(self.path, "coffee_ripple")
 
         # Diversity Zernike commands for DM2.
         diversity_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/"
@@ -75,7 +72,7 @@ class CoffeeRipple(Experiment):
         horizontal = SinSpecification(0, self.ncycle, self.amplitude,self.phase)
         ripple_command_dm1 = sin_command(horizontal,flat_map=True)
         take_coffee_data_set(diversity_zernike_command_paths,
-                             self.path,
+                             self.output_path,
                              "ripple_cycles{}_amplitude{}_phase{}".format(self.ncycle,self.amplitude.m,self.phase),
                              self.coron_exp_time,
                              self.direct_exp_time,

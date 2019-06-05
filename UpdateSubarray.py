@@ -31,7 +31,7 @@ class UpdateSubarray(Experiment):
                  dm2_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
                  exposure_time=quantity(250, units.microsecond),
                  camera_type="imaging_camera",
-                 path=None,
+                 output_path=None,
                  exposure_set_name=None,
                  filename=None,
                  suffix=None,
@@ -42,19 +42,20 @@ class UpdateSubarray(Experiment):
         :param exposure_time: (pint.quantity) Pint quantity for exposure time.
         :param num_exposures: (int) Number of exposures.
         :param step: (int) Step size to use for the motor positions (default is 10).
-        :param path: (string) Path to save data.
+        :param output_path: (string) Path to save data.
         :param camera_type: (string) Camera type, maps to the [tested] section in the ini.
         :param position_list: (list) Postion(s) of the camera
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
+
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+
         self.dm1_command_object = dm1_command_object
         self.dm2_command_object = dm2_command_object
         self.exposure_time = exposure_time
         self.camera_type = camera_type
-        self.path = path
         self.exposure_set_name = exposure_set_name
         self.filename = filename
-        self.suffix = suffix
         self.kwargs = kwargs
 
     def experiment(self):
@@ -65,7 +66,7 @@ class UpdateSubarray(Experiment):
                               self.camera_type,
                               False,  # Coronograph
                               False,  # Pipeline
-                              self.path,
+                              self.output_path,
                               self.filename,
                               self.exposure_set_name,
                               self.suffix,

@@ -23,9 +23,10 @@ class TakePhaseRetrievalZernikeData(Experiment):
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=5,
                  step=10,
-                 path=None,
+                 output_path=None,
                  camera_type="phase_retrieval_camera",
                  position_list=None,
+                 suffix="phase_retrieval_zernikes",
                  **kwargs):
         """
         Takes a set of data with the phase_retrieval camera (default) at constant "step" increments from focus.
@@ -34,21 +35,19 @@ class TakePhaseRetrievalZernikeData(Experiment):
         :param exposure_time: (pint.quantity) Pint quantity for exposure time.
         :param num_exposures: (int) Number of exposures.
         :param step: (int) Step size to use for the motor positions (default is 10).
-        :param path: (string) Path to save data.
+        :param output_path: (string) Path to save data.
         :param camera_type: (string) Camera type, maps to the [tested] section in the ini.
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.step = step
-        self.path = path
         self.camera_type = camera_type
         self.position_list = position_list
         self.kwargs = kwargs
 
     def experiment(self):
-        if self.path is None:
-            self.path = util.create_data_path(suffix="phase_retrieval_zernikes")
 
         # All pure zernikes at 4 different amplitudes.
         path_list = [#"z:/Testbeds/hicat_dev/data_vault/dm2_calibration/2018-01-21T15-13-01_4d_zernike_loop_spherical/",
@@ -69,7 +68,7 @@ class TakePhaseRetrievalZernikeData(Experiment):
                 take_phase_retrieval_data(self.exposure_time,
                                           self.num_exposures,
                                           self.step,
-                                          os.path.join(self.path, zernike_name, p2v_string),
+                                          os.path.join(self.output_path, zernike_name, p2v_string),
                                           self.camera_type,
                                           position_list=self.position_list,
                                           dm1_command=flat_command(bias=False, flat_map=True, dm_num=1),

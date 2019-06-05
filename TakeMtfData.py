@@ -23,22 +23,20 @@ class TakeMtfData(Experiment):
                  flat_map=True,
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=100,
-                 path=None,
+                 output_path=None,
                  camera_type="imaging_camera",
+                 suffix="mtf_calibration",
                  **kwargs):
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
-        self.path = path
         self.camera_type = camera_type
         self.kwargs = kwargs
 
     def experiment(self):
-        # Wait to set the path until the experiment starts (rather than the constructor).
-        if self.path is None:
-            self.path = util.create_data_path(suffix="mtf_calibration")
-            util.setup_hicat_logging(self.path, "mtf_calibration")
 
         # Create a flat dm command.
         flat_command_object1, flat_file_name = flat_command(flat_map=self.flat_map,
@@ -61,7 +59,7 @@ class TakeMtfData(Experiment):
                 # Flat.
                 dm.apply_shape_to_both(flat_command_object1, flat_command_object2)
                 cal_file_path = testbed.run_hicat_imaging(direct_exp_time, num_exposures, FpmPosition.direct,
-                                                          path=self.path, exposure_set_name="direct",
+                                                          path=self.output_path, exposure_set_name="direct",
                                                           filename=flat_file_name, camera_type=self.camera_type,
                                                           simulator=False,
                                                           **self.kwargs)

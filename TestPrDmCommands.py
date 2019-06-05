@@ -22,7 +22,11 @@ class TestPrDmCommands(Experiment):
                  num_exposures=10,
                  coron_exp_time=quantity(100, units.millisecond),
                  direct_exp_time=quantity(250, units.microsecond),
-                 centering=ImageCentering.custom_apodizer_spots):
+                 centering=ImageCentering.custom_apodizer_spots,
+                 output_path=None, suffix="test_pr_dm_data"):
+
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+
         self.commands_path = commands_path
         self.num_exposures = num_exposures
         self.coron_exp_time = coron_exp_time
@@ -30,15 +34,13 @@ class TestPrDmCommands(Experiment):
         self.centering = centering
 
     def experiment(self):
-        local_path = util.create_data_path(suffix="test_pr_dm_data")
-
         dm2_command = commands.flat_command(bias=False, flat_map=True, dm_num=2,
                                             return_shortname=False)
         # DM2 Flat, DM1 PR WF correction command.
         for command in self.commands_path:
             take_exposures_both_dm_commands([dm2_command],
                                             self.commands_path,
-                                            local_path,
+                                            self.output_path,,
                                             "pr_flats",
                                             self.coron_exp_time,
                                             self.direct_exp_time,
@@ -52,7 +54,7 @@ class TestPrDmCommands(Experiment):
 
         # # DM1 Flat, DM2 Flat.
         # take_exposures_dm_commands([dm2_command],
-        #                            local_path, "pr_flats", self.coron_exp_time,
+        #                            self.path, "pr_flats", self.coron_exp_time,
         #                            self.direct_exp_time, list_of_paths=False,
         #                            num_exposures=self.num_exposures,
         #                            centering=self.centering)

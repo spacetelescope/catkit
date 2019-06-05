@@ -18,6 +18,9 @@ class ApplyFlatMap(Experiment):
     def __init__(self,
                  dm1_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
                  dm2_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
+                 output_path=None,
+                 suffix='apply_flat_map',
+                 **kwargs,
                  ):
         """
         Takes a set of data with any camera, any DM command, any exposure time, etc.
@@ -25,12 +28,14 @@ class ApplyFlatMap(Experiment):
         :param dm1_command_object: (DmCommand) DmCommand object to apply on DM2.
 
         """
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, no_output_dir=True, **kwargs)
         self.dm1_command_object = dm1_command_object
         self.dm2_command_object = dm2_command_object
 
     def experiment(self):
         with testbed.dm_controller() as dm:
             dm.apply_shape_to_both(self.dm1_command_object, self.dm2_command_object)
-            print("Flat Map applied.")
+            self.log.info("Flat Map applied.")
+            self.log.info(" ** This will loop forever, maintaining the flat map. You must cancel the script to terminate it. ** ")
             while True:
                 time.sleep(1)

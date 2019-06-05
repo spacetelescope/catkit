@@ -21,16 +21,13 @@ class TestMemoryLeaks(Experiment):
     name = "Test Memory Leak"
     log = logging.getLogger(__name__)
 
-    def __init__(self, speckle_nulling_path, output_path=None):
+    def __init__(self, speckle_nulling_path, output_path=None, **kwargs):
+        super(self, Experiment).__init__(output_path=output_path, **kwargs)
+
         self.speckle_nulling_path = speckle_nulling_path
-        self.output_path = output_path
+        self.path = output_path
 
     def experiment(self):
-
-        # Wait to set the path until the experiment starts (rather than the constructor)
-        if self.output_path is None:
-            self.output_path = util.create_data_path(suffix="memory_leak_test")
-            util.setup_hicat_logging(self.output_path, "test_memory_leak")
 
         # Make a list of each iteration available in speckle nulling data.
         iteration_folders = glob(os.path.join(self.speckle_nulling_path, "iteration*"))
@@ -44,7 +41,7 @@ class TestMemoryLeaks(Experiment):
         for iteration_folder in iteration_folders:
 
             iteration_string = os.path.basename(os.path.normpath(iteration_folder))
-            output_iteration_folder_path = os.path.join(self.output_path,
+            output_iteration_folder_path = os.path.join(self.path,
                                                         iteration_string)
 
             # Run standard file pipeline using global cross correlation.

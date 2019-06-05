@@ -45,22 +45,23 @@ class Take4dImageDmCommand(Experiment):
     def __init__(self,
                  mask="dm1_detector.mask",
                  num_frames=2,
-                 path=None,
+                 output_path=None,
                  filename=None,
                  dm_num=1,
                  rotate=180,
                  fliplr=False,
                  command=flat_command(flat_map=True),
                  reference_command=None,
-                 suffix="",
+                 suffix="Take4dImageDmCommand",
                  **kwargs):
 
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         if filename is None:
             filename = "4d_"
 
         self.mask = mask
         self.num_frames = num_frames
-        self.path = path
+        self.output_path = output_path
         self.filename = filename
         self.dm_num = dm_num
         self.rotate = rotate
@@ -71,11 +72,6 @@ class Take4dImageDmCommand(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path,
-                                              suffix="Take4dImageDmCommand" + self.suffix)
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
@@ -94,7 +90,7 @@ class Take4dImageDmCommand(Experiment):
             print("Taking 4D image...")
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 file_name = "4dImage" if self.suffix == "" else "4dImage_" + self.suffix
-                image_path = four_d.take_measurement(path=os.path.join(self.path, "raw"),
+                image_path = four_d.take_measurement(path=os.path.join(self.output_path, "raw"),
                                                      filename=file_name,
                                                      rotate=self.rotate,
                                                      num_frames=self.num_frames,
@@ -104,7 +100,7 @@ class Take4dImageDmCommand(Experiment):
                 if self.reference_command is not None:
                     print("Taking reference image...")
                     dm.apply_shape(self.reference_command, self.dm_num)
-                    reference_path = four_d.take_measurement(path=os.path.join(self.path, "reference"),
+                    reference_path = four_d.take_measurement(path=os.path.join(self.output_path, "reference"),
                                                              filename="reference_flat",
                                                              rotate=self.rotate,
                                                              num_frames=self.num_frames,
@@ -113,7 +109,7 @@ class Take4dImageDmCommand(Experiment):
                     image = fits.getdata(image_path)
 
                     # Subtract the reference from image.
-                    util.write_fits(reference - image, os.path.join(self.path, file_name + "_subtracted"))
+                    util.write_fits(reference - image, os.path.join(self.output_path, file_name + "_subtracted"))
 
             # Save the DM_Command used.
-            self.command.export_fits(os.path.join(self.path, file_name))
+            self.command.export_fits(os.path.join(self.output_path, file_name))

@@ -22,15 +22,15 @@ class AutoFocus(Experiment):
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=500,
                  position_list=np.arange(11.0, 13.7, step=.1),
-                 path=None,
+                 output_path=None,
                  camera_type="imaging_camera",
                  **kwargs):
+        super(self, Experiment).__init__(output_path=output_path, **kwargs)
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.position_list = position_list
-        self.path = path
         self.camera_type = camera_type
         self.kwargs = kwargs
 
@@ -40,7 +40,7 @@ class AutoFocus(Experiment):
                                                       self.exposure_time,
                                                       self.num_exposures,
                                                       self.position_list,
-                                                      self.path,
+                                                      self.output_path,
                                                       self.camera_type,
                                                       **self.kwargs)
         auto_focus.collect_final_images(output_path)

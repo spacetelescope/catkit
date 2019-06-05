@@ -49,7 +49,7 @@ class Dm4dZernikeLoop(Experiment):
                  peak2valley=[100],
                  mask="dm1_detector.mask",
                  num_frames=2,
-                 path=None,
+                 output_path=None,
                  filename=None,
                  dm_num=1,
                  rotate=180,
@@ -57,16 +57,22 @@ class Dm4dZernikeLoop(Experiment):
                  iterations=15,
                  damping_ratio=.6,
                  create_zernike_map=True,
+                 suffix=None,
                  **kwargs):
 
         if filename is None:
             filename = "4d_"
 
         self.zernike_index = zernike_index
+        zernike_name = zernike.zern_name(self.zernike_index).replace(" ", "_").lower()
+        suffix="4d_zernike_loop_" + zernike_name
+
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
+
         self.peak2valley = peak2valley
         self.mask = mask
         self.num_frames = num_frames
-        self.path = path
+        self.path = output_path
         self.filename = filename
         self.dm_num = dm_num
         self.rotate = rotate
@@ -77,11 +83,6 @@ class Dm4dZernikeLoop(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            zernike_name = zernike.zern_name(self.zernike_index).replace(" ", "_").lower()
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_zernike_loop_" + zernike_name)
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"

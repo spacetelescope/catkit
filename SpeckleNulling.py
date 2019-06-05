@@ -30,26 +30,25 @@ class SpeckleNulling(Experiment):
                  num_iterations=10,
                  bias=False,
                  flat_map=True,
-                 path=None,
+                 output_path=None,
                  exposure_time=quantity(100, units.millisecond),
                  num_exposures=3,
                  dm_command_path=None,
                  initial_speckles=SinSpecification(10, 12, quantity(25, units.nanometer), 90),
-                 suffix=None,
+                 suffix="speckle_nulling",
                  fpm_position=FpmPosition.coron,
                  lyot_stop_position=LyotStopPosition.in_beam,
                  centering=ImageCentering.global_cross_correlation,
                  reference_centering=ImageCentering.custom_apodizer_spots,
                  **kwargs):
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.num_iterations = num_iterations
         self.bias = bias
         self.flat_map = flat_map
-        self.path = path
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.dm_command_path = dm_command_path
         self.initial_speckles = initial_speckles
-        self.suffix = suffix
         self.fpm_position = fpm_position
         self.lyot_stop_position = lyot_stop_position
         self.centering = centering
@@ -57,14 +56,6 @@ class SpeckleNulling(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-
-        # Wait to set the path until the experiment starts (rather than the constructor)
-        if self.path is None:
-            suffix = "speckle_nulling"
-            if self.suffix is not None:
-                suffix = suffix + "_" + self.suffix
-            self.path = util.create_data_path(suffix=suffix)
-            util.setup_hicat_logging(self.path, "speckle_nulling")
 
         # Start with a previously stored DM command if dm_command_path is passed in.
         if self.dm_command_path:
@@ -123,7 +114,7 @@ class SpeckleNulling(Experiment):
                                                                             pipeline=True)
 
                         # Take coronographic data, with backgrounds.
-                        ref_path = os.path.join(self.path, "reference")
+                        ref_path = os.path.join(self.output_path, "reference")
                         testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                                   lyot_stop_position=self.lyot_stop_position,
                                                   centering=centering,
@@ -142,7 +133,7 @@ class SpeckleNulling(Experiment):
                         centering=centering)
 
                     # Take coronographic data, with backgrounds.
-                    iteration_path = os.path.join(self.path, "iteration" + str(i))
+                    iteration_path = os.path.join(self.output_path, "iteration" + str(i))
                     testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                               lyot_stop_position=self.lyot_stop_position,
                                               centering=self.centering,
@@ -211,7 +202,7 @@ class SpeckleNulling(Experiment):
                 testbed.run_hicat_imaging(self.exposure_time, self.num_exposures, self.fpm_position,
                                           centering=self.centering,
                                           lyot_stop_position=self.lyot_stop_position,
-                                          path=self.path,
+                                          path=self.output_path,
                                           exposure_set_name="final", filename="final_dark_zone.fits",
                                           simulator=False, **self.kwargs)
 

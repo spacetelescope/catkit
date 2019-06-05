@@ -34,16 +34,17 @@ class CoffeeStrokeMin(Experiment):
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 path=None,
+                 output_path=None,
                  diversity="focus",
                  path_dm1_corr=None,
                  num_exposures=10,
                  coron_exp_time=quantity(100, units.millisecond),
                  direct_exp_time=quantity(1, units.millisecond),
                  centering=ImageCentering.custom_apodizer_spots,
+                 suffix = "coffee_strokemin",
                  **kwargs):
 
-        self.path = path
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.diversity = diversity
         self.path_dm1_corr = path_dm1_corr
         self.num_exposures = num_exposures
@@ -53,10 +54,6 @@ class CoffeeStrokeMin(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-        if self.path is None:
-            suffix = "coffee_strokemin"
-            self.path = util.create_data_path(suffix=suffix)
-            util.setup_hicat_logging(self.path, "coffee_strokemin")
 
         # Diversity Zernike commands for DM2.
         diversity_zernike_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/"
@@ -69,7 +66,7 @@ class CoffeeStrokeMin(Experiment):
         dm1_path = self.path_dm1_corr
         dm1_correction = DmCommand.load_dm_command(dm1_path, flat_map=True, dm_num=1)
         take_coffee_data_set(diversity_zernike_command_paths,
-                             self.path,
+                             self.output_path,
                              "stroke_min",
                              self.coron_exp_time,
                              self.direct_exp_time,

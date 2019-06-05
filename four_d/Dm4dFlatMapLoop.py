@@ -46,7 +46,7 @@ class Dm4dFlatMapLoop(Experiment):
     def __init__(self,
                  mask="dm2_detector.mask",
                  num_frames=2,
-                 path=None,
+                 output_path=None,
                  filename=None,
                  dm_num=2,
                  rotate=180,
@@ -55,14 +55,15 @@ class Dm4dFlatMapLoop(Experiment):
                  damping_ratio=.6,
                  create_flat_map=True,
                  initial_command_path=None,
+                 suffix="4d_flat_map_loop",
                  **kwargs):
 
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         if filename is None:
             filename = "4d_"
 
         self.mask = mask
         self.num_frames = num_frames
-        self.path = path
         self.filename = filename
         self.dm_num = dm_num
         self.rotate = rotate
@@ -74,10 +75,6 @@ class Dm4dFlatMapLoop(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="4d_flat_map_loop")
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
@@ -106,14 +103,14 @@ class Dm4dFlatMapLoop(Experiment):
             print("Taking initial image...")
             with Accufiz("4d_accufiz", mask=self.mask) as four_d:
                 initial_file_name = "initial_bias"
-                image_path = four_d.take_measurement(path=os.path.join(self.path, initial_file_name),
+                image_path = four_d.take_measurement(path=os.path.join(self.output_path, initial_file_name),
                                                      filename=initial_file_name,
                                                      rotate=self.rotate,
                                                      num_frames=self.num_frames,
                                                      fliplr=self.fliplr)
 
                 # Save the DM_Command used.
-                command_object.export_fits(os.path.join(self.path, initial_file_name))
+                command_object.export_fits(os.path.join(self.output_path, initial_file_name))
 
                 flat_value = 0
                 best_std_deviation = None
@@ -166,18 +163,18 @@ class Dm4dFlatMapLoop(Experiment):
 
                     print("Taking exposures with 4D...")
                     file_name = "iteration{}".format(i)
-                    image_path = four_d.take_measurement(path=os.path.join(self.path, file_name),
+                    image_path = four_d.take_measurement(path=os.path.join(self.output_path, file_name),
                                                          filename=file_name,
                                                          rotate=self.rotate,
                                                          num_frames=self.num_frames,
                                                          fliplr=self.fliplr)
 
                     # Save the DM_Command used.
-                    command_object.export_fits(os.path.join(self.path, file_name))
+                    command_object.export_fits(os.path.join(self.output_path, file_name))
 
                 if self.create_flat_map:
                     iteration_folder_name = "iteration" + str(best_flat_map)
-                    full_path = os.path.join(self.path, iteration_folder_name, "dm_command", "dm_command_2d.fits")
+                    full_path = os.path.join(self.output_path, iteration_folder_name, "dm_command", "dm_command_2d.fits")
                     dm_command_data = fits.getdata(full_path)
 
                     # Convert the dm command units to volts.

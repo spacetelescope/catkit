@@ -41,17 +41,18 @@ class SpeckleBoiling4dTest(Experiment):
                  speckle_nulling_path="Z:/Testbeds/hicat_dev/data/2018-02-27T14-12-04_speckle_nulling/",
                  mask="dm1_detector.mask",
                  num_frames=4,
-                 path=None,
+                 output_path=None,
                  filename=None,
                  dm_num=1,
                  rotate=180,
                  fliplr=False,
+                 suffix="4dSpeckleBoilingTest")
                  **kwargs):
 
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.mask = mask
         self.speckle_nulling_path = speckle_nulling_path
         self.num_frames = num_frames
-        self.path = path
         self.filename = filename
         self.dm_num = dm_num
         self.rotate = rotate
@@ -59,10 +60,6 @@ class SpeckleBoiling4dTest(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-
-        if self.path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            self.path = util.create_data_path(initial_path=central_store_path, suffix="4dSpeckleBoilingTest")
 
         # Glob the directories of specklenulling and order them by iteration number.
         folder_paths = glob(os.path.join(self.speckle_nulling_path, "*iteration*"))
@@ -76,7 +73,7 @@ class SpeckleBoiling4dTest(Experiment):
             with testbed.dm_controller() as dm:
                 # Take a reference flat.
                 dm.apply_shape(flat_command(flat_map=True), self.dm_num)
-                four_d.take_measurement(path=self.path,
+                four_d.take_measurement(path=self.output_path,
                                         filename="reference_flat",
                                         rotate=self.rotate,
                                         num_frames=self.num_frames,
@@ -94,11 +91,11 @@ class SpeckleBoiling4dTest(Experiment):
 
                     # Take 4d Image.
                     file_name = path[path.find(itr_string):]
-                    four_d.take_measurement(path=os.path.join(self.path, file_name),
+                    four_d.take_measurement(path=os.path.join(self.output_path, file_name),
                                             filename=file_name,
                                             rotate=self.rotate,
                                             num_frames=self.num_frames,
                                             fliplr=self.fliplr)
 
                     # Save the DM_Command used.
-                    current_command_object.export_fits(os.path.join(self.path, file_name))
+                    current_command_object.export_fits(os.path.join(self.output_path, file_name))

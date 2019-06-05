@@ -38,16 +38,16 @@ class TakeDm4dCalibrationData(Experiment):
                  dm_command_object=None,
                  mask="dm2_detector.mask",
                  num_frames=2,
-                 path=None,
+                 output_path=None,
                  filename=None,
                  dm_num=2,
                  rotate=0,
                  fliplr=False,
+                 output_path=None,
+                 suffix='4d',
                  **kwargs):
 
-        if path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d")
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         if filename is None:
             filename = "4d_"
@@ -55,7 +55,7 @@ class TakeDm4dCalibrationData(Experiment):
         self.dm_command_object = dm_command_object
         self.mask = mask
         self.num_frames = num_frames
-        self.path = path
+        self.output_path = output_path
         self.filename = filename
         self.dm_num = dm_num
         self.rotate = rotate
@@ -68,7 +68,7 @@ class TakeDm4dCalibrationData(Experiment):
 
         with Accufiz("4d_accufiz", mask=mask) as four_d:
             # Reference image.
-            reference_path = four_d.take_measurement(path=self.path,
+            reference_path = four_d.take_measurement(path=self.output_path,
                                                      num_frames=self.num_frames,
                                                      filename=self.filename + "_reference",
                                                      rotate=self.rotate,
@@ -76,7 +76,7 @@ class TakeDm4dCalibrationData(Experiment):
 
             with testbed.dm_controller() as dm:
                 dm.apply_shape(self.dm_command_object, self.dm_num)
-                image_path = four_d.take_measurement(path=self.path,
+                image_path = four_d.take_measurement(path=self.output_path,
                                                      num_frames=self.num_frames,
                                                      filename=self.filename + "_command_image",
                                                      rotate=self.rotate,
@@ -87,7 +87,7 @@ class TakeDm4dCalibrationData(Experiment):
                 image = fits.getdata(image_path)
 
                 # Subtract the reference from image.
-                util.write_fits(reference - image, os.path.join(self.path, self.filename + "_subtracted"))
+                util.write_fits(reference - image, os.path.join(self.output_path, self.filename + "_subtracted"))
 
                 # Save the DM_Command used.
-                self.dm_command_object.export_fits(self.path)
+                self.dm_command_object.export_fits(self.output_path)

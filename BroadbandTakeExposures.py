@@ -31,9 +31,9 @@ class BroadbandTakeExposures(Experiment):
                  num_exposures=5,
                  camera_type="imaging_camera",
                  pipeline=True,
-                 path=None,
+                 output_path=None,
                  filename=None,
-                 suffix=None,
+                 suffix='broadband',
                  **kwargs):
         """
         Takes a set of data with any camera, any DM command, any exposure time, etc.
@@ -41,11 +41,12 @@ class BroadbandTakeExposures(Experiment):
         :param exposure_time: (pint.quantity) Pint quantity for exposure time.
         :param num_exposures: (int) Number of exposures.
         :param step: (int) Step size to use for the motor positions (default is 10).
-        :param path: (string) Path to save data.
+        :param output_path: (string) Path to save data.
         :param camera_type: (string) Camera type, maps to the [tested] section in the ini.
         :param position_list: (list) Postion(s) of the camera
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.broadband_filter_set = broadband_filter_set
         self.dm1_command_object = dm1_command_object
         self.dm2_command_object = dm2_command_object
@@ -54,25 +55,17 @@ class BroadbandTakeExposures(Experiment):
         self.num_exposures = num_exposures
         self.camera_type = camera_type
         self.pipeline = pipeline
-        self.path = path
         self.filename = filename
-        self.suffix = suffix
         self.kwargs = kwargs
 
     def experiment(self):
-        # Wait to set the path until the experiment starts (rather than the constructor)
-        if self.path is None:
-            suffix = "broadband" if self.suffix is None else "broadband_" + self.suffix
-            self.path = util.create_data_path(suffix=suffix)
-
-        util.setup_hicat_logging(self.path, "broadband")
 
         with testbed.dm_controller() as dm:
             dm.apply_shape_to_both(self.dm1_command_object, self.dm2_command_object)
 
             testbed.run_hicat_imaging_broadband(self.broadband_filter_set,
                                                 self.exposure_time, self.num_exposures, self.fpm,
-                                                path=self.path,
+                                                path=self.output_path,
                                                 filename=self.filename,
                                                 camera_type=self.camera_type,
                                                 pipeline=self.pipeline,

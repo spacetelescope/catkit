@@ -19,7 +19,7 @@ class TakePhaseRetrievalData(Experiment):
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=5,
                  step=10,
-                 path=None,
+                 output_path=None,
                  camera_type="phase_retrieval_camera",
                  position_list=None,
                  dm1_command=flat_command(False, True, dm_num=1),
@@ -31,26 +31,25 @@ class TakePhaseRetrievalData(Experiment):
         :param exposure_time: (pint.quantity) Pint quantity for exposure time.
         :param num_exposures: (int) Number of exposures.
         :param step: (int) Step size to use for the motor positions (default is 10).
-        :param path: (string) Path to save data.
+        :param output_path: (string) Path to save data.
         :param camera_type: (string) Camera type, maps to the [tested] section in the ini.
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.step = step
-        self.path = path
         self.camera_type = camera_type
         self.position_list = position_list
         self.dm1_command = dm1_command
         self.dm2_command = dm2_command
-        self.suffix = suffix
         self.kwargs = kwargs
 
     def experiment(self):
         take_phase_retrieval_data(self.exposure_time,
                                   self.num_exposures,
                                   self.step,
-                                  self.path,
+                                  self.output_path,
                                   self.camera_type,
                                   position_list=self.position_list,
                                   dm1_command=self.dm1_command,

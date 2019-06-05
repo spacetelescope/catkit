@@ -23,7 +23,7 @@ class DoubleSinRemoveCrossterm(Experiment):
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 path=None,
+                 output_path=None,
                  bias=False,
                  flat_map=True,
                  coron_exposure_time=quantity(200, units.millisecond),
@@ -39,8 +39,9 @@ class DoubleSinRemoveCrossterm(Experiment):
                  alignment_speckle=False,
                  centering=ImageCentering.auto,
                  auto_exposure_mask_size=5.5,
+                 suffix="double_sin",
                  **kwargs):
-        self.path = path
+        super(self, Experiment).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.bias = bias
         self.flat_map = flat_map
         self.coron_exposure_time = coron_exposure_time
@@ -68,17 +69,12 @@ class DoubleSinRemoveCrossterm(Experiment):
         if self.alignment_speckle:
             self.centering = ImageCentering.injected_speckles
 
-        # Wait to set the path until the experiment starts (rather than the constructor)
-        if self.path is None:
-            self.path = util.create_data_path(suffix="double_sin")
-            util.setup_hicat_logging(self.path, "double_sin")
-
         coron_dirname = "coron"
         direct_dirname = "direct"
 
         with testbed.laser_source() as laser:
             for ncycle in self.ncycles_range:
-                ncycles_path = os.path.join(self.path, "ncycles" + str(ncycle))
+                ncycles_path = os.path.join(self.output_path, "ncycles" + str(ncycle))
                 for p2v in self.peak_to_valley_range:
                     peak_to_valley_quantity = quantity(p2v, units.nanometer)
                     sin_spec = SinSpecification(self.angle, ncycle, peak_to_valley_quantity, self.phase)
