@@ -26,7 +26,7 @@ class Experiment(object):
     interval = CONFIG_INI.getint("safety", "check_interval")
     safety_tests = [UpsSafetyTest(), HumidityTemperatureTest()]#, WeatherWarningTest()]
 
-    def __init__(self, output_path=None, suffix=None, no_output_dir=False):
+    def __init__(self, output_path=None, suffix=None):
         """ Initialize attributes common to all Experiments.
         All child classes should implement their own __init__ and call this via super()
 
@@ -34,17 +34,12 @@ class Experiment(object):
                      For the vast majority of use cases this should be left as None, in which
                      case it will be auto-generated based on date-time + suffix.
         :paran suffix: Descriptive string to include as part of the path.
-        :no_output_dir: Rarely, some Experiment types will intentionally produce no outputs
-                     Set this flag to suppress creation of an output directory for such.
-        :
         """
         # Default is to wait to set the path until the experiment starts (rather than the constructor)
         # but users can optionally pass in a specifc path if they want to do something different in a
         # particular case.
         self.output_path = output_path
         self.suffix = suffix
-
-        self._no_output_dir = no_output_dir   # make this attribute hidden since it is a niche use case.
 
     @abstractmethod
     def experiment(self):
@@ -114,13 +109,12 @@ class Experiment(object):
             self.log.exception("Safety exception.")
             raise
         except Exception as e:
-            errmessage = "Monitoring process caught an unexpected problem."
-            if hasattr(e, 'message'):
-                errmessage += "Error message: "+ e.message
+            errmessage = "Monitoring process caught an unexpected problem. Error message: " + str(e)
             self.log.exception(errmessage)
             # Shut down the experiment (but allow context managers to exit properly).
             if experiment_process is not None:
                 util.soft_kill(experiment_process)
+            # must return SafetyException type specifically to signal queue to stop in typical calling scripts
             raise SafetyException()
 
     def run_experiment(self):
@@ -161,9 +155,6 @@ class Experiment(object):
 
         Do not override.
         """
-
-        if self._no_output_dir:
-            return
 
         if self.suffix is None:
             self.suffix = str(self.name).replace(" ","_").lower()
