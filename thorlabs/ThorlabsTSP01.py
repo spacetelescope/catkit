@@ -26,11 +26,15 @@ class ThorlabsTSP01():
                                  "src", "thorlabs_sensor_cs", "bin", "Release", "thorlabs_sensor_cs.exe " + self.serial_number)
         output = subprocess.check_output(full_path)
 
+        if 'error' in output:
+            raise RuntimeError(output)
         # Remove newlines.
         for remove_me in ["\r", "\n"]:
             output = output.replace(remove_me, "")
 
         values = output.split(" ")
+        if len(values) < 2:
+            raise RuntimeError("Expected at least 2 values returned in sensor output; instead got '{}' ".format(output))
         temp = float(values[0].split("=")[1])
         humidity = float(values[1].split("=")[1])
         return temp, humidity
