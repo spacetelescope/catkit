@@ -19,6 +19,13 @@ from .. config import CONFIG_INI
 # Note, SafetyTest is in the Experiments directory but is not itself an Experiment subclass.
 # Rather it is part of the infrastructure used to enable running Experiments.
 
+# safety related log messages should ALWAYS be displayed on screen, regardless of whether any other
+# log handlers are present or not. Enforce this strictly by defining our own handler immediately on import.
+safety_log = logging.getLogger('hicat_safety')
+safety_log_handler = logging.StreamHandler()
+safety_log.addHandler(safety_log_handler)
+
+
 class SafetyTest(object):
     __metaclass__ = ABCMeta
 
@@ -32,14 +39,13 @@ class SafetyTest(object):
 
 class UpsSafetyTest(SafetyTest):
 
-    log = logging.getLogger(__name__)
     name = "UPS Safety Test"
 
     # Create a SnmpUPS object to monitor the White UPS.
     ups = testbed.backup_power()
 
     def check(self):
-        self.log.debug("Checking UPS power up")
+        safety_log.debug("Checking UPS power up")
         return self.ups.is_power_ok(return_status_msg=True)
 
 
@@ -57,7 +63,7 @@ class HumidityTemperatureTest(SafetyTest):
         if "TSP01GUI.exe" in (p.name() for p in psutil.process_iter()):
             status_msg = "Humidity and Temperature test failed: Close the Thorlabs GUI and run again. " \
                          "It interferes with our code."
-            self.log.error(status_msg)
+            safety_log.error(status_msg)
             return False, status_msg
 
         temp, humidity = testbed.temp_sensor().get_temp_humidity()
@@ -66,22 +72,22 @@ class HumidityTemperatureTest(SafetyTest):
         if temp_ok:
             status_msg = "Temperature test passed: {} falls between {} and {}.".format(
                 temp, self.min_temp, self.max_temp)
-            self.log.debug(status_msg)
+            safety_log.debug(status_msg)
         else:
             status_msg = "Temperature test failed: {} is outside of {} and {}.".format(
                 temp, self.min_temp, self.max_temp)
-            self.log.warning(status_msg)
+            safety_log.warning(status_msg)
 
         humidity_ok = self.min_humidity <= humidity <= self.max_humidity
 
         if humidity_ok:
             status_msg += "\nHumidity test passed: {} falls between {} and {}.".format(
                 humidity, self.min_humidity, self.max_humidity)
-            self.log.debug(status_msg)
+            safety_log.debug(status_msg)
         else:
             status_msg += "\nHumidity test failed: {} is outside of {} and {}.".format(
                 humidity, self.min_humidity, self.max_humidity)
-            self.log.warning(status_msg)
+            safety_log.warning(status_msg)
 
         return temp_ok and humidity_ok, status_msg
 
@@ -111,13 +117,13 @@ class WeatherWarningTest(SafetyTest):
                         end_time = wx_entry.text
 
                 if current_event:
-                    self.log.error("Event " + current_event + " from " + start_time + " to " + end_time)
+                    safety_log.error("Event " + current_event + " from " + start_time + " to " + end_time)
                     if current_event in wx_warning_list:
                         # assume we're in our own timezone.
                         startDT = datetime.strptime(start_time[:-6], "%Y-%m-%dT%H:%M:%S")
                         endDT = datetime.strptime(end_time[:-6], "%Y-%m-%dT%H:%M:%S")
                         if currentDT > startDT and currentDT < endDT:
-                            self.log.error("Weather warning: " + current_event + " from " + start_time + " to " + end_time )
+                            safety_log.error("Weather warning: " + current_event + " from " + start_time + " to " + end_time )
                             warning_count += 1
 
         if warning_count > 0:
