@@ -85,7 +85,6 @@ class Experiment(object):
                     elif safety_test.warning:
                             # Shut down the experiment (but allow context managers to exit properly).
                             errmessage = safety_test.name + " reports unsafe conditions repeatedly. Aborting experiment! Details: {}".format(msg)
-                            print(errmessage)
                             self.log.error(errmessage)
                             util.soft_kill(experiment_process)
                             raise SafetyException(errmessage)
@@ -93,7 +92,6 @@ class Experiment(object):
                     else:
                         errmessage = (message + "\n" +  "Warning issued for " + safety_test.name +
                               ". Experiment will be softly killed if safety check fails again.")
-                        print(errmessage)
                         self.log.warning(errmessage)
                         safety_test.warning = True
 

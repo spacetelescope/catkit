@@ -23,6 +23,7 @@ from .. config import CONFIG_INI
 # log handlers are present or not. Enforce this strictly by defining our own handler immediately on import.
 safety_log = logging.getLogger('hicat_safety')
 safety_log_handler = logging.StreamHandler()
+safety_log_handler.setLevel(logging.WARNING)
 safety_log.addHandler(safety_log_handler)
 
 
@@ -52,7 +53,6 @@ class UpsSafetyTest(SafetyTest):
 class HumidityTemperatureTest(SafetyTest):
 
     name = "Thorlabs Humidity and Temperature Sensor Safety Test"
-    log = logging.getLogger(__name__)
 
     min_humidity = CONFIG_INI.getfloat("safety", "min_humidity")
     max_humidity = CONFIG_INI.getfloat("safety", "max_humidity")
@@ -95,7 +95,6 @@ class HumidityTemperatureTest(SafetyTest):
 class WeatherWarningTest(SafetyTest):
 
     name = "National Weather Service MDC510 Warnings Safety Test"
-    log = logging.getLogger(__name__)
     def check(self):
         wx_warning_list = CONFIG_INI.get("nws", "wx_warning_list")
         wx_url = CONFIG_INI.get("nws", "wx_url")

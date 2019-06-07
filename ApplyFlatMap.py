@@ -37,5 +37,7 @@ class ApplyFlatMap(Experiment):
             dm.apply_shape_to_both(self.dm1_command_object, self.dm2_command_object)
             self.log.info("Flat Map applied.")
             self.log.info(" ** This will loop forever, maintaining the flat map. You must cancel the script to terminate it. ** ")
+            self.log.info(" ** I.e. use square 'stop' button in PyCharm. Caution - be careful to single click, not double click it! ** ")
+
             while True:
                 time.sleep(1)
