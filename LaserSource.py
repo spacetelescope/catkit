@@ -4,12 +4,12 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 import logging
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 """Interface for a laser source."""
 
 
-class LaserSource(object, metaclass=ABCMeta):
+class LaserSource(ABC):
     log = logging.getLogger()
 
     def __init__(self, config_id, *args, **kwargs):

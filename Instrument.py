@@ -3,11 +3,11 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 import logging
 
 
-class Instrument(object, metaclass=ABCMeta):
+class Instrument(ABC):
     """Generic interface to any instrument, implements a context manager."""
     log = logging.getLogger(__name__)
 

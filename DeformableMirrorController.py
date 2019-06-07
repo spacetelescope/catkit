@@ -5,14 +5,14 @@ from __future__ import (absolute_import, division,
 from builtins import *
 import logging
 
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 """Interface for a deformable mirror controller that can control 2 DMs.  
    It does so by interpreting the first half of the command for DM1, and the second for DM2.
    This controller cannot control the two DMs independently, it will always send a command to both."""
 
 
-class DeformableMirrorController(object, metaclass=ABCMeta):
+class DeformableMirrorController(ABC):
     log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):

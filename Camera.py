@@ -5,12 +5,12 @@ from __future__ import (absolute_import, division,
 from builtins import *
 import logging
 
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 """Abstract base class for all cameras. Implementations of this class also become context managers."""
 
 
-class Camera(object, metaclass=ABCMeta):
+class Camera(ABC):
     log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):

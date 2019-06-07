@@ -3,12 +3,12 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 """Interface for remote controlled power switch."""
 
 
-class RemotePowerSwitch(object, metaclass=ABCMeta):
+class RemotePowerSwitch(ABC):
     def __init__(self, config_id, *args, **kwargs):
         self.config_id = config_id
 

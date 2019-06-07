@@ -3,13 +3,13 @@ from __future__ import (absolute_import, division,
 
 # noinspection PyUnresolvedReferences
 from builtins import *
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 import logging
 
 """Interface for a two state flip motor."""
 
 
-class FlipMotor(object, metaclass=ABCMeta):
+class FlipMotor(ABC):
     log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):
