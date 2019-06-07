@@ -325,7 +325,7 @@ class SbigCamera(Camera):
 
         # at loop exit, the image should be available
         image_status = self.__check_image_status()
-        if image_status <> self.IMAGE_AVAILABLE:
+        if image_status != self.IMAGE_AVAILABLE:
             self.log.error('No image after exposure')
             raise Exception("Camera reported no image available after exposure.")
 
