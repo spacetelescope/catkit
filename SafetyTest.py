@@ -12,7 +12,7 @@ if sys.version_info > (3,0):
 else:
     from urllib2 import urlopen
 import xml.etree.cElementTree as ET
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from ..hardware import testbed
 from .. config import CONFIG_INI
 
@@ -27,7 +27,7 @@ safety_log_handler.setLevel(logging.WARNING)
 safety_log.addHandler(safety_log_handler)
 
 
-class SafetyTest(object, metaclass=ABCMeta):
+class SafetyTest(ABC):
     name = None
     warning = False
 

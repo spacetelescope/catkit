@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-from abc import *
+from abc import ABC, abstractmethod
 from multiprocessing import Process
 from .. config import CONFIG_INI
 from .. import util
@@ -13,7 +13,7 @@ import time
 import logging
 
 
-class Experiment(object, metaclass=ABCMeta):
+class Experiment(ABC):
     """
     Abstract base class that instills safety monitoring into any class that inherits it.  Subclasses
     need to implement a function called "experiment()", which is designated as an abstractmethod here.
