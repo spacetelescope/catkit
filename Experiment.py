@@ -64,7 +64,7 @@ class Experiment(object):
                 if not status:
                     errmessage = safety_test.name + " reports unsafe conditions. Aborting experiment before start... Details: {}".format(msg)
                     print(errmessage)
-                    self.log.error(errmessage)
+                    self.log.critical(errmessage)
                     raise SafetyException(errmessage)
             self.log.info("Safety tests passed!")
             self.log.info("Creating separate process to run experiment...")
@@ -85,7 +85,7 @@ class Experiment(object):
                     elif safety_test.warning:
                             # Shut down the experiment (but allow context managers to exit properly).
                             errmessage = safety_test.name + " reports unsafe conditions repeatedly. Aborting experiment! Details: {}".format(msg)
-                            self.log.error(errmessage)
+                            self.log.critical(errmessage)
                             util.soft_kill(experiment_process)
                             raise SafetyException(errmessage)
 
@@ -107,13 +107,13 @@ class Experiment(object):
             self.log.exception("Safety exception.")
             raise
         except Exception as e:
-            errmessage = "Monitoring process caught an unexpected problem. Error message: " + str(e)
-            self.log.exception(errmessage)
+            safety_exception = SafetyException("Monitoring process caught an unexpected problem: ", e)
+            self.log.exception(safety_exception)
             # Shut down the experiment (but allow context managers to exit properly).
             if experiment_process is not None:
                 util.soft_kill(experiment_process)
             # must return SafetyException type specifically to signal queue to stop in typical calling scripts
-            raise SafetyException()
+            raise safety_exception
 
     def run_experiment(self):
         """
