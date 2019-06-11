@@ -44,7 +44,6 @@ class TakeDm4dCheckerboardData(Experiment):
                  amplitude_range=range(-2200, 850, 200),
                  mask="dm1_detector.mask",
                  num_frames=2,
-                 output_path=None,
                  dm_num=1,
                  rotate=180,
                  fliplr=False,

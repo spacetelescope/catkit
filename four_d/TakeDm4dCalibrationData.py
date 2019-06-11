@@ -38,7 +38,6 @@ class TakeDm4dCalibrationData(Experiment):
                  dm_command_object=None,
                  mask="dm2_detector.mask",
                  num_frames=2,
-                 output_path=None,
                  filename=None,
                  dm_num=2,
                  rotate=0,
