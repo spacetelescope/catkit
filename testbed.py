@@ -119,11 +119,12 @@ def beam_dump():
 
 
 def temp_sensor():
+    sensor_config_ini_key = "thorlabs_tsp01_1"
     if testbed_state.simulation:
         from .. import simulators
-        return simulators.SimThorlabsTSP01("thorlabs_tsp01_1")
+        return simulators.SimThorlabsTSP01(sensor_config_ini_key)
     else:
-        return ThorlabsTSP01("thorlabs_tsp01_1")
+        return ThorlabsTSP01(sensor_config_ini_key)
 
 
 def laser_source():
