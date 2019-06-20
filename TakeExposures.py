@@ -40,7 +40,7 @@ class TakeExposures(Experiment):
         :param position_list: (list) Postion(s) of the camera
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
-        super(TakeExposures,  self).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(TakeExposures,  self).__init__(output_path=output_path, suffix=suffix)
         self.dm1_command_object = dm1_command_object
         self.dm2_command_object = dm2_command_object
         self.exposure_time = exposure_time
