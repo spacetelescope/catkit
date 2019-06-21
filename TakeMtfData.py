@@ -27,7 +27,7 @@ class TakeMtfData(Experiment):
                  camera_type="imaging_camera",
                  suffix="mtf_calibration",
                  **kwargs):
-        super(TakeMtfData, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(TakeMtfData, self).__init__(output_path=output_path, suffix=suffix)
 
         self.bias = bias
         self.flat_map = flat_map
