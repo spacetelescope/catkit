@@ -48,7 +48,7 @@ class UpdateSubarray(Experiment):
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
 
-        super(UpdateSubarray, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(UpdateSubarray, self).__init__(output_path=output_path, suffix=suffix)
 
         self.dm1_command_object = dm1_command_object
         self.dm2_command_object = dm2_command_object
