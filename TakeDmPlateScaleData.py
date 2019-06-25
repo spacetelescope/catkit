@@ -74,5 +74,6 @@ class TakeDmPlateScaleData(Experiment):
                                                             self.auto_exposure_mask_size,
                                                             centering=self.centering,
                                                             path=os.path.join(ncycle_path, "coron"),
+                                                            simulator=False,
                                                             lyot_stop_position=self.lyot_stop_position,
                                                             **self.kwargs)
