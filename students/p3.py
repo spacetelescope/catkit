@@ -1,52 +1,47 @@
 ###IMPORTS
-#Config file imports
-from __future__ import (absolute_import, division,
-                        unicode_literals)
 
-from builtins import *
 import configparser
 import os
+import time
+import sys
 
-#Camera imports
-import ZWOCamera
-
-#Controller imports
-import controller_interface
-
-#Picomotor imports
-import newport_interface
-
-#Centroid imports
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import numpy as np
 from photutils import centroid_1dg
-import time
-import subprocess
-import sys
 
-config_file_name = "config.ini"
-override_file_name = "config_local.ini"
+from interfaces import newport_interface, npoint_tiptilt, zwo_camera
+
+CONFIG_FILE_NAME = "config.ini"
+OVERRIDE_FILE_NAME = "config_local.ini"
 
 #Returns true if beam is through the hole and cenetered, false otherwise
-def check_beam():
-		time.sleep(time_between_beam_checking)
-		image = zwo_cam_tac.take_exposure(exp_time=exposure_time_ta)
-		beam_x, beam_y = centroid_1dg(image)
-		print(np.sum(image))
-		if ((np.abs(ta_cam_x - beam_x) > misaligned_threshold) or (np.abs(ta_cam_y - beam_y) > misaligned_threshold)):
-			print("Beam has moved. Restarting alignment process.")
-			#Restart program
-			return False
-		elif np.sum(image) < through_hole_threshold:
-			print("Loop is broken. Restarting alignment process.")
-			#Restart program
-			return False
-		else:
-			return True
+def check_beam(cam, cam_tac):
+    """ Checks if beam is through the hole. Returns True/False. """
 
+    time.sleep(time_between_beam_checking)
+    image = cam_tac.take_exposure(exp_time=exposure_time_ta)
+    beam_x, beam_y = centroid_1dg(image)
+    print(np.sum(image))
+    
+    if ((np.abs(ta_cam_x - beam_x) > misaligned_threshold).\
+        or (np.abs(ta_cam_y - beam_y) > misaligned_threshold)):
+        print("Beam has moved. Restarting alignment process.")
+        #Restart program
+        return False
+    
+    elif np.sum(image) < through_hole_threshold:
+        print("Loop is broken. Restarting alignment process.")
+        #Restart program
+        return False
+    
+    else:
+        return True
+
+# unused
 def get_config_ini_path():
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), config_file_name)
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)),
+            CONFIG_FILE_NAME)
 
 
 def load_config_ini():
@@ -58,167 +53,189 @@ def load_config_ini():
     config._interpolation = configparser.ExtendedInterpolation()
 
     # Check if there is a local override config file (which is ignored by git).
-    local_override_path = os.path.join(code_directory, override_file_name)
+    local_override_path = os.path.join(code_directory, OVERRIDE_FILE_NAME)
     result = config.read(local_override_path)
     if not result:
-        config.read(os.path.join(code_directory, config_file_name))
+        config.read(os.path.join(code_directory, CONFIG_FILE_NAME))
     return config
 
 
-def mainLoop(firstTime):
-	# ##MOVE PICO MOTORS (SCIENCE CAMERA) ONE
-	pm = newport_interface.NewportPicomotor()
-	image = zwo_cam_tac.take_exposure(exp_time=exposure_time_ta)
-	try:
-		if np.sum(image) < through_hole_threshold:
-			print("Aligning beam through hole (move 1 of 2)...\n")
-			# #Move picomotors accoringly...
-			image = zwo_cam.take_exposure(exp_time=exposure_time_sc)
-			beam_x, beam_y = centroid_1dg(image)
-			pm.command('relative_move',1, -1*(beam_x-sci_cam_x)/r_ratio_1)
-			time.sleep(2)
-			pm.command('relative_move',2, -1*(beam_y-sci_cam_y)/r_ratio_2)
-			time.sleep(2)
-		else:
-			print("Beam is already through the hole.\n")
+def main_close_loop(firstTime):
+    """ Main function to close the loop. """
+    
+    # Load constants
+    npoint_constants, zwo_constants, pico = load_config_constants()
+    
+    # Open interface connections
 
-		image = zwo_cam_tac.take_exposure(exp_time=exposure_time_sc)
-		if np.sum(image) < through_hole_threshold:
-			print("Aligning beam through hole (move 2 of 2)...\n")
-			# #Move picomotors accoringly...
-			image = zwo_cam.take_exposure(exp_time=exposure_time_sc)
-			beam_x, beam_y = centroid_1dg(image)
-			pm.command('relative_move',1, -1*(beam_x-sci_cam_x)/r_ratio_1)
-			time.sleep(2)
-			pm.command('relative_move',2, -1*(beam_y-sci_cam_y)/r_ratio_2)
-			time.sleep(2)
-		else:
-			print("Beam is through the hole.\n")
-	except:
-		print("An error has occured. Is the beam on the camera?\n")
+    # cameras 
+    try:
+        zwocam_tac = zwo_camera.ZWOCamera()
+        zwocam_tac.open_camera("ZWO ASI290MM(1)")
+        zwocam = zwo_camera.ZWOCamera()
+        zwocam.open_camera("ZWO ASI290MM(2)") #Open by name
+    except:
+        print("There is an issue with the cameras. Please unplug and plug them back in.\n")
 
-	###CLOSE THE LOOP
-	#Close loop
-	if not disable:
-		if firstTime:
-			input("Use picomotors to align the quadcell. Press enter when finished.")
-			
-		print("Closing loop two...\n")
-		time.sleep(2)
-		ctrl.command("p_gain",1, p_gain1)
-		ctrl.command("d_gain",1,d_gain1)
-		ctrl.command("i_gain",1, i_gain1)
-		ctrl.command("p_gain", 2, p_gain2)
-		ctrl.command("d_gain", 2, d_gain2)
-		ctrl.command("i_gain", 2, i_gain2)
-		time.sleep(.5)
-		ctrl.command("loop",2,1)
-		print("Loop two is closed. Closing loop one...\n")
-		time.sleep(.5)
-		ctrl.command("loop",1,1)
+    # newport 
+    pico = newport_interface.NewportPicomotor()
+    
+    # npoint 
+    npoint = npoint_tiptilt.nPoint_TipTilt()
+    
+    # Round of moves to hole on the science camera
+    move_to_hole(cameras=(zwocam, zwocam_tac), zwo_contants, pico_constants, mode='sience_cam')
 
-		ctrl.get_status(1)
-		ctrl.get_status(2)
-		print("Both loops closed.\n")
-	time.sleep(2)
+    #Close loop
+    if not disable:
+        if firstTime:
+            input("Use picomotors to align the quadcell. Press enter when finished.")
+        
+        print("Closing loop two...\n")
+        close_tiptilt_loop(npoint, npoint_constants, 2)
+        time.sleep(2)
+        close_tiptilt_loop(npoint, npoint_constants, 1)
+        print("Both loops closed...\n")
 
-	#input("Waiting\n")
-	# ##MOVE PICO MOTORS (TARGET AQUISITION CAMERA) 
-	# #Move picomotors accoringly...
-	pm = newport_interface.NewportPicomotor()
-	print("Performing precise centering...")
-	image = zwo_cam_tac.take_exposure(exp_time=exposure_time_ta)
-	try:
-		#Save plots
-		zwo_cam_tac.plot_image(image, output_name='image_TAC.png')
-		beam_x, beam_y = centroid_1dg(image)
-		if not disable:
-			pm.command('relative_move',3, -1*(beam_x-ta_cam_x)/r_ratio_3)
-			time.sleep(2)
-			pm.command('relative_move',4, -1*(beam_y-ta_cam_y)/r_ratio_4)
-			time.sleep(2)
-		else:
-			pm.command('relative_move',1, 1*(beam_x-ta_cam_x)/r_ratio_3)
-			time.sleep(2)
-			pm.command('relative_move',2, 1*(beam_y-ta_cam_y)/r_ratio_4)
-			time.sleep(2)
-	except:
-		print("An error has occured. Is the beam on the camera?\n")
+    # Move picomotors accoringly...
+    print("Performing precise centering...")
+    image = zwocam_tac.take_exposure(exp_time=zwo_constants['exposure_time_ta'])
+    
+    # Round of moves to hole on the TA camera
+    if not disable:
+        move_to_hole(cameras=(zwocam, zwocam_tac), zwo_constants, pico_constants, mode='ta_cam')
 
-	print("System complete. The laser is perfectly centered through the hole.")
-	print("Ensuring laser is through the hole (checking every 5 seconds).")
-	while(check_beam()):
-		#Check beam indefinetly until it is broken or moves
-		time.sleep(1)
-	
-	
-###Constants
-CONFIG_INI = load_config_ini()
-disable = CONFIG_INI.getboolean('nPoint', 'disable')
-p_gain1 = CONFIG_INI.getfloat('nPoint', 'p_gain1')
-d_gain1 = CONFIG_INI.getfloat('nPoint', 'd_gain1')
-i_gain1 = CONFIG_INI.getfloat('nPoint', 'i_gain1')
-p_gain2 = CONFIG_INI.getfloat('nPoint', 'p_gain2')
-d_gain2 = CONFIG_INI.getfloat('nPoint', 'd_gain2')
-i_gain2 = CONFIG_INI.getfloat('nPoint', 'i_gain2')
-#Camera
-sci_cam_x = CONFIG_INI.getfloat('Camera', 'sci_cam_x')
-sci_cam_y = CONFIG_INI.getfloat('Camera', 'sci_cam_y')
-ta_cam_x = CONFIG_INI.getfloat('Camera', 'ta_cam_x')
-ta_cam_y = CONFIG_INI.getfloat('Camera', 'ta_cam_y')
-#through_hole_threshold = CONFIG_INI.getfloat('Camera', 'through_hole_threshold')
-misaligned_threshold = CONFIG_INI.getfloat('Camera', 'misaligned_threshold')
-time_between_beam_checking = CONFIG_INI.getfloat('Camera', 'time_between_beam_checking')
-laser_source_power = CONFIG_INI.getfloat('Camera', 'laser_source_power')
-#Picomotor
-r_ratio_1 = CONFIG_INI.getfloat('Picomotor', 'r_ratio_1')
-r_ratio_2 = CONFIG_INI.getfloat('Picomotor', 'r_ratio_2')
-r_ratio_3 = CONFIG_INI.getfloat('Picomotor', 'r_ratio_3')
-r_ratio_4 = CONFIG_INI.getfloat('Picomotor', 'r_ratio_4')
+    print("System complete. The laser is perfectly centered through the hole.")
+    print("Ensuring laser is through the hole (checking every 5 seconds).")
+    while(check_beam(zwocam, zwocam_tac)):
+        #Check beam indefinetly until it is broken or moves
+        time.sleep(1)
 
-#Calculate exposure time
-if (laser_source_power == 200.0):
-	exposure_time_sc = 8000
-	exposure_time_ta = 300
-	through_hole_threshold = 200
-elif (laser_source_power == 20.0):
-	exposure_time_sc = 8000
-	exposure_time_ta = 300
-	through_hole_threshold = 15000
-else:
-	exposure_time_sc = 8000
-	exposure_time_ta = 300
-	through_hole_threshold = 200
+
+def close_tiptilt_loop(npoint_instance, npoint_dict, channel):
+    """ Closes tiptilt loop. 
+
+    Parameters
+    ----------
+    npoint_instance : nPoint_TipTilt object
+        Connection to npoint controller.
+    npoint_dict : dict
+        Dictionary of npoint config constants. 
+    channel : int
+        1, 2 -- which channel to close.
+    """
+
+    time.sleep(2)
+    npoint.command("p_gain", channel, npoint_constants['p_gain'.format(channel)])
+    npoint.command("d_gain", channel, npoint_constants['d_gain'.format(channel)])
+    npoint.command("i_gain", channel, npoint_constants['i_gain'.format(channel)])
+    time.sleep(.5)
+    npoint.command("loop", channel, 1)
+
+    npoint.get_status(channel)
+
+
+def load_data_from_config():
+    """ Loads data from config."""
+    CONFIG_INI = load_config_ini()
+    
+    # nPoint
+    npoint_constants = {}
+    npoint_constants['disable'] = CONFIG_INI.getboolean('nPoint', 'disable')
+    for constant in ['p_gain1', 'd_gain1', 'i_gain1', 'p_gain2', 'd_gain2', 'i_gain2']:
+        npoint_constants[consant] = CONFIG_INI.getfloat('nPoint', constant)
+
+    # zwoCam
+    zwo_constants = {}
+    for constant in ['sci_cam_x', 'sci_cam_y', 'ta_cam_x', 'ta_cam_y', 
+                     'laser_source_power', 'misaligned_threshold',
+                     'time_between_beam_checking', 'laser_source_power']:
+        zwo_constants[constant] = CONFIG_INI.getfloat('Camera', constant)
+    
+    # Calculate exposure time
+    zwo_constants['exposure_time_sc'] = 8000
+    zwo_constants['exposure_time_ta'] = 300
+    if zwo_constants['laser_source_power'] == 200.0:
+        zwo_constants['through_hole_threshold'] = 15000
+    else:
+        zwo_constants['through_hole_threshold'] = 200
+
+    # pico
+    pico_constants = {}
+    for constant in ['r_ratio_1', 'r_ratio_2', 'r_ratio_3', 'r_ratio_4']:
+        pico_constants[constant] = CONFIG_INI.getfloat('Picomotor', constant)
+
+    return npoint_constants, zwo_constants, pico_constants
+
+
+def move_to_hole(cameras, zwo_dict, pico_dict, mode):
+    """ Function to move cameras to the recorded hole location.
+
+    Parameters
+    ----------
+    cameras : tup of ZWOCamera object
+        Tuple with (science camera, tac camera).
+    zwo_dict : dict
+        Dictionary with zwo constants.
+    pico_dict : dict
+        Dictionary with picomotor constants.
+    mode : str
+        'science_cam' or 'ta_cam' for which camera hole to move to.
+    """
+    zwocam = cameras[0]
+    zwocam_tac = cameras[1]
+
+    if mode == 'science_cam':
+        picture_cam = zwocam
+        rx, ry = 'r_ratio_1', 'r_ratio_2'
+        cam_key = 'sci_cam'
+        niter = 0
+    elif mode == 'ta_cam':
+        picture_cam = zwocam_tac
+        rx, ry = 'r_ratio_3', 'r_ratio_4'
+        cam_key = 'ta_cam'
+        # Only one iteration for TA
+        niter = 4
+
+    try:
+        thresh_image = zwocam_tac.take_exposure(exp_time=zwo_dict['exposure_time_ta'])
+        while np.sum(thresh_image) < zwo_dict['through_hole_threshold'] and niter <= 5:
+            niter += 1
+            print("Aligning beam through hole (move {} of 5)...\n".format(niter))
+            #Move picomotors accoringly...
+            image = picture_cam.take_exposure(exp_time=zwo_dict['exposure_time_sc'])
+            beam_x, beam_y = centroid_1dg(image)
+            pico.command('relative_move', int(rx[-1]), -1*(beam_x-zwo_dict['{}_x'.format(cam_key])/pico_dict[rx])
+            time.sleep(2)
+            pico.command('relative_move', int(ry[-1]), -1*(beam_y-zwo_dict['{}_y'.format(cam_key)])/pico_dict[ry])
+            time.sleep(2)
+            thresh_image = zwocam_tac.take_exposure(exp_time=zwo_dict['exposure_time_ta'])
+        if niter == 5 and mode='sience_cam':
+            # log? 
+            print('5 moves was not enough to reach the threshold. Is the beam through the hole?') 
+
+    except Exception as e:
+        print(e)
+        print("An error has occured. Is the beam on the camera?\n")
+
 
 
 ###Creating controller object
 if not disable:
-	global ctrl
-	ctrl = controller_interface.Controller()
-	ctrl.command("loop", 1, 0)
-	ctrl.command("loop", 2, 0)
+	npoint.command("loop", 1, 0)
+	npoint.command("loop", 2, 0)
 else:
 	print("TIP/TILT IS DISABLED\n")
 
 # ###CALIBRATION
-print("Loading calibration...\n")
-try:
-	zwo_cam_tac = ZWOCamera.ZWOCamera()
-	zwo_cam_tac.open_camera("ZWO ASI290MM(1)")
-	zwo_cam = ZWOCamera.ZWOCamera()
-	zwo_cam.open_camera("ZWO ASI290MM(2)") #Open by name
-except:
-	print("There is an issue with the cameras. Please unplug and plug them back in.\n")
+## -- RUN
 
+if __name__ == "__main__":
 #Call main loop
 firstTime = True
+# UMMMM
 while True:
-	mainLoop(firstTime)
-	firstTime = False
-
-
+    mainLoop(firstTime)
+    firstTime = False
 	
-	
-
-
 
