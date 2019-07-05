@@ -223,7 +223,7 @@ class NewportPicomotor:
         """
         
         state_dict = {}
-        for cmd_key in ('home_position', 'exact_move', 'relative_position'):
+        for cmd_key in ('home_position', 'exact_move', 'relative_move'):
             
             message = self._build_message(cmd_key, 'get', axis)
             value = self._send_message(message, 'get') 
