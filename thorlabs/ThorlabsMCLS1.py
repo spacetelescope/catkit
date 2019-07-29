@@ -20,7 +20,7 @@ class ThorlabsMCLS1(LaserSource):
     SLEEP_TIME = 2  # Number of seconds to sleep after turning on laser or changing current.
     log = logging.getLogger(__name__)
 
-    def __init__(self, config_id, *args, **kwargs):
+    def __init__(self, config_id, power_off_on_exit=True, *args, **kwargs):
         """
         Child constructor to add a few hardware specific class attributes. Still calls the super.
         """
@@ -28,7 +28,9 @@ class ThorlabsMCLS1(LaserSource):
         self.nominal_current = None
         self.handle = None
         self.port = None
+        self.power_off_on_exit = power_off_on_exit
         super(ThorlabsMCLS1, self).__init__(config_id, *args, **kwargs)
+
 
     def initialize(self, *args, **kwargs):
         """Starts laser at the nominal_current value from config.ini."""
@@ -50,18 +52,23 @@ class ThorlabsMCLS1(LaserSource):
 
     def close(self):
         """Close laser connection safely"""
+
         if self.laser.fnUART_LIBRARY_isOpen(b"{}".format(self.port)) == 1:
             self.set_channel_enable(self.channel, 0)
 
-            # Check if the other channels are enabled before turning off system enable.
-            turn_off_system_enable = True
-            for i in range(1, 5):
-                if self.is_channel_enabled(i) == 1:
-                    turn_off_system_enable = False
+            if self.power_off_on_exit:
+                print("Checking to power off laser")
+                # Check if the other channels are enabled before turning off system enable.
+                turn_off_system_enable = True
+                for i in range(1, 5):
+                    if self.is_channel_enabled(i) == 1:
+                        turn_off_system_enable = False
 
-            if turn_off_system_enable:
-                self.set_system_enable(0)
-            self.laser.fnUART_LIBRARY_close(self.handle)
+                if turn_off_system_enable:
+                    self.set_system_enable(0)
+                self.laser.fnUART_LIBRARY_close(self.handle)
+            else:
+                print("Power off on exit is False; leaving laser ON.")
         self.handle = None
 
         # Update testbed_state.
