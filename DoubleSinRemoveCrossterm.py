@@ -101,6 +101,9 @@ class DoubleSinRemoveCrossterm(Experiment):
                         # Flat for DM2.
                         dm2_command = flat_command(bias=self.bias, flat_map=self.flat_map, dm_num=2)
 
+                        # Flat for DM1.
+                        #dm1_command = flat_command(bias=self.bias, flat_map=self.flat_map, dm_num=1)
+
                         # Postive sin wave.
                         dm.apply_shape_to_both(sin_command_object, dm2_command)
                         testbed.run_hicat_imaging(self.direct_exposure_time, self.direct_nexps,
@@ -109,3 +112,12 @@ class DoubleSinRemoveCrossterm(Experiment):
                                                   filename=sin_file_name, centering=ImageCentering.psf,
                                                   auto_exposure_mask_size=None,
                                                   **self.kwargs)
+
+                        # Postive sin wave for DM2.
+                        # dm.apply_shape_to_both(dm1_command, sin_command_object)
+                        # testbed.run_hicat_imaging(self.direct_exposure_time, self.direct_nexps,
+                        #                           FpmPosition.direct,
+                        #                           path=p2v_path, exposure_set_name=direct_dirname,
+                        #                           filename=sin_file_name, centering=ImageCentering.psf,
+                        #                           auto_exposure_mask_size=None,
+                        #                           **self.kwargs)
