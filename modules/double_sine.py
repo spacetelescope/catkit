@@ -74,6 +74,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                 file_mode=True, raw_skip=0, path=None, simulator=True,
                                 auto_exposure_time=True,
                                 resume=False, centering=ImageCentering.auto,
+                                dm=1, opposite=False,
                                 **kwargs):
     """
     Takes 3 sets of exposures: "Positive Sin", "Negative Sin", and "Flat", and remove the cross term.
@@ -96,10 +97,15 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     :param resume: (Boolean) Primitive way to resume an experiment that was incomplete, file_mode=True only.
     :param centering: (ImageCentering) Mode pipeline will use to find the center of images and recenter them.
     :param kwargs: Specific keyword arguments passed to the Camera interface.
+    :param dm: Which DM to apply the sine to? Either 1 or 2. The other will be set to flat.
+    :param opposite: Bool; if true then put opposite amplitude sines on both DMs.
     :return:
     If file_mode=False: Numpy image data for final image with crossterm removed.
     If file_mode=True: Nothing is returned.
     """
+
+    dm_to_control = dm
+    dm_to_flatten = 2 if dm==1 else 1
 
     # Aligment speckle specification, only used when alignment_speckle param is True.
     alignment_speckle_spec = SinSpecification(90, 17, quantity(60, units.nanometer), 90)
@@ -130,10 +136,12 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     with testbed.dm_controller() as dm:
 
         # Apply a flat to DM2.
-        dm.apply_shape(flat_command(flat_map=True, dm_num=2), 2)
+        dm.apply_shape(flat_command(flat_map=True, dm_num=2), dm_to_flatten)
 
         # Positive sin wave.
-        dm.apply_shape(sin_command_object, 1)
+        dm.apply_shape(sin_command_object, dm_to_control)
+        if opposite:
+            dm.apply_shape(negative_sin_command_object, dm_to_flatten)
         positive_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
                                                    lyot_stop_position=lyot_stop_position,
                                                    file_mode=file_mode, raw_skip=raw_skip, path=path,
@@ -144,7 +152,9 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                    resume=resume, **kwargs)
 
         # Negative.
-        dm.apply_shape(negative_sin_command_object, 1)
+        dm.apply_shape(negative_sin_command_object, dm_to_control)
+        if opposite:
+            dm.apply_shape(sin_command_object, dm_to_flatten)
         negative_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
                                                    lyot_stop_position=lyot_stop_position,
                                                    file_mode=file_mode, raw_skip=raw_skip, path=path,
@@ -155,7 +165,10 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                    resume=resume, **kwargs)
 
         # Flat (always use PSF image centering).
-        dm.apply_shape(flat_command_object, 1)
+        dm.apply_shape(flat_command_object, dm_to_control)
+        if opposite:
+            dm.apply_shape(flat_command_object, dm_to_flatten)
+
         flat_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
                                                lyot_stop_position=lyot_stop_position,
                                                file_mode=file_mode, raw_skip=raw_skip, path=path,

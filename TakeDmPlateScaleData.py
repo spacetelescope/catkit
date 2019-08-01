@@ -36,6 +36,7 @@ class TakeDmPlateScaleData(Experiment):
                  centering=ImageCentering.auto,
                  auto_exposure_mask_size=None,
                  suffix="dm_plate_scale",
+                 dm=1,
                  **kwargs):
         super(TakeDmPlateScaleData, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.bias = bias
@@ -51,6 +52,7 @@ class TakeDmPlateScaleData(Experiment):
         self.alignment_speckle = alignment_speckle
         self.centering = centering
         self.auto_exposure_mask_size = auto_exposure_mask_size
+        self.dm=dm
         self.kwargs = kwargs
 
     def experiment(self):
@@ -76,4 +78,5 @@ class TakeDmPlateScaleData(Experiment):
                                                             path=os.path.join(ncycle_path, "coron"),
                                                             simulator=False,
                                                             lyot_stop_position=self.lyot_stop_position,
+                                                            dm=self.dm,
                                                             **self.kwargs)
