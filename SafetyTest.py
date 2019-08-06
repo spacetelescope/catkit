@@ -60,11 +60,18 @@ class HumidityTemperatureTest(SafetyTest):
     max_temp = CONFIG_INI.getfloat("safety", "max_temp")
 
     def check(self):
-        if "TSP01GUI.exe" in (p.name() for p in psutil.process_iter()):
-            status_msg = "Humidity and Temperature test failed: Close the Thorlabs GUI and run again. " \
-                         "It interferes with our code."
-            safety_log.error(status_msg)
-            return False, status_msg
+        for p in psutil.process_iter():
+            try:
+                if p.name() == "TSP01GUI.exe":
+                    status_msg = "Humidity and Temperature test failed: Close the Thorlabs GUI and run again. " \
+                                 "It interferes with our code."
+                    safety_log.error(status_msg)
+                    return False, status_msg
+            except psutil.NoSuchProcess:
+                # We don't care whether zombie processes (never present Windows).
+                continue
+
+
 
         temp, humidity = testbed.temp_sensor().get_temp_humidity()
         temp_ok = self.min_temp <= temp <= self.max_temp
