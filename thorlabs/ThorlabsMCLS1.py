@@ -20,7 +20,7 @@ class ThorlabsMCLS1(LaserSource):
     SLEEP_TIME = 2  # Number of seconds to sleep after turning on laser or changing current.
     log = logging.getLogger(__name__)
 
-    def __init__(self, config_id, power_off_on_exit=True, *args, **kwargs):
+    def __init__(self, config_id, power_off_on_exit=False, *args, **kwargs):
         """
         Child constructor to add a few hardware specific class attributes. Still calls the super.
         """
@@ -149,3 +149,8 @@ class ThorlabsMCLS1(LaserSource):
         self.laser.fnUART_LIBRARY_Get(self.handle, command, response_buffer)
         result = int(re.findall("\d+", response_buffer)[0])
         return result
+
+    def disable_channel(self, channel):
+        if self.is_channel_enabled(channel) == 1:
+            turn_off_system_enable = False
+
