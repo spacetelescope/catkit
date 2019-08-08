@@ -15,7 +15,8 @@ import os
 
 
 #if __name__ == "__main__":
-def auto_focus(filePath, start_pos, positions, incr, im_size, threshold, im_name):#   dataDir, 
+def auto_focus(filePath, start_pos, positions, incr, im_size, threshold, im_name):#   dataDir, can calculate im_size
+# This would get imported and called in the calabration notebook
 
     print('Starting autofocus analysis')
     """
@@ -23,8 +24,9 @@ def auto_focus(filePath, start_pos, positions, incr, im_size, threshold, im_name
     positions = 20 is this the number of positions? Is that equal to the number of exposures?
     incr = 0.05
     cam_z = 45.1
-    start_pos = cam_z + positions*incr
+    start_pos = cam_z + positions*incr ??????
     im_size = 1024
+    im_size = np.shape(image) -or something more like what I did for post flash-
     threshold = 100 ##What is this the threshold of? Where does it come from? Does it change?
     dataDir = '11_2018-2-16'
     filePath = '../data/setup/autofocus'
