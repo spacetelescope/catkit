@@ -150,7 +150,3 @@ class ThorlabsMCLS1(LaserSource):
         result = int(re.findall("\d+", response_buffer)[0])
         return result
 
-    def disable_channel(self, channel):
-        if self.is_channel_enabled(channel) == 1:
-            turn_off_system_enable = False
-
