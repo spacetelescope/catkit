@@ -25,9 +25,7 @@ def usb_except(function):
         try:
             return function(self, *args, **kwargs)
         except usb.core.USBError as e:
-            self.logger.error("There's a timeout or a busy resource.")
-            self.logger.error(e)
-            raise e
+            raise Exception('{} : was caught due to a USB connection error.'.format(e))
 
     return wrapper
 
@@ -75,7 +73,6 @@ class nPointTipTilt():
         product_id = 24596
         self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
         if self.dev == None:
-            self.logger.error('No device to connect to.')
             self.close_logger()
             raise NameError("Go get the device sorted you knucklehead.")
              
@@ -155,12 +152,10 @@ class nPointTipTilt():
 
         elif cmd_type == 'set':
             if value == None:
-                self.logger.error('There was no value set for this command.')
                 raise ValueError("Value is required.")
 
             if cmd_key == 'loop':
                 if value not in [1,0]:
-                    self.logger.error('Loop requires a 1/0 value.')
                     raise ValueError("1 or 0 value is required for loop.")
 
                 # Convert to hex
@@ -172,7 +167,6 @@ class nPointTipTilt():
                     value = float(value)
 
                 elif type(value) not in [float, double]:
-                    self.logger.error('Gain requires float/int value.')
                     raise TypeError("Int or float value is required for gain.")
                 
                 # Convert to hex double (64 bit)
@@ -228,7 +222,6 @@ class nPointTipTilt():
         time_elapsed = time.time() - start
         
         if len(resp) < 4:
-            logging.error("No response was ever read.")
             raise ValueError("No response was ever read.")
             
         else:
@@ -318,7 +311,6 @@ class nPointTipTilt():
         if value == set_value:
             self.logger.info('Command successful: {} == {}.'.format(value, set_value))
         else:
-            self.logger.info('Command NOT successful : {} != {}.'.format(value, set_value))
             raise ValueError('Command NOT successful : {} != {}.'.format(value, set_value))
 
     @usb_except
