@@ -45,18 +45,13 @@ class nPointTipTilt():
 
         """Initial function to configure logging and find the device."""
          
-        if os.environ.get("INTERFACES") != None:
-            log_path = os.path.join(os.environ.get("INTERFACES"), "logs")
-        else:
-            log_path = '.'
-       
         # Set up the logging.
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
         self.logger = logging.getLogger('nPoint-{}'.format(str_date))
         self.logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = os.path.join(log_path, 'npoint_tiptilt_log_{}.txt'.format(str_date))
+        log_file = 'npoint_tiptilt_log_{}.txt'.format(str_date)
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
