@@ -289,10 +289,10 @@ class NewportPicomotor:
 
         if cmd_key == 'reset':
             if axis != None:
-                self.logger.info('Nothing will happen to the specified axis while we reset.')
+                raise ValueError('No axis is needed for a reset.')
                 
             if value != None:
-                self.logger.info('Nothing will happen to the specified value while we reset.')
+                raise ValueError('No value is needed for a reset.')
 
             message = address 
 
@@ -300,7 +300,7 @@ class NewportPicomotor:
             if axis == None:
                 raise ValueError("This command requires an axis.")
             elif value != None:
-                self.logger.info('Nothing will happen to the specified value while we check stuff.')
+                raise ValueError('No value can be set during a status check.')
             message = '{}{}?'.format(int(axis), address)
         
         elif cmd_type == 'set': 
