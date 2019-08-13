@@ -21,9 +21,7 @@ def zwo_except(function):
         try:
             return function(self, *args, **kwargs)
         except (zwoasi.ZWO_Error, zwoasi.ZWO_IOError, zwoasi.ZWO_CaptureError) as e:
-            self.logger.error("There's a ZWO-specific error.")
-            self.logger.error(e)
-            raise e
+            raise Exception('{} : was caught do to a ZWO/camera specific error.'.format(e))
     return wrapper
 
 
@@ -73,7 +71,6 @@ class ZWOCamera:
         
         # Unforseen complications.
         except Exception as e:
-            logger.error(e)
             raise e
         
         self.logger.info('Camera library instantiated and logging online.')
@@ -137,7 +134,6 @@ class ZWOCamera:
             self.name = self.camera.get_camera_property()['Name']
         
         else:
-            self.logger.error('The camera you specified : {}, is not currently connected.'.format(camera_name))
             raise NameError('The camera you specified : {}, is not currently connected.'.format(camera_name))
     
         self.logger.info('Connection to {} created.'.format(self.name))
@@ -200,7 +196,6 @@ class ZWOCamera:
                 v_min = np.median(image) - factor*np.std(image)
                 v_max = np.median(image) + factor*np.std(image)
             else:
-                self.logger.warning("In order to use the 'x-std' normalization you need an int. Try '3-std'.")
                 raise ValueError("In order to use the 'x-std' normalization you need an int. Try '3-std'.")
         
         elif ',' in norm:
@@ -208,7 +203,6 @@ class ZWOCamera:
                 v_min = float(norm.split(',')[0])
                 v_max = float(norm.split(',')[1])
             except ValueError:
-                self.logger.warning("In order to use the 'x,y' normalization you need two numbers. Try '-2.1,400'")
                 raise ValueError("In order to use the 'x,y' normalization you need two numbers. Try '-2.1,400'")
         
         elif norm == 'min/max':
@@ -219,7 +213,6 @@ class ZWOCamera:
             v_min, v_max = None, None
 
         else:
-            self.logger.warning("The normalization scheme you tried doesn't exist.")
             raise NotImplementedError("The normalization scheme you tried doesn't exist.")
 
         # Save it

@@ -33,8 +33,7 @@ def http_except(function):
         try:
             return function(self, *args, **kwargs)
         except (IncompleteRead, HTTPError) as e:
-            self.logger.error("The page timed out with : {}.".format(e))
-            raise Exception 
+            raise Exception('{} : was caught due to issues connecting to the webpage.'.format(e))
 
     return wrapper
 
@@ -71,7 +70,6 @@ class NewportPicomotor:
         try:
             urlopen('http://{}'.format(self.ip), timeout=60)
         except (IncompleteRead, HTTPError, Exception) as e:
-            self.logger.error('The controller IP address is not responding.')
             self.close_logger()
             raise NameError("The controller IP address is not responding.")
 
@@ -304,7 +302,6 @@ class NewportPicomotor:
 
         if cmd_type == 'get':
             if axis == None:
-                self.logger.error("This command requires an axis.")
                 raise ValueError("This command requires an axis.")
             elif value != None:
                 self.logger.info('Nothing will happen to the specified value while we check stuff.')
@@ -312,13 +309,10 @@ class NewportPicomotor:
         
         elif cmd_type == 'set': 
             if axis == None:
-                self.logger.error("This command requiers an axis.")
                 raise ValueError("This command requires an axis.")
             elif value == None:
-                self.logger.error("This command requires a value.")
                 raise ValueError("This command requires a value.")
             elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > 2147483647:
-                self.logger.error('You can only move 2147483647 in any direction.')
                 raise ValueError('You can only move 2147483647 in any direction.')
             else:
                 message = '{}{}{}'.format(int(axis), address, int(value))
