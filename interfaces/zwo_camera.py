@@ -42,7 +42,7 @@ class ZWOCamera:
         self.logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = 'zwo_camera_log_{}.txt'.format(str_date)
+        log_file = 'zwo_camera_log_{}.log'.format(str_date)
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
