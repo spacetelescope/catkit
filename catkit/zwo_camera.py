@@ -28,7 +28,7 @@ def zwo_except(function):
 class ZWOCamera:
     """Class for the ZWOCamera. """
     
-    def __init__(self):
+    def __init__(self, camera='default'):
         """ Init function to set up logging and instantiate the camera
         libraries."""
         
@@ -68,6 +68,22 @@ class ZWOCamera:
             raise e
         
         self.logger.info('Camera library instantiated and logging online.')
+        
+        if camera_name=='default':
+            # Open first camera connection 
+            self.camera = zwoasi.Camera(0)
+            self.name = self.camera.get_camera_property()['Name']
+        
+        elif camera_name in zwoasi.list_cameras():
+            # Set up connection to named camera
+            camera_index = zwoasi.list_cameras().index(camera_name)
+            self.camera = zwoasi.Camera(camera_index)
+            self.name = self.camera.get_camera_property()['Name']
+        
+        else:
+            raise NameError('The camera you specified : {}, is not currently connected.'.format(camera_name))
+    
+        self.logger.info('Connection to {} created.'.format(self.name))
 
     
     def __del__(self):
@@ -107,7 +123,7 @@ class ZWOCamera:
         return cameras
 
     @zwo_except
-    def open_camera(self, camera_name='default'):
+    def _open_camera(self, camera_name):
         """ Opens a connection to the camera. 
         
         Parameters

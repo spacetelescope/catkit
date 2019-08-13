@@ -42,7 +42,7 @@ class nPointTipTilt():
     should close the connection when the time is right.
     """
 
-    def __init__(self):
+    def __init__(self, config_params='default'):
 
         """Initial function to configure logging and find the device."""
          
@@ -64,19 +64,23 @@ class nPointTipTilt():
         self.logger.addHandler(ch)
         
         # Pull device specifics from config file
-        config_file = os.environ.get('NPOINT_CONFIG')
-        if config_file == None:
-            raise NameError('No available config to specify npoint connection.')
+        if config_params == 'default':
+            config_file = os.environ.get('CATKIT_CONFIG')
+            if config_file == None:
+                raise NameError('No available config to specify npoint connection.')
         
-        config = configparser.ConfigParser()
-        config.read(config_file)
+            config = configparser.ConfigParser()
+            config.read(config_file)
 
-        vendor_id = config.get('npoint_tiptilt', 'vendor_id')
-        product_id = config.get('npoint_tiptilt', 'product_id')
-
+            self.vendor_id = config.get('npoint_tiptilt', 'vendor_id')
+            self.product_id = config.get('npoint_tiptilt', 'product_id')
+        
+        else:
+            self.vendor_id = config_params[0]
+            self.product_id = config_params[1]
+        
         # Instantiate the device
-        # Vendor ID and Product ID for our specific controller for now
-        self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
+        self.dev = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id)
         if self.dev == None:
             self.close_logger()
             raise NameError("Go get the device sorted you knucklehead.")
