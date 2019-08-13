@@ -32,13 +32,9 @@ class ZWOCamera:
         """ Init function to set up logging and instantiate the camera
         libraries."""
         
-        if os.environ.get("INTERFACES") != None:
-            log_path = os.path.join(os.environ.get("INTERFACES"), "logs")
-            self.img_path = os.path.join(os.environ.get("INTERFACES"), "images")
-            self.lib_path = os.path.join(os.environ.get("INTERFACES"), "libraries")
-            print(self.lib_path)
-        else:
-            raise FileNotFoundError("You need to export the 'INTERFACES' environment variable.")
+        camera_library_file = os.environ.get("CAMERA_LIBRARY")
+        if camera_library_file == None:
+            raise FileNotFoundError("You need to export the 'CAMERA_LIBRARY' environment variable.")
 
         # Logging
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
@@ -46,7 +42,7 @@ class ZWOCamera:
         self.logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = os.path.join(log_path, 'zwo_camera_log_{}.txt'.format(str_date))
+        log_file = 'zwo_camera_log_{}.txt'.format(str_date)
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
@@ -65,9 +61,7 @@ class ZWOCamera:
         
         # If it isn't, read in the library file
         except AttributeError:
-            cam_lib_file = os.path.join(self.lib_path, 'ASICamera2.dll')
-            print(cam_lib_file)
-            zwoasi.init(cam_lib_file)
+            zwoasi.init(camera_library_file)
         
         # Unforseen complications.
         except Exception as e:
@@ -185,7 +179,7 @@ class ZWOCamera:
             max of the image, and None, for no normalization. Defaults to '3-std'.
         output_name, str, optional
             Name of the output image. Includes path. Defaults to
-            'images/camera_test.png'
+            'camera_test.png'
         """
 
         # Set the appropriate scale normalization
@@ -218,9 +212,9 @@ class ZWOCamera:
         # Save it
         plt.imshow(image, vmin=v_min, vmax=v_max, cmap=colors)
         plt.colorbar()
-        plt.savefig(os.path.join(self.img_path, output_name))
+        plt.savefig(output_name)
         plt.clf()
-        self.logger.info('Image saved to {}.'.format(os.path.join(self.img_path, output_name)))
+        self.logger.info('Image saved to {}.'.format(output_name))
         
     def write_out_image(self, image, output_name='camera_test.fits'):
         """ Writes out the camera image to a FITS file.
@@ -231,7 +225,7 @@ class ZWOCamera:
             Np.array image output from `take_exposure`.
         output_name : str, optional
             Name of the output image. Includes path. Defaults to
-            'images/camera_test.fits'.
+            'camera_test.fits'.
         
         Notes
         -----
@@ -245,7 +239,7 @@ class ZWOCamera:
         
         # Write out the file
         hdu = fits.PrimaryHDU(data=image, header=hdr)
-        hdu.writeto(os.path.join(self.img_path, output_name), overwrite=True)
+        hdu.writeto(output_name, overwrite=True)
 
     def _close_camera(self):
         """Closes the camera."""

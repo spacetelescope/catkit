@@ -44,17 +44,13 @@ class NewportPicomotor:
         """ Initial function to set up logging and 
         set the IP address for the controller."""
 
-        if os.environ.get("INTERFACES") != None:
-            log_path = os.path.join(os.environ.get("INTERFACES"), "logs")
-        else:
-            log_path = '.'
 
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
         self.logger = logging.getLogger('Newport-{}'.format(str_date))
         self.logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = os.path.join(log_path, 'newport_interface_log_{}.txt'.format(str_date))
+        log_file = 'newport_interface_log_{}.txt'.format(str_date)
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
