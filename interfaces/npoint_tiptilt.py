@@ -1,5 +1,6 @@
 ## -- IMPORTS
 
+import configparser
 import datetime
 import functools
 import logging
@@ -62,10 +63,19 @@ class nPointTipTilt():
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
         
+        # Pull device specifics from config file
+        config_file = os.environ.get('NPOINT_CONFIG')
+        if config_file == None:
+            raise NameError('No available config to specify npoint connection.')
+        
+        config = configparser.ConfigParser()
+        config.read(config_file)
+
+        vendor_id = config.get('npoint_tiptilt', 'vendor_id')
+        product_id = config.get('npoint_tiptilt', 'product_id')
+
         # Instantiate the device
         # Vendor ID and Product ID for our specific controller for now
-        vendor_id = 1027
-        product_id = 24596
         self.dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
         if self.dev == None:
             self.close_logger()
