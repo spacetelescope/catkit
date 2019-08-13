@@ -337,8 +337,8 @@ class NewportPicomotor:
         """
         
         form_data = urlencode({'cmd': message, 'submit': 'Send'})
-        html = urlopen('http://{}/cmd_send.cgi?{}'.format(self.ip, form_data))
-        resp = str(html.read())
+        with urlopen('http://{}/cmd_send.cgi?{}'.format(self.ip, form_data)) as html:
+            resp = str(html.read())
         
         if cmd_type == 'get':
             # Pull out the response from the html on the page 
