@@ -40,10 +40,9 @@ def http_except(function):
 class NewportPicomotor:
     """ This class handles all the picomotor stufff. """
 
-    def __init__(self):
+    def __init__(self, ip='default', timeout=60):
         """ Initial function to set up logging and 
         set the IP address for the controller."""
-
 
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
         self.logger = logging.getLogger('Newport-{}'.format(str_date))
@@ -61,15 +60,30 @@ class NewportPicomotor:
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
         
-        # Set IP address 
-        self.ip = '192.168.192.151'
+        # Initialize some command parameters
+        self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
+                         'relative_move': 'PR', 'reset': 'RS'}
+        
+        # Pull info from config
+        config_file = os.environ.get('CATKIT_CONFIG')
+        if config_file == None:
+            raise NameError('No available config to specify newport IP or max step.')
+        config = configparser.ConfigParser()
+        config.read(config_file)
+        
+        self.max_step = config.get('newport_picomotor', 'max_step')
+
+        # Set IP address
+        if ip == 'default':
+            self.ip = config.get('newport_picomotor', 'ip_address')
+
         try:
-            urlopen('http://{}'.format(self.ip), timeout=60)
+            urlopen('http://{}'.format(self.ip), timeout=timeout)
         except (IncompleteRead, HTTPError, Exception) as e:
             self.close_logger()
             raise NameError("The controller IP address is not responding.")
 
-        self.logger.info('IP address online, and logging instantiated.')
+        self.logger.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
 
 
     def __enter__(self):
@@ -78,8 +92,8 @@ class NewportPicomotor:
         return self
 
     def __exit__(self, ex_type, ex_value, traceback):
-        """ Exit function to open loop, reset gain parameters to 0, close the
-        logging handler, and maybe someday close the controller intelligently."""
+        """ Exit function to open loop, reset parameters to 0, close the
+        logging handler."""
 
         self.close()
     
@@ -92,14 +106,14 @@ class NewportPicomotor:
         """ Function for the close behavior. Return every parameter to zero
         and shut down the logging."""
 
-        self.close_controller()
+        self.reset_controller()
         self.close_logger()
 
-    def close_controller(self):
-        """Function for the close controller behavior."""
+    def reset_controller(self):
+        """Function to reset the controller behavior."""
 
         for cmd_key in ('home_position', 'exact_move'):
-            for axis in (1,2):
+            for axis in '1234':
                 self.command(cmd_key, axis, 0)
         
     def close_logger(self):
@@ -129,27 +143,23 @@ class NewportPicomotor:
         set_message = self._build_message(cmd_key, 'set', axis, value)
         get_message = self._build_message(cmd_key, 'get', axis)
         
-        if cmd_key == 'relative_move':
-            init_value = self._send_message(get_message, 'get')
-        else:
-            init_value = 0
-        self._send_message(set_message, 'set')
-        set_value = float(self._send_message(get_message, 'get')) - float(init_value)
+        initial_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
+        set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
         
         if float(set_value) != value:
             self.logger.error('Something is wrong, {} != {}'.format(set_value, value)) 
          
         self.logger.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
     
-    def convert_move_to_pixel(self, img1, img2, move, axis):
+    def convert_move_to_pixel(self, img_before, img_after, move, axis):
         """ After two images taken some x_move or y_move apart, calculate how
         the picomoter move corresponds to pixel move.
         
         Parameters
         ----------
-        img1 : np.array
+        img_before : np.array
             Image before move.
-        img2 : np.array
+        img_after : np.array
             Image after move.
         move : int
             How much the picomotor moved.
@@ -168,8 +178,8 @@ class NewportPicomotor:
             The difference between the angle from x and the picomotor axis.
         """
 
-        x1, y1 = centroid_1dg(img1)
-        x2, y2 = centroid_1dg(img2)
+        x1, y1 = centroid_1dg(img_before)
+        x2, y2 = centroid_1dg(img_after)
 
         x_move = x1 - x2
         y_move = y1 - y2
@@ -179,24 +189,18 @@ class NewportPicomotor:
         
         r_ratio = r/move
         
-        if axis == 1:
+        if axis in '13':
             delta_theta = theta - 0
-            self.r_ratio_1 = r_ratio
-            self.delta_theta_1 = delta_theta
-        elif axis == 2:
+        
+        elif axis in '24':
             delta_theta = theta - np.pi/2
-            self.r_ratio_2 = r_ratio
-            self.delta_theta_2 = delta_theta
-        elif axis == 3:
-            delta_theta = theta - 0
-            self.r_ratio_3 = r_ratio
-            self.delta_theta_3 = delta_theta
-        elif axis ==4:
-            delta_theta = theta - np.pi/2
-            self.r_ratio_4 = r_ratio
-            self.delta_theta_4 = delta_theta
+        
         else:
             raise NotImplementedError('Only axis 1 through 4 are defined.')
+        
+        self.calibration = {} 
+        self.calibration['r_ratio_{}'.format(axis)] = r_ratio
+        self.calibration['delta_theta_{}'.format(axis)] = delta_theta
         
         return r, theta, r_ratio, delta_theta
     
@@ -282,10 +286,7 @@ class NewportPicomotor:
             The message to send to the controller site.
         """
         
-        cmd_dict = {'home_position' : 'DH', 'exact_move' : 'PA', 
-                    'relative_move' : 'PR', 'reset' : 'RS'}
-        
-        address = cmd_dict[cmd_key]
+        address = self.cmd_dict[cmd_key]
 
         if cmd_key == 'reset':
             if axis != None:
@@ -308,8 +309,8 @@ class NewportPicomotor:
                 raise ValueError("This command requires an axis.")
             elif value == None:
                 raise ValueError("This command requires a value.")
-            elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > 2147483647:
-                raise ValueError('You can only move 2147483647 in any direction.')
+            elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > self.max_step:
+                raise ValueError('You can only move {} in any direction.'.format(self.max_step))
             else:
                 message = '{}{}{}'.format(int(axis), address, int(value))
             
@@ -338,6 +339,7 @@ class NewportPicomotor:
         
         if cmd_type == 'get':
             # Pull out the response from the html on the page 
+            # The output will be nestled between --> and \\r
             response = resp.split('response')[1].split('-->')[1].split('\\r')[0]
 
             return response
