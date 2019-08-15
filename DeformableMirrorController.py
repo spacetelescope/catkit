@@ -12,8 +12,7 @@ from abc import ABCMeta, abstractmethod
    This controller cannot control the two DMs independently, it will always send a command to both."""
 
 
-class DeformableMirrorController(object):
-    __metaclass__ = ABCMeta
+class DeformableMirrorController(object, metaclass=ABCMeta):
     log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):

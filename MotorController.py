@@ -9,8 +9,7 @@ import logging
 """Interface for a motor controller."""
 
 
-class MotorController(object):
-    __metaclass__ = ABCMeta
+class MotorController(object, metaclass=ABCMeta):
     log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):

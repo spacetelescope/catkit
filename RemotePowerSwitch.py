@@ -8,9 +8,7 @@ from abc import ABCMeta, abstractmethod
 """Interface for remote controlled power switch."""
 
 
-class RemotePowerSwitch(object):
-    __metaclass__ = ABCMeta
-
+class RemotePowerSwitch(object, metaclass=ABCMeta):
     def __init__(self, config_id, *args, **kwargs):
         self.config_id = config_id
 

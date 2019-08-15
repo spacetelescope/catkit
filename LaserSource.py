@@ -9,8 +9,7 @@ from abc import ABCMeta, abstractmethod
 """Interface for a laser source."""
 
 
-class LaserSource(object):
-    __metaclass__ = ABCMeta
+class LaserSource(object, metaclass=ABCMeta):
     log = logging.getLogger()
 
     def __init__(self, config_id, *args, **kwargs):

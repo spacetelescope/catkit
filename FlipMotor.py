@@ -9,8 +9,7 @@ import logging
 """Interface for a two state flip motor."""
 
 
-class FlipMotor(object):
-    __metaclass__ = ABCMeta
+class FlipMotor(object, metaclass=ABCMeta):
     log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):

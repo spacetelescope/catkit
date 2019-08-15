@@ -7,10 +7,8 @@ from abc import ABCMeta, abstractmethod
 import logging
 
 
-class Instrument(object):
+class Instrument(object, metaclass=ABCMeta):
     """Generic interface to any instrument, implements a context manager."""
-
-    __metaclass__ = ABCMeta
     log = logging.getLogger(__name__)
 
     def __new__(cls, config_id):

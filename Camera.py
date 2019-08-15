@@ -10,8 +10,7 @@ from abc import ABCMeta, abstractmethod
 """Abstract base class for all cameras. Implementations of this class also become context managers."""
 
 
-class Camera(object):
-    __metaclass__ = ABCMeta
+class Camera(object, metaclass=ABCMeta):
     log = logging.getLogger(__name__)
 
     def __init__(self, config_id, *args, **kwargs):

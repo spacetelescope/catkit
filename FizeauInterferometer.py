@@ -9,9 +9,7 @@ from abc import ABCMeta, abstractmethod
 """Abstract base class for all Fizeau Interferometers. Implementations of this class also become context managers."""
 
 
-class FizeauInterferometer(object):
-    __metaclass__ = ABCMeta
-
+class FizeauInterferometer(object, metaclass=ABCMeta):
     def __init__(self, config_id, *args, **kwargs):
         """Opens connection with camera sets class attributes for 'config_id'"""
         self.config_id = config_id

@@ -8,9 +8,7 @@ from abc import ABCMeta, abstractmethod
 """Interface for backup power supply (ex: UPS)"""
 
 
-class BackupPower(object):
-    __metaclass__ = ABCMeta
-
+class BackupPower(object, metaclass=ABCMeta):
     def __init__(self, config_id, *args, **kwargs):
         self.config_id = config_id
 
