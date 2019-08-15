@@ -13,13 +13,11 @@ import time
 import logging
 
 
-class Experiment(object):
+class Experiment(object, metaclass=ABCMeta):
     """
     Abstract base class that instills safety monitoring into any class that inherits it.  Subclasses
     need to implement a function called "experiment()", which is designated as an abstractmethod here.
     """
-
-    __metaclass__ = ABCMeta
     name = None
 
     log = logging.getLogger(__name__)

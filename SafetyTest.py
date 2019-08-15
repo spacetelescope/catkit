@@ -27,9 +27,7 @@ safety_log_handler.setLevel(logging.WARNING)
 safety_log.addHandler(safety_log_handler)
 
 
-class SafetyTest(object):
-    __metaclass__ = ABCMeta
-
+class SafetyTest(object, metaclass=ABCMeta):
     name = None
     warning = False
 
