@@ -12,7 +12,7 @@ import logging
 
 # BMC is Boston's library and it only works on windows.
 try:
-    from .sdk.python2.v3_5_1 import bmc
+    from .sdk.python3.v3_5_1 import bmc
 except ImportError:
     pass
 
