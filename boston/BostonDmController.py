@@ -31,7 +31,7 @@ class BostonDmController(DeformableMirrorController):
         # Connect to DM.
         dm = bmc.BmcDm()
         serial_num = CONFIG_INI.get(self.config_id, "serial_num")
-        dm.open_dm(bytes(serial_num, "utf-8"))
+        dm.open_dm(serial_num)
         command_length = dm.num_actuators()
 
         if command_length == 0:
