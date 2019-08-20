@@ -20,7 +20,7 @@ class ThorlabsMCLS1(LaserSource):
     SLEEP_TIME = 2  # Number of seconds to sleep after turning on laser or changing current.
     log = logging.getLogger(__name__)
 
-    def __init__(self, config_id, power_off_on_exit=False, *args, **kwargs):
+    def __init__(self, config_id, device_id=None, power_off_on_exit=False, *args, **kwargs):
         """
         Child constructor to add a few hardware specific class attributes. Still calls the super.
         """
@@ -29,6 +29,7 @@ class ThorlabsMCLS1(LaserSource):
         self.handle = None
         self.port = None
         self.power_off_on_exit = power_off_on_exit
+        self.device_id = device_id if device_id else CONFIG_INI.get(config_id, "device_id")
         super(ThorlabsMCLS1, self).__init__(config_id, *args, **kwargs)
 
 
@@ -42,6 +43,8 @@ class ThorlabsMCLS1(LaserSource):
         self.laser = cdll.LoadLibrary(path)
         self.port = self.find_com_port()
         self.handle = self.laser.fnUART_LIBRARY_open(self.port.encode(), 115200, 3)
+        if self.handle < 0:
+            raise IOError("{} connection failure on port: '{}'".format(self.config_id, self.port))
 
         # Set the initial current to nominal_current and enable the laser.
         self.set_current(self.nominal_current, sleep=False)
@@ -68,6 +71,7 @@ class ThorlabsMCLS1(LaserSource):
                 self.laser.fnUART_LIBRARY_close(self.handle)
             else:
                 print("Power off on exit is False; leaving laser ON.")
+
         self.handle = None
 
         # Update testbed_state.
@@ -100,7 +104,10 @@ class ThorlabsMCLS1(LaserSource):
         return float(re.findall("\d+\.\d+", response_buffer)[0])
 
     def find_com_port(self):
-        """Queries the dll for the com port it is using."""
+        """Queries the dll for the list of all com devices."""
+        if not self.device_id:
+            raise ValueError("{}: requires a device ID to find a com port to connect to.".format(self.config_id))
+
         response_buffer = ("0" * 255).encode()
         self.laser.fnUART_LIBRARY_list(response_buffer, 255)
         response_buffer = response_buffer.decode()
@@ -108,11 +115,10 @@ class ThorlabsMCLS1(LaserSource):
         for i, thing in enumerate(split):
 
             # The list has a format of "Port, Device, Port, Device". Once we find device named VCPO, minus 1 for port.
-            if thing == "\\Device\\VCP0":
+            if thing == self.device_id:
                 return split[i - 1]
 
-        # Return None keyword if not found.
-        return None
+        raise IOError("{}: no port found for '{}'".format(self.config_id, self.device_id))
 
     def set_channel_enable(self, channel, value):
         """
@@ -148,6 +154,4 @@ class ThorlabsMCLS1(LaserSource):
         response_buffer = ("0" * 255).encode()
         self.laser.fnUART_LIBRARY_Get(self.handle, command, response_buffer)
         response_buffer = response_buffer.decode()
-        result = int(re.findall("\d+", response_buffer)[0])
-        return result
-
+        return bool(int(re.findall("\d+", response_buffer)[0]))
