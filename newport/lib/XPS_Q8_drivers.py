@@ -3,7 +3,7 @@
 #  for XPS-Q8 Firmware Precision Platform V1.4.x
 #
 #  See Programmer's manual for more information on XPS function calls
-from __future__ import print_function
+
 import socket
 
 class XPS:
@@ -24,8 +24,8 @@ class XPS:
 	# Send command and get return
 	def __sendAndReceive (self, socketId, command):
 		try:
-			XPS.__sockets[socketId].send(command)
-			ret = XPS.__sockets[socketId].recv(1024)
+			XPS.__sockets[socketId].send(command.encode())
+			ret = XPS.__sockets[socketId].recv(1024).decode()
 			while (ret.find(',EndOfAPI') == -1):
 				ret += XPS.__sockets[socketId].recv(1024)
 		except socket.timeout:
