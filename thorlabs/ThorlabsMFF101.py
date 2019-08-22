@@ -4,7 +4,10 @@ from __future__ import (absolute_import, division,
 # noinspection PyUnresolvedReferences
 from builtins import *
 
-import ftd2xx
+try:
+    import ftd2xx
+except Exception as error:  # Raises OSError if it can't open driver lib
+    raise ImportError("Missing libftd2xx driver? Download from https://www.ftdichip.com/Drivers/D2XX.htm") from error
 import ftd2xx.defines as constants
 import time
 import logging

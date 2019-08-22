@@ -24,13 +24,8 @@ class ThorlabsTSP01():
         full_path = os.path.join(current_dir,
                                  "tsp01_resources",
                                  "src", "thorlabs_sensor_cs", "bin", "Release", "thorlabs_sensor_cs.exe " + self.serial_number)
-        output = subprocess.check_output(full_path)
 
-        if 'error' in output:
-            raise RuntimeError(output)
-        # Remove newlines.
-        for remove_me in ["\r", "\n"]:
-            output = output.replace(remove_me, "")
+        output = subprocess.check_output(full_path, universal_newlines=True)
 
         values = output.split(" ")
         if len(values) < 2:

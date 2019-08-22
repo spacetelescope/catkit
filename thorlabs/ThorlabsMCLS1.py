@@ -39,9 +39,9 @@ class ThorlabsMCLS1(LaserSource):
         path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "lib", "uart_library_win64.dll")
 
         # noinspection PyArgumentList
-        self.laser = cdll.LoadLibrary(bytes(path, 'utf-8'))
+        self.laser = cdll.LoadLibrary(path)
         self.port = self.find_com_port()
-        self.handle = self.laser.fnUART_LIBRARY_open(b"{}".format(self.port), 115200, 3)
+        self.handle = self.laser.fnUART_LIBRARY_open(self.port.encode(), 115200, 3)
 
         # Set the initial current to nominal_current and enable the laser.
         self.set_current(self.nominal_current, sleep=False)
@@ -52,8 +52,7 @@ class ThorlabsMCLS1(LaserSource):
 
     def close(self):
         """Close laser connection safely"""
-
-        if self.laser.fnUART_LIBRARY_isOpen(b"{}".format(self.port)) == 1:
+        if self.laser.fnUART_LIBRARY_isOpen(self.port.encode()) == 1:
             self.set_channel_enable(self.channel, 0)
 
             if self.power_off_on_exit:
@@ -81,7 +80,7 @@ class ThorlabsMCLS1(LaserSource):
         if self.get_current() != value:
             self.log.info("Laser is changing amplitude...")
             self.set_active_channel(self.channel)
-            current_command_string = b"current={}\r".format(value)
+            current_command_string = "current={}\r".format(value).encode()
             self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
             if sleep:
                 time.sleep(self.SLEEP_TIME)
@@ -93,17 +92,18 @@ class ThorlabsMCLS1(LaserSource):
     def get_current(self):
         """Returns the value of the laser's current."""
         self.set_active_channel(self.channel)
-        command = b"current?\r"
-        response_buffer = b"0" * 255
+        command = "current?\r".encode()
+        response_buffer = ("0" * 255).encode()
         self.laser.fnUART_LIBRARY_Get(self.handle, command, response_buffer)
-
+        response_buffer = response_buffer.decode()
         # Use regex to find the float value in the response.
         return float(re.findall("\d+\.\d+", response_buffer)[0])
 
     def find_com_port(self):
         """Queries the dll for the com port it is using."""
-        response_buffer = b"0" * 255
+        response_buffer = ("0" * 255).encode()
         self.laser.fnUART_LIBRARY_list(response_buffer, 255)
+        response_buffer = response_buffer.decode()
         split = response_buffer.split(",")
         for i, thing in enumerate(split):
 
@@ -121,7 +121,7 @@ class ThorlabsMCLS1(LaserSource):
         :param value: Integer value, 1 is enabled, and 0 is disabled.
         """
         self.set_active_channel(channel)
-        enable_command_string = b"enable={}\r".format(value)
+        enable_command_string = "enable={}\r".format(value).encode()
         self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
         if value == 1:
             self.log.info("Laser is enabling channel " + str(channel) + "...")
@@ -132,21 +132,22 @@ class ThorlabsMCLS1(LaserSource):
         Set the laser's system enable.
         :param value: Integer value, 1 is enabled, and 0 is disabled.
         """
-        enable_command_string = b"system={}\r".format(value)
+        enable_command_string = "system={}\r".format(value).encode()
         self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
         if value == 1:
             time.sleep(self.SLEEP_TIME)
 
     def set_active_channel(self, channel):
         # Set Active Channel.
-        active_command_string = b"channel={}\r".format(channel)
+        active_command_string = "channel={}\r".format(channel).encode()
         self.laser.fnUART_LIBRARY_Set(self.handle, active_command_string, 32)
 
     def is_channel_enabled(self, channel):
         self.set_active_channel(channel)
-        command = b"enable?\r"
-        response_buffer = b"0" * 255
+        command = "enable?\r".encode()
+        response_buffer = ("0" * 255).encode()
         self.laser.fnUART_LIBRARY_Get(self.handle, command, response_buffer)
+        response_buffer = response_buffer.decode()
         result = int(re.findall("\d+", response_buffer)[0])
         return result
 

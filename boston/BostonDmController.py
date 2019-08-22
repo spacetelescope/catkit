@@ -12,7 +12,7 @@ import logging
 
 # BMC is Boston's library and it only works on windows.
 try:
-    from .sdk import bmc
+    from .sdk.python3.v3_5_1 import bmc
 except ImportError:
     pass
 
@@ -31,7 +31,7 @@ class BostonDmController(DeformableMirrorController):
         # Connect to DM.
         dm = bmc.BmcDm()
         serial_num = CONFIG_INI.get(self.config_id, "serial_num")
-        dm.open_dm(bytes(serial_num, "utf-8"))
+        dm.open_dm(serial_num)
         command_length = dm.num_actuators()
 
         if command_length == 0:
