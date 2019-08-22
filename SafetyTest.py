@@ -12,7 +12,7 @@ if sys.version_info > (3,0):
 else:
     from urllib2 import urlopen
 import xml.etree.cElementTree as ET
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from ..hardware import testbed
 from .. config import CONFIG_INI
 
@@ -27,9 +27,7 @@ safety_log_handler.setLevel(logging.WARNING)
 safety_log.addHandler(safety_log_handler)
 
 
-class SafetyTest(object):
-    __metaclass__ = ABCMeta
-
+class SafetyTest(ABC):
     name = None
     warning = False
 
@@ -60,11 +58,18 @@ class HumidityTemperatureTest(SafetyTest):
     max_temp = CONFIG_INI.getfloat("safety", "max_temp")
 
     def check(self):
-        if "TSP01GUI.exe" in (p.name() for p in psutil.process_iter()):
-            status_msg = "Humidity and Temperature test failed: Close the Thorlabs GUI and run again. " \
-                         "It interferes with our code."
-            safety_log.error(status_msg)
-            return False, status_msg
+        for p in psutil.process_iter():
+            try:
+                if p.name() == "TSP01GUI.exe":
+                    status_msg = "Humidity and Temperature test failed: Close the Thorlabs GUI and run again. " \
+                                 "It interferes with our code."
+                    safety_log.error(status_msg)
+                    return False, status_msg
+            except psutil.NoSuchProcess:
+                # We don't care whether zombie processes (never present Windows).
+                continue
+
+
 
         temp, humidity = testbed.temp_sensor().get_temp_humidity()
         temp_ok = self.min_temp <= temp <= self.max_temp
