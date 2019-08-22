@@ -25,6 +25,7 @@ class AutoFocus(Experiment):
                  position_list=np.arange(11.0, 13.7, step=.1),
                  output_path=None,
                  camera_type="imaging_camera",
+                 threshold=100,
                  **kwargs):
         super(AutoFocus, self).__init__(output_path=output_path, **kwargs)
         self.bias = bias
@@ -33,6 +34,7 @@ class AutoFocus(Experiment):
         self.num_exposures = num_exposures
         self.position_list = position_list
         self.camera_type = camera_type
+        self.threshold = threshold
         self.kwargs = kwargs
 
     def experiment(self):
@@ -46,7 +48,7 @@ class AutoFocus(Experiment):
                                                       **self.kwargs)
         auto_focus.collect_final_images(output_path)
         #self.log.info(wolfram_wrappers.run_auto_focus(output_path))
-        #autofocusMTF.auto_focus(filePath, start_pos, position_list, incr, im_size, threshold, im_name)
+        autofocusMTF.auto_focus(output_path, self.position_list, self.threshold)
 
 
 
