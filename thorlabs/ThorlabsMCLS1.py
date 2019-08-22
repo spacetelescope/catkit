@@ -55,10 +55,10 @@ class ThorlabsMCLS1(LaserSource):
 
     def close(self):
         """Close laser connection safely"""
-        if self.laser.fnUART_LIBRARY_isOpen(self.port.encode()) == 1:
-            self.set_channel_enable(self.channel, 0)
+        if self.power_off_on_exit:
+            if self.laser.fnUART_LIBRARY_isOpen(self.port.encode()) == 1:
+                self.set_channel_enable(self.channel, 0)
 
-            if self.power_off_on_exit:
                 print("Checking to power off laser")
                 # Check if the other channels are enabled before turning off system enable.
                 turn_off_system_enable = True
@@ -69,8 +69,8 @@ class ThorlabsMCLS1(LaserSource):
                 if turn_off_system_enable:
                     self.set_system_enable(0)
                 self.laser.fnUART_LIBRARY_close(self.handle)
-            else:
-                print("Power off on exit is False; leaving laser ON.")
+        else:
+            print("Power off on exit is False; leaving laser ON.")
 
         self.handle = None
 
