@@ -24,31 +24,11 @@ from ...hardware import testbed_state
 class ZwoCamera(Camera):
 
     log = logging.getLogger(__name__)
-    ZWO_ASI_LIB = 'ZWO_ASI_LIB'
 
     def initialize(self, *args, **kwargs):
         """Opens connection with camera and returns the camera manufacturer specific object.
            Uses the config_id to look up parameters in the config.ini."""
         # noinspection PyBroadException
-
-        env_filename = os.getenv(self.ZWO_ASI_LIB)
-        # NOTE: The ZWO ASI SDK can be downloaded from https://astronomy-imaging-camera.com/software-drivers
-        # Windows requires additional drivers also from https://astronomy-imaging-camera.com/software-drivers
-        if not env_filename:
-            raise OSError("Environment variable '{}' doesn't exist. Create and point to ASICamera2 lib".format(self.ZWO_ASI_LIB))
-        if not os.path.exists(env_filename):
-            raise OSError("File not found: '{}' -> '{}'".format(self.ZWO_ASI_LIB, env_filename))
-
-        try:
-            zwoasi.init(env_filename)
-        except zwoasi.ZWO_Error as error:
-            if str(error) == 'Library already initialized': # weak but better than nothing...
-                # Library already initialized, continuing...
-                pass
-            else:
-                raise ImportError("Failed to import zwoasi lib: '{}'".format(env_filename)) from error
-        except Exception as error:
-            raise ImportError("Failed to import zwoasi lib: '{}'".format(env_filename)) from error
 
         # Attempt to find USB camera.
         num_cameras = zwoasi.get_num_cameras()
