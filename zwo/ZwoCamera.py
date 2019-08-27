@@ -41,9 +41,14 @@ class ZwoCamera(Camera):
 
         try:
             zwoasi.init(env_filename)
-        except Exception:
-            # Library already initialized, continuing...
-            pass
+        except zwoasi.ZWO_Error as error:
+            if str(error) == 'Library already initialized': # weak but better than nothing...
+                # Library already initialized, continuing...
+                pass
+            else:
+                raise ImportError("Failed to import zwoasi lib: '{}'".format(env_filename)) from error
+        except Exception as error:
+            raise ImportError("Failed to import zwoasi lib: '{}'".format(env_filename)) from error
 
         # Attempt to find USB camera.
         num_cameras = zwoasi.get_num_cameras()
