@@ -6,11 +6,7 @@ from builtins import *
 import psutil
 import logging
 from datetime import datetime
-import sys
-if sys.version_info > (3,0):
-    from urllib.request import urlopen
-else:
-    from urllib2 import urlopen
+from urllib.request import urlopen
 import xml.etree.cElementTree as ET
 from abc import ABC, abstractmethod
 from ..hardware import testbed
