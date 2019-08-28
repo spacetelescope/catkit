@@ -49,12 +49,13 @@ def auto_focus(filePath, positions, threshold):#   dataDir, can calculate im_siz
         MTF[i] /= np.max(MTF[i])
 
     # Define MTF support on image that is supposed to be best focus
-    bg_zone = MTF[numer_positions, 1:im_size/8, 1:im_size/8]   # Picking the central picture as reference
+    central_size = int(im_size/8)
+    bg_zone = MTF[int(numer_positions), 1:central_size, 1:central_size]   # Picking the central picture as reference
     #med = np.median(bg_zone)
     noise = np.std(bg_zone)
 
-    mask = np.ones_like(MTF[numer_positions])
-    bkgr = np.where(MTF[numer_positions] < (threshold*noise))
+    mask = np.ones_like(MTF[int(numer_positions)])
+    bkgr = np.where(MTF[int(numer_positions)] < (threshold*noise))
     mask[bkgr] = 0
 
     # Calculate sum of MTF. It gets smaller when we move away from best focus
@@ -83,42 +84,4 @@ def auto_focus(filePath, positions, threshold):#   dataDir, can calculate im_siz
     plt.xlabel('Camera position [mm]')
     plt.ylabel('MTF sum [counts]')
     plt.savefig(os.path.join(filePath, 'autofocus_results.pdf'))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    plt.show()
