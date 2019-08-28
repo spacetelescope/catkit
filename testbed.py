@@ -28,8 +28,8 @@ if not testbed_state.simulation:
     from .thorlabs.ThorlabsMCLS1 import ThorlabsMCLS1
     from .thorlabs.ThorlabsTSP01 import ThorlabsTSP01
 
-from ..interfaces.DummyLaserSource import DummyLaserSource
-from ..hardware.FilterWheelAssembly import FilterWheelAssembly
+from ..interfaces.DummyLaserSource import DummyLaserSource # noqa: E4
+from ..hardware.FilterWheelAssembly import FilterWheelAssembly # noqa: E4
 
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""

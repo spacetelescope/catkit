@@ -10,7 +10,7 @@ from ...config import CONFIG_INI
 from pyvisa import constants
 import time
 
-from.. import testbed_state
+from .. import testbed_state
 from ...interfaces.FilterWheel import FilterWheel
 
 
