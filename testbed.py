@@ -349,7 +349,7 @@ def run_hicat_imaging(exposure_time, num_exposures, fpm_position, lyot_stop_posi
                     os.makedirs(bg_path)
                     cache_file_path = os.path.join(bg_path, "cache_directory.txt")
 
-                    with open(cache_file_path, mode=b'w') as cache_file:
+                    with open(cache_file_path, mode='w') as cache_file:
                         cache_file.write(bg_cache_path)
             if not bg_list:
                 # Move the beam dump in the path and take background exposures.
