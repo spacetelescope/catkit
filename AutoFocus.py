@@ -21,7 +21,7 @@ class AutoFocus(Experiment):
                  flat_map=True,
                  exposure_time=quantity(250, units.microsecond),
                  num_exposures=500,
-                 position_list=np.arange(11.0, 13.7, step=.1),
+                 position_list=np.arange(10.0, 16.0, step=0.1),
                  output_path=None,
                  camera_type="imaging_camera",
                  threshold=100,

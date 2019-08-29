@@ -15,7 +15,7 @@ import os
 
 
 #if __name__ == "__main__":
-def auto_focus(filePath, positions, threshold): 
+def auto_focus_mtf(filePath, positions, threshold): 
 
     print('Starting autofocus analysis')
     """
