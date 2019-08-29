@@ -1,12 +1,12 @@
 ## -- Controller interface for the newport picomotor. 
 """
-This is certainly its own beast. (A small cute beast.)
-The name of the game seems to be getting the IP address and 
-giving it the ol' ping until the command goes through.
+Interface for the newport picomotors. 
+Checks the website spins up appropriately, and then holds
+convenience functions to send commands to the motors, check 
+the status, and try to put some error handling over top.
 
-Authors
--------
-Jules Fowler, 2019
+According to the manual, this should hold for models: 
+8743-CL-various, 8745-PS
 
 """
 
@@ -40,16 +40,28 @@ def http_except(function):
 class NewportPicomotor:
     """ This class handles all the picomotor stufff. """
 
-    def __init__(self, ip='default', timeout=60):
+    def __init__(self, ip='None', timeout=60):
         """ Initial function to set up logging and 
         set the IP address for the controller."""
+
+        # Set IP address
+        if ip is None:
+            config_file = os.environ.get('CATKIT_CONFIG')
+            if config_file is None:
+                raise NameError('No available config to specify npoint connection.')
+            
+            config = configparser.ConfigParser()
+            config.read(config_file)
+            self.ip = config.get('newport_picomotor_8743-CL_8745-PS', 'ip_address')
+        else:
+            self.ip = ip
 
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
         self.logger = logging.getLogger('Newport-{}'.format(str_date))
         self.logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = 'newport_interface_log_{}.log'.format(str_date)
+        log_file = 'newport_{}_{}.log'.format(self.ip, str_date)
         fh = logging.FileHandler(filename=log_file)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
@@ -67,21 +79,18 @@ class NewportPicomotor:
         # Pull info from config
         config_file = os.environ.get('CATKIT_CONFIG')
         if config_file == None:
-            raise NameError('No available config to specify newport IP or max step.')
+            raise OSError('No available config to specify newport IP or max step.')
         config = configparser.ConfigParser()
         config.read(config_file)
         
+        self.calibration = {} 
         self.max_step = config.get('newport_picomotor', 'max_step')
-
-        # Set IP address
-        if ip == 'default':
-            self.ip = config.get('newport_picomotor', 'ip_address')
 
         try:
             urlopen('http://{}'.format(self.ip), timeout=timeout)
         except (IncompleteRead, HTTPError, Exception) as e:
             self.close_logger()
-            raise NameError("The controller IP address is not responding.")
+            raise OSError("The controller IP address is not responding.")
 
         self.logger.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
 
@@ -143,7 +152,11 @@ class NewportPicomotor:
         set_message = self._build_message(cmd_key, 'set', axis, value)
         get_message = self._build_message(cmd_key, 'get', axis)
         
-        initial_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
+        if cmd_key == 'relative_move':
+            initial_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
+        else:
+            initial_value = 0
+        self._send_message(set_message, 'set')
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
         
         if float(set_value) != value:
@@ -198,7 +211,6 @@ class NewportPicomotor:
         else:
             raise NotImplementedError('Only axis 1 through 4 are defined.')
         
-        self.calibration = {} 
         self.calibration['r_ratio_{}'.format(axis)] = r_ratio
         self.calibration['delta_theta_{}'.format(axis)] = delta_theta
         
@@ -239,34 +251,6 @@ class NewportPicomotor:
         self._send_message(message, 'set')
         self.logger.info('Controller reset.')
 
-    @http_except
-    def set_to_centroid(self, data, x_center=0, y_center=0, flip=False):
-        """ Sets the home position to the 2d centroid.
-
-        Parameters
-        ----------
-        data : np.array
-            2D image array to check for the centroid position.
-        x_center : float, optional
-            Where the controller thinks the x_0 of the detector is. 
-            Defaults to zero.
-        y_center : float, optional 
-            Where the controller thinks the y_0 of the detector is. 
-            Defaults to zero.
-        flip : bool, optional
-            Whether or not the axis 1/2 is flipped from x/y. Defaults to 
-            False.
-        """
-        if flip:
-            x, y = y, x
-        
-        x, y = centroid_1dg(data)
-        
-        self.logger.info('Centroid found at ({},{}). Resetting home position.'.format(x, y))
-        
-        self.command('home_position', 'set', 1, x-x_center)
-        self.command('home_position', 'set', 2, y-y_center)
-    
     def _build_message(self, cmd_key, cmd_type, axis=None, value=None):
         """Build a message for the newport picomotor controller.
 
