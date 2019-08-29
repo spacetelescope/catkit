@@ -15,20 +15,15 @@ import os
 
 
 #if __name__ == "__main__":
-def auto_focus(filePath, positions, threshold):#   dataDir, can calculate im_size, im_name unneeded, incr not using it now but maybe I'll need to, 
+def auto_focus(filePath, positions, threshold): 
 
     print('Starting autofocus analysis')
     """
     # Input parameters
-    positions = 20 how many camera positions should get tested in front and behind nominal best focus
-    incr = 0.05 the step size between positions
-    cam_z = 45.1 the best guess of the focus (maybe read in the previous recorded focus for this)
-    start_position = cam_z + positions*incr calculation of starting point to walk from
-    im_size = hdr['NAXIS1']
-    threshold = 100 ##What is this the threshold of?? Where does it come from? your head(aka:wolfram script): Does it change? Yes, this must be set each time we run this after major hardware changes.
-    dataDir = '11_2018-2-16'
-    filePath = '../data/setup/autofocus'
-    im_name = 'find_focus_'
+    filePath = the path the the data taken
+    positions = list of observed positions
+    threshold = 100 
+
     #"""
 
     # Check how many calibrated images there are
@@ -51,7 +46,6 @@ def auto_focus(filePath, positions, threshold):#   dataDir, can calculate im_siz
     # Define MTF support on image that is supposed to be best focus
     central_size = int(im_size/8)
     bg_zone = MTF[int(numer_positions), 1:central_size, 1:central_size]   # Picking the central picture as reference
-    #med = np.median(bg_zone)
     noise = np.std(bg_zone)
 
     mask = np.ones_like(MTF[int(numer_positions)])

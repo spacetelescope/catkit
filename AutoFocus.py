@@ -8,7 +8,6 @@ import numpy as np
 
 from .Experiment import Experiment
 from .modules import auto_focus
-#from .. import wolfram_wrappers
 from . import AutofocusMTF
 from ..hicat_types import *
 
@@ -47,30 +46,4 @@ class AutoFocus(Experiment):
                                                       self.camera_type,
                                                       **self.kwargs)
         auto_focus.collect_final_images(output_path)
-        #self.log.info(wolfram_wrappers.run_auto_focus(output_path))
         AutofocusMTF.auto_focus(output_path, self.position_list, self.threshold)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
