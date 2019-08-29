@@ -1,3 +1,10 @@
+"""
+Interface for the nPoint Tip/Tilt close loop controller. 
+Connects to the controller via usb, and then sends and recieves hex
+messages to send commands, check the status, and put error handling over
+top. 
+"""
+
 ## -- IMPORTS
 
 import configparser
@@ -15,7 +22,7 @@ import usb.core
 import usb.util
 
 
-## -- FUNCTIONS and FIDDLING (and CLASSES, oh MY!)
+## -- FUNCTIONS and FIDDLING 
 
 # Decorator with error handling
 def usb_except(function):
@@ -42,13 +49,30 @@ class nPointTipTilt():
     should close the connection when the time is right.
     """
 
-    def __init__(self, config_params='default'):
+    def __init__(self, config_params=None):
 
         """Initial function to configure logging and find the device."""
+        
+        # Pull device specifics from config file
+        if config_params is None:
+            config_file = os.environ.get('CATKIT_CONFIG')
+            if config_file is None:
+                raise NameError('No available config to specify npoint connection.')
+        
+            config = configparser.ConfigParser()
+            config.read(config_file)
+
+            self.vendor_id = config.get('npoint_tiptilt_lc_400', 'vendor_id')
+            self.product_id = config.get('npoint_tiptilt_lc_400', 'product_id')
+        
+        else:
+            self.vendor_id = config_params['vendor_id']
+            self.product_id = config_params['product_id']
+        
          
         # Set up the logging.
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
-        self.logger = logging.getLogger('nPoint-{}'.format(str_date))
+        self.logger = logging.getLogger('nPoint-{}-{}'.format(self.vendor_id, self.product_id, str_date))
         self.logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -62,22 +86,6 @@ class nPointTipTilt():
         ch.setLevel(logging.DEBUG)
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
-        
-        # Pull device specifics from config file
-        if config_params == 'default':
-            config_file = os.environ.get('CATKIT_CONFIG')
-            if config_file == None:
-                raise NameError('No available config to specify npoint connection.')
-        
-            config = configparser.ConfigParser()
-            config.read(config_file)
-
-            self.vendor_id = config.get('npoint_tiptilt', 'vendor_id')
-            self.product_id = config.get('npoint_tiptilt', 'product_id')
-        
-        else:
-            self.vendor_id = config_params[0]
-            self.product_id = config_params[1]
         
         # Instantiate the device
         self.dev = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id)
