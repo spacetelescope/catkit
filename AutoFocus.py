@@ -8,7 +8,6 @@ import numpy as np
 
 from .Experiment import Experiment
 from .modules import auto_focus
-from . import AutofocusMTF
 from ..hicat_types import *
 
 
@@ -24,7 +23,7 @@ class AutoFocus(Experiment):
                  position_list=np.arange(10.0, 16.0, step=0.1),
                  output_path=None,
                  camera_type="imaging_camera",
-                 threshold=100,
+                 mtf_snr_threshold=100,
                  **kwargs):
         super(AutoFocus, self).__init__(output_path=output_path, **kwargs)
         self.bias = bias
@@ -33,7 +32,7 @@ class AutoFocus(Experiment):
         self.num_exposures = num_exposures
         self.position_list = position_list
         self.camera_type = camera_type
-        self.threshold = threshold
+        self.mtf_snr_threshold = mtf_snr_threshold
         self.kwargs = kwargs
 
     def experiment(self):
@@ -46,4 +45,4 @@ class AutoFocus(Experiment):
                                                       self.camera_type,
                                                       **self.kwargs)
         auto_focus.collect_final_images(output_path)
-        AutofocusMTF.auto_focus(output_path, self.position_list, self.threshold)
+        auto_focus.auto_focus_mtf(output_path, self.position_list, self.mtf_snr_threshold)
