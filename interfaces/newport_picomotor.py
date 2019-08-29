@@ -40,12 +40,12 @@ def http_except(function):
 class NewportPicomotor:
     """ This class handles all the picomotor stufff. """
 
-    def __init__(self, ip='None', timeout=60):
+    def __init__(self, config_params):
         """ Initial function to set up logging and 
         set the IP address for the controller."""
 
         # Set IP address
-        if ip is None:
+        if config_params is None:
             config_file = os.environ.get('CATKIT_CONFIG')
             if config_file is None:
                 raise NameError('No available config to specify npoint connection.')
@@ -53,8 +53,13 @@ class NewportPicomotor:
             config = configparser.ConfigParser()
             config.read(config_file)
             self.ip = config.get('newport_picomotor_8743-CL_8745-PS', 'ip_address')
+            self.max_step = config.get('newport_picomotor_8743-CL_8475_PS', 'max_step')
+            self.timeout = config.get('newport_picomotor_8743-CL_8475_PS', 'timeout')
+
         else:
-            self.ip = ip
+            self.ip = config_params['ip_address']
+            self.max_step = config_params['max_step']
+            self.timeout = config_params['timeout']
 
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
         self.logger = logging.getLogger('Newport-{}'.format(str_date))
@@ -76,15 +81,7 @@ class NewportPicomotor:
         self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
                          'relative_move': 'PR', 'reset': 'RS'}
         
-        # Pull info from config
-        config_file = os.environ.get('CATKIT_CONFIG')
-        if config_file == None:
-            raise OSError('No available config to specify newport IP or max step.')
-        config = configparser.ConfigParser()
-        config.read(config_file)
-        
         self.calibration = {} 
-        self.max_step = config.get('newport_picomotor', 'max_step')
 
         try:
             urlopen('http://{}'.format(self.ip), timeout=timeout)
