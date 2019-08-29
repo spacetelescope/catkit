@@ -33,7 +33,7 @@ def usb_except(function):
         try:
             return function(self, *args, **kwargs)
         except usb.core.USBError as e:
-            raise Exception('{} : was caught due to a USB connection error.'.format(e))
+            raise Exception('USB connection error.') from e
 
     return wrapper
 
