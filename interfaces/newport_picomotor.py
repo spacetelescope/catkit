@@ -33,7 +33,7 @@ def http_except(function):
         try:
             return function(self, *args, **kwargs)
         except (IncompleteRead, HTTPError) as e:
-            raise Exception('{} : was caught due to issues connecting to the webpage.'.format(e))
+            raise Exception('Issues connecting to the webpage.') from e
 
     return wrapper
 
@@ -90,7 +90,7 @@ class NewportPicomotor:
             urlopen('http://{}'.format(self.ip), timeout=timeout)
         except (IncompleteRead, HTTPError, Exception) as e:
             self.close_logger()
-            raise OSError("The controller IP address is not responding.")
+            raise OSError("The controller IP address is not responding.") from e
 
         self.logger.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
 
