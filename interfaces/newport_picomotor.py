@@ -81,13 +81,11 @@ class NewportPicomotor:
         self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
                          'relative_move': 'PR', 'reset': 'RS', 
                          'error_message': 'TB'}
-        
-
 
         self.calibration = {} 
 
         try:
-            urlopen('http://{}'.format(self.ip), timeout=timeout)
+            urlopen('http://{}'.format(self.ip), timeout=ip.timeout)
         except (IncompleteRead, HTTPError, Exception) as e:
             self.close_logger()
             raise OSError("The controller IP address is not responding.") from e
@@ -130,13 +128,37 @@ class NewportPicomotor:
     
     def check_motors(self):
         """ Function to check if motors are online."""
-
+        
+        # Write the message to check for errors
+        message = self._build_message('error_message', 'get', '')
+        
+        # Loop through each motor
         for motor in '1234':
+            
+            # Set to true so command won't throw an error
             self.motor_dict[motor] = True
-            message = self._build_message('error_message', 'get', '')
+            # Clear any irrelevant error messages
+            n = 0
+            while 'NO ERROR' not in resp or n < 3:
+                resp = self._send_message(message, 'get')
+            
+            # Send command to motor
+            self.command('relative_move', motor, 50)
+            
+            # Wait for command to complete
+            time.sleep(3)
             response = self._send_message(message, 'get')
-            self.motor_dict[motor] = 'Motor' not in response
-            logging.info('Motor {} is {} online.'.format(motor, '' if success else 'NOT')
+            
+            # See if it's thrown an error
+            success = 'MOTOR' not in response and '{}08'.format(motor) not in response
+            
+            # Move it back if it successfully moved
+            if success:
+                self.command('relative_move', motor, -50)
+
+            # Update attributes and note in the log
+            self.motor_dict[motor] = success
+            self.logger.info('Motor {} is {} online.'.format(motor, '' if success else 'NOT'))
 
     def close_logger(self):
         """Function for the close logger behavior."""
