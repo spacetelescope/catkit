@@ -79,8 +79,11 @@ class NewportPicomotor:
         
         # Initialize some command parameters
         self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
-                         'relative_move': 'PR', 'reset': 'RS'}
+                         'relative_move': 'PR', 'reset': 'RS', 
+                         'error_message': 'TB'}
         
+
+
         self.calibration = {} 
 
         try:
@@ -91,6 +94,9 @@ class NewportPicomotor:
 
         self.logger.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
 
+        # Test motor connections
+        self.motor_dict = {}
+        self.check_motors()
 
     def __enter__(self):
         """ Enter function to allow context management."""
@@ -121,7 +127,17 @@ class NewportPicomotor:
         for cmd_key in ('home_position', 'exact_move'):
             for axis in '1234':
                 self.command(cmd_key, axis, 0)
-        
+    
+    def check_motors(self):
+        """ Function to check if motors are online."""
+
+        for motor in '1234':
+            self.motor_dict[motor] = True
+            message = self._build_message('error_message', 'get', '')
+            response = self._send_message(message, 'get')
+            self.motor_dict[motor] = 'Motor' not in response
+            logging.info('Motor {} is {} online.'.format(motor, '' if success else 'NOT')
+
     def close_logger(self):
         """Function for the close logger behavior."""
 
@@ -140,12 +156,15 @@ class NewportPicomotor:
             The parameter to set, presently allows for 'home_position',
             'exact_move', or 'relative_move'.
         axis : int
-            Axis 1, 2, (or potentially 3) for x/y/z, tip/tilt/piston.
-        value : int/float/double
-            Given any number (it will be converted to int regardless of type),
+            Axis 1, 2, 3, 4.
+        value : int
+            Given an int,
             it will set the command to that value.
         """
-        value = round(value)
+        # Check on motor 
+        if not self.motor_dict[str(axis)]:
+            raise OSError('Motor {} is not plugged in. If you think it is, try checking the motors with ...'.format(axis))
+        value = value
         set_message = self._build_message(cmd_key, 'set', axis, value)
         get_message = self._build_message(cmd_key, 'get', axis)
         
@@ -279,7 +298,9 @@ class NewportPicomotor:
             message = address 
 
         if cmd_type == 'get':
-            if axis == None:
+            if cmd_key == 'error_message' and axis != '':
+                raise ValueError("No axis can be specified for an error check.")
+            elif axis == None:
                 raise ValueError("This command requires an axis.")
             elif value != None:
                 raise ValueError('No value can be set during a status check.')
