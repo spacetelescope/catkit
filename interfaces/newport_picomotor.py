@@ -40,26 +40,22 @@ def http_except(function):
 class NewportPicomotor:
     """ This class handles all the picomotor stufff. """
 
-    def __init__(self, config_params):
+    def __init__(self, ip=None, max_step=None, timeout=None):
         """ Initial function to set up logging and 
         set the IP address for the controller."""
 
         # Set IP address
-        if config_params is None:
+        if None in [ip, max_step, timeout]:
             config_file = os.environ.get('CATKIT_CONFIG')
             if config_file is None:
-                raise NameError('No available config to specify npoint connection.')
+                raise FileNotFoundError('No available config to specify picomotor connection.')
             
             config = configparser.ConfigParser()
             config.read(config_file)
-            self.ip = config.get('newport_picomotor_8743-CL_8745-PS', 'ip_address')
-            self.max_step = config.get('newport_picomotor_8743-CL_8475_PS', 'max_step')
-            self.timeout = config.get('newport_picomotor_8743-CL_8475_PS', 'timeout')
-
-        else:
-            self.ip = config_params['ip_address']
-            self.max_step = config_params['max_step']
-            self.timeout = config_params['timeout']
+            
+        self.ip = config.get('newport_picomotor_8743-CL_8745-PS', 'ip') if ip is None else ip
+        self.max_step = config.get('newport_picomotor_8743-CL_8745-PS', 'max_step') if max_step is None else max_step
+        self.timeout = config.get('newport_picomotor_8743-CL_8745-PS', 'timeout') if timeout is None else timeout
 
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
         self.logger = logging.getLogger('Newport-{}'.format(str_date))
@@ -85,7 +81,7 @@ class NewportPicomotor:
         self.calibration = {} 
 
         try:
-            urlopen('http://{}'.format(self.ip), timeout=ip.timeout)
+            urlopen('http://{}'.format(self.ip), timeout=self.timeout)
         except (IncompleteRead, HTTPError, Exception) as e:
             self.close_logger()
             raise OSError("The controller IP address is not responding.") from e
@@ -186,14 +182,13 @@ class NewportPicomotor:
         # Check on motor 
         if not self.motor_dict[str(axis)]:
             raise OSError('Motor {} is not plugged in. If you think it is, try checking the motors with ...'.format(axis))
-        value = value
+        
         set_message = self._build_message(cmd_key, 'set', axis, value)
         get_message = self._build_message(cmd_key, 'get', axis)
         
-        if cmd_key == 'relative_move':
-            initial_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
-        else:
-            initial_value = 0
+        
+        init_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
+        
         self._send_message(set_message, 'set')
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
         
@@ -322,17 +317,17 @@ class NewportPicomotor:
         if cmd_type == 'get':
             if cmd_key == 'error_message' and axis != '':
                 raise ValueError("No axis can be specified for an error check.")
-            elif axis == None:
-                raise ValueError("This command requires an axis.")
+            elif axis == None or if type(axis) != int:
+                raise ValueError("This command requires an integer axis.")
             elif value != None:
                 raise ValueError('No value can be set during a status check.')
             message = '{}{}?'.format(int(axis), address)
         
         elif cmd_type == 'set': 
-            if axis == None:
-                raise ValueError("This command requires an axis.")
-            elif value == None:
-                raise ValueError("This command requires a value.")
+            if axis == None or if type(axis) != int:
+                raise ValueError("This command requires an integer axis.")
+            elif value == None or if type(value) != int:
+                raise ValueError("This command requires an integer value.")
             elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > self.max_step:
                 raise ValueError('You can only move {} in any direction.'.format(self.max_step))
             else:
@@ -358,7 +353,7 @@ class NewportPicomotor:
         """
         
         form_data = urlencode({'cmd': message, 'submit': 'Send'})
-        with urlopen('http://{}/cmd_send.cgi?{}'.format(self.ip, form_data)) as html:
+        with urlopen('http://{}/cmd_send.cgi?{}'.format(self.ip, form_data), timeout=self.timeout) as html:
             resp = str(html.read())
         
         if cmd_type == 'get':
