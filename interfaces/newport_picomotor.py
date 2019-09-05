@@ -42,7 +42,21 @@ class NewportPicomotor:
 
     def __init__(self, ip=None, max_step=None, timeout=None, home_reset=True):
         """ Initial function to set up logging and 
-        set the IP address for the controller."""
+        set the IP address for the controller. Anything unset will attempt tp
+        pull from the config file.
+        
+        Parameters
+        ----------
+        ip : string
+            The IP address for the controller. Defaults to None.
+        max_step : float
+            The max step the controller can take. Defaults to None. 
+        timeout : float
+            The timeout before the urlopen call gives up. Defaults to None.
+        home_reset : bool
+            Whether or not to reset to the home position on controller close.
+            Defaults to True.
+        """
 
         # Set IP address
         if None in [ip, max_step, timeout]:
@@ -88,7 +102,7 @@ class NewportPicomotor:
 
         self.logger.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
         
-        # Reset home position to current 
+        # Reset home position to current so we track.
         for axis in '1234':
             self.command('home_position', axis, 0)
 
@@ -121,7 +135,8 @@ class NewportPicomotor:
         
         if self.home_reset:
             for axis in '1234':
-                self.command('exact_move', axis, 0)
+                self.command('exact_move', axis, 0)a
+            self.logger.info('Controller reset to original position.')
         
     def close_logger(self):
         """Function for the close logger behavior."""
@@ -139,17 +154,15 @@ class NewportPicomotor:
         ----------
         cmd_key : str
             The parameter to set, presently allows for 'home_position',
-            'exact_move', or 'relative_move'.
+            'exact_move', 'relative_move', or 'error_message'.
         axis : int
             Axis 1, 2, 3, 4.
         value : int
-            Given an int,
-            it will set the command to that value.
+            Given an int, it will set the command to that value.
         """
         
         set_message = self._build_message(cmd_key, 'set', axis, value)
         get_message = self._build_message(cmd_key, 'get', axis)
-        
         
         init_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
         
@@ -230,7 +243,7 @@ class NewportPicomotor:
         """
         
         state_dict = {}
-        for cmd_key in ('home_position', 'exact_move', 'relative_move'):
+        for cmd_key in ('home_position', 'relative_move'):
             
             message = self._build_message(cmd_key, 'get', axis)
             value = self._send_message(message, 'get') 
@@ -238,7 +251,6 @@ class NewportPicomotor:
             self.logger.info('For axis {}, {} is set to {}'.format(axis, cmd_key, value))
         
         return state_dict
-    
         
     @http_except
     def reset(self):
@@ -279,7 +291,7 @@ class NewportPicomotor:
             message = address 
 
         if cmd_type == 'get':
-            if cmd_key == 'error_message' and axis != '':
+            if cmd_key == 'error_message' and axis != None:
                 raise ValueError("No axis can be specified for an error check.")
             elif axis == None or if type(axis) != int:
                 raise ValueError("This command requires an integer axis.")
