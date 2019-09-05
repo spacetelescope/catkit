@@ -40,18 +40,18 @@ def http_except(function):
 class NewportPicomotor:
     """ This class handles all the picomotor stufff. """
 
-    def __init__(self, ip=None, max_step=None, timeout=None):
+    def __init__(self, ip=None, max_step=None, timeout=None, home_reset=True):
         """ Initial function to set up logging and 
         set the IP address for the controller."""
 
         # Set IP address
         if None in [ip, max_step, timeout]:
-            config_file = os.environ.get('CATKIT_CONFIG')
-            if config_file is None:
-                raise FileNotFoundError('No available config to specify picomotor connection.')
+            config_path = os.environ.get('CATKIT_CONFIG')
+            if config_path is None:
+                raise OSError('No available config to specify picomotor connection.')
             
             config = configparser.ConfigParser()
-            config.read(config_file)
+            config.read(config_path)
             
         self.ip = config.get('newport_picomotor_8743-CL_8745-PS', 'ip') if ip is None else ip
         self.max_step = config.get('newport_picomotor_8743-CL_8745-PS', 'max_step') if max_step is None else max_step
@@ -87,10 +87,11 @@ class NewportPicomotor:
             raise OSError("The controller IP address is not responding.") from e
 
         self.logger.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
+        
+        # Reset home position to current 
+        for axis in '1234':
+            self.command('home_position', axis, 0)
 
-        # Test motor connections
-        self.motor_dict = {}
-        self.check_motors()
 
     def __enter__(self):
         """ Enter function to allow context management."""
@@ -116,46 +117,12 @@ class NewportPicomotor:
         self.close_logger()
 
     def reset_controller(self):
-        """Function to reset the controller behavior."""
-
-        for cmd_key in ('home_position', 'exact_move'):
+        """Function to reset the motors to where they started."""
+        
+        if self.home_reset:
             for axis in '1234':
-                self.command(cmd_key, axis, 0)
-    
-    def check_motors(self):
-        """ Function to check if motors are online."""
+                self.command('exact_move', axis, 0)
         
-        # Write the message to check for errors
-        message = self._build_message('error_message', 'get', '')
-        
-        # Loop through each motor
-        for motor in '1234':
-            
-            # Set to true so command won't throw an error
-            self.motor_dict[motor] = True
-            # Clear any irrelevant error messages
-            n = 0
-            while 'NO ERROR' not in resp or n < 3:
-                resp = self._send_message(message, 'get')
-            
-            # Send command to motor
-            self.command('relative_move', motor, 50)
-            
-            # Wait for command to complete
-            time.sleep(3)
-            response = self._send_message(message, 'get')
-            
-            # See if it's thrown an error
-            success = 'MOTOR' not in response and '{}08'.format(motor) not in response
-            
-            # Move it back if it successfully moved
-            if success:
-                self.command('relative_move', motor, -50)
-
-            # Update attributes and note in the log
-            self.motor_dict[motor] = success
-            self.logger.info('Motor {} is {} online.'.format(motor, '' if success else 'NOT'))
-
     def close_logger(self):
         """Function for the close logger behavior."""
 
@@ -179,9 +146,6 @@ class NewportPicomotor:
             Given an int,
             it will set the command to that value.
         """
-        # Check on motor 
-        if not self.motor_dict[str(axis)]:
-            raise OSError('Motor {} is not plugged in. If you think it is, try checking the motors with ...'.format(axis))
         
         set_message = self._build_message(cmd_key, 'set', axis, value)
         get_message = self._build_message(cmd_key, 'get', axis)
