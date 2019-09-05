@@ -1,3 +1,0 @@
-PH? -- get hardware status
-TB? -- get error message
-ZH? -- get hardware config
