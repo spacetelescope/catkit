@@ -49,12 +49,12 @@ class nPointTipTilt():
     should close the connection when the time is right.
     """
 
-    def __init__(self, config_params=None):
+    def __init__(self, vendor_id=None, product_id=None):
 
         """Initial function to configure logging and find the device."""
         
         # Pull device specifics from config file
-        if config_params is None:
+        if None in [vendor_id, product_id]:
             config_file = os.environ.get('CATKIT_CONFIG')
             if config_file is None:
                 raise NameError('No available config to specify npoint connection.')
@@ -62,14 +62,9 @@ class nPointTipTilt():
             config = configparser.ConfigParser()
             config.read(config_file)
 
-            self.vendor_id = config.get('npoint_tiptilt_lc_400', 'vendor_id')
-            self.product_id = config.get('npoint_tiptilt_lc_400', 'product_id')
+        self.vendor_id = config.get('npoint_tiptilt_lc_400', 'vendor_id') if vendor_id is None else vendor_id
+        self.product_id = config.get('npoint_tiptilt_lc_400', 'product_id') if product_id is None else product_id
         
-        else:
-            self.vendor_id = config_params['vendor_id']
-            self.product_id = config_params['product_id']
-        
-         
         # Set up the logging.
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
         self.logger = logging.getLogger('nPoint-{}-{}'.format(self.vendor_id, self.product_id, str_date))
