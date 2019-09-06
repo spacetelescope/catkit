@@ -28,7 +28,7 @@ class ThorlabsTSP01():
         output = subprocess.check_output(full_path, universal_newlines=True)
 
         values = output.split(" ")
-        if len(values) < 2:
+        if len(values) != 2:
             raise RuntimeError("Expected at least 2 values returned in sensor output; instead got '{}' ".format(output))
         temp = float(values[0].split("=")[1])
         humidity = float(values[1].split("=")[1])
