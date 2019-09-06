@@ -296,21 +296,21 @@ class NewportPicomotor:
         if cmd_type == 'get':
             if cmd_key == 'error_message' and axis is not None:
                 raise ValueError("No axis can be specified for an error check.")
-            elif axis is None or type(axis) != int:
+            elif axis is None or not isinstance(axis, int):
                 raise ValueError("This command requires an integer axis.")
             elif value is not None:
                 raise ValueError('No value can be set during a status check.')
-            message = '{}{}?'.format(int(axis), address)
+            message = '{}{}?'.format(axis, address)
         
         elif cmd_type == 'set': 
-            if axis is None or type(axis) != int:
+            if axis is None or not isinstance(axis, int):
                 raise ValueError("This command requires an integer axis.")
-            elif value is None or type(value) != int:
+            elif value is None or not isinstance(value, int):
                 raise ValueError("This command requires an integer value.")
             elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > self.max_step:
                 raise ValueError('You can only move {} in any direction.'.format(self.max_step))
             else:
-                message = '{}{}{}'.format(int(axis), address, int(value))
+                message = '{}{}{}'.format(axis, address, value)
             
         return message
     
