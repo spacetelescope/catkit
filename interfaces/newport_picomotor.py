@@ -42,7 +42,7 @@ class NewportPicomotor:
 
     def __init__(self, ip=None, max_step=None, timeout=None, home_reset=True):
         """ Initial function to set up logging and 
-        set the IP address for the controller. Anything unset will attempt tp
+        set the IP address for the controller. Anything set to None will attempt to
         pull from the config file.
         
         Parameters
