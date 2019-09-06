@@ -51,7 +51,16 @@ class nPointTipTilt():
 
     def __init__(self, vendor_id=None, product_id=None):
 
-        """Initial function to configure logging and find the device."""
+        """Initial function to configure logging and find the device. Anything 
+        set to None will attempt to pull from the config file.
+        
+        Parameters
+        ----------
+        vendor_id : int
+            The vendor ID for the device, defaults to None.
+        product_id : int 
+            The produce ID for the device, defautls to None.
+        """
         
         # Pull device specifics from config file
         if None in [vendor_id, product_id]:
