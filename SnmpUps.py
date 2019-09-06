@@ -13,6 +13,9 @@ from ..config import CONFIG_INI
 
 
 class SnmpUps(BackupPower):
+    """Queryable from the terminal with:
+    snmpwalk -v1 -c palapa 10.128.242.6 .1.3.6.1.4.1.534.1.3.5.0"""
+
     log = logging.getLogger(__name__)
 
     def get_status(self):
