@@ -93,7 +93,7 @@ class nPointTipTilt():
         
         # Instantiate the device
         self.dev = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id)
-        if self.dev == None:
+        if self.dev is None:
             self.close_logger()
             raise NameError("Go get the device sorted you knucklehead.")
              
@@ -166,13 +166,13 @@ class nPointTipTilt():
         message = []
 
         if cmd_type == 'get':
-            if value != None:
+            if value is not None:
                 warnings.warn('You specified a value but nothing will happen to it.')
             
             message.append(b'\xa4' + addr[:4] + b'\x02\x00\x00\x00\x55')
 
         elif cmd_type == 'set':
-            if value == None:
+            if value is None:
                 raise ValueError("Value is required.")
 
             if cmd_key == 'loop':
