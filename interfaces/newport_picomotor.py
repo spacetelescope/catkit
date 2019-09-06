@@ -70,6 +70,7 @@ class NewportPicomotor:
         self.ip = config.get('newport_picomotor_8743-CL_8745-PS', 'ip') if ip is None else ip
         self.max_step = config.get('newport_picomotor_8743-CL_8745-PS', 'max_step') if max_step is None else max_step
         self.timeout = config.get('newport_picomotor_8743-CL_8745-PS', 'timeout') if timeout is None else timeout
+        self.home_reset = config.get('newport_picomotor_8743-CL_8745-PS', 'home_reset') if home_reset is None else home_reset
 
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
         self.logger = logging.getLogger('Newport-{}'.format(str_date))
@@ -104,7 +105,7 @@ class NewportPicomotor:
         
         # Reset home position to current so we track.
         for axis in '1234':
-            self.command('home_position', axis, 0)
+            self.command('home_position', int(axis), 0)
 
 
     def __enter__(self):
@@ -135,7 +136,7 @@ class NewportPicomotor:
         
         if self.home_reset:
             for axis in '1234':
-                self.command('exact_move', axis, 0)a
+                self.command('exact_move', int(axis), 0)
             self.logger.info('Controller reset to original position.')
         
     def close_logger(self):
@@ -164,7 +165,7 @@ class NewportPicomotor:
         set_message = self._build_message(cmd_key, 'set', axis, value)
         get_message = self._build_message(cmd_key, 'get', axis)
         
-        init_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
+        initial_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
         
         self._send_message(set_message, 'set')
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
@@ -293,16 +294,16 @@ class NewportPicomotor:
         if cmd_type == 'get':
             if cmd_key == 'error_message' and axis != None:
                 raise ValueError("No axis can be specified for an error check.")
-            elif axis == None or if type(axis) != int:
+            elif axis == None or type(axis) != int:
                 raise ValueError("This command requires an integer axis.")
             elif value != None:
                 raise ValueError('No value can be set during a status check.')
             message = '{}{}?'.format(int(axis), address)
         
         elif cmd_type == 'set': 
-            if axis == None or if type(axis) != int:
+            if axis == None or type(axis) != int:
                 raise ValueError("This command requires an integer axis.")
-            elif value == None or if type(value) != int:
+            elif value == None or type(value) != int:
                 raise ValueError("This command requires an integer value.")
             elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > self.max_step:
                 raise ValueError('You can only move {} in any direction.'.format(self.max_step))
