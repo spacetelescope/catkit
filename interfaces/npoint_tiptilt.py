@@ -55,12 +55,12 @@ class nPointTipTilt():
         
         # Pull device specifics from config file
         if None in [vendor_id, product_id]:
-            config_file = os.environ.get('CATKIT_CONFIG')
-            if config_file is None:
-                raise NameError('No available config to specify npoint connection.')
+            config_path = os.environ.get('CATKIT_CONFIG')
+            if config_path is None:
+                raise OSError('No available config to specify npoint connection.')
         
             config = configparser.ConfigParser()
-            config.read(config_file)
+            config.read(config_path)
 
         self.vendor_id = config.get('npoint_tiptilt_lc_400', 'vendor_id') if vendor_id is None else vendor_id
         self.product_id = config.get('npoint_tiptilt_lc_400', 'product_id') if product_id is None else product_id
