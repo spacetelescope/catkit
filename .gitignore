@@ -1,2 +1,6 @@
 __pycache__
-*log*.txt
+*egg*
+*.sw*
+*.png
+*.fits
+*.log*
