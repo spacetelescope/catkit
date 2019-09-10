@@ -97,8 +97,8 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     :param resume: (Boolean) Primitive way to resume an experiment that was incomplete, file_mode=True only.
     :param centering: (ImageCentering) Mode pipeline will use to find the center of images and recenter them.
     :param kwargs: Specific keyword arguments passed to the Camera interface.
-    :param dm: Which DM to apply the sine to? Either 1 or 2. The other will be set to flat.
-    :param opposite: Bool; if true then put opposite amplitude sines on both DMs.
+    :param dm: Which DM to apply the sine to? Either 1 or 2. The other will by default be set to flat
+    :param opposite: Bool; if true then put opposite amplitude sines on both DMs, instead of leaving the second DM flat.
     :return:
     If file_mode=False: Numpy image data for final image with crossterm removed.
     If file_mode=True: Nothing is returned.
@@ -168,7 +168,6 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
         dm.apply_shape(flat_command_object, dm_to_control)
         if opposite:
             dm.apply_shape(flat_command_object, dm_to_flatten)
-
         flat_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
                                                lyot_stop_position=lyot_stop_position,
                                                file_mode=file_mode, raw_skip=raw_skip, path=path,
