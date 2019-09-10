@@ -119,7 +119,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
 
     # Create a "negative" sine wave by adding a phase of 180 from the original.
     negative_sine_spec_list = [SinSpecification(sin_specification.angle, sin_specification.ncycles,
-                                                sin_specification.peak_to_valley, 180)]
+                                                sin_specification.peak_to_valley, sin_specification.phase+180)]
     if alignment_speckle:
         negative_sine_spec_list.append(alignment_speckle_spec)
     negative_sin_command_object, neg_file_name = sin_command(negative_sine_spec_list, bias=bias, flat_map=flat_map,
