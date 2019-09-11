@@ -26,7 +26,7 @@ if not testbed_state.simulation:
     from ..hardware.zwo.ZwoCamera import ZwoCamera
     from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
     from .thorlabs.ThorlabsMCLS1 import ThorlabsMCLS1
-    from .thorlabs.ThorlabsTSP01 import ThorlabsTSP01
+    from .thorlabs.ThorlabsTSP01 import TSP01
 
 from ..interfaces.DummyLaserSource import DummyLaserSource # noqa: E4
 from ..hardware.FilterWheelAssembly import FilterWheelAssembly # noqa: E4
@@ -124,7 +124,7 @@ def temp_sensor():
         from .. import simulators
         return simulators.SimThorlabsTSP01(sensor_config_ini_key)
     else:
-        return ThorlabsTSP01(sensor_config_ini_key)
+        return TSP01.create(sensor_config_ini_key)
 
 
 def laser_source():
