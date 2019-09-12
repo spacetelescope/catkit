@@ -17,9 +17,18 @@ class DmCommand(object):
         """
         Understands the many different formats of dm commands that we have, and returns an object that allows you to
         reliably craft and save commands for the correct DM.
-        :param data: numpy array of the following shapes: 34x34, 1x952, 1x2048, 1x4096.
+
+        :param data: numpy array of the following shapes: 34x34, 1x952, 1x2048, 1x4096. Interpreted by default as
+                     the desired DM surface height in units of meters, but see parameters as_volts
+                     and as_voltage_percentage.
         :param dm_num: Valid values are 0, 1, 2.  Default is 0, which will automatically identify which dm to use.
-        You can specify 1 or 2 to ensure a certain DM is used, regardless of how the input data is padded.
+                     You can specify 1 or 2 to ensure a certain DM is used, regardless of how the input data is padded.
+        :param flat_map: If true, add flat map correction to the data before outputting commands
+        :param bias: If true, add bias to the data before outputting commands
+        :param as_voltage_percentage: Interpret the data as a voltage percentage instead of meters; Deprecated.
+        :param as_volts: If true, interpret the data as volts instead of meters
+        :param sin_specification: Add this sine to the data
+
         """
 
         self.dm_num = dm_num
@@ -69,6 +78,11 @@ class DmCommand(object):
         return self.data
 
     def to_dm_command(self):
+        """ Output DM command suitable for sending to the hardware driver
+
+        returns: 1D array, typically 2048 length for HiCAT, in units of percent of max voltage
+
+        """
 
         dm_command = np.copy(self.data)
 
@@ -76,13 +90,13 @@ class DmCommand(object):
         if self.as_voltage_percentage:
             self.data *= 2
 
-        # Otherwise convert nanometers to volts and apply appropriate corrections and bias.
+        # Otherwise convert meters to volts and apply appropriate corrections and bias.
         else:
             if not self.as_volts:
-                # Convert nanometers to volts.
+                # Convert meters to volts.
                 script_dir = os.path.dirname(__file__)
-                nm_to_volts_map = fits.getdata(os.path.join(script_dir, "meters_to_volts_dm1.fits"))
-                dm_command = hicat_util.safe_divide(self.data, nm_to_volts_map)
+                m_per_volt_map = fits.getdata(os.path.join(script_dir, "meters_per_volt_dm1.fits"))
+                dm_command = hicat_util.safe_divide(self.data, m_per_volt_map)
 
             # Apply bias.
             if self.bias:
@@ -127,12 +141,19 @@ class DmCommand(object):
         return dm_command
 
     def export_fits(self, path, folder_name="dm_command"):
-        """
-        Saves the dm command in two different formats:
+        """ Export DM commands to disk.
+
+        Saves the dm command in three different formats:
+        - 1D representation of the command (2048 x 1; DM1 commands in 0:952, DM2 in 1024:1976)
         - 2D representation of the command with no padding (34 x 34).
         - 2D command with the flat/bias removed (34 x 34).
+
         :param path: Path to a directory to create a folder named "dm_command" and save the 3 files.
         :param folder_name: Optional parameter to specify a folder to store the fits file to.
+
+        Separate files are written for each DM, named as 'dm1_*' and 'dm2_*'. The actual full command sent to the
+        drive electronics is the summation of the two 1D commands for DM1 and DM2.
+
         """
 
         # Add dm_command folder and join the path back up.
@@ -176,9 +197,3 @@ def get_flat_map_volts(dm_num):
         flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
         return flat_map_volts[0].data
 
-
-def convert_volts_to_nm(data):
-    # Convert nanometers to volts.
-    script_dir = os.path.dirname(__file__)
-    nm_to_volts_map = fits.getdata(os.path.join(script_dir, "meters_to_volts_dm1.fits"))
-    return data * nm_to_volts_map
