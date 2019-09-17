@@ -48,7 +48,7 @@ def accquire_target(camera1, camera2, pico, tiptilt, hole1=None, hole2=None):
     # Move camera 1 to hole
     tries = 0
     while some_threshold or tries < 3: 
-        img1_current = camera1.take_exposure?
+        img1_current = camera1.__capture(100)
         current_position = centroid_1dg(img1_current)
         for index, position in enumerate(current_position):
             # Calculate the command for x/y (axis 1/2)
@@ -67,7 +67,7 @@ def accquire_target(camera1, camera2, pico, tiptilt, hole1=None, hole2=None):
     # Move camera 2 to hole
     tries = 0
     while some_threshold or tries < 3:
-        img2_current = camera2.take_exposure?
+        img2_current = camera2.__capture(100)
         curren_position = centroid_1dg(img2_current)
         for index, position in enumerate(current_position):
             # Calculate the command for x/y (axis 1/2)
