@@ -68,6 +68,49 @@ class ZwoCamera(Camera):
         camera.set_image_type(zwoasi.ASI_IMG_RAW16)
         return camera
 
+    def capture(self, exposure_time):
+        """ Takes an image.
+
+        Parameters
+        ----------
+        exposure_time : float
+            How long the exposure should be, in seconds.
+
+        Returns
+        -------
+        image : np.array of ints
+            Array of integers making up the image.
+        """
+
+        # Passing the initial_sleep and poll values prevent crashes. DO NOT REMOVE!!!
+        poll = quantity(0.1, units.second)
+        image = self.camera.capture(initial_sleep=exposure_time.to(units.second).magnitude, poll=poll.magnitude)
+
+        return image.astype(np.dtype(np.int))
+
+    def capture_and_flip(self, exposure_time, theta, fliplr):
+        """ Takes and image and flips according to theta and l/r input.
+
+        Parameters
+        ----------
+        exposure_time : float
+            How long the exposure should be, in seconds. 
+        theta : float
+            ...
+        fliplr : ...
+            ...
+
+        Returns
+        -------
+        image : np.array of ints
+            Array of integers making up the image.
+        """
+
+        unflipped_image = capture(exposure_time) 
+        image = util.rotate_and_flip_image(unflipped_image, theta, fliplr)
+        
+        return image 
+    
     def close(self):
         """Close camera connection"""
         self.camera.close()
@@ -126,7 +169,7 @@ class ZwoCamera(Camera):
         if not file_mode:
             # Take exposures and add to list.
             for i in range(num_exposures):
-                img = self.__capture(exposure_time)
+                img = self.capture_and_flip(exposure_time, theta, fliplr)
                 img_list.append(img)
             if return_metadata:
                 return img_list, meta_data
@@ -150,6 +193,10 @@ class ZwoCamera(Camera):
         # Create directory if it doesn't exist.
         if not os.path.exists(path):
             os.makedirs(path)
+        
+        # Pull flip parameters
+        theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
+        fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
 
         # Take exposures. Use Astropy to handle fits format.
         skip_counter = 0
@@ -167,7 +214,7 @@ class ZwoCamera(Camera):
                 continue
 
             # Take exposure.
-            img = self.__capture(exposure_time)
+            img = self.capture_and_flip(exposure_time, theta, fliplr)
 
             # Skip writing the fits files per the raw_skip value, and keep img data in memory.
             if raw_skip != 0:
@@ -319,15 +366,3 @@ class ZwoCamera(Camera):
                                 image_type=zwoasi.ASI_IMG_RAW16,
                                 bins=bins)
 
-    def __capture(self, exposure_time):
-
-        # Passing the initial_sleep and poll values prevent crashes. DO NOT REMOVE!!!
-        poll = quantity(0.1, units.second)
-        image = self.camera.capture(initial_sleep=exposure_time.to(units.second).magnitude, poll=poll.magnitude)
-
-        # Apply rotation and flip to the image based on config.ini file.
-        theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
-        fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
-        image = util.rotate_and_flip_image(image, theta, fliplr)
-
-        return image.astype(np.dtype(np.int))
