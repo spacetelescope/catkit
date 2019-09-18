@@ -96,9 +96,9 @@ class ZwoCamera(Camera):
         exposure_time : float
             How long the exposure should be, in seconds. 
         theta : float
-            ...
-        fliplr : ...
-            ...
+            How many degrees to rotate the image.
+        fliplr : bool
+            Whether to flip left/right.
 
         Returns
         -------
@@ -163,6 +163,10 @@ class ZwoCamera(Camera):
                 meta_data.extend(extra_metadata)
             else:
                 meta_data.append(extra_metadata)
+        
+        # Pull flip parameters
+        theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
+        fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
 
         # DATA MODE: Takes images and returns data and metadata (does not write anything to disk).
         img_list = []
@@ -194,10 +198,6 @@ class ZwoCamera(Camera):
         if not os.path.exists(path):
             os.makedirs(path)
         
-        # Pull flip parameters
-        theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
-        fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
-
         # Take exposures. Use Astropy to handle fits format.
         skip_counter = 0
         for i in range(num_exposures):
