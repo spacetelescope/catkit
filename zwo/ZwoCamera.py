@@ -29,6 +29,11 @@ class ZwoCamera(Camera):
         """Opens connection with camera and returns the camera manufacturer specific object.
            Uses the config_id to look up parameters in the config.ini."""
         # noinspection PyBroadException
+        
+        # Pull flip parameters
+        self.theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
+        self.fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
+
 
         # Attempt to find USB camera.
         num_cameras = zwoasi.get_num_cameras()
@@ -88,7 +93,7 @@ class ZwoCamera(Camera):
 
         return image.astype(np.dtype(np.int))
 
-    def capture_and_flip(self, exposure_time, theta, fliplr):
+    def capture_and_orient(self, exposure_time, theta, fliplr):
         """ Takes and image and flips according to theta and l/r input.
 
         Parameters
@@ -164,16 +169,12 @@ class ZwoCamera(Camera):
             else:
                 meta_data.append(extra_metadata)
         
-        # Pull flip parameters
-        theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
-        fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
-
         # DATA MODE: Takes images and returns data and metadata (does not write anything to disk).
         img_list = []
         if not file_mode:
             # Take exposures and add to list.
             for i in range(num_exposures):
-                img = self.capture_and_flip(exposure_time, theta, fliplr)
+                img = self.capture_and_orient(exposure_time, self.theta, self.fliplr)
                 img_list.append(img)
             if return_metadata:
                 return img_list, meta_data
@@ -214,7 +215,7 @@ class ZwoCamera(Camera):
                 continue
 
             # Take exposure.
-            img = self.capture_and_flip(exposure_time, theta, fliplr)
+            img = self.capture_and_orient(exposure_time, self.theta, self.fliplr)
 
             # Skip writing the fits files per the raw_skip value, and keep img data in memory.
             if raw_skip != 0:
