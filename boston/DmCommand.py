@@ -11,6 +11,8 @@ from hicat.config import CONFIG_INI
 from hicat import util as hicat_util
 
 
+m_per_volt_map = None  # for caching the conversion factor, to avoid reading from disk each time
+
 class DmCommand(object):
     def __init__(self, data, dm_num, flat_map=False, bias=False, as_voltage_percentage=False,
                  as_volts=False, sin_specification=None):
@@ -194,6 +196,15 @@ def get_flat_map_volts(dm_num):
         flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
         return flat_map_volts[0].data
 
+def get_m_per_volt_map():
+    global m_per_volt_map
+    if m_per_volt_map is None:
+        script_dir = os.path.dirname(__file__)
+        m_per_volt_map = fits.getdata(os.path.join(script_dir,
+                                               CONFIG_INI.get("boston_kilo952", "meters_per_volt_map")))
+    return m_per_volt_map
+
+
 def convert_volts_to_m(data):
     """
     Convert volts to meters for DM commands.
@@ -203,11 +214,8 @@ def convert_volts_to_m(data):
 
     :return: DM commands in meters
     """
-    script_dir = os.path.dirname(__file__)
-    m_per_volt_map = fits.getdata(os.path.join(script_dir,
-                                               CONFIG_INI.get("boston_kilo952", "meters_per_volt_map")))
 
-    return data * m_per_volt_map
+    return data * get_m_per_volt_map()
 
 def convert_m_to_volts(data):
     """
@@ -218,8 +226,5 @@ def convert_m_to_volts(data):
 
     :return: DM commands in volts
     """
-    script_dir = os.path.dirname(__file__)
-    m_per_volt_map = fits.getdata(os.path.join(script_dir,
-                                               CONFIG_INI.get("boston_kilo952", "meters_per_volt_map")))
 
-    return hicat_util.safe_divide(data, m_per_volt_map)
+    return hicat_util.safe_divide(data, get_m_per_volt_map())
