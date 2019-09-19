@@ -93,10 +93,7 @@ class DmCommand(object):
         # Otherwise convert meters to volts and apply appropriate corrections and bias.
         else:
             if not self.as_volts:
-                # Convert meters to volts.
-                script_dir = os.path.dirname(__file__)
-                m_per_volt_map = fits.getdata(os.path.join(script_dir, "meters_per_volt_dm1.fits"))
-                dm_command = hicat_util.safe_divide(self.data, m_per_volt_map)
+                dm_command = convert_m_to_volts((self.data))
 
             # Apply bias.
             if self.bias:
@@ -197,3 +194,32 @@ def get_flat_map_volts(dm_num):
         flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
         return flat_map_volts[0].data
 
+def convert_volts_to_m(data):
+    """
+    Convert volts to meters for DM commands.
+    Inverse of convert_m_to_volts
+
+    :param data:  DM commands in volts
+
+    :return: DM commands in meters
+    """
+    script_dir = os.path.dirname(__file__)
+    m_per_volt_map = fits.getdata(os.path.join(script_dir,
+                                               CONFIG_INI.get("boston_kilo952", "meters_per_volt_map")))
+
+    return data * m_per_volt_map
+
+def convert_m_to_volts(data):
+    """
+    Convert meters to volts for DM commands.
+    Inverse of convert_volts_to_m
+
+    :param data:  DM commands in meters
+
+    :return: DM commands in volts
+    """
+    script_dir = os.path.dirname(__file__)
+    m_per_volt_map = fits.getdata(os.path.join(script_dir,
+                                               CONFIG_INI.get("boston_kilo952", "meters_per_volt_map")))
+
+    return hicat_util.safe_divide(data, m_per_volt_map)
