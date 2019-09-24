@@ -2,13 +2,12 @@ from hicat.hardware import testbed_state
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 from hicat.config import CONFIG_INI
 import numpy as np
-import logging
 
 # BMC is Boston's library and it only works on windows.
 try:
     from catkit.hardware.boston.sdk.python3.v3_5_1 import bmc
 except ImportError:
-    pass
+    bmc = None
 
 """Interface for Boston Micro-machines deformable mirror controller that can control 2 DMs.  
    It does so by interpreting the first half of the command for DM1, and the second for DM2.
@@ -17,39 +16,58 @@ except ImportError:
 
 class BostonDmController(DeformableMirrorController):
 
-    log = logging.getLogger(__name__)
+    instrument_lib = bmc
 
     def initialize(self, *args, **kwargs):
         """Opens connection with dm and returns the dm manufacturer specific object."""
         self.log.info("Opening DM connection")
-        # Connect to DM.
-        dm = bmc.BmcDm()
-        serial_num = CONFIG_INI.get(self.config_id, "serial_num")
-        dm.open_dm(serial_num)
-        command_length = dm.num_actuators()
+        # Create class attributes for storing individual DM commands.
+        self.dm1_command = None
+        self.dm2_command = None
+        self.command_length = 0
+        self.serial_num = CONFIG_INI.get(self.config_id, "serial_num")
 
-        if command_length == 0:
-            raise Exception("Unable to connect to " + self.config_id + ", make sure it is turned on.")
+    def send_data(self, data):
+        status = self.instrument.send_data(data)
+        if status != self.instrument_lib.NO_ERR:
+            raise Exception("{}: Failed to send data - {}".format(self.config_id,
+                                                                  self.instrument.error_string(status)))
+
+    def _open(self):
+        dm = self.instrument_lib.BmcDm()
+        status = dm.open_dm(self.serial_num)
+        if status != self.instrument_lib.NO_ERR:
+            raise Exception("{}: Failed to connect - {}.".format(self.config_id,
+                                                                 dm.error_string(status)))
+
+        # If we get this far, a connection has been successfully opened.
+        # Set self.instrument so that we can close if anything here subsequently fails.
+        self.instrument = dm
+        self.command_length = dm.num_actuators()
 
         # Initialize the DM to zeros.
-        zeros = np.zeros(command_length, dtype=float)
-        dm.send_data(zeros)
+        zeros = np.zeros(self.command_length, dtype=float)
+        self.send_data(zeros)
 
         # Store the current dm_command values in class attributes.
         self.dm1_command = zeros
         self.dm2_command = zeros
-        return dm
+        self.dm_controller = self.instrument  # For legacy API purposes
+
+        return self.instrument
 
     def close(self):
         """Close dm connection safely."""
-        self.log.info("Closing DM connection")
+        try:
+            self.log.info("Closing DM connection")
 
-        command_length = self.dm_controller.num_actuators()
-
-        # Set the DM to zeros.
-        zeros = np.zeros(command_length, dtype=float)
-        self.dm_controller.send_data(zeros)
-        self.dm_controller.close_dm()
+            # FIXME: I'm pretty sure the new SDK does this under the hood.
+            # Set the DM to zeros.
+            zeros = np.zeros(self.command_length, dtype=float)
+            self.send_data(zeros)
+        finally:
+            self.instrument.close_dm()
+            self.instrument = None
 
         # Update testbed_state.
         self.__close_dm_controller_testbed_state()
@@ -68,7 +86,7 @@ class BostonDmController(DeformableMirrorController):
 
         # Add both arrays together (first half and second half) and send to DM.
         full_command = dm1_command + dm2_command
-        self.dm_controller.send_data(full_command)
+        self.send_data(full_command)
 
         # Update both dm_command class attributes.
         self.dm1_command = dm1_command
@@ -93,7 +111,7 @@ class BostonDmController(DeformableMirrorController):
 
         # Add both arrays together (first half and second half) and send to DM.
         full_command = dm_command + other_dm_command
-        self.dm_controller.send_data(full_command)
+        self.send_data(full_command)
 
         # Update the dm_command class attribute.
         if dm_num == 1:
