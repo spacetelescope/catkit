@@ -1,17 +1,13 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 from abc import ABC, abstractmethod
 from multiprocessing import Process
-from .. config import CONFIG_INI
-from .. import util
-from .SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
 import time
 import logging
 
+from hicat.config import CONFIG_INI
+from hicat import util
+from hicat.experiments.SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
+
+>>>>>>> Errors with imports.
 
 class Experiment(ABC):
     """

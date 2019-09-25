@@ -1,16 +1,12 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import psutil
 import logging
 from datetime import datetime
 from urllib.request import urlopen
 import xml.etree.cElementTree as ET
 from abc import ABC, abstractmethod
-from ..hardware import testbed
-from .. config import CONFIG_INI
+
+from hicat.hardware import testbed
+from hicat.config import CONFIG_INI
 
 # Note, SafetyTest is in the Experiments directory but is not itself an Experiment subclass.
 # Rather it is part of the infrastructure used to enable running Experiments.
