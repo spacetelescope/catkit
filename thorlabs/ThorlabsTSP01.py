@@ -18,12 +18,9 @@ from hicat.config import CONFIG_INI
 # The current implementation of code exec upon import of this mod
 # prevents both model revisions being used simultaneously.
 
-TSP01_LIB_PREFIX = "TLTSPB"  # "TLTSP" for pre revision B models.
-TSP01_BIT_SUFFIX = "64"
-
-# Find TLTSP(B)_32|64.dll - the path to which needs to be added to PYTHONPATH.
+# Find TLTSPB_64.dll - the path to which needs to be added to PYTHONPATH.
 # E.g. C:/Program Files/IVI Foundation/VISA/Win64/Bin/TLTSPB_64.dll.
-TSP01_REQUIRED_LIB = TSP01_LIB_PREFIX + "_" + TSP01_BIT_SUFFIX + ".dll"  # Yep, this is Windows specific.
+TSP01_REQUIRED_LIB = "TLTSPB_64.dll"  # Yep, this is Windows specific.
 TSP01_LIB_PATH = None
 for path in sys.path:
     TSP01_LIB_PATH = glob.glob(os.path.join(path, TSP01_REQUIRED_LIB))
@@ -33,18 +30,20 @@ if not TSP01_LIB_PATH:
     raise ImportError("TSP01: Failed to locate '{}' - add path to PYTHONPATH".format(TSP01_REQUIRED_LIB))
 
 # Now load the found library.
-TSP01_LIB = None
 try:
     TSP01_LIB = ctypes.cdll.LoadLibrary(TSP01_LIB_PATH[0])
 except Exception as error:
+    TSP01_LIB = None
     raise ImportError("TSP01: Failed to import '{}' library @ '{}'".format(TSP01_REQUIRED_LIB, TSP01_LIB_PATH)) from error
 
 
 class TSP01:
+    # Don't use this class directly, instead use TSP01RevB.
+
     macro_definitions = {"TLTSP_BUFFER_SIZE": 256,
-                         "TLTSP_TEMPER_CHANNEL_1": 11,  # internal (1 for pre revB)
-                         "TLTSP_TEMPER_CHANNEL_2": 12,  # external probe 1 (2 for pre revB)
-                         "TLTSP_TEMPER_CHANNEL_3": 13}  # external probe 2 (3 for pre revB)
+                         "TLTSP_TEMPER_CHANNEL_1": None,  # internal
+                         "TLTSP_TEMPER_CHANNEL_2": None,  # external probe 1
+                         "TLTSP_TEMPER_CHANNEL_3": None}  # external probe 2
 
     @classmethod
     def get_error_message(cls, status_code):
@@ -144,28 +143,20 @@ class TSP01:
         channel = self.macro_definitions["TLTSP_TEMPER_CHANNEL_2"]
         return self.get_temp(channel), self.get_humidity()
 
-    @classmethod
-    def get_macro_defs(cls, paths):
-        # Normalize
-        if not isinstance(paths, list):
-            paths = list(paths)
 
-        macros = {}
-        search_pattern = TSP01_LIB_PREFIX[0:-1] + "*.h" if 'B' in TSP01_LIB_PREFIX else TSP01_LIB_PREFIX + "_*.h"
-        for path in paths:
-            header_files = glob.glob(os.path.join(path, search_pattern))
-            for header_file in header_files:
-                with open(header_file) as file:
-                    contents = file.read()
-                    macros.update(dict(re.findall('#define\s+(\w+)\s+\(*(\d+)', contents)))
+class TSP01RevA(TSP01):
+    macro_definitions = TSP01.macro_definitions
+    macro_definitions["TLTSP_TEMPER_CHANNEL_1"] = 1  # internal
+    macro_definitions["TLTSP_TEMPER_CHANNEL_2"] = 2  # external probe 1
+    macro_definitions["TLTSP_TEMPER_CHANNEL_3"] = 3  # external probe 2
 
-        for key in cls.macro_definitions:
-            cls.macro_definitions[key] = macros[key]
+    def __init__(self, serial_number):
+        raise NotImplementedError()
 
 
-# This is run when this module is imported, however,
-# needs to be down here to not forward ref. TSP01 class.
-try:
-    TSP01.get_macro_defs(sys.path)
-except Exception as error:
-    warnings.warn("Failed to import Thorlabs TSP01 header files - falling back to defaults")
+class TSP01RevB(TSP01):
+    macro_definitions = TSP01.macro_definitions
+    macro_definitions["TLTSP_TEMPER_CHANNEL_1"] = 11  # internal
+    macro_definitions["TLTSP_TEMPER_CHANNEL_2"] = 12  # external probe 1
+    macro_definitions["TLTSP_TEMPER_CHANNEL_3"] = 13  # external probe 2
+    pass
