@@ -1,9 +1,3 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 from hicat.hardware import testbed_state
 from hicat.interfaces.DeformableMirrorController import DeformableMirrorController
 from hicat.config import CONFIG_INI

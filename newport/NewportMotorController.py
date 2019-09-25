@@ -1,15 +1,10 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import numpy as np
 import logging
 
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed_state
 from hicat.interfaces.MotorController import MotorController
-from .lib import XPS_Q8_drivers
+from hicat.hardware.newport.lib import XPS_Q8_drivers
 
 """Implementation of the Newport motor controller interface."""
 

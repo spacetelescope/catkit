@@ -1,17 +1,12 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 from ctypes import cdll
 import logging
 import os
 import re
 import time
 
-from ...interfaces.LaserSource import LaserSource
-from ...config import CONFIG_INI
-from ...hardware import testbed_state
+from hicat.interfaces.LaserSource import LaserSource
+from hicat.config import CONFIG_INI
+from hicat.hardware import testbed_state
 
 """Interface for a laser source."""
 

@@ -1,8 +1,3 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 from astropy.io import fits
 import os
 import numpy as np

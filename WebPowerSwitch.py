@@ -1,12 +1,7 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 import requests
-from ..config import CONFIG_INI
-from ..interfaces.RemotePowerSwitch import RemotePowerSwitch
+from hicat.config import CONFIG_INI
+from hicat.interfaces.RemotePowerSwitch import RemotePowerSwitch
 
 """
 Implementation of RemotePowerSwitch abstract base class for the Web Power Switch 7 (LAN controlled power switch).

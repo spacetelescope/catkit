@@ -1,12 +1,6 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 import os
 import subprocess
-from ...config import CONFIG_INI
+from hicat.config import CONFIG_INI
 
 class ThorlabsTSP01():
     def __init__(self, config_id):

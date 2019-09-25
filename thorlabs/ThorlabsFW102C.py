@@ -1,17 +1,12 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 import visa
 import platform
-from ...config import CONFIG_INI
+from hicat.config import CONFIG_INI
 from pyvisa import constants
 import time
 
-from .. import testbed_state
-from ...interfaces.FilterWheel import FilterWheel
+from hicat.hardware import testbed_state
+from hicat.interfaces.FilterWheel import FilterWheel
 
 
 class ThorlabsFW102C(FilterWheel):

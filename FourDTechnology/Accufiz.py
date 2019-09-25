@@ -1,9 +1,3 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 import h5py
 import time
 import requests
@@ -14,9 +8,9 @@ from astropy.io import fits
 from scipy import ndimage
 from glob import glob
 
-from ...interfaces.FizeauInterferometer import FizeauInterferometer
-from ...config import CONFIG_INI
-from ... import util
+from hicat.interfaces.FizeauInterferometer import FizeauInterferometer
+from hicat.config import CONFIG_INI
+from hicat import util
 
 
 class Accufiz(FizeauInterferometer):
