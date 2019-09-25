@@ -15,16 +15,16 @@ if not testbed_state.simulation:
     # Don't try to import the hardware drivers if we are pre-configured into simulation
     # mode. This allows running the simulator on computers that don't have all the
     # necessary driver files installed.
-    from ..hardware.SnmpUps import SnmpUps
-    from ..hardware.boston.BostonDmController import BostonDmController
-    from ..hardware.newport.NewportMotorController import NewportMotorController
-    from ..hardware.zwo.ZwoCamera import ZwoCamera
-    from .thorlabs.ThorlabsMFF101 import ThorlabsMFF101
-    from .thorlabs.ThorlabsMCLS1 import ThorlabsMCLS1
-    from .thorlabs.ThorlabsTSP01 import TSP01RevB
+    from hicat.hardware.SnmpUps import SnmpUps
+    from hicat.hardware.boston.BostonDmController import BostonDmController
+    from hicat.hardware.newport.NewportMotorController import NewportMotorController
+    from hicat.hardware.zwo.ZwoCamera import ZwoCamera
+    from hicat.hardware.thorlabs.ThorlabsMFF101 import ThorlabsMFF101
+    from hicat.hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMCLS1
+    from hicat.hardware.thorlabs.ThorlabsTSP01 import TSP01RevB
 
-from ..interfaces.DummyLaserSource import DummyLaserSource # noqa: E4
-from ..hardware.FilterWheelAssembly import FilterWheelAssembly # noqa: E4
+from hicat.interfaces.DummyLaserSource import DummyLaserSource # noqa: E4
+from hicat.hardware.FilterWheelAssembly import FilterWheelAssembly # noqa: E4
 
 
 """Contains shortcut methods to create control objects for the hardware used on the testbed."""
@@ -39,7 +39,7 @@ def imaging_camera():
     """
     camera_name = CONFIG_INI.get("testbed", "imaging_camera")
     if testbed_state.simulation:
-        from .. import simulators
+        from hicat import simulators
         return simulators.SimZwoCamera(camera_name)
     else:
         return ZwoCamera(camera_name)
@@ -53,7 +53,7 @@ def phase_retrieval_camera():
     """
     camera_name = CONFIG_INI.get("testbed", "phase_retrieval_camera")
     if testbed_state.simulation:
-        from .. import simulators
+        from hicat import simulators
         return simulators.SimZwoCamera(camera_name)
     else:
         return ZwoCamera(camera_name)
@@ -67,7 +67,7 @@ def pupil_camera():
         """
     camera_name = CONFIG_INI.get("testbed", "pupil_camera")
     if testbed_state.simulation:
-        from .. import simulators
+        from hicat import simulators
         return simulators.SimZwoCamera(camera_name)
     else:
         return ZwoCamera(camera_name)
@@ -82,7 +82,7 @@ def dm_controller():
     :return: An instance of the DeformableMirrorController.py interface.
     """
     if testbed_state.simulation:
-        from .. import simulators
+        from hicat import simulators
         return simulators.SimBostonDmController("boston_kilo952")
     else:
         return BostonDmController("boston_kilo952")
@@ -95,7 +95,7 @@ def motor_controller(initialize_to_nominal=True, use_testbed_state=True):
     :return: An instance of the MotorController.py interface.
     """
     if testbed_state.simulation:
-        from .. import simulators
+        from hicat import simulators
         return simulators.SimNewportMotorController("newport_xps_q8",
                                   initialize_to_nominal=initialize_to_nominal,
                                   use_testbed_state=use_testbed_state)
@@ -107,7 +107,7 @@ def motor_controller(initialize_to_nominal=True, use_testbed_state=True):
 
 def beam_dump():
     if testbed_state.simulation:
-        from .. import simulators
+        from hicat import simulators
         return simulators.SimThorlabsMFF101("thorlabs_mff101_1")
     else:
         return ThorlabsMFF101("thorlabs_mff101_1")
@@ -116,7 +116,7 @@ def beam_dump():
 def temp_sensor():
     sensor_config_ini_key = "thorlabs_tsp01_1"
     if testbed_state.simulation:
-        from .. import simulators
+        from hicat import simulators
         return simulators.SimThorlabsTSP01(sensor_config_ini_key)
     else:
         return TSP01RevB.create(sensor_config_ini_key)
@@ -129,7 +129,7 @@ def laser_source():
         return DummyLaserSource("dummy")
     else:
         if testbed_state.simulation:
-            from .. import simulators
+            from hicat import simulators
             return simulators.SimThorlabsMCLS1(laser_name)
         else:
             return ThorlabsMCLS1(laser_name)
@@ -137,7 +137,7 @@ def laser_source():
 
 def backup_power():
     if testbed_state.simulation:
-        from .. import simulators
+        from hicat import simulators
         return simulators.SimSnmpUps("blue_ups")
     else:
         return SnmpUps("blue_ups")
