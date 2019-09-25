@@ -1,12 +1,7 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 
 from abc import abstractmethod
-from .Instrument import Instrument
+from hicat.interfaces.Instrument import Instrument
 
 """Abstract base class for filter wheels."""
 

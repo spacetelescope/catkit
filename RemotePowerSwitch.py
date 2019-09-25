@@ -1,8 +1,3 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 from abc import ABC, abstractmethod
 
 """Interface for remote controlled power switch."""
