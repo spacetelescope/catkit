@@ -1,9 +1,3 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 try:
     import ftd2xx
 except Exception as error:  # Raises OSError if it can't open driver lib
@@ -11,9 +5,9 @@ except Exception as error:  # Raises OSError if it can't open driver lib
 import ftd2xx.defines as constants
 import time
 import logging
-from ...interfaces.FlipMotor import FlipMotor
-from ...config import CONFIG_INI
-from ...hardware import testbed_state
+from hicat.interfaces.FlipMotor import FlipMotor
+from hicat.config import CONFIG_INI
+from hicat.hardware import testbed_state
 
 """Implementation of the FlipMotor interface for the Thorlabs MFF101 Flip Mount."""
 

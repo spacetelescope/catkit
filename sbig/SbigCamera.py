@@ -1,15 +1,9 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
-from ...hardware.testbed_state import MetaDataEntry
-from ...interfaces.Camera import Camera
-from ...config import CONFIG_INI
-from ...hicat_types import units, quantity
-from ... import util
-from ...hardware import testbed_state
+from hicat.hardware.testbed_state import MetaDataEntry
+from hicat.interfaces.Camera import Camera
+from hicat.config import CONFIG_INI
+from hicat.hicat_types import units, quantity
+from hicat import util
+from hicat.hardware import testbed_state
 from astropy.io import fits
 from time import sleep
 import numpy as np

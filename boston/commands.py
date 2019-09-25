@@ -1,13 +1,8 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import numpy as np
 
-from ... import config as hicat_config
-from .DmCommand import DmCommand
-from ...hicat_types import units, quantity
+from hicat import config as hicat_config
+from hicat.hardware.boston.DmCommand import DmCommand
+from hicat.hicat_types import units, quantity
 
 # Read config file once here.
 config = hicat_config.load_config_ini()

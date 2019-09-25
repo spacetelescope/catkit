@@ -1,19 +1,13 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
 import math
 
 import numpy as np
-# noinspection PyUnresolvedReferences
-from builtins import *
 from scipy.ndimage.interpolation import rotate
-# noinspection PyPackageRequirements
 from skimage.transform import resize
 
-from ... import util
-from .DmCommand import DmCommand
-from ...hicat_types import units
-from ...config import CONFIG_INI
+from hicat import util
+from hicat.hardware.boston.DmCommand import DmCommand
+from hicat.hicat_types import units
+from hicat.config import CONFIG_INI
 
 
 dm_config_id = "boston_kilo952"
