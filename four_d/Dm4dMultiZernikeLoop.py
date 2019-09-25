@@ -68,10 +68,10 @@ class Dm4dMultiZernikeLoop(Experiment):
         self.first_zernike = first_zernike
         self.second_zernike = second_zernike
         # Resolve the names of the zernike indexes, and use them to make paths and filenames.
-        first_zernike_name = zernike.zern_name(self.first_zernike).replace(" ", "_").lower()
-        second_zernike_name = zernike.zern_name(self.second_zernike).replace(" ", "_").lower()
+        self.first_zernike_name = zernike.zern_name(self.first_zernike).replace(" ", "_").lower()
+        self.second_zernike_name = zernike.zern_name(self.second_zernike).replace(" ", "_").lower()
 
-        suffix = "4d_multi_zernike_loop_" + first_zernike_name + "_" + second_zernike_name
+        suffix = "4d_multi_zernike_loop_" + self.first_zernike_name + "_" + self.second_zernike_name
 
         super(Dm4dMultiZernikeLoop, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
 
@@ -144,8 +144,8 @@ class Dm4dMultiZernikeLoop(Experiment):
                     combined_zernike_1d = util.convert_dm_image_to_command(first_zernike_data + second_zernike_data)
 
                     # Set up more path strings.
-                    first_folder = first_zernike_name + "_" + str(first_p2v_value) + "_nm"
-                    second_folder = second_zernike_name + "_" + str(second_p2v_value) + "_nm"
+                    first_folder = self.first_zernike_name + "_" + str(first_p2v_value) + "_nm"
+                    second_folder = self.second_zernike_name + "_" + str(second_p2v_value) + "_nm"
 
                     for i in range(self.iterations):
 
