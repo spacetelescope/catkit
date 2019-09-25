@@ -111,7 +111,7 @@ class ZwoCamera(Camera):
             Array of integers making up the image.
         """
 
-        unflipped_image = capture(exposure_time) 
+        unflipped_image = self.capture(exposure_time)
         image = util.rotate_and_flip_image(unflipped_image, theta, fliplr)
         
         return image 
