@@ -19,7 +19,7 @@ class TestPrDmCommands(Experiment):
                  centering=ImageCentering.custom_apodizer_spots,
                  output_path=None, suffix="test_pr_dm_data"):
 
-        super(TestPrDmCommands, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super().__init__(output_path=output_path, suffix=suffix)
 
         self.commands_path = commands_path
         self.num_exposures = num_exposures
