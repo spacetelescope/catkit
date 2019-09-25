@@ -7,7 +7,6 @@ from hicat.config import CONFIG_INI
 from hicat import util
 from hicat.experiments.SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
 
->>>>>>> Errors with imports.
 
 class Experiment(ABC):
     """

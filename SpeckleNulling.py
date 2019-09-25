@@ -1,25 +1,20 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 import os
 import numpy as np
 from glob import glob
 from astropy.io import fits
 
-from .Experiment import Experiment
-from ..hardware.boston.sin_command import sin_command
-from ..hardware.boston.commands import flat_command
+from hicat.experiments.Experiment import Experiment
+from hicat.hardware.boston.sin_command import sin_command
+from hicat.hardware.boston.commands import flat_command
 
-from ..speckle_nulling import speckle_nulling
-from ..hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition, ImageCentering
-from ..hardware import testbed
-from ..hardware.boston import DmCommand
-from ..config import CONFIG_INI
-from ..hardware import testbed_state
-from .. import util
+from hicat.speckle_nulling import speckle_nulling
+from hicat.hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition, ImageCentering
+from hicat.hardware import testbed
+from hicat.hardware.boston import DmCommand
+from hicat.config import CONFIG_INI
+from hicat.hardware import testbed_state
+from hicat import util
 
 
 class SpeckleNulling(Experiment):

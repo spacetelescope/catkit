@@ -1,21 +1,15 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-
-from builtins import *
 import logging
 import os
 
-from ..hardware.FilterWheelAssembly import FilterWheelAssembly
+from hicat.hardware.FilterWheelAssembly import FilterWheelAssembly
 
-from .Experiment import Experiment
-from ..hicat_types import *
-from ..hardware.boston.commands import flat_command
-from .. import util
-from ..hardware import testbed
-from ..hardware.thorlabs.ThorlabsFW102C import ThorlabsFW102C
-from ..config import CONFIG_INI
+from hicat.experiments.Experiment import Experiment
+from hicat.hicat_types import * # OHNO
+from hicat.hardware.boston.commands import flat_command
+from hicat import util
+from hicat.hardware import testbed
+from hicat.hardware.thorlabs.ThorlabsFW102C import ThorlabsFW102C
+from hicat.config import CONFIG_INI
 
 
 class BroadbandTakeExposures(Experiment):

@@ -1,16 +1,11 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import numpy as np
 import logging
 
-from ...config import CONFIG_INI
-from ...hardware import testbed
-from ... import util
-from ...hardware.boston.commands import flat_command
-from ...hicat_types import FpmPosition, MetaDataEntry
+from hicat.config import CONFIG_INI
+from hicat.hardware import testbed
+from hicat import util
+from hicat.hardware.boston.commands import flat_command
+from hicat.hicat_types import FpmPosition, MetaDataEntry
 
 
 def take_phase_retrieval_data(exposure_time,

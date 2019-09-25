@@ -1,14 +1,9 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
 import logging
 import os
 from glob import glob
 
 import matplotlib.pyplot as plt
 from astropy.io import fits
-# noinspection PyUnresolvedReferences
-from builtins import *
 from photutils import find_peaks
 import shutil
 

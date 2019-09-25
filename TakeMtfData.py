@@ -1,17 +1,12 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 
-from .Experiment import Experiment
-from ..hardware.boston.commands import flat_command
-from ..hardware import testbed
-from ..hicat_types import units, quantity, FpmPosition
-from .. import util
-from ..config import CONFIG_INI
-from ..wolfram_wrappers import run_mtf
+from hicat.experiments.Experiment import Experiment
+from hicat.hardware.boston.commands import flat_command
+from hicat.hardware import testbed
+from hicat.hicat_types import units, quantity, FpmPosition
+from hicat import util
+from hicat.config import CONFIG_INI
+from hicat.wolfram_wrappers import run_mtf
 
 
 class TakeMtfData(Experiment):

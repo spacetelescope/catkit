@@ -1,9 +1,3 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 from shutil import copyfile
 
 import logging
@@ -14,11 +8,11 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ...hardware.boston.commands import flat_command
-from ... import util
-from ...hardware import testbed
-from ...hicat_types import *
-from ...config import CONFIG_INI
+from hicat.hardware.boston.commands import flat_command
+from hicat import util
+from hicat.hardware import testbed
+from hicat.hicat_types import *
+from hicat.config import CONFIG_INI
 
 
 def take_auto_focus_data(bias,

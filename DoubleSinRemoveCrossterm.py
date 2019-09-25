@@ -1,21 +1,14 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 import os
 import logging
 from hicat.hicat_types import ImageCentering
-from .modules import double_sine
-from .Experiment import Experiment
-from .. import util
-from ..config import CONFIG_INI
-from ..hardware import testbed
-from ..hardware.boston.commands import flat_command
-from ..hardware.boston.sin_command import sin_command
-from ..hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition
+from hicat.experiments.modules import double_sine
+from hicat.experiments.Experiment import Experiment
+from hicat import util
+from hicat.config import CONFIG_INI
+from hicat.hardware import testbed
+from hicat.hardware.boston.commands import flat_command
+from hicat.hardware.boston.sin_command import sin_command
+from hicat.hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition
 
 
 class DoubleSinRemoveCrossterm(Experiment):

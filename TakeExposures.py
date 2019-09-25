@@ -1,15 +1,10 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 
-from .Experiment import Experiment
-from ..hicat_types import *
-from ..hardware.boston.commands import flat_command
-from .modules.general import take_exposures
-from .. import util
+from hicat.experiments.Experiment import Experiment
+from hicat.hicat_types import * # AGAIN, OHNO
+from hicat.hardware.boston.commands import flat_command
+from hicat.experiments.modules.general import take_exposures
+from hicat import util
 
 
 class TakeExposures(Experiment):

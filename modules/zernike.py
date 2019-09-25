@@ -1,13 +1,8 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 from hicat.config import CONFIG_INI
 
 import numpy as np
 from poppy import zernike
-from ...hicat_types import quantity, units
+from hicat.hicat_types import quantity, units
 
 def create_zernike(zernike_index, p2v):
     dm_length = CONFIG_INI.getint("boston_kilo952", 'dm_length_actuators')
