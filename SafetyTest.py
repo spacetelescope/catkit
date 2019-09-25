@@ -6,7 +6,7 @@ import xml.etree.cElementTree as ET
 from abc import ABC, abstractmethod
 
 from hicat.hardware import testbed
-from hicat config import CONFIG_INI
+from hicat.config import CONFIG_INI
 
 # Note, SafetyTest is in the Experiments directory but is not itself an Experiment subclass.
 # Rather it is part of the infrastructure used to enable running Experiments.

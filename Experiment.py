@@ -4,7 +4,7 @@ from multiprocessing import Process
 import time
 import logging
 
-from hicat config import CONFIG_INI
+from hicat.config import CONFIG_INI
 from hicat import util
 from hicat.experiments.SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
 
