@@ -5,7 +5,7 @@ import logging
 from hicat.experiments.Experiment import Experiment
 from hicat.hardware.boston.commands import flat_command
 from hicat.hicat_types import quantity, units, MetaDataEntry, FpmPosition
-from hicat.experminets.modules.phase_retrieval import take_phase_retrieval_data
+from hicat.experiments.modules.phase_retrieval import take_phase_retrieval_data
 from hicat import util
 from hicat.hardware.boston import DmCommand
 
