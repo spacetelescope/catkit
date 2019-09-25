@@ -1,18 +1,13 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import os
 from glob import glob
 import logging
 
-from .Experiment import Experiment
-from ..hardware.boston.commands import flat_command
-from ..hicat_types import quantity, units, MetaDataEntry, FpmPosition
-from .modules.phase_retrieval import take_phase_retrieval_data
-from .. import util
-from ..hardware.boston import DmCommand
+from hicat.experiments.Experiment import Experiment
+from hicat.hardware.boston.commands import flat_command
+from hicat.hicat_types import quantity, units, MetaDataEntry, FpmPosition
+from hicat.experiments.modules.phase_retrieval import take_phase_retrieval_data
+from hicat import util
+from hicat.hardware.boston import DmCommand
 
 
 class TakePhaseRetrievalZernikeData(Experiment):
