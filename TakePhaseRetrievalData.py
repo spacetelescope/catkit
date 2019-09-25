@@ -1,14 +1,9 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 
-from .Experiment import Experiment
-from ..hicat_types import quantity, units, MetaDataEntry, FpmPosition
-from .modules.phase_retrieval import take_phase_retrieval_data
-from ..hardware.boston.commands import flat_command
+from hicat.Experiment import Experiment
+from hicat.hicat_types import quantity, units, MetaDataEntry, FpmPosition
+from hicat.modules.phase_retrieval import take_phase_retrieval_data
+from hicat.hardware.boston.commands import flat_command
 
 
 class TakePhaseRetrievalData(Experiment):

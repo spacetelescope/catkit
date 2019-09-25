@@ -1,14 +1,9 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 import time
 
-from .Experiment import Experiment
-from ..hardware.boston.commands import flat_command
-from ..hardware import testbed
+from hicat.experiements.Experiment import Experiment
+from hicat.hardware.boston.commands import flat_command
+from hicat.hardware import testbed
 
 
 class ApplyFlatMap(Experiment):

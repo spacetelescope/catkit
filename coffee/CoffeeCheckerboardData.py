@@ -1,18 +1,12 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 import logging
 from glob import glob
 
-from ..Experiment import Experiment
-from ...hardware.boston.commands import checkerboard_command, flat_command
-from ...config import CONFIG_INI
-from ... import util
-from ...hicat_types import units, quantity, ImageCentering, MetaDataEntry
-from ..modules.general import take_coffee_data_set
+from hicat.experiments.Experiment import Experiment
+from hicat.hardware.boston.commands import checkerboard_command, flat_command
+from hicat.config import CONFIG_INI
+from hicat import util
+from hicat.hicat_types import units, quantity, ImageCentering, MetaDataEntry
+from hicat.experiments.modules.general import take_coffee_data_set
 
 
 class CoffeeCheckerboardData(Experiment):

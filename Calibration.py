@@ -1,22 +1,16 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
 from collections import OrderedDict
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 import os
 import numpy as np
 
-from .. import wolfram_wrappers
-from .Experiment import Experiment
-from .modules import auto_focus
-from .. import calibration_take_data, calibration_util
-from ..hardware.boston.commands import flat_command
-from .. import util
-from ..hicat_types import *
-from ..config import CONFIG_INI
+from hicat import wolfram_wrappers
+from hicat.experiments.Experiment import Experiment
+from hicat.experiments.modules import auto_focus
+from hicat import calibration_take_data, calibration_util
+from hicat.hardware.boston.commands import flat_command
+from hicat import util
+from hicat.hicat_types import *
+from hicat.config import CONFIG_INI
 
 
 class Calibration(Experiment):

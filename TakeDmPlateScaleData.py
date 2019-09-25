@@ -1,20 +1,15 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
 import os
 import logging
 
 import numpy as np
-# noinspection PyUnresolvedReferences
-from builtins import *
 
-from ..hicat_types import ImageCentering
-from .modules import double_sine
-from .Experiment import Experiment
-from .. import util
-from ..config import CONFIG_INI
-from ..hardware import testbed
-from ..hicat_types import units, quantity, SinSpecification, FpmPosition, LyotStopPosition
+from hicat.hicat_types import ImageCentering
+from hicat.experiments.modules import double_sine
+from hicat.experiments.Experiment import Experiment
+from hicat import util
+from hicat.config import CONFIG_INI
+from hicat.hardware import testbed
+from hicat.hicat_types import units, quantity, SinSpecification, FpmPosition, LyotStopPosition
 
 
 class TakeDmPlateScaleData(Experiment):

@@ -1,19 +1,13 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 import os
 from astropy.io import fits
 from glob import glob
 
 from hicat.hicat_types import ImageCentering
-from ...hardware.boston.commands import flat_command
-from ...hardware.boston.sin_command import sin_command
-from ...hardware import testbed
-from ...util import write_fits, read_fits
-from ...hicat_types import LyotStopPosition, SinSpecification, quantity, units
+from hicat.hardware.boston.commands import flat_command
+from hicat.hardware.boston.sin_command import sin_command
+from hicat.hardware import testbed
+from hicat.util import write_fits, read_fits
+from hicat.hicat_types import LyotStopPosition, SinSpecification, quantity, units
 
 
 positive_sin_dirname = "positive_sin"

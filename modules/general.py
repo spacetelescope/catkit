@@ -1,16 +1,11 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 import os
-from ...hicat_types import FpmPosition, ImageCentering
-from ... import util
-from ...hardware import testbed
-from ...config import CONFIG_INI
-from ...hardware.boston import commands
-from ...hardware.boston import DmCommand
+
+from hicat.hicat_types import FpmPosition, ImageCentering
+from hicat import util
+from hicat.hardware import testbed
+from hicat.config import CONFIG_INI
+from hicat.hardware.boston import commands
+from hicat.hardware.boston import DmCommand
 
 
 def take_coffee_data_set(dm2_command_list,

@@ -1,18 +1,12 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 from glob import glob
 import logging
 
-from ..Experiment import Experiment
-from ...hardware.boston import commands
+from hicat.experiments.Experiment import Experiment
+from hicat.hardware.boston import commands
 from hicat.hardware.boston.sin_command import sin_command
-from ... import util
-from ...hicat_types import units, quantity, ImageCentering, SinSpecification
-from ..modules.general import take_coffee_data_set
+from hicat import util
+from hicat.hicat_types import units, quantity, ImageCentering, SinSpecification
+from hicat.experiments.modules.general import take_coffee_data_set
 
 class CoffeeRipple(Experiment):
     """

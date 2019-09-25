@@ -1,9 +1,4 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
 from astropy.stats.sigma_clipping import sigma_clipped_stats
-from builtins import *
 import logging
 import os
 from glob import glob
@@ -12,13 +7,13 @@ from photutils.centroids.core import centroid_1dg, centroid_2dg
 
 from photutils.detection.core import find_peaks
 
-from .Experiment import Experiment
-from ..hicat_types import *
-from ..hardware.boston.commands import flat_command
-from .modules.general import take_exposures
-from .. import util
-from .. import calibration_util
-from ..config import CONFIG_INI
+from hicat.experiments.Experiment import Experiment
+from hicat.hicat_types import *
+from hicat.hardware.boston.commands import flat_command
+from hicat.experiments.modules.general import take_exposures
+from hicat import util
+from hicat import calibration_util
+from hicat.config import CONFIG_INI
 import matplotlib.pyplot as plt
 
 

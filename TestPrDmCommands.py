@@ -1,17 +1,11 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 from glob import glob
 import logging
 
-from .Experiment import Experiment
-from ..hardware.boston import commands, DmCommand
-from ..hicat_types import units, quantity, ImageCentering
-from .. import util
-from .modules.general import take_exposures_both_dm_commands
+from hicat.experiments.Experiment import Experiment
+from hicat.hardware.boston import commands, DmCommand
+from hicat.hicat_types import units, quantity, ImageCentering
+from hicat import util
+from hicat.experiments.modules.general import take_exposures_both_dm_commands
 
 
 class TestPrDmCommands(Experiment):

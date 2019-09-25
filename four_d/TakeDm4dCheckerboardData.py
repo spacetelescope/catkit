@@ -1,9 +1,3 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
-
 import os
 from glob import glob
 from astropy.io import fits

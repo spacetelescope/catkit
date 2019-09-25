@@ -1,14 +1,9 @@
-from __future__ import (absolute_import, division,
-                        unicode_literals)
-
-# noinspection PyUnresolvedReferences
-from builtins import *
 import logging
 import numpy as np
 
-from .Experiment import Experiment
-from .modules import auto_focus
-from ..hicat_types import *
+from hicat.experiments.Experiment import Experiment
+from hicat.modules import auto_focus
+from hicat.hicat_types import *
 
 
 class AutoFocus(Experiment):
