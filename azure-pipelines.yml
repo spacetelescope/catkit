@@ -1,0 +1,58 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+#- script: |
+#    python -m pip install --upgrade pip
+#    pip install -r requirements.txt
+#  displayName: 'Install dependencies'
+
+stages:
+
+  - stage: lint
+    displayName: Pre-build linting
+    variables:
+      exclude_dirs: "catkit/hardware/thorlabs/lib,\
+                     catkit/hardware/thorlabs/tsp01_resources,\
+                     catkit/hardware/newport/lib,\
+                     catkit/hardware/boston/sdk"
+    jobs:
+    - job: flake8
+      pool:
+        vmImage: 'ubuntu-latest'
+      variables:
+        # http://flake8.pycqa.org/en/latest/user/error-codes.html
+        selections: "E4,\
+                     E7,\
+                     E9,\
+                     W6,\
+                     F821,\
+                     F822"
+        ignore: "W605"
+      steps:
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '3.6'
+        - bash: python -m pip install flake8
+        - bash: flake8 --count --statistics --exclude=$(exclude_dirs) --select=$(selections) --ignore=$(ignore)
+
+  - stage: pytest
+    displayName: All pytests
+    jobs:
+      - job:
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.6'
+          - bash: echo "##vso[task.prependpath]$CONDA/bin"
+            displayName: Add conda to PATH
+          - bash: conda env create --quiet  --file environment.yml
+            displayName: Create Anaconda environment
+          - bash: |
+              source activate catkit
+              python setup.py develop
+              pytest catkit
+            displayName: Running all pytests
