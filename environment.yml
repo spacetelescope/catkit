@@ -7,7 +7,7 @@
 #    conda env update --name <myEnvName> --file environment.yml
 # ```
 
-name: hicat-package
+name: catkie 
 dependencies:
   - astropy>=1.3
   - numpy>=1.15.0
