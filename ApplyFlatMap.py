@@ -1,7 +1,7 @@
 import logging
 import time
 
-from hicat.experiements.Experiment import Experiment
+from hicat.experiments.Experiment import Experiment
 from hicat.hardware.boston.commands import flat_command
 from hicat.hardware import testbed
 
