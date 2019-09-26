@@ -5,7 +5,7 @@ import os
 from hicat.experiments.Experiment import Experiment
 from hicat.hardware.boston import DmCommand
 from hicat import util
-from hiact.hicat_types import units, quantity, ImageCentering
+from hicat.hicat_types import units, quantity, ImageCentering
 from hicat.experiments.modules.general import take_coffee_data_set
 
 

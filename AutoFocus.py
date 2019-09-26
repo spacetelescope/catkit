@@ -2,7 +2,7 @@ import logging
 import numpy as np
 
 from hicat.experiments.Experiment import Experiment
-from hicat.modules import auto_focus
+from hicat.experiments.modules import auto_focus
 from hicat.hicat_types import *
 
 
