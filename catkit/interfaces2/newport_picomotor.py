@@ -11,6 +11,7 @@ According to the manual, this should hold for models:
 """
 
 ## -- IMPORTS
+import configparser
 import datetime
 import functools
 import logging
