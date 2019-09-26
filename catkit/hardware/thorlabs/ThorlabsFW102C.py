@@ -5,8 +5,8 @@ from hicat.config import CONFIG_INI
 from pyvisa import constants
 import time
 
-from hicat.hardware import testbed_state
-from hicat.interfaces.FilterWheel import FilterWheel
+from catkit.hardware import testbed_state
+from catkit.interfaces.FilterWheel import FilterWheel
 
 
 class ThorlabsFW102C(FilterWheel):

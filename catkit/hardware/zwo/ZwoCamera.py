@@ -6,10 +6,10 @@ import zwoasi
 import sys
 
 from hicat.hicat_types import MetaDataEntry, units, quantity
-from hicat.interfaces.Camera import Camera
+from catkit.interfaces.Camera import Camera
 from hicat.config import CONFIG_INI
 from hicat import util
-from hicat.hardware import testbed_state
+from catkit.hardware import testbed_state
 
 
 """Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
