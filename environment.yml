@@ -1,0 +1,43 @@
+# ``conda env create --file environment.yml``
+# or
+# ``conda env create --name <myEnvName> --file environment.yml``
+# For python 2.7 etc, either edit below, i.e. python=2.7 or
+# ```
+#    conda create --name <myEnvName> python=2.7
+#    conda env update --name <myEnvName> --file environment.yml
+# ```
+
+name: catkit
+dependencies:
+  - astropy>=1.3
+  - numpy>=1.15.0
+  - pillow>=4.0.0
+  - conda-forge::pint
+  - conda-forge::pyusb
+  - arrow
+  - configparser
+  - future
+  - h5py
+  - imageio
+  - matplotlib
+  - pandas
+  - conda-forge::photutils
+  - photutils
+  - pip
+  - psutil
+  - pyserial
+  - pysnmp
+  - pytest
+  - python>=3.6,<3.7
+  - pyvisa
+  - pyvisa-py
+  - requests
+  - scikit-image>=0.15
+  - scipy
+  - sphinx
+  - pip:
+    - zwoasi>=0.0.21 # Requires additional manual install of driver(s) from https://astronomy-imaging-camera.com/software-drivers
+    - ftd2xx # Requires additional manual install of driver from https://www.ftdichip.com/Drivers/D2XX.htm
+    - hcipy
+    - logging-slackhandler
+    - git+https://github.com/spacetelescope/poppy
