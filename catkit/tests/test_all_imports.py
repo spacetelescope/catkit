@@ -7,7 +7,7 @@ import pytest
 import catkit
 
 # Find package root dir path.
-package_path = os.path.dirname(hicat.__file__)
+package_path = os.path.dirname(catkit.__file__)
 # Find all .py files in package root path.
 search_pattern = os.path.join(package_path, "**", "*.py")
 all_files = glob.glob(search_pattern, recursive=True)
