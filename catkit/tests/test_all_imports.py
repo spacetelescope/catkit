@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-import hicat
+import catkit
 
 # Find package root dir path.
 package_path = os.path.dirname(hicat.__file__)
