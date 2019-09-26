@@ -8,7 +8,6 @@ from astropy.io import fits
 from hicat.experiments.modules import zernike as my_zernike_module
 from hicat.experiments.Experiment import Experiment
 from hicat.hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
-from hicat.hardware.boston.DmCommand import get_flat_map_volts, convert_volts_to_nm
 from hicat.hardware import testbed
 from hicat.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
