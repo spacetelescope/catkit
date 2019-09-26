@@ -36,3 +36,23 @@ stages:
             versionSpec: '3.6'
         - bash: python -m pip install flake8
         - bash: flake8 --count --statistics --exclude=$(exclude_dirs) --select=$(selections) --ignore=$(ignore)
+
+  - stage: pytest
+    displayName: All pytests
+    jobs:
+      - job:
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.6'
+          - bash: echo "##vso[task.prependpath]$CONDA/bin"
+            displayName: Add conda to PATH
+          - bash: conda env create --quiet  --file environment.yml
+            displayName: Create Anaconda environment
+          - bash: |
+              source activate hicat-package
+              python setup.py develop
+              pytest hicat
+            displayName: Running all pytests
