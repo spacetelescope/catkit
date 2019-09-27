@@ -23,7 +23,7 @@ if not testbed_state.simulation:
     from catkit.hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMCLS1
     from catkit.hardware.thorlabs.ThorlabsTSP01 import TSP01RevB
 
-from hicat.interfaces.DummyLaserSource import DummyLaserSource # noqa: E4
+from catkit.interfaces.DummyLaserSource import DummyLaserSource # noqa: E4
 from catkit.hardware.FilterWheelAssembly import FilterWheelAssembly # noqa: E4
 
 

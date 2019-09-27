@@ -1,6 +1,6 @@
 import logging
 
-from hicat.interfaces.LaserSource import LaserSource
+from catkit.interfaces.LaserSource import LaserSource
 
 
 """Interface for a laser source."""

@@ -4,7 +4,7 @@ import os
 import re
 import time
 
-from hicat.interfaces.LaserSource import LaserSource
+from catkit.interfaces.LaserSource import LaserSource
 from hicat.config import CONFIG_INI
 from catkit.hardware import testbed_state
 

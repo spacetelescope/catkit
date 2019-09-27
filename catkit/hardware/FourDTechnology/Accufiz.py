@@ -8,7 +8,7 @@ from astropy.io import fits
 from scipy import ndimage
 from glob import glob
 
-from hicat.interfaces.FizeauInterferometer import FizeauInterferometer
+from catkit.interfaces.FizeauInterferometer import FizeauInterferometer
 from hicat.config import CONFIG_INI
 from hicat import util
 

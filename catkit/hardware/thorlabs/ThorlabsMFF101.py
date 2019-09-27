@@ -5,7 +5,7 @@ except Exception as error:  # Raises OSError if it can't open driver lib
 import ftd2xx.defines as constants
 import time
 import logging
-from hicat.interfaces.FlipMotor import FlipMotor
+from catkit.interfaces.FlipMotor import FlipMotor
 from hicat.config import CONFIG_INI
 from catkit.hardware import testbed_state
 

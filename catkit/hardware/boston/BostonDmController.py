@@ -1,5 +1,5 @@
 from catkit.hardware import testbed_state
-from hicat.interfaces.DeformableMirrorController import DeformableMirrorController
+from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 from hicat.config import CONFIG_INI
 import numpy as np
 import logging
