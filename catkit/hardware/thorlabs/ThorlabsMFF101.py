@@ -7,7 +7,7 @@ import time
 import logging
 from hicat.interfaces.FlipMotor import FlipMotor
 from hicat.config import CONFIG_INI
-from hicat.hardware import testbed_state
+from catkit.hardware import testbed_state
 
 """Implementation of the FlipMotor interface for the Thorlabs MFF101 Flip Mount."""
 

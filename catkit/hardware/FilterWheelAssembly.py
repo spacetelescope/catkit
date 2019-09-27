@@ -2,7 +2,7 @@ import logging
 
 from serial import SerialException
 
-from hicat.hardware.thorlabs.ThorlabsFW102C import ThorlabsFW102C
+from catkit.hardware.thorlabs.ThorlabsFW102C import ThorlabsFW102C
 from hicat.interfaces.Instrument import Instrument
 from hicat.config import CONFIG_INI
 
