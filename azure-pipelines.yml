@@ -13,12 +13,9 @@ stages:
   - stage: lint
     displayName: Pre-build linting
     variables:
-      exclude_dirs: "catkit/hardware/thorlabs/lib,\
-                     catkit/hardware/thorlabs/tsp01_resources,\
-                     catkit/hardware/newport/lib,\
-                     catkit/hardware/boston/sdk,\
-                     hardware_from_hicat/newport/lib,\
-                     hardware_from_hicat/boston/sdk"
+      exclude_dirs: "catkit/hardware/newport/lib,\
+                     catkit/hardware/boston/sdk"
+
     jobs:
     - job: flake8
       pool:
