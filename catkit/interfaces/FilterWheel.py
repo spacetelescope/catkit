@@ -1,7 +1,7 @@
 import logging
 
 from abc import abstractmethod
-from hicat.interfaces.Instrument import Instrument
+from catkit.interfaces.Instrument import Instrument
 
 """Abstract base class for filter wheels."""
 

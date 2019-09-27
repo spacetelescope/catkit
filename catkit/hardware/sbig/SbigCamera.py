@@ -1,5 +1,5 @@
 from catkit.hardware.testbed_state import MetaDataEntry
-from hicat.interfaces.Camera import Camera
+from catkit.interfaces.Camera import Camera
 from hicat.config import CONFIG_INI
 from hicat.hicat_types import units, quantity
 from hicat import util
