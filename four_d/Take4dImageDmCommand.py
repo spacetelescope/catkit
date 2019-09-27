@@ -69,8 +69,7 @@ class Take4dImageDmCommand(Experiment):
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
-        repo_path = util.find_repo_location()
-        mask_path = os.path.join(repo_path, "hicat", "hardware", "FourDTechnology", map_file_name)
+        mask_path = os.path.join(util.find_package_location("catkit"), "hardware", "FourDTechnology", map_file_name)
         actuator_index = {}
         with open(mask_path) as csvfile:
             reader = csv.DictReader(csvfile)

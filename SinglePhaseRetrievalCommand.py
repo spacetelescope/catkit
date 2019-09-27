@@ -50,8 +50,7 @@ class SinglePhaseRetrievalCommand(Experiment):
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
-        repo_path = util.find_repo_location()
-        map_path = os.path.join(repo_path, "hicat", "phase_retrieval", map_file_name)
+        map_path = os.path.join(util.find_package_location(), "phase_retrieval", map_file_name)
         actuator_index = {}
         with open(map_path) as csvfile:
             reader = csv.DictReader(csvfile)
