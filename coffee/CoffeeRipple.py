@@ -2,8 +2,8 @@ from glob import glob
 import logging
 
 from hicat.experiments.Experiment import Experiment
-from hicat.hardware.boston import commands
-from hicat.hardware.boston.sin_command import sin_command
+from catkit.hardware.boston import commands
+from catkit.hardware.boston.sin_command import sin_command
 from hicat import util
 from hicat.hicat_types import units, quantity, ImageCentering, SinSpecification
 from hicat.experiments.modules.general import take_coffee_data_set

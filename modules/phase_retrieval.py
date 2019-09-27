@@ -4,7 +4,7 @@ import logging
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
 from hicat import util
-from hicat.hardware.boston.commands import flat_command
+from catkit.hardware.boston.commands import flat_command
 from hicat.hicat_types import FpmPosition, MetaDataEntry
 
 

@@ -1,14 +1,14 @@
 import logging
 import os
 
-from hicat.hardware.FilterWheelAssembly import FilterWheelAssembly
+from catkit.hardware.FilterWheelAssembly import FilterWheelAssembly
 
 from hicat.experiments.Experiment import Experiment
 from hicat.hicat_types import * # OHNO
-from hicat.hardware.boston.commands import flat_command
+from catkit.hardware.boston.commands import flat_command
 from hicat import util
 from hicat.hardware import testbed
-from hicat.hardware.thorlabs.ThorlabsFW102C import ThorlabsFW102C
+from catkit.hardware.thorlabs.ThorlabsFW102C import ThorlabsFW102C
 from hicat.config import CONFIG_INI
 
 

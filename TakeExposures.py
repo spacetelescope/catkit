@@ -2,7 +2,7 @@ import logging
 
 from hicat.experiments.Experiment import Experiment
 from hicat.hicat_types import * # AGAIN, OHNO
-from hicat.hardware.boston.commands import flat_command
+from catkit.hardware.boston.commands import flat_command
 from hicat.experiments.modules.general import take_exposures
 from hicat import util
 

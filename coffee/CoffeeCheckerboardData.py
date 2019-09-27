@@ -2,7 +2,7 @@ import logging
 from glob import glob
 
 from hicat.experiments.Experiment import Experiment
-from hicat.hardware.boston.commands import checkerboard_command, flat_command
+from catkit.hardware.boston.commands import checkerboard_command, flat_command
 from hicat.config import CONFIG_INI
 from hicat import util
 from hicat.hicat_types import units, quantity, ImageCentering, MetaDataEntry

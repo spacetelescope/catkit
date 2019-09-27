@@ -8,7 +8,7 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 import numpy as np
 
-from hicat.hardware.boston.commands import flat_command
+from catkit.hardware.boston.commands import flat_command
 from hicat import util
 from hicat.hardware import testbed
 from hicat.hicat_types import *

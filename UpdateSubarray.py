@@ -9,7 +9,7 @@ from photutils.detection.core import find_peaks
 
 from hicat.experiments.Experiment import Experiment
 from hicat.hicat_types import *
-from hicat.hardware.boston.commands import flat_command
+from catkit.hardware.boston.commands import flat_command
 from hicat.experiments.modules.general import take_exposures
 from hicat import util
 from hicat import calibration_util

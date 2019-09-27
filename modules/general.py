@@ -4,8 +4,8 @@ from hicat.hicat_types import FpmPosition, ImageCentering
 from hicat import util
 from hicat.hardware import testbed
 from hicat.config import CONFIG_INI
-from hicat.hardware.boston import commands
-from hicat.hardware.boston import DmCommand
+from catkit.hardware.boston import commands
+from catkit.hardware.boston import DmCommand
 
 
 def take_coffee_data_set(dm2_command_list,

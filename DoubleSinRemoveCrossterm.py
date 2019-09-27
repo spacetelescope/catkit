@@ -6,8 +6,8 @@ from hicat.experiments.Experiment import Experiment
 from hicat import util
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
-from hicat.hardware.boston.commands import flat_command
-from hicat.hardware.boston.sin_command import sin_command
+from catkit.hardware.boston.commands import flat_command
+from catkit.hardware.boston.sin_command import sin_command
 from hicat.hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition
 
 

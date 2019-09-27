@@ -11,8 +11,8 @@ from hicat.experiments.Experiment import Experiment
 from hicat import util
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
-from hicat.hardware.FourDTechnology.Accufiz import Accufiz
-from hicat.hardware.boston.commands import poke_command, flat_command
+from catkit.hardware.FourDTechnology.Accufiz import Accufiz
+from catkit.hardware.boston.commands import poke_command, flat_command
 from hicat.hicat_types import quantity, units
 
 

@@ -3,9 +3,9 @@ import logging
 from astropy.io import fits
 
 from hicat.experiments.Experiment import Experiment
-from hicat.hardware.boston.commands import poke_command, flat_command
+from catkit.hardware.boston.commands import poke_command, flat_command
 from hicat.hardware import testbed
-from hicat.hardware.FourDTechnology.Accufiz import Accufiz
+from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
 from hicat import util
 from hicat.hicat_types import units, quantity

@@ -5,10 +5,10 @@ import csv
 from astropy.io import fits
 
 from hicat.experiments.Experiment import Experiment
-from hicat.hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
-from hicat.hardware.boston import DmCommand
+from catkit.hardware.boston.commands import poke_letter_f_command, poke_command, flat_command
+from catkit.hardware.boston import DmCommand
 from hicat.hardware import testbed
-from hicat.hardware.FourDTechnology.Accufiz import Accufiz
+from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
 from hicat import util
 from hicat.hicat_types import units, quantity

@@ -6,13 +6,13 @@ from astropy.io import fits
 import time
 
 from hicat.experiments.Experiment import Experiment
-from hicat.hardware.boston.sin_command import sin_command
-from hicat.hardware.boston.commands import flat_command
+from catkit.hardware.boston.sin_command import sin_command
+from catkit.hardware.boston.commands import flat_command
 
 from hicat.speckle_nulling import speckle_nulling
 from hicat.hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition, ImageCentering
 from hicat.hardware import testbed
-from hicat.hardware.boston import DmCommand
+from catkit.hardware.boston import DmCommand
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed_state
 from hicat import util
