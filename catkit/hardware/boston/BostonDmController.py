@@ -1,12 +1,12 @@
-from hicat.hardware import testbed_state
-from hicat.interfaces.DeformableMirrorController import DeformableMirrorController
+from catkit.hardware import testbed_state
+from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 from hicat.config import CONFIG_INI
 import numpy as np
 import logging
 
 # BMC is Boston's library and it only works on windows.
 try:
-    from hicat.hardware.boston.sdk.python3.v3_5_1 import bmc
+    from catkit.hardware.boston.sdk.python3.v3_5_1 import bmc
 except ImportError:
     pass
 

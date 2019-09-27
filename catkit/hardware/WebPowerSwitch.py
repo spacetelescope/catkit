@@ -1,7 +1,7 @@
 import logging
 import requests
 from hicat.config import CONFIG_INI
-from hicat.interfaces.RemotePowerSwitch import RemotePowerSwitch
+from catkit.interfaces.RemotePowerSwitch import RemotePowerSwitch
 
 """
 Implementation of RemotePowerSwitch abstract base class for the Web Power Switch 7 (LAN controlled power switch).

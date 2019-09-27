@@ -5,7 +5,7 @@ from scipy.ndimage.interpolation import rotate
 from skimage.transform import resize
 
 from hicat import util
-from hicat.hardware.boston.DmCommand import DmCommand
+from catkit.hardware.boston.DmCommand import DmCommand
 from hicat.hicat_types import units
 from hicat.config import CONFIG_INI
 

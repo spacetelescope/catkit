@@ -1,7 +1,7 @@
 import numpy as np
 
 from hicat import config as hicat_config
-from hicat.hardware.boston.DmCommand import DmCommand
+from catkit.hardware.boston.DmCommand import DmCommand
 from hicat.hicat_types import units, quantity
 
 # Read config file once here.

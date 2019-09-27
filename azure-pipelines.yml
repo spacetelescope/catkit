@@ -13,12 +13,9 @@ stages:
   - stage: lint
     displayName: Pre-build linting
     variables:
-      exclude_dirs: "catkit/hardware/thorlabs/lib,\
-                     catkit/hardware/thorlabs/tsp01_resources,\
-                     catkit/hardware/newport/lib,\
-                     catkit/hardware/boston/sdk,\
-                     hardware_from_hicat/newport/lib,\
-                     hardware_from_hicat/boston/sdk"
+      exclude_dirs: "catkit/hardware/newport/lib,\
+                     catkit/hardware/boston/sdk"
+
     jobs:
     - job: flake8
       pool:
@@ -51,8 +48,14 @@ stages:
               versionSpec: '3.6'
           - bash: echo "##vso[task.prependpath]$CONDA/bin"
             displayName: Add conda to PATH
-          - bash: conda env create --quiet  --file environment.yml
+          - bash: conda env create --quiet --file environment.yml
             displayName: Create Anaconda environment
+          - bash: |
+              source activate catkit
+              git clone https://$(GITHUB_USER):$(GITHUB_TOKEN)@github.com/spacetelescope/hicat
+              cd hicat-package
+              pip install .
+            displayName: Clone and pip install hicat
           - bash: |
               source activate catkit
               python setup.py develop
