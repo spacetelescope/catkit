@@ -1,16 +1,15 @@
 import numpy as np
 
-from hicat import config as hicat_config
+from hicat.config import CONFIG_INI
 from catkit.hardware.boston.DmCommand import DmCommand
 from hicat.hicat_types import units, quantity
 
 # Read config file once here.
-config = hicat_config.load_config_ini()
 config_name = "boston_kilo952"
 
 # Load values from config.ini into variables.
-num_actuators_pupil = config.getint(config_name, 'dm_length_actuators')
-total_actuators = config.getint(config_name, 'number_of_actuators')
+num_actuators_pupil = CONFIG_INI.getint(config_name, 'dm_length_actuators')
+total_actuators = CONFIG_INI.getint(config_name, 'number_of_actuators')
 
 
 def flat_command(bias=False,
