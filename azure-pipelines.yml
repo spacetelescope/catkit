@@ -51,12 +51,14 @@ stages:
           - bash: conda env create --quiet --file environment.yml
             displayName: Create Anaconda environment
           - bash: |
+              set -e
               source activate catkit
-              git clone https://$(GITHUB_USER):$(GITHUB_TOKEN)@github.com/spacetelescope/hicat
+              git clone https://$(GITHUB_USER):$(GITHUB_TOKEN)@github.com/spacetelescope/hicat-package
               cd hicat-package
-              pip install .
+              python setup.py develop
             displayName: Clone and pip install hicat
           - bash: |
+              set -e
               source activate catkit
               python setup.py develop
               pytest catkit
