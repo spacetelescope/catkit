@@ -12,6 +12,7 @@ from catkit.interfaces.FizeauInterferometer import FizeauInterferometer
 from hicat.config import CONFIG_INI
 from hicat import util
 
+calibration_data_path = os.path.join(util.find_package_location("hicat"), "hardware", "FourDTechnology")
 
 class Accufiz(FizeauInterferometer):
 
@@ -95,8 +96,7 @@ class Accufiz(FizeauInterferometer):
 
     @staticmethod
     def __get_mask_path(mask):
-        script_dir = os.path.dirname(__file__)
-        return os.path.join(script_dir, mask)
+        return os.path.join(calibration_data_path, mask)
 
     @staticmethod
     def __convert_h5_to_fits(path, file, rotate, fliplr):
