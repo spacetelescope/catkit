@@ -8,6 +8,9 @@ from hicat import util as hicat_util
 
 m_per_volt_map = None  # for caching the conversion factor, to avoid reading from disk each time
 
+calibration_data_path = os.path.join(hicat_util.find_package_location("hicat"), "hardware", "boston")
+
+
 class DmCommand(object):
     def __init__(self, data, dm_num, flat_map=False, bias=False, as_voltage_percentage=False,
                  as_volts=False, sin_specification=None):
@@ -98,14 +101,13 @@ class DmCommand(object):
 
             # OR apply Flat Map.
             elif self.flat_map:
-                script_dir = os.path.dirname(__file__)
                 if self.dm_num == 1:
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-                    flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+                    flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
                 else:
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-                    flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+                    flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
 
             # Convert between 0-1.
@@ -181,21 +183,19 @@ def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
 
 
 def get_flat_map_volts(dm_num):
-    script_dir = os.path.dirname(__file__)
     if dm_num == 1:
         flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-        flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+        flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
         return flat_map_volts[0].data
     else:
         flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-        flat_map_volts = fits.open(os.path.join(script_dir, flat_map_file_name))
+        flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
         return flat_map_volts[0].data
 
 def get_m_per_volt_map():
     global m_per_volt_map
     if m_per_volt_map is None:
-        script_dir = os.path.dirname(__file__)
-        m_per_volt_map = fits.getdata(os.path.join(script_dir,
+        m_per_volt_map = fits.getdata(os.path.join(calibration_data_path,
                                                CONFIG_INI.get("boston_kilo952", "meters_per_volt_map")))
     return m_per_volt_map
 
