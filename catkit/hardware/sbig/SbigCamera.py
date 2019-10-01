@@ -1,9 +1,9 @@
-from catkit.hardware.testbed_state import MetaDataEntry
+from hicat.hardware.testbed_state import MetaDataEntry
 from catkit.interfaces.Camera import Camera
 from hicat.config import CONFIG_INI
 from hicat.hicat_types import units, quantity
 from hicat import util
-from catkit.hardware import testbed_state
+from hicat.hardware import testbed_state
 from astropy.io import fits
 from time import sleep
 import numpy as np
