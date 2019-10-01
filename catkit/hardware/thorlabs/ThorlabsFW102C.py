@@ -5,7 +5,7 @@ from hicat.config import CONFIG_INI
 from pyvisa import constants
 import time
 
-from catkit.hardware import testbed_state
+from hicat.hardware import testbed_state
 from catkit.interfaces.FilterWheel import FilterWheel
 
 

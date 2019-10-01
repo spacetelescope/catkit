@@ -9,7 +9,7 @@ from hicat.hicat_types import MetaDataEntry, units, quantity
 from catkit.interfaces.Camera import Camera
 from hicat.config import CONFIG_INI
 from hicat import util
-from catkit.hardware import testbed_state
+from hicat.hardware import testbed_state
 
 
 """Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
