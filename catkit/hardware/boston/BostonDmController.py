@@ -24,7 +24,7 @@ class BostonDmController(DeformableMirrorController):
         # Create class attributes for storing individual DM commands.
         self.dm1_command = None
         self.dm2_command = None
-        self.command_length = 0
+        self.command_length = CONFIG_INI.getint(self.config_id, "command_length")
         self.serial_num = CONFIG_INI.get(self.config_id, "serial_num")
 
     def send_data(self, data):
@@ -43,7 +43,11 @@ class BostonDmController(DeformableMirrorController):
         # If we get this far, a connection has been successfully opened.
         # Set self.instrument so that we can close if anything here subsequently fails.
         self.instrument = dm
-        self.command_length = dm.num_actuators()
+        hardware_command_length = dm.num_actuators()
+        if self.command_length != hardware_command_length:
+            raise ValueError("config.ini error - '{}':'command_length' = {} but hardware gives {}.".format(self.config_id,
+                                                                                                           self.command_length,
+                                                                                                           hardware_command_length))
 
         # Initialize the DM to zeros.
         zeros = np.zeros(self.command_length, dtype=float)
@@ -51,7 +55,7 @@ class BostonDmController(DeformableMirrorController):
 
         # Store the current dm_command values in class attributes.
         self.dm1_command = zeros
-        self.dm2_command = zeros
+        self.dm2_command = zeros[:]  # dm 1 & 2 should NOT be using the same memory
         self.dm_controller = self.instrument  # For legacy API purposes
 
         return self.instrument
