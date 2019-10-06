@@ -8,7 +8,7 @@ class Instrument(ABC):
 
     instrument_lib = None
 
-    def __new__(cls, config_id):
+    def __new__(cls, config_id, *args, **kwargs):
         return super().__new__(cls)
 
     def __init__(self, config_id, *args, **kwargs):
