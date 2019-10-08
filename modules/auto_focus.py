@@ -134,10 +134,11 @@ def auto_focus_mtf(filePath, positions, threshold):
 
     # Plot focus fit
     plt.clf()
-    plt.scatter(positions, values_MTF, c='r')
-    plt.plot(fit_x, fit_data)
+    plt.scatter(positions, values_MTF, c='r', label='data points')
+    plt.plot(fit_x, fit_data, label='model fit')
     plt.title('HICAT autofocus ' + ' @ ' + str(best_foc) + 'mm')
     plt.xlabel('Camera position [mm]')
     plt.ylabel('MTF sum [counts]')
+    plt.legend()
     plt.savefig(os.path.join(filePath, 'autofocus_results.pdf'))
     plt.show()
