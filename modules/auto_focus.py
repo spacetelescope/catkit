@@ -6,6 +6,7 @@ from glob import glob
 
 from astropy.io import fits
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 import numpy as np
 
 from catkit.hardware.boston.commands import flat_command
@@ -106,13 +107,21 @@ def auto_focus_mtf(filePath, positions, threshold):
 
     # Calculate sum of MTF. It gets smaller when we move away from best focus
     values_MTF = []
+    mtf_dir = 'mtf_plots'
+    os.makedirs(os.path.join(filePath, mtf_dir), exist_ok=True)
+
     for i in range(MTF.shape[0]):
         values_MTF.append(np.sum(MTF[i]*mask))
+
+        # create MTF plot and save as pdf
+        plt.clf()
+        plt.imshow(MTF[i] * mask, norm=LogNorm())
+        plt.savefig(os.path.join(filePath, mtf_dir, 'mtf_' + str(positions[i]) + '.pdf'))
 
     # Create motor position values and fit a 2. order curve to data
     parab = np.polyfit(positions, values_MTF, 2)
     fit = np.poly1d(parab)
-    fit_x = np.linspace(positions[0], positions[-1], 50)# this is for plotting at fine samplings
+    fit_x = np.linspace(positions[0], positions[-1], 50)   # this is for plotting at fine samplings
 
     fit_data = fit(fit_x)
 
@@ -124,6 +133,7 @@ def auto_focus_mtf(filePath, positions, threshold):
     print('Best focus is at ' + str(best_foc) + 'mm')
 
     # Plot focus fit
+    plt.clf()
     plt.scatter(positions, values_MTF, c='r')
     plt.plot(fit_x, fit_data)
     plt.title('HICAT autofocus ' + ' @ ' + str(best_foc) + 'mm')
