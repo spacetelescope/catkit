@@ -8,6 +8,9 @@ import hicat.util
 
 
 class PoppyBmcEmulator:
+    """ This class (partially) emulates the Boston Micromachines Company's (BMC)
+    SDK that communicates with their kilo 952 deformable mirror (DM) controller.
+    It is not yet functionally complete."""
 
     NO_ERR = 0
 
@@ -50,6 +53,9 @@ class PoppyBmcEmulator:
 
 
 class PoppyDMCommand(DmCommand):
+    """ Container class to override `to_dm_command()` to NOT calibrate the command.
+    E.g., The Poppy simulated DMs do not require flat map calibrating."""
+
     def __init__(self, dm_command_object):
         """Copy constructor."""
         vars(self).update(copy.deepcopy(vars(dm_command_object)))
@@ -59,10 +65,14 @@ class PoppyDMCommand(DmCommand):
 
 
 class PoppyBostonDMController(BostonDmController):
+    """ Emulated version of the real hardware `BostonDmController` class.
+    This directly follows the hardware control except that the communication layer to the
+    hardware uses our emulated version of Boston's DM SDK - `PoppyBmcEmulator`"""
 
     instrument_lib = PoppyBmcEmulator
 
     def __init__(self, config_id, num_actuators, command_length, dm1, dm2=None):
+        # self.instrument_lib points to a class def NOT an instance, so we need to instantiate.
         self.instrument_lib = self.instrument_lib(num_actuators, command_length, dm1, dm2)
         return super().__init__(config_id)
 
