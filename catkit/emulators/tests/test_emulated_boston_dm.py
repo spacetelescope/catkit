@@ -8,7 +8,7 @@ from poppy.dms import ContinuousDeformableMirror
 import pytest
 
 from catkit.hardware.boston.DmCommand import DmCommand
-from catkit.emulators.boston_DM import PoppyBostonDMController
+from catkit.emulators.boston_dm import PoppyBostonDMController
 
 data_dir = os.path.join(os.path.dirname(__file__), "data")
 # Example specs mimic Boston Kilo 952 DM
@@ -61,21 +61,21 @@ class TestPoppyBostonDMController:
 
         assert dm.instrument is None
 
-    @pytest.mark.xfail
     def test_access_after_with(self):
         flat_dm1 = DmCommand(np.zeros(self.number_of_actuators), 1)
         flat_dm2 = DmCommand(np.zeros(self.number_of_actuators), 2)
         with self.instantiate_dm_controller() as dm:
             dm.apply_shape_to_both(flat_dm1, flat_dm2)
 
-        dm.apply_shape_to_both(flat_dm1, flat_dm2)
+        with pytest.raises(AttributeError):
+            dm.apply_shape_to_both(flat_dm1, flat_dm2)
 
-    @pytest.mark.xfail
     def test_access_outside_with(self):
         flat_dm1 = DmCommand(np.zeros(self.number_of_actuators), 1)
         flat_dm2 = DmCommand(np.zeros(self.number_of_actuators), 2)
         dm = self.instantiate_dm_controller()
-        dm.apply_shape_to_both(flat_dm1, flat_dm2)
+        with pytest.raises(AttributeError):
+            dm.apply_shape_to_both(flat_dm1, flat_dm2)
 
     def test_keep_alive(self):
         flat_dm1 = DmCommand(np.zeros(self.number_of_actuators), 1)

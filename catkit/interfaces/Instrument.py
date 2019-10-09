@@ -3,7 +3,24 @@ import logging
 
 
 class Instrument(ABC):
-    """Generic interface to any instrument, implements a context manager."""
+    """ This is the abstract base class intended to to be inherited and ultimately implemented
+    by all of our hardware classes (actual or emulated/simulated).
+    This is not pure and is not intended to be, such that restrictions can be imposed to safely
+    and adequately control access to the underlying hardware connections.
+
+    Use pattern:
+     * `initialize()` is called by `__init__()`, is not assigned to anything and MUST NEVER open
+        a connection to the hardware.
+     * `_open()` MUST return an object connected to the instrument,
+        that can be assigned to self.instrument. It is hidden as it should not be called.
+        Connections should only be opened when context managed using the `with` statement.
+     * `self.instrument` holds the ref to the connection object.
+     * `self.instrument_lib` points to the connection library, actual or emulated.
+     * No methods should be overridden other than those abstract. If they are, changes should be
+       minimal and the super MUST be called - this really only applies to `__init__()` so
+       that `self.instrument_lib` can be instantiated, if needed.
+    """
+
     log = logging.getLogger(__name__)
 
     instrument_lib = None
