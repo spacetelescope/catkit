@@ -38,17 +38,15 @@ class Accufiz(FizeauInterferometer):
         """Close interferometer connection?"""
 
     def take_measurement(self,
+                         path,
                          num_frames=2,
-                         path=None,
                          filename=None,
                          rotate=0,
                          fliplr=False,
                          exposure_set=""):
 
         if path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            # pass actual path here instead of call `create`
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d")
+           raise Exception("Path must be defined.")
 
         if filename is None:
             filename = "4d_measurement"
