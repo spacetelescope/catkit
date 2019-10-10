@@ -9,9 +9,10 @@ from scipy import ndimage
 from glob import glob
 
 from catkit.interfaces.FizeauInterferometer import FizeauInterferometer
+from catkit import util
 from hicat.config import CONFIG_INI
-from hicat import util
 
+# I assume we still want to write out to the same location...
 calibration_data_path = os.path.join(util.find_package_location("hicat"), "hardware", "FourDTechnology")
 
 class Accufiz(FizeauInterferometer):
@@ -46,6 +47,7 @@ class Accufiz(FizeauInterferometer):
 
         if path is None:
             central_store_path = CONFIG_INI.get("optics_lab", "data_path")
+            # pass actual path here instead of call `create`
             path = util.create_data_path(initial_path=central_store_path, suffix="4d")
 
         if filename is None:
