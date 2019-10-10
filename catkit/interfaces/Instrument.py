@@ -1,5 +1,16 @@
 from abc import ABC, abstractmethod
+import inspect
 import logging
+
+_not_permitted_error = "Positional args are not permitted. Call with explicit keyword args only.\n"\
+                       "E.g., def func(a, b) called as func(1, 2) -> func(a=1, b=2)"
+
+
+def call_with_correct_args(func, **kwargs):
+    """ Extract from kwargs only those args required by func."""
+    signature = inspect.getfullargspec(func)
+    func_kwargs = {arg: kwargs[arg] for arg in kwargs if arg in signature.args or arg in signature.kwonlyargs}
+    return func(**func_kwargs)
 
 
 class Instrument(ABC):
@@ -16,24 +27,28 @@ class Instrument(ABC):
         Connections should only be opened when context managed using the `with` statement.
      * `self.instrument` holds the ref to the connection object.
      * `self.instrument_lib` points to the connection library, actual or emulated.
-     * No methods should be overridden other than those abstract. If they are, changes should be
-       minimal and the super MUST be called - this really only applies to `__init__()` so
-       that `self.instrument_lib` can be instantiated, if needed.
+     * No methods should be overridden other than those abstract by implementing them.
+     * The only other restriction is that instantiation should be called with explicit keyword args,
+       and not implicit positionals. Positionals are ok in the func signature, just not the call to it (binding).
     """
 
     log = logging.getLogger(__name__)
 
     instrument_lib = None
 
-    def __new__(cls, config_id, *args, **kwargs):
-        return super().__new__(cls)
+    # Initialize this here such that it always exists for __del__().
+    # Is an issue otherwise if an  __init__() raises before self.instrument = None is set.
+    instrument = None
 
-    def __init__(self, config_id, *args, **kwargs):
-        self.instrument = None
+    def __init__(self, config_id, *not_permitted, **kwargs):
+        if not_permitted:
+            raise TypeError(_not_permitted_error)
+
+        self.instrument = None  # Make local, intentionally shadowing class member.
         self.__keep_alive = False  # Back door - DO NOT USE!!!
         self.config_id = config_id
         self.socket_id = None  # Legacy - we will remove at some point.
-        self.initialize(*args, **kwargs)  # This should NOT open a connection!
+        self.initialize(**kwargs)  # This should NOT open a connection!
         self.log.info("Initialized '{}' (but connection is not open)".format(config_id))
 
     # Context manager Enter function, gets called automatically when the "with" statement is used.
@@ -84,3 +99,13 @@ class Instrument(ABC):
     @abstractmethod
     def close(self):
         """Close connection to self.instrument. Must be a NOOP if self.instrument is None"""
+
+
+class SimInstrument(Instrument, ABC):
+    """To be inherited by simulated versions of the actual hardware classes."""
+    def __init__(self, *not_permitted, **kwargs):
+        if not_permitted:
+            raise TypeError(_not_permitted_error)
+
+        self.instrument_lib = call_with_correct_args(self.instrument_lib, **kwargs)
+        return call_with_correct_args(super().__init__, **kwargs)
