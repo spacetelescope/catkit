@@ -1,10 +1,11 @@
 import copy
 
 import astropy.units
+import hicat.util
 
 from catkit.hardware.boston.DmCommand import DmCommand
 from catkit.hardware.boston.BostonDmController import BostonDmController
-import hicat.util
+from catkit.interfaces.Instrument import SimInstrument
 
 
 class PoppyBmcEmulator:
@@ -23,7 +24,7 @@ class PoppyBmcEmulator:
     def BmcDm(self):
         return self
 
-    def open_dm(self, serial_number):
+    def open_dm(self, _serial_number):
         return self.NO_ERR
 
     def close_dm(self):
@@ -48,7 +49,7 @@ class PoppyBmcEmulator:
         # Oddly, the hardware actually returns the command length, not the number of actuators per dm etc.
         return self._command_length
 
-    def error_string(self, status):
+    def error_string(self, _status):
         return "Woops!"
 
 
@@ -64,17 +65,12 @@ class PoppyDMCommand(DmCommand):
         return super().to_dm_command(calibrate=calibrate)
 
 
-class PoppyBostonDMController(BostonDmController):
+class PoppyBostonDMController(SimInstrument, BostonDmController):
     """ Emulated version of the real hardware `BostonDmController` class.
     This directly follows the hardware control except that the communication layer to the
     hardware uses our emulated version of Boston's DM SDK - `PoppyBmcEmulator`"""
 
     instrument_lib = PoppyBmcEmulator
-
-    def __init__(self, config_id, num_actuators, command_length, dm1, dm2=None):
-        # self.instrument_lib points to a class def NOT an instance, so we need to instantiate.
-        self.instrument_lib = self.instrument_lib(num_actuators, command_length, dm1, dm2)
-        return super().__init__(config_id)
 
     def apply_shape_to_both(self, dm1_command_object, dm2_command_object):
         if dm1_command_object.as_volts or dm2_command_object.as_volts:

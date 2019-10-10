@@ -18,7 +18,7 @@ class BostonDmController(DeformableMirrorController):
 
     instrument_lib = bmc
 
-    def initialize(self, *args, **kwargs):
+    def initialize(self):
         """Opens connection with dm and returns the dm manufacturer specific object."""
         self.log.info("Opening DM connection")
         # Create class attributes for storing individual DM commands.

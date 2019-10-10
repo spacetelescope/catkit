@@ -33,10 +33,10 @@ class TestPoppyBostonDMController:
     poppy_dm2.shift_y = 0.0
     poppy_dm2.flip_x = True
 
-    instantiate_dm_controller = functools.partial(PoppyBostonDMController, "boston_kilo952",
-                                                  number_of_actuators,
-                                                  command_length,
-                                                  poppy_dm1,
+    instantiate_dm_controller = functools.partial(PoppyBostonDMController, config_id="boston_kilo952",
+                                                  num_actuators=number_of_actuators,
+                                                  command_length=command_length,
+                                                  dm1=poppy_dm1,
                                                   dm2=poppy_dm2)
 
     def test_with(self):
