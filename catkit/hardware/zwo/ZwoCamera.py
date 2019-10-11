@@ -8,7 +8,7 @@ import sys
 from hicat.hicat_types import MetaDataEntry, units, quantity
 from catkit.interfaces.Camera import Camera
 from hicat.config import CONFIG_INI
-from catkit import util
+import catkit.util
 from hicat.hardware import testbed_state
 
 
@@ -106,7 +106,7 @@ class ZwoCamera(Camera):
         """
 
         unflipped_image = self.capture(exposure_time)
-        image = util.rotate_and_flip_image(unflipped_image, theta, fliplr)
+        image = catkit.util.rotate_and_flip_image(unflipped_image, theta, fliplr)
         
         return image 
     

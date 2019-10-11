@@ -9,11 +9,11 @@ from scipy import ndimage
 from glob import glob
 
 from catkit.interfaces.FizeauInterferometer import FizeauInterferometer
-from catkit import util
+import catkit.util
 from hicat.config import CONFIG_INI
 
 # I assume we still want to write out to the same location...
-calibration_data_path = os.path.join(util.find_package_location("hicat"), "hardware", "FourDTechnology")
+calibration_data_path = os.path.join(catkit.util.find_package_location("hicat"), "hardware", "FourDTechnology")
 
 class Accufiz(FizeauInterferometer):
 
@@ -46,7 +46,7 @@ class Accufiz(FizeauInterferometer):
                          exposure_set=""):
 
         if path is None:
-           raise Exception("Path must be defined.")
+           raise ValueError("Path must be defined.")
 
         if filename is None:
             filename = "4d_measurement"
@@ -118,7 +118,7 @@ class Accufiz(FizeauInterferometer):
                 np.int(center[1]) - radiusmask: np.int(center[1]) + radiusmask - 1]
 
         # Apply the rotation and flips.
-        image = util.rotate_and_flip_image(image, rotate, fliplr)
+        image = catkit.util.rotate_and_flip_image(image, rotate, fliplr)
 
         # Convert waves to nanometers (wavelength of 632.8).
         image = image * 632.8
