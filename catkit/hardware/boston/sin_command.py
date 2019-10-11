@@ -4,7 +4,7 @@ import numpy as np
 from scipy.ndimage.interpolation import rotate
 from skimage.transform import resize
 
-from hicat import util
+import catkit.util
 from catkit.hardware.boston.DmCommand import DmCommand
 from hicat.hicat_types import units
 from hicat.config import CONFIG_INI
@@ -57,7 +57,7 @@ def sin_command(sin_specification,
                                spec.phase)
 
     # Apply the DM pupil mask.
-    mask = util.get_hicat_dm_mask()
+    mask = catkit.util.get_dm_mask()
     sin_wave *= mask
 
     # Create the DM Command Object.

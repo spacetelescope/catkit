@@ -135,7 +135,8 @@ def create_flatmap_from_dm_command(dm_command_path, output_path=None, file_name=
         file_name = "flat_map_volts_" + str(dm_string) + "_" + date_time_string + ".fits"
 
     if output_path is None:
-        root_dir = find_package_location()
+        # I think in the future this should be passed in not set to hicat
+        root_dir = find_package_location('hicat')
         output_path = os.path.join(root_dir, "hardware", "boston", file_name)
 
     # Convert the dm command units to volts.

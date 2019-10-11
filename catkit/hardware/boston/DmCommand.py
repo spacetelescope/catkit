@@ -3,13 +3,13 @@ import os
 import numpy as np
 
 from hicat.config import CONFIG_INI
-from catkit import util
+import catkit.util
 
 
 m_per_volt_map = None  # for caching the conversion factor, to avoid reading from disk each time
 
 # And again
-calibration_data_path = os.path.join(util.find_package_location("hicat"), "hardware", "boston")
+calibration_data_path = os.path.join(catkit.util.find_package_location("hicat"), "hardware", "boston")
 
 
 class DmCommand(object):
@@ -65,11 +65,11 @@ class DmCommand(object):
 
         # 1D and no padding, convert to 2D using mask index.
         elif data.ndim == 1 and data.size == self.total_actuators:
-            self.data = util.convert_dm_command_to_image(data)
+            self.data = catkit.util.convert_dm_command_to_image(data)
 
         # Support for old DM Commands created for Labview of size 4096.
         elif data.ndim == 1 and data.size == 4096:
-            self.data = util.convert_dm_command_to_image(data[0:952])
+            self.data = catkit.util.convert_dm_command_to_image(data[0:952])
 
         else:
             raise ValueError("Data needs to be a 1D array of size " + str(self.total_actuators) + " or " +
@@ -115,7 +115,7 @@ class DmCommand(object):
             dm_command /= self.max_volts
 
         # Flatten the command using the mask index.
-        dm_command = util.convert_dm_image_to_command(dm_command)
+        dm_command = catkit.util.convert_dm_image_to_command(dm_command)
 
         if self.dm_num == 1:
             dm_command = np.append(dm_command, np.zeros(self.command_length - dm_command.size))
@@ -134,7 +134,7 @@ class DmCommand(object):
         :return: the numpy array that was saved to fits.
         """
         dm_command = self.to_dm_command()
-        util.write_fits(dm_command, filepath)
+        catkit.util.write_fits(dm_command, filepath)
         return dm_command
 
     def export_fits(self, path, folder_name="dm_command"):
@@ -160,14 +160,14 @@ class DmCommand(object):
         dm_command_1d = self.to_dm_command()[0:self.total_actuators] if self.dm_num == 1 \
             else self.to_dm_command()[1024:1024 + self.total_actuators]
 
-        util.write_fits(self.to_dm_command(), os.path.join(dir_path, "dm{}_command_1d".format(self.dm_num)))
+        catkit.util.write_fits(self.to_dm_command(), os.path.join(dir_path, "dm{}_command_1d".format(self.dm_num)))
 
         # Save 2D representation of the command with no padding (34 x 34).
-        util.write_fits(util.convert_dm_command_to_image(dm_command_1d),
+        catkit.util.write_fits(catkit.util.convert_dm_command_to_image(dm_command_1d),
                               os.path.join(dir_path, "dm{}_command_2d".format(self.dm_num)))
 
         # Save raw data as input to the simulator.
-        util.write_fits(self.data, os.path.join(dir_path, "dm{}_command_2d_noflat".format(self.dm_num)))
+        catkit.util.write_fits(self.data, os.path.join(dir_path, "dm{}_command_2d_noflat".format(self.dm_num)))
 
 
 def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
@@ -223,4 +223,4 @@ def convert_m_to_volts(data):
     :return: DM commands in volts
     """
 
-    return util.safe_divide(data, get_m_per_volt_map())
+    return catkit.util.safe_divide(data, get_m_per_volt_map())
