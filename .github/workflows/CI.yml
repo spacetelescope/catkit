@@ -1,4 +1,4 @@
-name: hicat CI
+name: catkit CI
 
 on:
   pull_request:
@@ -81,16 +81,14 @@ jobs:
     - name: Install dependencies
       run: |
         conda env create --file environment.yml
-        source activate hicat-package
+        source activate catkit
         python setup.py develop
-        git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/instrument-interface-library
-        cd instrument-interface-library
-        git checkout v0.1.4
+        git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
+        cd hicat-package
         python setup.py develop
       shell: bash
     - name: Test with pytest
       run: |
-        source activate hicat-package
-        git lfs pull
-        pytest hicat
+        source activate catkit
+        pytest .
       shell: bash
