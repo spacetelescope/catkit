@@ -32,8 +32,6 @@ class Instrument(ABC):
        and not implicit positionals. Positionals are ok in the func signature, just not the call to it (binding).
     """
 
-    log = logging.getLogger(__name__)
-
     instrument_lib = None
 
     # Initialize this here such that it always exists for __del__().
@@ -43,7 +41,7 @@ class Instrument(ABC):
     def __init__(self, config_id, *not_permitted, **kwargs):
         if not_permitted:
             raise TypeError(_not_permitted_error)
-
+        self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
         self.instrument = None  # Make local, intentionally shadowing class member.
         self.__keep_alive = False  # Back door - DO NOT USE!!!
         self.config_id = config_id
