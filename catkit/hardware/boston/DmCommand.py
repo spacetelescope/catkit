@@ -77,7 +77,7 @@ class DmCommand(object):
     def get_data(self):
         return self.data
 
-    def to_dm_command(self, calibrate=True):
+    def to_dm_command(self):
         """ Output DM command suitable for sending to the hardware driver
 
         returns: 1D array, typically 2048 length for HiCAT, in units of percent of max voltage
@@ -86,33 +86,29 @@ class DmCommand(object):
 
         dm_command = np.copy(self.data)
 
-        if calibrate:
-            # Convert legacy "voltage percentage" data to straight volts.
-            if self.as_voltage_percentage:
-                self.data *= 2
+        # Convert legacy "voltage percentage" data to straight volts.
+        if self.as_voltage_percentage:
+            self.data *= 2
 
-            # Otherwise convert meters to volts and apply appropriate corrections and bias.
-            else:
-                if not self.as_volts:
-                    dm_command = convert_m_to_volts((self.data))
+        # Otherwise convert meters to volts and apply appropriate corrections and bias.
+        else:
+            if not self.as_volts:
+                dm_command = convert_m_to_volts((self.data))
 
-                # Apply bias.
-                if self.bias:
-                    dm_command += self.bias_volts_dm1 if self.dm_num == 1 else self.bias_volts_dm2
+            # Apply bias.
+            if self.bias:
+                dm_command += self.bias_volts_dm1 if self.dm_num == 1 else self.bias_volts_dm2
 
-                # OR apply Flat Map.
-                elif self.flat_map:
-                    if self.dm_num == 1:
-                        flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-                        flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
-                        dm_command += flat_map_volts[0].data
-                    else:
-                        flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-                        flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
-                        dm_command += flat_map_volts[0].data
-
-                # Convert between 0-1.
-                dm_command /= self.max_volts
+            # OR apply Flat Map (which is itself biased).
+            elif self.flat_map:
+                if self.dm_num == 1:
+                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
+                    flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
+                    dm_command += flat_map_volts[0].data
+                else:
+                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
+                    flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
+                    dm_command += flat_map_volts[0].data
 
         # Flatten the command using the mask index.
         dm_command = catkit.util.convert_dm_image_to_command(dm_command)
@@ -123,6 +119,13 @@ class DmCommand(object):
             zero_buffer = np.zeros(int(self.command_length / 2))
             dm_command = np.append(zero_buffer, dm_command)
             dm_command = np.append(dm_command, np.zeros(self.command_length - dm_command.size))
+
+        # Convert between 0-1.
+        dm_command /= self.max_volts
+        # Whilst the SDK will clip anything outside of the 0-1 range to either 0 or 1,
+        # the following test is a good measure of whether we have done something wrong.
+        assert np.min(dm_command) >= 0 and np.max(dm_command) <= 1, \
+            "DM command must be unitless (normalized Volts), i.e. 0.0-1.0."
 
         return dm_command
 

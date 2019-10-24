@@ -1,9 +1,12 @@
 import copy
+import logging
 
-import astropy.units
 import hicat.util
+import numpy as np
 
-from catkit.hardware.boston.DmCommand import DmCommand
+import poppy.dms
+
+import catkit.hardware.boston.DmCommand
 from catkit.hardware.boston.BostonDmController import BostonDmController
 from catkit.interfaces.Instrument import SimInstrument
 
@@ -14,12 +17,19 @@ class PoppyBmcEmulator:
     It is not yet functionally complete."""
 
     NO_ERR = 0
+    dac_bit_width = 14
+    max_volts = 200  # TODO: make dynamic
 
     def __init__(self, num_actuators, command_length, dm1, dm2=None):
+        self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
         self._num_actuators = num_actuators
         self._command_length = command_length
         self.dm1 = dm1
         self.dm2 = dm2
+
+        # As the class name suggests, the design only works with ``poppy.dms.ContinuousDeformableMirror``.
+        assert isinstance(dm1, poppy.dms.ContinuousDeformableMirror)
+        assert isinstance(dm2, poppy.dms.ContinuousDeformableMirror)
 
     def BmcDm(self):
         return self
@@ -32,16 +42,32 @@ class PoppyBmcEmulator:
 
     def send_data(self, full_dm_command):
 
-        meters = astropy.units.m
+        assert np.min(full_dm_command) >= 0 and np.max(full_dm_command) <= 1, \
+            "DM command must be unitless (normalized Volts), i.e. 0.0-1.0."
+
+        full_dm_command = copy.deepcopy(full_dm_command)
+
+        if self.dac_bit_width:
+            self.log.info(f"Simulating DM quantization with {self.dac_bit_width}b DAC")
+
+            quantization_step_size = 1.0/(2**self.dac_bit_width - 1)
+            full_dm_command.data = quantization_step_size * np.round(full_dm_command / quantization_step_size)
+
+        # Convert to Volts.
+        full_dm_command = full_dm_command * self.max_volts
 
         if self.dm1:
             dm1_command = full_dm_command[:self._num_actuators]
             dm1_image = hicat.util.convert_dm_command_to_image(dm1_command)
-            self.dm1.set_surface(dm1_image * meters)
+            # Convert to meters
+            dm1_image = catkit.hardware.boston.DmCommand.convert_volts_to_m(dm1_image)
+            self.dm1.set_surface(dm1_image)
         if self.dm2:
             dm2_command = full_dm_command[self._command_length // 2:self._command_length // 2 + self._num_actuators]
             dm2_image = hicat.util.convert_dm_command_to_image(dm2_command)
-            self.dm2.set_surface(dm2_image * meters)
+            # Convert to meters
+            dm2_image = catkit.hardware.boston.DmCommand.convert_volts_to_m(dm2_image)
+            self.dm2.set_surface(dm2_image)
 
         return self.NO_ERR
 
@@ -53,36 +79,9 @@ class PoppyBmcEmulator:
         return "Woops!"
 
 
-class PoppyDMCommand(DmCommand):
-    """ Container class to override `to_dm_command()` to NOT calibrate the command.
-    E.g., The Poppy simulated DMs do not require flat map calibrating."""
-
-    def __init__(self, dm_command_object):
-        """Copy constructor."""
-        vars(self).update(copy.deepcopy(vars(dm_command_object)))
-
-    def to_dm_command(self, calibrate=False):
-        return super().to_dm_command(calibrate=calibrate)
-
-
 class PoppyBostonDMController(SimInstrument, BostonDmController):
     """ Emulated version of the real hardware `BostonDmController` class.
     This directly follows the hardware control except that the communication layer to the
     hardware uses our emulated version of Boston's DM SDK - `PoppyBmcEmulator`"""
 
     instrument_lib = PoppyBmcEmulator
-
-    def apply_shape_to_both(self, dm1_command_object, dm2_command_object):
-        if dm1_command_object.as_volts or dm2_command_object.as_volts:
-            raise NotImplementedError("Simulator needs to convert DM command from volts to nm")
-
-        _dm1_command_object = PoppyDMCommand(dm1_command_object)
-        _dm2_command_object = PoppyDMCommand(dm2_command_object)
-        return super().apply_shape_to_both(_dm1_command_object, _dm2_command_object)
-
-    def apply_shape(self, dm_command_object, dm_num):
-        if dm_command_object.as_volts:
-            raise NotImplementedError("Simulator needs to convert DM command from volts to nm")
-
-        _dm_command_object = PoppyDMCommand(dm_command_object)
-        return super().apply_shape(_dm_command_object, dm_num)
