@@ -2,7 +2,7 @@ from hicat.hardware.testbed_state import MetaDataEntry
 from catkit.interfaces.Camera import Camera
 from hicat.config import CONFIG_INI
 from hicat.hicat_types import units, quantity
-from hicat import util
+import catkit.util
 from hicat.hardware import testbed_state
 from astropy.io import fits
 from time import sleep
@@ -331,6 +331,6 @@ class SbigCamera(Camera):
         # Apply rotation and flip to the image based on config.ini file.
         theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
         fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
-        image = util.rotate_and_flip_image(image, theta, fliplr)
+        image = catkit.util.rotate_and_flip_image(image, theta, fliplr)
 
         return image
