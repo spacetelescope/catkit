@@ -8,7 +8,6 @@ import catkit.util
 
 m_per_volt_map = None  # for caching the conversion factor, to avoid reading from disk each time
 
-# And again
 calibration_data_path = os.path.join(catkit.util.find_package_location("hicat"), "hardware", "boston")
 
 
