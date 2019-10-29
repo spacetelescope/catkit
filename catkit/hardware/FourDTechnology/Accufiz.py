@@ -9,10 +9,10 @@ from scipy import ndimage
 from glob import glob
 
 from catkit.interfaces.FizeauInterferometer import FizeauInterferometer
+import catkit.util
 from hicat.config import CONFIG_INI
-from hicat import util
 
-calibration_data_path = os.path.join(util.find_package_location("hicat"), "hardware", "FourDTechnology")
+calibration_data_path = os.path.join(catkit.util.find_package_location("hicat"), "hardware", "FourDTechnology")
 
 class Accufiz(FizeauInterferometer):
 
@@ -37,16 +37,15 @@ class Accufiz(FizeauInterferometer):
         """Close interferometer connection?"""
 
     def take_measurement(self,
+                         path,
                          num_frames=2,
-                         path=None,
                          filename=None,
                          rotate=0,
                          fliplr=False,
                          exposure_set=""):
 
         if path is None:
-            central_store_path = CONFIG_INI.get("optics_lab", "data_path")
-            path = util.create_data_path(initial_path=central_store_path, suffix="4d")
+           raise ValueError("Path must be defined.")
 
         if filename is None:
             filename = "4d_measurement"
@@ -118,7 +117,7 @@ class Accufiz(FizeauInterferometer):
                 np.int(center[1]) - radiusmask: np.int(center[1]) + radiusmask - 1]
 
         # Apply the rotation and flips.
-        image = util.rotate_and_flip_image(image, rotate, fliplr)
+        image = catkit.util.rotate_and_flip_image(image, rotate, fliplr)
 
         # Convert waves to nanometers (wavelength of 632.8).
         image = image * 632.8
