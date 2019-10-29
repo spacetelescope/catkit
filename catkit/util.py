@@ -116,7 +116,7 @@ def rotate_and_flip_image(data, theta, flip):
     return data_corr
 
 
-def create_flatmap_from_dm_command(dm_command_path, output_path=None, file_name=None, dm_num=1):
+def create_flatmap_from_dm_command(dm_command_path, file_name=None, dm_num=1):
     """
     Converts a dm_command_2d.fits to the format used for the flatmap, and outputs a new flatmap fits file.
     :param dm_command_path: Full path to the dm_command_2d.fits file.
@@ -135,9 +135,7 @@ def create_flatmap_from_dm_command(dm_command_path, output_path=None, file_name=
         file_name = "flat_map_volts_" + str(dm_string) + "_" + date_time_string + ".fits"
 
     if output_path is None:
-        # I think in the future this should be passed in not set to hicat
-        root_dir = find_package_location('hicat')
-        output_path = os.path.join(root_dir, "hardware", "boston", file_name)
+        raise ValueError
 
     # Convert the dm command units to volts.
     max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
