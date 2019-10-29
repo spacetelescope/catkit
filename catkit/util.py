@@ -116,7 +116,7 @@ def rotate_and_flip_image(data, theta, flip):
     return data_corr
 
 
-def create_flatmap_from_dm_command(dm_command_path, file_name=None, dm_num=1):
+def create_flatmap_from_dm_command(dm_command_path, output_path, file_name=None, dm_num=1):
     """
     Converts a dm_command_2d.fits to the format used for the flatmap, and outputs a new flatmap fits file.
     :param dm_command_path: Full path to the dm_command_2d.fits file.
