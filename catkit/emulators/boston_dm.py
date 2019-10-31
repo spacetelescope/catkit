@@ -17,6 +17,12 @@ class PoppyDM(poppy.dms.ContinuousDeformableMirror):
         self.meter_per_volt_map = meter_per_volt_map
         self.flat_map = flat_map
         self.bias_voltage = bias_voltage
+
+        # TODO: HICAT-652 - unbiasing the flatmap should obtain ``bias_voltage`` from the flatmap file meta.
+        self.unbiased_flatmap = self.flat_map
+        if self.bias_voltage is not None:
+            self.unbiased_flatmap -= self.bias_voltage
+
         super().__init__(**super_kwargs)
 
 
@@ -50,6 +56,7 @@ class PoppyBmcEmulator:
 
     def send_data(self, full_dm_command):
 
+        # TODO: HICAT-653 clip or raise/assert?
         assert np.min(full_dm_command) >= 0 and np.max(full_dm_command) <= 1, \
             "DM command must be unitless (normalized Volts), i.e. 0.0-1.0."
 
@@ -64,15 +71,17 @@ class PoppyBmcEmulator:
         def convert_command_to_poppy_surface(dm_command, dm):
             # Convert to volts
             dm_command *= dm.max_volts
+
             # Convert to 2D image
             dm_image = hicat.util.convert_dm_command_to_image(dm_command)
 
-            # Remove flatmap
-            if dm.flat_map is not None:
-                dm_image -= dm.flat_map
-                # The flatmap includes the voltage bias/offset so if one exists add it back
-                if dm.bias_voltage:
-                    dm_image += dm.bias_voltage
+            # The 0 Volt DM surface is not flat. Attempt to simulate this.
+            if dm.unbiased_flatmap is not None:
+                dm_image -= dm.unbiased_flatmap
+
+            # Simulate voltage bias/offset
+            if dm.bias_voltage:
+                dm_image += dm.bias_voltage
 
             # Convert to meters
             dm_surface = catkit.hardware.boston.DmCommand.convert_volts_to_m(dm_image, dm.meter_per_volt_map)
