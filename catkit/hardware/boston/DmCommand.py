@@ -203,7 +203,7 @@ def get_m_per_volt_map():
     return m_per_volt_map
 
 
-def convert_volts_to_m(data):
+def convert_volts_to_m(data, meter_to_volt_map=None):
     """
     Convert volts to meters for DM commands.
     Inverse of convert_m_to_volts
@@ -213,9 +213,12 @@ def convert_volts_to_m(data):
     :return: DM commands in meters
     """
 
-    return data * get_m_per_volt_map()
+    if meter_to_volt_map is None:
+        meter_to_volt_map = get_m_per_volt_map()
+    return data * meter_to_volt_map
 
-def convert_m_to_volts(data):
+
+def convert_m_to_volts(data, meter_to_volt_map=None):
     """
     Convert meters to volts for DM commands.
     Inverse of convert_volts_to_m
@@ -225,4 +228,6 @@ def convert_m_to_volts(data):
     :return: DM commands in volts
     """
 
-    return catkit.util.safe_divide(data, get_m_per_volt_map())
+    if meter_to_volt_map is None:
+        meter_to_volt_map = get_m_per_volt_map()
+    return catkit.util.safe_divide(data, meter_to_volt_map)
