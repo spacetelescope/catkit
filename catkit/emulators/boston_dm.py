@@ -11,14 +11,22 @@ from catkit.hardware.boston.BostonDmController import BostonDmController
 from catkit.interfaces.Instrument import SimInstrument
 
 
+class PoppyDM(poppy.dms.ContinuousDeformableMirror):
+    def __init__(self, max_volts, meter_per_volt_map, bias_voltage=None, flat_map=None, **super_kwargs):
+        self.max_volts = max_volts
+        self.meter_per_volt_map = meter_per_volt_map
+        self.flat_map = flat_map
+        self.bias_voltage = bias_voltage
+        super().__init__(**super_kwargs)
+
+
 class PoppyBmcEmulator:
     """ This class (partially) emulates the Boston Micromachines Company's (BMC)
     SDK that communicates with their kilo 952 deformable mirror (DM) controller.
     It is not yet functionally complete."""
 
     NO_ERR = 0
-    dac_bit_width = 14
-    max_volts = 200  # TODO: make dynamic
+    dac_bit_width = 14  # Should this belong to PoppyDM?
 
     def __init__(self, num_actuators, command_length, dm1, dm2=None):
         self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
@@ -28,8 +36,8 @@ class PoppyBmcEmulator:
         self.dm2 = dm2
 
         # As the class name suggests, the design only works with ``poppy.dms.ContinuousDeformableMirror``.
-        assert isinstance(dm1, poppy.dms.ContinuousDeformableMirror)
-        assert isinstance(dm2, poppy.dms.ContinuousDeformableMirror)
+        assert isinstance(dm1, PoppyDM)
+        assert isinstance(dm2, PoppyDM)
 
     def BmcDm(self):
         return self
@@ -53,21 +61,29 @@ class PoppyBmcEmulator:
             quantization_step_size = 1.0/(2**self.dac_bit_width - 1)
             full_dm_command.data = quantization_step_size * np.round(full_dm_command / quantization_step_size)
 
-        # Convert to Volts.
-        full_dm_command = full_dm_command * self.max_volts
+        def convert_command_to_poppy_surface(dm_command, dm):
+            # Convert to volts
+            dm_command *= dm.max_volts
+            # Convert to 2D image
+            dm_image = hicat.util.convert_dm_command_to_image(dm_command)
+
+            # Remove flatmap
+            if dm.flat_map is not None:
+                dm_image -= dm.flat_map
+                # The flatmap includes the voltage bias/offset so if one exists add it back
+                if dm.bias_voltage:
+                    dm_image += dm.bias_voltage
+
+            # Convert to meters
+            dm_surface = catkit.hardware.boston.DmCommand.convert_volts_to_m(dm_image, dm.meter_per_volt_map)
+            return dm_surface
 
         if self.dm1:
             dm1_command = full_dm_command[:self._num_actuators]
-            dm1_image = hicat.util.convert_dm_command_to_image(dm1_command)
-            # Convert to meters
-            dm1_image = catkit.hardware.boston.DmCommand.convert_volts_to_m(dm1_image)
-            self.dm1.set_surface(dm1_image)
+            self.dm1.set_surface(convert_command_to_poppy_surface(dm1_command, self.dm1))
         if self.dm2:
             dm2_command = full_dm_command[self._command_length // 2:self._command_length // 2 + self._num_actuators]
-            dm2_image = hicat.util.convert_dm_command_to_image(dm2_command)
-            # Convert to meters
-            dm2_image = catkit.hardware.boston.DmCommand.convert_volts_to_m(dm2_image)
-            self.dm2.set_surface(dm2_image)
+            self.dm2.set_surface(convert_command_to_poppy_surface(dm2_command, self.dm2))
 
         return self.NO_ERR
 
