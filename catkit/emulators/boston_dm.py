@@ -1,11 +1,11 @@
 import copy
 import logging
 
-import hicat.util
 import numpy as np
 
 import poppy.dms
 
+import catkit.util
 import catkit.hardware.boston.DmCommand
 from catkit.hardware.boston.BostonDmController import BostonDmController
 from catkit.interfaces.Instrument import SimInstrument
@@ -72,7 +72,7 @@ class PoppyBmcEmulator:
             dm_command *= dm.max_volts
 
             # Convert to 2D image
-            dm_image = hicat.util.convert_dm_command_to_image(dm_command)
+            dm_image = catkit.util.convert_dm_command_to_image(dm_command)
 
             # The 0 Volt DM surface is not flat. Attempt to simulate this.
             if dm.unbiased_flatmap is not None:
