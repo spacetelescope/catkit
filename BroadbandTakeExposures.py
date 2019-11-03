@@ -6,7 +6,6 @@ from catkit.hardware.FilterWheelAssembly import FilterWheelAssembly
 from hicat.experiments.Experiment import Experiment
 from hicat.hicat_types import * # OHNO
 from catkit.hardware.boston.commands import flat_command
-from hicat import util
 from hicat.hardware import testbed
 from catkit.hardware.thorlabs.ThorlabsFW102C import ThorlabsFW102C
 from hicat.config import CONFIG_INI
@@ -40,7 +39,7 @@ class BroadbandTakeExposures(Experiment):
         :param position_list: (list) Postion(s) of the camera
         :param kwargs: Parameters for either the run_hicat_imaging function or the camera itself.
         """
-        super(BroadbandTakeExposuresm, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super(BroadbandTakeExposures, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.broadband_filter_set = broadband_filter_set
         self.dm1_command_object = dm1_command_object
         self.dm2_command_object = dm2_command_object

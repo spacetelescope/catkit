@@ -11,10 +11,10 @@ from catkit.hardware.boston.commands import poke_letter_f_command, poke_command,
 from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
-from hicat import util
+import hicat.util
 from hicat.hicat_types import units, quantity
 from hicat import wavefront_correction
-
+import catkit.util
 
 class Dm4dMultiZernikeLoop(Experiment):
     """
@@ -89,7 +89,7 @@ class Dm4dMultiZernikeLoop(Experiment):
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
-        mask_path = os.path.join(util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
+        mask_path = os.path.join(hicat.util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
         actuator_index = {}
         with open(mask_path) as csvfile:
             reader = csv.DictReader(csvfile)
@@ -134,7 +134,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                     # Create the zernike shape.
                     first_zernike_data = my_zernike_module.create_zernike(self.first_zernike, first_p2v_value)
                     second_zernike_data = my_zernike_module.create_zernike(self.second_zernike, second_p2v_value)
-                    combined_zernike_1d = util.convert_dm_image_to_command(first_zernike_data + second_zernike_data)
+                    combined_zernike_1d = catkit.util.convert_dm_image_to_command(first_zernike_data + second_zernike_data)
 
                     # Set up more path strings.
                     first_folder = self.first_zernike_name + "_" + str(first_p2v_value) + "_nm"
@@ -183,7 +183,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                             corrected_values.append(correction)
 
                         # Update the DmCommand.
-                        command_object.data += util.convert_dm_command_to_image(corrected_values)
+                        command_object.data += catkit.util.convert_dm_command_to_image(corrected_values)
 
                         # Apply the new command.
                         dm.apply_shape(command_object, dm_num=self.dm_num)
@@ -215,4 +215,4 @@ class Dm4dMultiZernikeLoop(Experiment):
                         zernike_name = first_folder + "_" + second_folder
                         filename = zernike_name + "_dm1" if self.dm_num == 1 else zernike_name + "_dm2"
                         filename += "_command.fits"
-                        util.write_fits(dm_command_data, os.path.join(self.output_path, first_folder, second_folder, filename))
+                        hicat.util.write_fits(dm_command_data, os.path.join(self.output_path, first_folder, second_folder, filename))

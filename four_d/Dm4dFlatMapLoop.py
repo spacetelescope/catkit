@@ -10,10 +10,10 @@ from catkit.hardware.boston import DmCommand
 from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
-from hicat import util
+import hicat.util
 from hicat.hicat_types import units, quantity
 from hicat import wavefront_correction
-
+import catkit.util
 
 class Dm4dFlatMapLoop(Experiment):
     """
@@ -72,7 +72,7 @@ class Dm4dFlatMapLoop(Experiment):
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
-        mask_path = os.path.join(util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
+        mask_path = os.path.join(hicat.util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
         actuator_index = {}
         with open(mask_path) as csvfile:
             reader = csv.DictReader(csvfile)
@@ -149,7 +149,7 @@ class Dm4dFlatMapLoop(Experiment):
                         corrected_values.append(correction)
 
                     # Update the DmCommand.
-                    command_object.data += util.convert_dm_command_to_image(corrected_values)
+                    command_object.data += catkit.util.convert_dm_command_to_image(corrected_values)
 
                     # Apply the new command.
                     dm.apply_shape(command_object, dm_num=self.dm_num)
@@ -175,7 +175,7 @@ class Dm4dFlatMapLoop(Experiment):
                     dm_command_data *= max_volts
 
                     filename = "flat_map_volts_dm1.fits" if self.dm_num == 1 else "flat_map_volts_dm2.fits"
-                    root_dir = util.find_package_location()
+                    root_dir = hicat.util.find_package_location()
                     full_output_path = os.path.join(root_dir, "hardware", "boston", filename)
 
-                    util.write_fits(dm_command_data, full_output_path)
+                    hicat.util.write_fits(dm_command_data, full_output_path)

@@ -10,7 +10,7 @@ from catkit.hardware.boston import DmCommand
 from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
-from hicat import util
+import hicat.util
 from hicat.hicat_types import units, quantity
 from hicat import wavefront_correction
 
@@ -69,7 +69,7 @@ class Take4dImageDmCommand(Experiment):
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
-        mask_path = os.path.join(util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
+        mask_path = os.path.join(hicat.util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
         actuator_index = {}
         with open(mask_path) as csvfile:
             reader = csv.DictReader(csvfile)
@@ -102,7 +102,7 @@ class Take4dImageDmCommand(Experiment):
                     image = fits.getdata(image_path)
 
                     # Subtract the reference from image.
-                    util.write_fits(reference - image, os.path.join(self.output_path, file_name + "_subtracted"))
+                    hicat.util.write_fits(reference - image, os.path.join(self.output_path, file_name + "_subtracted"))
 
             # Save the DM_Command used.
             self.command.export_fits(os.path.join(self.output_path, file_name))

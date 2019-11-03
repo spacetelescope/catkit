@@ -8,7 +8,6 @@ from hicat.experiments.Experiment import Experiment
 from hicat.experiments.modules import auto_focus
 from hicat import calibration_take_data, calibration_util
 from catkit.hardware.boston.commands import flat_command
-from hicat import util
 from hicat.hicat_types import *
 from hicat.config import CONFIG_INI
 

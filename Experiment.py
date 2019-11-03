@@ -4,7 +4,7 @@ import time
 import logging
 
 from hicat.config import CONFIG_INI
-from hicat import util
+import hicat.util
 from hicat.experiments.SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
 
 
@@ -79,7 +79,7 @@ class Experiment(ABC):
                             # Shut down the experiment (but allow context managers to exit properly).
                             errmessage = safety_test.name + " reports unsafe conditions repeatedly. Aborting experiment! Details: {}".format(msg)
                             self.log.critical(errmessage)
-                            util.soft_kill(experiment_process)
+                            hicat.util.soft_kill(experiment_process)
                             raise SafetyException(errmessage)
 
                     else:
@@ -104,7 +104,7 @@ class Experiment(ABC):
             self.log.exception(safety_exception)
             # Shut down the experiment (but allow context managers to exit properly).
             if experiment_process is not None:
-                util.soft_kill(experiment_process)
+                hicat.util.soft_kill(experiment_process)
             # must return SafetyException type specifically to signal queue to stop in typical calling scripts
             raise safety_exception
 
@@ -151,6 +151,6 @@ class Experiment(ABC):
             self.suffix = str(self.name).replace(" ","_").lower()
 
         if self.output_path is None:
-            self.output_path = util.create_data_path(suffix=self.suffix)
+            self.output_path = hicat.util.create_data_path(suffix=self.suffix)
 
-        util.setup_hicat_logging(self.output_path, self.suffix)
+        hicat.util.setup_hicat_logging(self.output_path, self.suffix)

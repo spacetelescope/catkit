@@ -6,7 +6,6 @@ import numpy as np
 from hicat.hicat_types import ImageCentering
 from hicat.experiments.modules import double_sine
 from hicat.experiments.Experiment import Experiment
-from hicat import util
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
 from hicat.hicat_types import units, quantity, SinSpecification, FpmPosition, LyotStopPosition

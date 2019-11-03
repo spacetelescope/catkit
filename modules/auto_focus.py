@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from catkit.hardware.boston.commands import flat_command
-from hicat import util
+import hicat.util
 from hicat.hardware import testbed
 from hicat.hicat_types import *
 from hicat.config import CONFIG_INI
@@ -26,8 +26,8 @@ def take_auto_focus_data(bias,
     log = logging.getLogger(__name__)
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
-        path = util.create_data_path(suffix="focus")
-        util.setup_hicat_logging(path, "focus")
+        path = hicat.util.create_data_path(suffix="focus")
+        hicat.util.setup_hicat_logging(path, "focus")
 
 
     camera_motor = testbed.get_camera_motor_name(camera_type)

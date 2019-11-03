@@ -4,7 +4,6 @@ import logging
 from hicat.experiments.Experiment import Experiment
 from catkit.hardware.boston import commands, DmCommand
 from hicat.hicat_types import units, quantity, ImageCentering
-from hicat import util
 from hicat.experiments.modules.general import take_exposures_both_dm_commands
 
 

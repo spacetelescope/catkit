@@ -5,7 +5,6 @@ from glob import glob
 from astropy.io import fits
 
 from hicat.experiments.Experiment import Experiment
-from hicat import util
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz

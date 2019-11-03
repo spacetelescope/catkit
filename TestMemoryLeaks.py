@@ -6,7 +6,7 @@ from hicat.data_pipeline import standard_file_pipeline
 from hicat.experiments.Experiment import Experiment
 from hicat.hardware import testbed_state
 from hicat.hicat_types import ImageCentering
-from hicat import util
+import hicat.util
 from hicat.config import CONFIG_INI
 
 from glob import glob
@@ -81,4 +81,4 @@ class TestMemoryLeaks(Experiment):
         center_y = int(round(height / 2))
 
         # Make a mask as big as the CNT apodizer's natural dark zone.
-        return util.circular_mask((center_x, center_y), radius, (width, height))
+        return hicat.util.circular_mask((center_x, center_y), radius, (width, height))

@@ -4,7 +4,6 @@ from hicat.experiments.Experiment import Experiment
 from hicat.hicat_types import * # AGAIN, OHNO
 from catkit.hardware.boston.commands import flat_command
 from hicat.experiments.modules.general import take_exposures
-from hicat import util
 
 
 class TakeExposures(Experiment):

@@ -11,7 +11,7 @@ from hicat.experiments.Experiment import Experiment
 from hicat.hicat_types import *
 from catkit.hardware.boston.commands import flat_command
 from hicat.experiments.modules.general import take_exposures
-from hicat import util
+import hicat.util
 from hicat import calibration_util
 from hicat.config import CONFIG_INI
 import matplotlib.pyplot as plt
@@ -69,7 +69,7 @@ class UpdateSubarray(Experiment):
 
         # Open the raw image and use the PSF to find the center.
         file_path = path[0]
-        psf_image = util.read_fits(file_path, return_header=False)
+        psf_image = hicat.util.read_fits(file_path, return_header=False)
 
         # Find the brightest peak (should be the core of the psf).
         mean, median, std = sigma_clipped_stats(psf_image, sigma=3)

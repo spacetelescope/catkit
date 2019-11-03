@@ -11,10 +11,10 @@ from catkit.hardware.boston.commands import poke_letter_f_command, poke_command,
 from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
-from hicat import util
+import hicat.util
 from hicat.hicat_types import units, quantity
 from hicat import wavefront_correction
-
+import catkit.util
 
 class Dm4dZernikeLoop(Experiment):
     """
@@ -80,7 +80,7 @@ class Dm4dZernikeLoop(Experiment):
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
-        mask_path = os.path.join(util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
+        mask_path = os.path.join(hicat.util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
         actuator_index = {}
         with open(mask_path) as csvfile:
             reader = csv.DictReader(csvfile)
@@ -119,7 +119,7 @@ class Dm4dZernikeLoop(Experiment):
                     p2v_string = str(p2v) + "_nm_p2v"
 
                     # Create the zernike shape.
-                    zernike_1d = util.convert_dm_image_to_command(my_zernike_module.create_zernike(self.zernike_index,p2v))
+                    zernike_1d = catkit.util.convert_dm_image_to_command(my_zernike_module.create_zernike(self.zernike_index,p2v))
 
                     for i in range(self.iterations):
                         # Using the actuator_map, find the intensities at each actuator pixel value.
@@ -163,7 +163,7 @@ class Dm4dZernikeLoop(Experiment):
                             corrected_values.append(correction)
 
                         # Update the DmCommand.
-                        command_object.data += util.convert_dm_command_to_image(corrected_values)
+                        command_object.data += catkit.util.convert_dm_command_to_image(corrected_values)
 
                         # Apply the new command.
                         dm.apply_shape(command_object, dm_num=self.dm_num)
@@ -192,4 +192,4 @@ class Dm4dZernikeLoop(Experiment):
                     # Add the Zernike name to the file name.
                     zernike_name = zernike.zern_name(self.zernike_index) + "_zernike"
                     filename = zernike_name + "_volts_dm1.fits" if self.dm_num == 1 else zernike_name + "_volts_dm2.fits"
-                    util.write_fits(dm_command_data, os.path.join(self.path, p2v_string, filename))
+                    hicat.util.write_fits(dm_command_data, os.path.join(self.path, p2v_string, filename))

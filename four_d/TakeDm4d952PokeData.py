@@ -8,7 +8,7 @@ from photutils import find_peaks
 import shutil
 
 from hicat.experiments.Experiment import Experiment
-from hicat import util
+import hicat.util
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz
@@ -104,7 +104,7 @@ class TakeDm4d952PokeData(Experiment):
                     image = fits.getdata(image_path)
 
                     # Subtract the reference from image.
-                    util.write_fits(reference - image, os.path.join(self.output_path, file_name + "_subtracted"))
+                    hicat.util.write_fits(reference - image, os.path.join(self.output_path, file_name + "_subtracted"))
 
                     # Save the DM_Command used.
                     command.export_fits(os.path.join(self.output_path, file_name))
@@ -151,7 +151,7 @@ class TakeDm4d952PokeData(Experiment):
                 csvfile.write(row + "\n")
 
         if self.overwrite_csv:
-            root_dir = util.find_package_location()
+            root_dir = hicat.util.find_package_location()
             package_csv_file = os.path.join(root_dir, csv_filename)
             shutil.copy(csv_file_path, package_csv_file)
 

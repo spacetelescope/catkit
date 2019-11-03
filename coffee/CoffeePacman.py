@@ -4,7 +4,6 @@ import os
 
 from hicat.experiments.Experiment import Experiment
 from catkit.hardware.boston import DmCommand
-from hicat import util
 from hicat.hicat_types import units, quantity, ImageCentering
 from hicat.experiments.modules.general import take_coffee_data_set
 

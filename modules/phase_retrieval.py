@@ -3,7 +3,7 @@ import logging
 
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
-from hicat import util
+import hicat.util
 from catkit.hardware.boston.commands import flat_command
 from hicat.hicat_types import FpmPosition, MetaDataEntry
 
@@ -19,13 +19,13 @@ def take_phase_retrieval_data(exposure_time,
                               suffix=None,
                               **kwargs):
 
-    util.setup_hicat_logging(path, "take_phase_retrieval_data")
+    hicat.util.setup_hicat_logging(path, "take_phase_retrieval_data")
     log = logging.getLogger(__name__)
 
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         suffix = "phase_retrieval_data" if suffix is None else "phase_retrieval_data_" + suffix
-        path = util.create_data_path(suffix=suffix)
+        path = hicat.util.create_data_path(suffix=suffix)
 
     # Get the selected camera's current focus from the ini.
     motor_name = testbed.get_camera_motor_name(camera_type)

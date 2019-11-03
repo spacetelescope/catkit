@@ -8,10 +8,11 @@ from hicat.experiments.Experiment import Experiment
 from catkit.hardware.boston.DmCommand import DmCommand
 from hicat.experiments.modules.phase_retrieval import take_phase_retrieval_data
 from hicat.config import CONFIG_INI
-from hicat import util
+import hicat.util
 from hicat.hicat_types import units, quantity
 from hicat import wavefront_correction
 from catkit.hardware.boston.commands import flat_command
+import catkit.util
 
 
 class SinglePhaseRetrievalCommand(Experiment):
@@ -50,7 +51,7 @@ class SinglePhaseRetrievalCommand(Experiment):
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
-        map_path = os.path.join(util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
+        map_path = os.path.join(hicat.util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
         actuator_index = {}
         with open(map_path) as csvfile:
             reader = csv.DictReader(csvfile)
@@ -63,7 +64,7 @@ class SinglePhaseRetrievalCommand(Experiment):
         image = fits.getdata(self.input_image_path)
 
         # Apply rotates and flips.
-        image = util.rotate_and_flip_image(image, self.rotate, self.fliplr)
+        image = catkit.util.rotate_and_flip_image(image, self.rotate, self.fliplr)
 
         # Apply a -1 to the pr data.
         # image *= -1
@@ -94,7 +95,7 @@ class SinglePhaseRetrievalCommand(Experiment):
             corrected_values.append(correction)
 
         # Update the DmCommand.
-        pr_command = DmCommand(util.convert_dm_command_to_image(corrected_values), 1, flat_map=True)
+        pr_command = DmCommand(catkit.util.convert_dm_command_to_image(corrected_values), 1, flat_map=True)
 
         print("Starting phase retrieval data set...")
         take_phase_retrieval_data(self.exposure_time,

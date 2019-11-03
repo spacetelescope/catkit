@@ -4,7 +4,6 @@ from hicat.experiments.Experiment import Experiment
 from catkit.hardware.boston.commands import flat_command
 from hicat.hardware import testbed
 from hicat.hicat_types import units, quantity, FpmPosition
-from hicat import util
 from hicat.config import CONFIG_INI
 from hicat.wolfram_wrappers import run_mtf
 

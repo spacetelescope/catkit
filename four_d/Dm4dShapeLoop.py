@@ -11,10 +11,10 @@ from catkit.hardware.boston.commands import poke_letter_f_command, poke_command,
 from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
-from hicat import util
+import hicat.util
 from hicat.hicat_types import units, quantity
 from hicat import wavefront_correction
-
+import catkit.util
 
 class Dm4dShapeLoop(Experiment):
     """
@@ -78,7 +78,7 @@ class Dm4dShapeLoop(Experiment):
 
         # Read in the actuator map into a dictionary.
         map_file_name = "actuator_map_dm1.csv" if self.dm_num == 1 else "actuator_map_dm2.csv"
-        mask_path = os.path.join(util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
+        mask_path = os.path.join(hicat.util.find_package_location(), "hardware", "FourDTechnology", map_file_name)
         actuator_index = {}
         with open(mask_path) as csvfile:
             reader = csv.DictReader(csvfile)
@@ -120,7 +120,7 @@ class Dm4dShapeLoop(Experiment):
                     renormalized_shape = self.shape * amp_nm
 
                     # Create the 1d shape.
-                    shape_1d = util.convert_dm_image_to_command(renormalized_shape)
+                    shape_1d = catkit.util.convert_dm_image_to_command(renormalized_shape)
 
                     for i in range(self.iterations):
                         image = fits.getdata(image_path)
@@ -166,14 +166,14 @@ class Dm4dShapeLoop(Experiment):
 
 
                         # Update the DmCommand.
-                        command_object.data += util.convert_dm_command_to_image(corrected_values)
+                        command_object.data += catkit.util.convert_dm_command_to_image(corrected_values)
 
                         # Apply the new command.
                         dm.apply_shape(command_object, dm_num=self.dm_num)
 
                         print("Taking exposures with 4D...")
                         file_name = "iteration{}".format(i)
-                        util.write_fits(util.convert_dm_command_to_image([i * 1e9 for i in corrected_values]),
+                        hicat.util.write_fits(catkit.util.convert_dm_command_to_image([i * 1e9 for i in corrected_values]),
                                         os.path.join(self.path, p2v_string, file_name, "correction"))
 
                         image_path = four_d.take_measurement(path=os.path.join(self.path, p2v_string, file_name),
@@ -201,7 +201,7 @@ class Dm4dShapeLoop(Experiment):
                         fliplr=self.fliplr)
                     raw_image = fits.getdata(image_path)
                     reference = fits.getdata(reference_image_path)
-                    util.write_fits(raw_image - reference,
+                    hicat.util.write_fits(raw_image - reference,
                                     os.path.join(self.path, p2v_string, file_name + "_subtracted"))
 
                 if self.create_command:
@@ -216,4 +216,4 @@ class Dm4dShapeLoop(Experiment):
 
                     # Add the Zernike name to the file name.
                     filename = "shape_volts_dm1.fits" if self.dm_num == 1 else "shape_volts_dm2.fits"
-                    util.write_fits(dm_command_data, os.path.join(self.path, p2v_string, filename))
+                    hicat.util.write_fits(dm_command_data, os.path.join(self.path, p2v_string, filename))

@@ -7,7 +7,7 @@ from catkit.hardware.boston.commands import poke_letter_f_command, poke_command
 from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
-from hicat import util
+import hicat.util
 
 
 class TakeDm4dCalibrationData(Experiment):
@@ -80,7 +80,7 @@ class TakeDm4dCalibrationData(Experiment):
                 image = fits.getdata(image_path)
 
                 # Subtract the reference from image.
-                util.write_fits(reference - image, os.path.join(self.output_path, self.filename + "_subtracted"))
+                hicat.util.write_fits(reference - image, os.path.join(self.output_path, self.filename + "_subtracted"))
 
                 # Save the DM_Command used.
                 self.dm_command_object.export_fits(self.output_path)

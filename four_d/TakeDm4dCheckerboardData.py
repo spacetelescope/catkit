@@ -9,7 +9,7 @@ from catkit.hardware.boston.commands import poke_letter_f_command, poke_command,
 from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
-from hicat import util
+import hicat.util
 from hicat.hicat_types import units, quantity
 
 
@@ -98,7 +98,7 @@ class TakeDm4dCheckerboardData(Experiment):
                             metadata.append(MetaDataEntry("amplitude", "amp", k, "Amplitude in nanometers"))
 
                             # Subtract the reference from image.
-                            util.write_fits(reference - image, os.path.join(self.output_path, file_name + "_subtracted"),
+                            hicat.util.write_fits(reference - image, os.path.join(self.output_path, file_name + "_subtracted"),
                                             metadata=metadata)
 
                             # Save the DM_Command used.

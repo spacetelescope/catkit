@@ -1,7 +1,7 @@
 import os
 
 from hicat.hicat_types import FpmPosition, ImageCentering
-from hicat import util
+import hicat.util
 from hicat.hardware import testbed
 from hicat.config import CONFIG_INI
 from catkit.hardware.boston import commands
@@ -134,9 +134,9 @@ def take_exposures(dm1_command_object,
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
         suffix = "take_exposures_data" if suffix is None else "take_exposures_data_" + suffix
-        path = util.create_data_path(suffix=suffix)
+        path = hicat.util.create_data_path(suffix=suffix)
 
-    util.setup_hicat_logging(path, "take_exposures_data")
+    hicat.util.setup_hicat_logging(path, "take_exposures_data")
 
     # Establish image type and set the FPM position and laser current
     if coronograph:
