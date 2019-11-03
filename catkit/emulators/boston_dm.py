@@ -56,11 +56,10 @@ class PoppyBmcEmulator:
 
     def send_data(self, full_dm_command):
 
-        # TODO: HICAT-653 clip or raise/assert?
-        assert np.min(full_dm_command) >= 0 and np.max(full_dm_command) <= 1, \
-            "DM command must be unitless (normalized Volts), i.e. 0.0-1.0."
-
         full_dm_command = copy.deepcopy(full_dm_command)
+
+        # Clip command between 0.0 - 1.0 just as the hardware does.
+        np.clip(full_dm_command, a_min=0, a_max=1, out=full_dm_command)
 
         if self.dac_bit_width:
             self.log.info(f"Simulating DM quantization with {self.dac_bit_width}b DAC")

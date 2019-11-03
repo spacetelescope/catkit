@@ -28,6 +28,13 @@ class BostonDmController(DeformableMirrorController):
         self.serial_num = CONFIG_INI.get(self.config_id, "serial_num")
 
     def send_data(self, data):
+
+        # The DM controller expects the command to be unitless (normalized Volts): 0.0 - 1.0, where 1.0 := max_volts
+        data_min = np.min(data)
+        data_max = np.max(data)
+        if data_min < 0 or data_max > 1:
+            self.log.warning(f"DM command out of range and will be clipped by hardware. min:{data_min}, max:{data_max}")
+
         status = self.instrument.send_data(data)
         if status != self.instrument_lib.NO_ERR:
             raise Exception("{}: Failed to send data - {}".format(self.config_id,
