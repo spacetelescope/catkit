@@ -65,7 +65,7 @@ class PoppyBmcEmulator:
             self.log.info(f"Simulating DM quantization with {self.dac_bit_width}b DAC")
 
             quantization_step_size = 1.0/(2**self.dac_bit_width - 1)
-            full_dm_command.data = quantization_step_size * np.round(full_dm_command / quantization_step_size)
+            full_dm_command = quantization_step_size * np.round(full_dm_command / quantization_step_size)
 
         def convert_command_to_poppy_surface(dm_command, dm):
             # Convert to volts
