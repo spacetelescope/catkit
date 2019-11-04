@@ -122,10 +122,6 @@ class DmCommand(object):
 
         # Convert between 0-1.
         dm_command /= self.max_volts
-        # Whilst the SDK will clip anything outside of the 0-1 range to either 0 or 1,
-        # the following test is a good measure of whether we have done something wrong.
-        assert np.min(dm_command) >= 0 and np.max(dm_command) <= 1, \
-            "DM command must be unitless (normalized Volts), i.e. 0.0-1.0."
 
         return dm_command
 
