@@ -46,7 +46,7 @@ class Instrument(ABC):
         self.__keep_alive = False  # Back door - DO NOT USE!!!
         self.config_id = config_id
         self.socket_id = None  # Legacy - we will remove at some point.
-        self.initialize(**kwargs)  # This should NOT open a connection!
+        call_with_correct_args(self.initialize, **kwargs)  # This should NOT open a connection!
         self.log.info("Initialized '{}' (but connection is not open)".format(config_id))
 
     # Context manager Enter function, gets called automatically when the "with" statement is used.
@@ -80,7 +80,7 @@ class Instrument(ABC):
         # __func() can't be overridden without also overriding those that call it.
         try:
             if self.instrument:
-                self.close()
+                self._close()
                 self.log.info("Safely closed connection to '{}'".format(self.config_id))
         finally:
             self.instrument = None
@@ -95,7 +95,7 @@ class Instrument(ABC):
         that can be assigned to self.instrument."""
 
     @abstractmethod
-    def close(self):
+    def _close(self):
         """Close connection to self.instrument. Must be a NOOP if self.instrument is None"""
 
 
@@ -106,4 +106,5 @@ class SimInstrument(Instrument, ABC):
             raise TypeError(_not_permitted_error)
 
         self.instrument_lib = call_with_correct_args(self.instrument_lib, **kwargs)
-        return call_with_correct_args(super().__init__, **kwargs)
+        # Pass all **kwargs through as ``__init__()`` calls ``initialize()`` as ``call_with_correct_args(self.initialize, **kwargs)``
+        return super().__init__(**kwargs)

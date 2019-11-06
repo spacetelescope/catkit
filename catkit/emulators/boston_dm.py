@@ -29,21 +29,23 @@ class PoppyDM(poppy.dms.ContinuousDeformableMirror):
 class PoppyBmcEmulator:
     """ This class (partially) emulates the Boston Micromachines Company's (BMC)
     SDK that communicates with their kilo 952 deformable mirror (DM) controller.
-    It is not yet functionally complete."""
+    It is not yet functionally complete.
+    See `catkit.hardware.boston.sdk.python3.v3_5_1.bmc` for completeness."""
 
     NO_ERR = 0
-    dac_bit_width = 14  # Should this belong to PoppyDM?
 
-    def __init__(self, num_actuators, command_length, dm1, dm2=None):
+    def __init__(self, num_actuators, command_length, dac_bit_width,  dm1, dm2=None):
         self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
         self._num_actuators = num_actuators
         self._command_length = command_length
+        self._dac_bit_width = dac_bit_width
         self.dm1 = dm1
         self.dm2 = dm2
 
         # As the class name suggests, the design only works with ``poppy.dms.ContinuousDeformableMirror``.
         assert isinstance(dm1, PoppyDM)
-        assert isinstance(dm2, PoppyDM)
+        if dm2 is not None:
+            assert isinstance(dm2, PoppyDM)
 
     def BmcDm(self):
         return self
@@ -58,13 +60,13 @@ class PoppyBmcEmulator:
 
         full_dm_command = copy.deepcopy(full_dm_command)
 
-        # Clip command between 0.0 - 1.0 just as the hardware does.
+        # Clip command between 0.0 and 1.0 just as the hardware does.
         np.clip(full_dm_command, a_min=0, a_max=1, out=full_dm_command)
 
-        if self.dac_bit_width:
-            self.log.info(f"Simulating DM quantization with {self.dac_bit_width}b DAC")
+        if self._dac_bit_width:
+            self.log.info(f"Simulating DM quantization with {self._dac_bit_width}b DAC")
 
-            quantization_step_size = 1.0/(2**self.dac_bit_width - 1)
+            quantization_step_size = 1.0/(2**self._dac_bit_width - 1)
             full_dm_command = quantization_step_size * np.round(full_dm_command / quantization_step_size)
 
         def convert_command_to_poppy_surface(dm_command, dm):
@@ -100,7 +102,7 @@ class PoppyBmcEmulator:
         return self._command_length
 
     def error_string(self, _status):
-        return "Woops!"
+        return f"An emulated error occurred with the following status code: {_status}!"
 
 
 class PoppyBostonDMController(SimInstrument, BostonDmController):
