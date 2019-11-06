@@ -55,7 +55,10 @@ class TestPoppyBostonDMController:
     poppy_dm2.shift_y = 0.0
     poppy_dm2.flip_x = True
 
-    instantiate_dm_controller = functools.partial(catkit.emulators.boston_dm.PoppyBostonDMController, config_id="boston_kilo952",
+    instantiate_dm_controller = functools.partial(catkit.emulators.boston_dm.PoppyBostonDMController,
+                                                  config_id="boston_kilo952",
+                                                  serial_number="00CW000#000",
+                                                  dac_bit_width=14,
                                                   num_actuators=number_of_actuators,
                                                   command_length=command_length,
                                                   dm1=poppy_dm1,
@@ -115,3 +118,15 @@ class TestPoppyBostonDMController:
         with self.instantiate_dm_controller() as dm:
             dm._Instrument__keep_alive = True
         del dm
+
+    def test_single_dm(self):
+        # Test everything works when using only one DM.
+        dm_controller = catkit.emulators.boston_dm.PoppyBostonDMController(config_id="boston_kilo952",
+                                                                           serial_number="00CW000#000",
+                                                                           dac_bit_width=14,
+                                                                           num_actuators=self.number_of_actuators,
+                                                                           command_length=self.command_length,
+                                                                           dm1=self.poppy_dm1)
+        flat_dm1 = DmCommand(np.zeros(self.number_of_actuators), 1)
+        with dm_controller as dm:
+            dm.apply_shape(flat_dm1, 1)

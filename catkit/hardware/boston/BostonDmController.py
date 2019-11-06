@@ -1,7 +1,7 @@
-from hicat.hardware import testbed_state
-from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
-from hicat.config import CONFIG_INI
 import numpy as np
+from hicat.hardware import testbed_state
+
+from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 
 # BMC is Boston's library and it only works on windows.
 try:
@@ -18,14 +18,15 @@ class BostonDmController(DeformableMirrorController):
 
     instrument_lib = bmc
 
-    def initialize(self):
-        """Opens connection with dm and returns the dm manufacturer specific object."""
+    def initialize(self, serial_number, command_length, dac_bit_width):
+        """ Initialize dm manufacturer specific object - this does not, nor should it, open a connection."""
         self.log.info("Opening DM connection")
         # Create class attributes for storing individual DM commands.
         self.dm1_command = None
         self.dm2_command = None
-        self.command_length = CONFIG_INI.getint(self.config_id, "command_length")
-        self.serial_num = CONFIG_INI.get(self.config_id, "serial_num")
+        self.serial_num = serial_number
+        self.command_length = command_length
+        self.dac_bit_width = dac_bit_width
 
     def send_data(self, data):
 
@@ -62,26 +63,27 @@ class BostonDmController(DeformableMirrorController):
 
         # Store the current dm_command values in class attributes.
         self.dm1_command = zeros
-        self.dm2_command = zeros[:]  # dm 1 & 2 should NOT be using the same memory
+        self.dm2_command = zeros.copy()  # dm 1 & 2 should NOT be using the same memory
         self.dm_controller = self.instrument  # For legacy API purposes
 
         return self.instrument
 
-    def close(self):
+    def _close(self):
         """Close dm connection safely."""
         try:
-            self.log.info("Closing DM connection")
+            try:
+                self.log.info("Closing DM connection")
 
-            # FIXME: I'm pretty sure the new SDK does this under the hood.
-            # Set the DM to zeros.
-            zeros = np.zeros(self.command_length, dtype=float)
-            self.send_data(zeros)
+                # FIXME: I'm pretty sure the new SDK does this under the hood.
+                # Set the DM to zeros.
+                zeros = np.zeros(self.command_length, dtype=float)
+                self.send_data(zeros)
+            finally:
+                self.instrument.close_dm()
         finally:
-            self.instrument.close_dm()
             self.instrument = None
-
-        # Update testbed_state.
-        self.__close_dm_controller_testbed_state()
+            # Update testbed_state.
+            self.__close_dm_controller_testbed_state()
 
     def apply_shape_to_both(self, dm1_command_object, dm2_command_object):
         """Combines both commands and sends to the controller to produce a shape on each DM."""
