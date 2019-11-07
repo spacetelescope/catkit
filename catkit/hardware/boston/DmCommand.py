@@ -110,6 +110,9 @@ class DmCommand(object):
                     flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
 
+            # Convert between 0-1.
+            dm_command /= self.max_volts
+
         # Flatten the command using the mask index.
         dm_command = catkit.util.convert_dm_image_to_command(dm_command)
 
@@ -119,9 +122,6 @@ class DmCommand(object):
             zero_buffer = np.zeros(int(self.command_length / 2))
             dm_command = np.append(zero_buffer, dm_command)
             dm_command = np.append(dm_command, np.zeros(self.command_length - dm_command.size))
-
-        # Convert between 0-1.
-        dm_command /= self.max_volts
 
         return dm_command
 
