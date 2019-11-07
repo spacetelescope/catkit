@@ -6,6 +6,7 @@ sim = hicat.simulators.auto_enable_sim()
 import os
 import functools
 import datetime
+import time
 import numpy as np
 from astropy.io import fits
 import hcipy
@@ -30,12 +31,27 @@ class ContrastStability(Experiment):
 
     name = "Contrast Stability Test"
 
-    def __init__(self, dm_command_path, dh_filename, iterations=50, num_exposures=10):
+    def __init__(self, dm_command_path, dh_filename, iterations=50, num_exposures=10, sleep=1):
+        """
+        Load DM maps on DM1 and DM2, hold them, and measure contrast with a user-specified cadence.
+
+        :param dm_command_path: string, path to DM commands
+        :param dh_filename: string, observation matrix
+        :param iterations: int, number of consecutive measurements to take
+        :param num_exposures: int, number of exposures per measurement
+        :param sleep: float, time for the script to wait between measurements ON TOP of the image acquisition and processing
+        """
         super().__init__(suffix='contrast_stability')
         self.dh_filename = dh_filename
         self.iter = iterations
         self.num_exposures = num_exposures
         self.mean_contrasts_image = []
+        self.sleep = sleep
+
+        # Metrics
+        self.timestamp = []
+        self.temp = []
+        self.humidity = []
 
         # Read dark zone
         with fits.open(dh_filename) as probe_info:
@@ -49,6 +65,34 @@ class ContrastStability(Experiment):
         self.dm1_hold = dm1_start[stroke_min.dm_mask] * 1e9   # The file saves the DM maps in meters, while the
         self.dm2_hold = dm2_start[stroke_min.dm_mask] * 1e9   # take exposure function needs them in nanometers.
 
+    def collect_metrics(self, devices):
+        """
+        Totally hijacked from run_strokemin.py, but that one over there didn't have a docstring.
+
+        Measure temperature and humidity and save those values with most recent image contrast.
+        :param devices: dict of HiCAT devices
+        :return:
+        """
+        self.timestamp.append(datetime.datetime.now().isoformat().split('.')[0])
+        try:
+            temp, humidity = devices['temp_sensor'].get_temp_humidity()
+        except Exception:
+            temp = None
+            humidity = None
+            self.log.exception("Failed to get temp & humidity data")
+        finally:
+            self.temp.append(temp)
+            self.humidity.append(humidity)
+
+        filename = os.path.join(self.output_path, "metrics.csv")
+        #write header
+        if not os.path.exists(filename):
+            with open(filename, mode='a') as metric_file:
+                metric_file.write("time stamp, temp (C), humidity (%), mean image contrast\n")
+
+        with open(filename, mode='a') as metric_file:
+            metric_file.write(f"{self.timestamp[-1]}, {self.temp[-1]}, {self.humidity[-1]}, {self.mean_contrasts_image[-1]}\n")
+
     def experiment(self):
 
         self.output_path = util.create_data_path(suffix=self.suffix)
@@ -61,12 +105,14 @@ class ContrastStability(Experiment):
                 testbed.dm_controller() as dm, \
                 testbed.motor_controller() as motor_controller, \
                 testbed.beam_dump() as beam_dump, \
-                testbed.imaging_camera() as cam:
+                testbed.imaging_camera() as cam, \
+                testbed.temp_sensor(ID=2) as temp_sensor:
             devices = {'laser': laser,
                        'dm': dm,
                        'motor_controller': motor_controller,
                        'beam_dump': beam_dump,
-                       'imaging_camera': cam}
+                       'imaging_camera': cam,
+                       'temp_sensor': temp_sensor}
 
             # Take direct exposure for normalization
             direct, _header = take_direct_exposure(np.zeros(stroke_min.num_actuators),
@@ -81,14 +127,19 @@ class ContrastStability(Experiment):
                                                      devices, num_exposures=self.num_exposures,
                                                      initial_path=self.output_path)
                 coron /= direct.max()
-
                 self.mean_contrasts_image.append(np.mean(coron[self.dark_zone]))
+
+                # Track temp and humidity. Measure as close to image acquisition as possible. But after measuring contrast.
+                self.collect_metrics(devices)
 
                 # Plot
                 self.show_contrast_stability_plot(coron, self.mean_contrasts_image, mw=self.movie_writer)
 
+                # Delay next iteration to control data cadence. This is on top of the full processing loop.
+                time.sleep(self.sleep)
+
             # Save all mean contrasts to file
-            np.savetxt(os.path.join(self.output_path, 'mean_contrasts.txt'), self.mean_contrasts_image)
+            #np.savetxt(os.path.join(self.output_path, 'mean_contrasts.txt'), self.mean_contrasts_image)
 
     def show_contrast_stability_plot(self, image, contrast_list, mw=None):
 
