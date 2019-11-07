@@ -1,4 +1,3 @@
-import copy
 import os
 import functools
 
@@ -24,33 +23,33 @@ class TestPoppyBostonDMController:
     dm1_flatmap = mask * bias_voltage
     dm2_flatmap = dm1_flatmap
 
-    poppy_dm1 = catkit.emulators.boston_dm.PoppyDM(max_volts=dm_max_volts,
-                                                   meter_per_volt_map=meter_per_volt_map,
-                                                   flat_map=dm1_flatmap,
-                                                   bias_voltage=bias_voltage,
-                                                   name='Boston DM1',
-                                                   dm_shape=(34, 34),
-                                                   radius=12 / 2,
-                                                   influence_func=os.path.join(data_dir, "dm_influence_function_dm5v2.fits"),
-                                                   actuator_spacing=300 * astropy.units.micron,
-                                                   include_actuator_print_through=True,
-                                                   actuator_print_through_file=os.path.join(data_dir, "boston_mems_actuator_medres.fits"),
-                                                   actuator_mask_file=os.path.join(data_dir, "boston_kilodm-952_mask.fits"),
-                                                   inclination_y=10)
+    poppy_dm1 = catkit.emulators.boston_dm.PoppyBostonDM(max_volts=dm_max_volts,
+                                                         meter_per_volt_map=meter_per_volt_map,
+                                                         flat_map=dm1_flatmap,
+                                                         bias_voltage=bias_voltage,
+                                                         name='Boston DM1',
+                                                         dm_shape=(34, 34),
+                                                         radius=12 / 2,
+                                                         influence_func=os.path.join(data_dir, "dm_influence_function_dm5v2.fits"),
+                                                         actuator_spacing=300 * astropy.units.micron,
+                                                         include_actuator_print_through=True,
+                                                         actuator_print_through_file=os.path.join(data_dir, "boston_mems_actuator_medres.fits"),
+                                                         actuator_mask_file=os.path.join(data_dir, "boston_kilodm-952_mask.fits"),
+                                                         inclination_y=10)
 
-    poppy_dm2 = catkit.emulators.boston_dm.PoppyDM(max_volts=dm_max_volts,
-                                                   meter_per_volt_map=meter_per_volt_map,
-                                                   flat_map=dm2_flatmap,
-                                                   bias_voltage=bias_voltage,
-                                                   name='Boston DM2',
-                                                   dm_shape=(34, 34),
-                                                   radius=12 / 2,
-                                                   influence_func=os.path.join(data_dir, "dm_influence_function_dm5v2.fits"),
-                                                   actuator_spacing=300 * astropy.units.micron,
-                                                   include_actuator_print_through=True,
-                                                   actuator_print_through_file=os.path.join(data_dir, "boston_mems_actuator_medres.fits"),
-                                                   actuator_mask_file=os.path.join(data_dir, "boston_kilodm-952_mask.fits"),
-                                                   inclination_y=10)
+    poppy_dm2 = catkit.emulators.boston_dm.PoppyBostonDM(max_volts=dm_max_volts,
+                                                         meter_per_volt_map=meter_per_volt_map,
+                                                         flat_map=dm2_flatmap,
+                                                         bias_voltage=bias_voltage,
+                                                         name='Boston DM2',
+                                                         dm_shape=(34, 34),
+                                                         radius=12 / 2,
+                                                         influence_func=os.path.join(data_dir, "dm_influence_function_dm5v2.fits"),
+                                                         actuator_spacing=300 * astropy.units.micron,
+                                                         include_actuator_print_through=True,
+                                                         actuator_print_through_file=os.path.join(data_dir, "boston_mems_actuator_medres.fits"),
+                                                         actuator_mask_file=os.path.join(data_dir, "boston_kilodm-952_mask.fits"),
+                                                         inclination_y=10)
     poppy_dm2.shift_x = -0.00015 * astropy.units.m
     poppy_dm2.shift_y = 0.0
     poppy_dm2.flip_x = True
