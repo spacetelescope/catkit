@@ -11,8 +11,25 @@ from catkit.hardware.boston.BostonDmController import BostonDmController
 from catkit.interfaces.Instrument import SimInstrument
 
 
-class PoppyDM(poppy.dms.ContinuousDeformableMirror):
+class PoppyBostonDM(poppy.dms.ContinuousDeformableMirror):
+    """
+    Wraps `poppy.dms.ContinuousDeformableMirror` so as to encapsulate the additional DM
+    attributes required to describe a typical Boston Micromachines DM.
+
+    :param max_volts: int
+        The maximum voltage limit as defined in the DM profile file.
+    :param meter_per_volt_map: array-like
+        Calibration data array map for converting each actuator voltage to surface height in meters.
+    :param bias_voltage: float, int
+        Voltage bias/offset to be applied to the DM and/or that already applied to `flat_map`.
+    :param flat_map: array-like
+        Calibration data array describing the flat map characteristics of the DM.
+    :param super_kwargs:
+        Keyword args that get passed to  `poppy.dms.ContinuousDeformableMirror()`
+    """
+
     def __init__(self, max_volts, meter_per_volt_map, bias_voltage=None, flat_map=None, **super_kwargs):
+
         self.max_volts = max_volts
         self.meter_per_volt_map = meter_per_volt_map
         self.flat_map = flat_map
@@ -34,7 +51,7 @@ class PoppyBmcEmulator:
 
     NO_ERR = 0
 
-    def __init__(self, num_actuators, command_length, dac_bit_width,  dm1, dm2=None):
+    def __init__(self, num_actuators, command_length, dac_bit_width, dm1, dm2=None):
         self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
         self._num_actuators = num_actuators
         self._command_length = command_length
@@ -43,9 +60,9 @@ class PoppyBmcEmulator:
         self.dm2 = dm2
 
         # As the class name suggests, the design only works with ``poppy.dms.ContinuousDeformableMirror``.
-        assert isinstance(dm1, PoppyDM)
+        assert isinstance(dm1, PoppyBostonDM)
         if dm2 is not None:
-            assert isinstance(dm2, PoppyDM)
+            assert isinstance(dm2, PoppyBostonDM)
 
     def BmcDm(self):
         return self
@@ -57,6 +74,30 @@ class PoppyBmcEmulator:
         return self.NO_ERR
 
     def send_data(self, full_dm_command):
+        """
+        Emulate the sending of data to the Boston DM driver/controller
+        by "sending" the command data to Poppy DMs.
+
+        The real hardware call receives `full_dm_command` as a unitless float array.
+        It would then convert it to Volts as `full_dm_command * max_volts`,
+        where for the Boston twin Kilo driver's `max_volts` := 200V.
+        This function needs to convert the command to meters to be applied to the Poppy DM simulator.
+
+        Has the following features:
+
+         * Clips the command to 0.0 and 1.0 just as the hardware does.
+         * Simulates DAC voltage quantization.
+         * Simulates the 0V "off" relaxed surface state using each DMs (unbiased) flat map.
+         * Converts the command to volts using max_volts
+         * Converts volts to meters using each DMs `meter_per_volt_map`.
+         * Applies a voltage bias as set per each DM's `bias_voltage`.
+
+        :param full_dm_command: float array-like
+            Array of floats of length self._command_length.
+            Values should be in the range 0.0 to 1.0 and are clipped otherwise.
+        :return: int
+            Error status: self.NO_ERR := 0, raises otherwise.
+        """
 
         full_dm_command = copy.deepcopy(full_dm_command)
 

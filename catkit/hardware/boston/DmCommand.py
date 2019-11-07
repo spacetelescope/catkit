@@ -191,6 +191,7 @@ def get_flat_map_volts(dm_num):
         flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
         return flat_map_volts[0].data
 
+
 def get_m_per_volt_map():
     global m_per_volt_map
     if m_per_volt_map is None:
@@ -204,7 +205,10 @@ def convert_volts_to_m(data, meter_to_volt_map=None):
     Convert volts to meters for DM commands.
     Inverse of convert_m_to_volts
 
-    :param data:  DM commands in volts
+    :param data: array-like
+        DM commands in volts
+    :param meter_to_volt_map: array-like
+        The calibration array used to map/convert volts to DM surface height in meters.
 
     :return: DM commands in meters
     """
