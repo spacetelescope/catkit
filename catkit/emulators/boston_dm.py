@@ -20,25 +20,25 @@ class PoppyBostonDM(poppy.dms.ContinuousDeformableMirror):
         The maximum voltage limit as defined in the DM profile file.
     :param meter_per_volt_map: array-like
         Calibration data array map for converting each actuator voltage to surface height in meters.
-    :param bias_voltage: float, int
-        Voltage bias/offset to be applied to the DM and/or that already applied to `flat_map`.
-    :param flat_map: array-like
-        Calibration data array describing the flat map characteristics of the DM.
+    :param flat_map_voltage: array-like
+        Calibration data array describing the flat map characteristics of the DM. Has units volts.
+    :param flat_map_bias_voltage: float, int
+        Voltage bias/offset already applied to `flat_map`. Subtracted from `flat_map` to create an unbiased flat map.
     :param super_kwargs:
         Keyword args that get passed to  `poppy.dms.ContinuousDeformableMirror()`
     """
 
-    def __init__(self, max_volts, meter_per_volt_map, bias_voltage=None, flat_map=None, **super_kwargs):
+    def __init__(self, max_volts, meter_per_volt_map, flat_map_voltage=None, flat_map_bias_voltage=None, **super_kwargs):
 
         self.max_volts = max_volts
         self.meter_per_volt_map = meter_per_volt_map
-        self.flat_map = flat_map
-        self.bias_voltage = bias_voltage
+        self.flat_map_voltage = flat_map_voltage
+        self.flat_map_bias_voltage = flat_map_bias_voltage
 
         # TODO: HICAT-652 - unbiasing the flatmap should obtain ``bias_voltage`` from the flatmap file meta.
-        self.unbiased_flatmap = self.flat_map
-        if self.bias_voltage is not None:
-            self.unbiased_flatmap -= self.bias_voltage
+        self.unbiased_flatmap_voltage = self.flat_map_voltage
+        if self.flat_map_bias_voltage is not None:
+            self.unbiased_flatmap_voltage -= self.flat_map_bias_voltage
 
         super().__init__(**super_kwargs)
 
@@ -90,7 +90,6 @@ class PoppyBmcEmulator:
          * Simulates the 0V "off" relaxed surface state using each DMs (unbiased) flat map.
          * Converts the command to volts using max_volts
          * Converts volts to meters using each DMs `meter_per_volt_map`.
-         * Applies a voltage bias as set per each DM's `bias_voltage`.
 
         :param full_dm_command: float array-like
             Array of floats of length self._command_length.
@@ -118,12 +117,8 @@ class PoppyBmcEmulator:
             dm_image = catkit.util.convert_dm_command_to_image(dm_command)
 
             # The 0 Volt DM surface is not flat. Attempt to simulate this.
-            if dm.unbiased_flatmap is not None:
-                dm_image -= dm.unbiased_flatmap
-
-            # Simulate voltage bias/offset
-            if dm.bias_voltage:
-                dm_image += dm.bias_voltage
+            if dm.unbiased_flatmap_voltage is not None:
+                dm_image -= dm.unbiased_flatmap_voltage
 
             # Convert to meters
             dm_surface = catkit.hardware.boston.DmCommand.convert_volts_to_m(dm_image, dm.meter_per_volt_map)

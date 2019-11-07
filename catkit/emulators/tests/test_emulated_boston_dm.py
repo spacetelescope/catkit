@@ -17,16 +17,16 @@ class TestPoppyBostonDMController:
     number_of_actuators = 952
     command_length = 2048
     dm_max_volts = 200
-    bias_voltage = 140
+    flat_map_bias_voltage = 140
     mask = catkit.util.get_dm_mask()
     meter_per_volt_map = get_m_per_volt_map()
-    dm1_flatmap = mask * bias_voltage
+    dm1_flatmap = mask * flat_map_bias_voltage
     dm2_flatmap = dm1_flatmap
 
     poppy_dm1 = catkit.emulators.boston_dm.PoppyBostonDM(max_volts=dm_max_volts,
                                                          meter_per_volt_map=meter_per_volt_map,
-                                                         flat_map=dm1_flatmap,
-                                                         bias_voltage=bias_voltage,
+                                                         flat_map_voltage=dm1_flatmap,
+                                                         flat_map_bias_voltage=flat_map_bias_voltage,
                                                          name='Boston DM1',
                                                          dm_shape=(34, 34),
                                                          radius=12 / 2,
@@ -39,8 +39,8 @@ class TestPoppyBostonDMController:
 
     poppy_dm2 = catkit.emulators.boston_dm.PoppyBostonDM(max_volts=dm_max_volts,
                                                          meter_per_volt_map=meter_per_volt_map,
-                                                         flat_map=dm2_flatmap,
-                                                         bias_voltage=bias_voltage,
+                                                         flat_map_voltage=dm2_flatmap,
+                                                         flat_map_bias_voltage=flat_map_bias_voltage,
                                                          name='Boston DM2',
                                                          dm_shape=(34, 34),
                                                          radius=12 / 2,
