@@ -99,7 +99,7 @@ class DmCommand(object):
             if self.bias:
                 dm_command += self.bias_volts_dm1 if self.dm_num == 1 else self.bias_volts_dm2
 
-            # OR apply Flat Map.
+            # OR apply Flat Map (which is itself biased).
             elif self.flat_map:
                 if self.dm_num == 1:
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
@@ -118,7 +118,6 @@ class DmCommand(object):
 
         if self.dm_num == 1:
             dm_command = np.append(dm_command, np.zeros(self.command_length - dm_command.size))
-
         else:
             zero_buffer = np.zeros(int(self.command_length / 2))
             dm_command = np.append(zero_buffer, dm_command)
@@ -192,6 +191,7 @@ def get_flat_map_volts(dm_num):
         flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
         return flat_map_volts[0].data
 
+
 def get_m_per_volt_map():
     global m_per_volt_map
     if m_per_volt_map is None:
@@ -200,19 +200,25 @@ def get_m_per_volt_map():
     return m_per_volt_map
 
 
-def convert_volts_to_m(data):
+def convert_volts_to_m(data, meter_to_volt_map=None):
     """
     Convert volts to meters for DM commands.
     Inverse of convert_m_to_volts
 
-    :param data:  DM commands in volts
+    :param data: array-like
+        DM commands in volts
+    :param meter_to_volt_map: array-like
+        The calibration array used to map/convert volts to DM surface height in meters.
 
     :return: DM commands in meters
     """
 
-    return data * get_m_per_volt_map()
+    if meter_to_volt_map is None:
+        meter_to_volt_map = get_m_per_volt_map()
+    return data * meter_to_volt_map
 
-def convert_m_to_volts(data):
+
+def convert_m_to_volts(data, meter_to_volt_map=None):
     """
     Convert meters to volts for DM commands.
     Inverse of convert_volts_to_m
@@ -222,4 +228,6 @@ def convert_m_to_volts(data):
     :return: DM commands in volts
     """
 
-    return catkit.util.safe_divide(data, get_m_per_volt_map())
+    if meter_to_volt_map is None:
+        meter_to_volt_map = get_m_per_volt_map()
+    return catkit.util.safe_divide(data, meter_to_volt_map)

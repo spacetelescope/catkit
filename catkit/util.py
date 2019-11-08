@@ -29,9 +29,10 @@ def convert_dm_command_to_image(dm_command):
     mask = get_dm_mask()
     index952 = np.flatnonzero(mask)
 
-    num_actuators_pupil = CONFIG_INI.getint('boston_kilo952', 'dm_length_actuators')
-    image = np.zeros((num_actuators_pupil, num_actuators_pupil))
-    image[np.unravel_index(index952, image.shape)] = dm_command[0:952]
+    number_of_actuators_per_dimension = CONFIG_INI.getint('boston_kilo952', 'dm_length_actuators')
+    number_of_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
+    image = np.zeros((number_of_actuators_per_dimension, number_of_actuators_per_dimension))
+    image[np.unravel_index(index952, image.shape)] = dm_command[:number_of_actuators]
 
     return image
 
