@@ -1,14 +1,13 @@
-from hicat.hardware import testbed_state
-from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
-from hicat.config import CONFIG_INI
 import numpy as np
-import logging
+from hicat.hardware import testbed_state
+
+from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 
 # BMC is Boston's library and it only works on windows.
 try:
     from catkit.hardware.boston.sdk.python3.v3_5_1 import bmc
 except ImportError:
-    pass
+    bmc = None
 
 """Interface for Boston Micro-machines deformable mirror controller that can control 2 DMs.  
    It does so by interpreting the first half of the command for DM1, and the second for DM2.
@@ -17,42 +16,74 @@ except ImportError:
 
 class BostonDmController(DeformableMirrorController):
 
-    log = logging.getLogger(__name__)
+    instrument_lib = bmc
 
-    def initialize(self, *args, **kwargs):
-        """Opens connection with dm and returns the dm manufacturer specific object."""
+    def initialize(self, serial_number, command_length, dac_bit_width):
+        """ Initialize dm manufacturer specific object - this does not, nor should it, open a connection."""
         self.log.info("Opening DM connection")
-        # Connect to DM.
-        dm = bmc.BmcDm()
-        serial_num = CONFIG_INI.get(self.config_id, "serial_num")
-        dm.open_dm(serial_num)
-        command_length = dm.num_actuators()
+        # Create class attributes for storing individual DM commands.
+        self.dm1_command = None
+        self.dm2_command = None
+        self.serial_num = serial_number
+        self.command_length = command_length
+        self.dac_bit_width = dac_bit_width
 
-        if command_length == 0:
-            raise Exception("Unable to connect to " + self.config_id + ", make sure it is turned on.")
+    def send_data(self, data):
+
+        # The DM controller expects the command to be unitless (normalized Volts): 0.0 - 1.0, where 1.0 := max_volts
+        data_min = np.min(data)
+        data_max = np.max(data)
+        if data_min < 0 or data_max > 1:
+            self.log.warning(f"DM command out of range and will be clipped by hardware. min:{data_min}, max:{data_max}")
+
+        status = self.instrument.send_data(data)
+        if status != self.instrument_lib.NO_ERR:
+            raise Exception("{}: Failed to send data - {}".format(self.config_id,
+                                                                  self.instrument.error_string(status)))
+
+    def _open(self):
+        dm = self.instrument_lib.BmcDm()
+        status = dm.open_dm(self.serial_num)
+        if status != self.instrument_lib.NO_ERR:
+            raise Exception("{}: Failed to connect - {}.".format(self.config_id,
+                                                                 dm.error_string(status)))
+
+        # If we get this far, a connection has been successfully opened.
+        # Set self.instrument so that we can close if anything here subsequently fails.
+        self.instrument = dm
+        hardware_command_length = dm.num_actuators()
+        if self.command_length != hardware_command_length:
+            raise ValueError("config.ini error - '{}':'command_length' = {} but hardware gives {}.".format(self.config_id,
+                                                                                                           self.command_length,
+                                                                                                           hardware_command_length))
 
         # Initialize the DM to zeros.
-        zeros = np.zeros(command_length, dtype=float)
-        dm.send_data(zeros)
+        zeros = np.zeros(self.command_length, dtype=float)
+        self.send_data(zeros)
 
         # Store the current dm_command values in class attributes.
         self.dm1_command = zeros
-        self.dm2_command = zeros
-        return dm
+        self.dm2_command = zeros.copy()  # dm 1 & 2 should NOT be using the same memory
+        self.dm_controller = self.instrument  # For legacy API purposes
 
-    def close(self):
+        return self.instrument
+
+    def _close(self):
         """Close dm connection safely."""
-        self.log.info("Closing DM connection")
+        try:
+            try:
+                self.log.info("Closing DM connection")
 
-        command_length = self.dm_controller.num_actuators()
-
-        # Set the DM to zeros.
-        zeros = np.zeros(command_length, dtype=float)
-        self.dm_controller.send_data(zeros)
-        self.dm_controller.close_dm()
-
-        # Update testbed_state.
-        self.__close_dm_controller_testbed_state()
+                # FIXME: I'm pretty sure the new SDK does this under the hood.
+                # Set the DM to zeros.
+                zeros = np.zeros(self.command_length, dtype=float)
+                self.send_data(zeros)
+            finally:
+                self.instrument.close_dm()
+        finally:
+            self.instrument = None
+            # Update testbed_state.
+            self.__close_dm_controller_testbed_state()
 
     def apply_shape_to_both(self, dm1_command_object, dm2_command_object):
         """Combines both commands and sends to the controller to produce a shape on each DM."""
@@ -68,7 +99,7 @@ class BostonDmController(DeformableMirrorController):
 
         # Add both arrays together (first half and second half) and send to DM.
         full_command = dm1_command + dm2_command
-        self.dm_controller.send_data(full_command)
+        self.send_data(full_command)
 
         # Update both dm_command class attributes.
         self.dm1_command = dm1_command
@@ -93,7 +124,7 @@ class BostonDmController(DeformableMirrorController):
 
         # Add both arrays together (first half and second half) and send to DM.
         full_command = dm_command + other_dm_command
-        self.dm_controller.send_data(full_command)
+        self.send_data(full_command)
 
         # Update the dm_command class attribute.
         if dm_num == 1:
