@@ -41,7 +41,8 @@ class ContrastStability(Experiment):
         :param num_exposures: int, number of exposures per measurement
         :param sleep: float, time for the script to wait between measurements ON TOP of the image acquisition and processing
         """
-        super().__init__(suffix='contrast_stability')
+        suffix = "contrast_stability"
+        super().__init__(suffix=suffix, output_path=util.create_data_path(suffix=suffix))
         self.dh_filename = dh_filename
         self.iter = iterations
         self.num_exposures = num_exposures
@@ -95,7 +96,6 @@ class ContrastStability(Experiment):
 
     def experiment(self):
 
-        self.output_path = util.create_data_path(suffix=self.suffix)
         util.setup_hicat_logging(self.output_path, self.suffix)
         print("LOGGING: " + self.output_path + "  " + self.suffix)
         self.movie_writer = hicat.plotting.animation.GifWriter(os.path.join(self.output_path, 'contrast_sequence.gif'),
