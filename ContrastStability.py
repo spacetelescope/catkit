@@ -133,15 +133,13 @@ class ContrastStability(Experiment):
                 self.collect_metrics(devices)
 
                 # Plot
-                self.show_contrast_stability_plot(coron, self.mean_contrasts_image, mw=self.movie_writer)
+                self.show_contrast_stability_plot(coron, self.timestamp, self.mean_contrasts_image, self.temp, self.humidity, mw=self.movie_writer)
 
                 # Delay next iteration to control data cadence. This is on top of the full processing loop.
                 time.sleep(self.sleep)
 
-            # Save all mean contrasts to file
-            #np.savetxt(os.path.join(self.output_path, 'mean_contrasts.txt'), self.mean_contrasts_image)
 
-    def show_contrast_stability_plot(self, image, contrast_list, mw=None):
+    def show_contrast_stability_plot(self, image, timestamp, contrast_list, temp_list, hum_list, mw=None):
 
         log_img = np.log10(image)
         log_img[image <= 0] = -20
@@ -153,14 +151,20 @@ class ContrastStability(Experiment):
         im = hcipy.imshow_field(log_img, vmin=-8, vmax=-4, cmap='inferno', ax=ax)
         hicat.plotting.image_axis_setup(ax, im, title="Image after iteration {}".format(iteration))
 
-        # Contrast plot: contrast vs iteration
+        # Contrast plot: contrast vs time stamp
+        # plus humidity and temperature
         ax = axes[0, 0]
-        ax.plot(contrast_list, 'o-', c='blue', label='Measured from image')
+        ax.plot(timestamp, contrast_list, 'o-', c='blue', label='Mean contrast')
+        ax2 = ax.twinx()
+        ax2.plot(timestamp, temp_list, 'o-', c='red', label='Temperature (C)')
+        ax2.plot(timestamp, hum_list, 'o-', c='green', label='Humidity (%)')
         ax.set_yscale('log')
-        ax.set_title("Contrast vs Iteration")
-        ax.set_xlabel("Iteration")
+        ax2.set_ylim(5, 30)
+        ax.set_title("Contrast stability test")
+        ax.set_xlabel("Time")
         ax.grid(True, alpha=0.1)
-        ax.legend(loc='upper right', fontsize='x-small')
+        ax.legend(loc='upper left', fontsize='x-small')
+        ax2.legend(loc='upper right', fontsize='x-small')
 
         # The two DMs
         dm1_surf = stroke_min.dm_actuators_to_surface(self.dm1_hold)
