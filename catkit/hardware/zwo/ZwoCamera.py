@@ -1,6 +1,5 @@
 from astropy.io import fits
 import numpy as np
-import logging
 import os
 import zwoasi
 import sys
@@ -16,56 +15,59 @@ from catkit.hardware import testbed_state
 
 
 class ZwoCamera(Camera):
+    
+    instrument_lib = zwoasi
 
-    log = logging.getLogger(__name__)
-
-    def initialize(self, *args, **kwargs):
-        """Opens connection with camera and returns the camera manufacturer specific object.
-           Uses the config_id to look up parameters in the config.ini."""
-        # noinspection PyBroadException
+    def initialize(self):
+        """Uses the config_id to look up parameters in the config.ini."""
         
         # Pull flip parameters
         self.theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
         self.fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
 
+    def _open(self):
 
         # Attempt to find USB camera.
-        num_cameras = zwoasi.get_num_cameras()
+        num_cameras = self.instrument_lib.get_num_cameras()
         if num_cameras == 0:
             self.log.error('No cameras found')
             sys.exit(0)
 
-        cameras_found = zwoasi.list_cameras()  # Model names of the connected cameras.
-
         # Get camera id and name.
         camera_name = CONFIG_INI.get(self.config_id, 'camera_name')
+        cameras_found = self.instrument_lib.list_cameras()  # Model names of the connected cameras.
         camera_index = cameras_found.index(camera_name)
 
         # Create a camera object using the zwoasi library.
-        camera = zwoasi.Camera(camera_index)
-
+        camera = self.instrument_lib.Camera(camera_index)
+        self.log.info("Opened connection to camera: " + self.config_id)
+        
+        self.instrument = camera
+        self.camera = self.instrument
+        
         # Get all of the camera controls.
-        controls = camera.get_controls()
+        controls = self.instrument.get_controls()
 
         # Restore all controls to default values, in case any other application modified them.
         for c in controls:
-            camera.set_control_value(controls[c]['ControlType'], controls[c]['DefaultValue'])
+            self.instrument.set_control_value(controls[c]['ControlType'], controls[c]['DefaultValue'])
 
         # Set bandwidth overload control to minvalue.
-        camera.set_control_value(zwoasi.ASI_BANDWIDTHOVERLOAD, camera.get_controls()['BandWidth']['MinValue'])
+        self.instrument.set_control_value(self.instrument_lib.ASI_BANDWIDTHOVERLOAD, camera.get_controls()['BandWidth']['MinValue'])
 
         # noinspection PyBroadException
         try:
             # Force any single exposure to be halted
-            camera.stop_video_capture()
-            camera.stop_exposure()
+            self.instrument.stop_video_capture()
+            self.instrument.stop_exposure()
         except Exception:
             # Catch and hide exceptions that get thrown if the camera rejects the stop commands.
             pass
 
         # Set image format to be RAW16, although camera is only 12-bit.
-        camera.set_image_type(zwoasi.ASI_IMG_RAW16)
-        return camera
+        self.instrument.set_image_type(self.instrument_lib.ASI_IMG_RAW16)
+        
+        return self.instrument
 
     def __capture(self, initial_sleep):
         """ Takes an image.
@@ -86,7 +88,7 @@ class ZwoCamera(Camera):
         # Passing the initial_sleep and poll values prevent crashes. DO NOT REMOVE!!!
         poll = quantity(0.1, units.second)
         try:
-            image = self.camera.capture(initial_sleep=initial_sleep.to(units.second).magnitude, poll=poll.magnitude)
+            image = self.instrument.capture(initial_sleep=initial_sleep.to(units.second).magnitude, poll=poll.magnitude)
         except zwoasi.ZWO_CaptureError as error:
             # Maps to:
             # https://github.com/stevemarple/python-zwoasi/blob/1aadf7924dd1cb3b8587d97689d82cd5f1a0b5f6/zwoasi/__init__.py#L889-L893
@@ -117,9 +119,14 @@ class ZwoCamera(Camera):
         image = catkit.util.rotate_and_flip_image(unflipped_image, theta, fliplr)
         return image
     
-    def close(self):
+    def _close(self):
         """Close camera connection"""
-        self.camera.close()
+        try:
+            self.log.info("Closing camera connection.")
+            self.instrument.close()
+        
+        finally:
+            self.instrument = None
 
     def take_exposures(self, exposure_time, num_exposures,
                        file_mode=False, raw_skip=0, path=None, filename=None,
@@ -205,12 +212,12 @@ class ZwoCamera(Camera):
         Passing the value 50 will append (2) to the name.
         """
 
-        camera_info_before = self.camera.get_camera_property()
+        camera_info_before = self.instrument.get_camera_property()
         self.log.info("Before Flash:")
         self.log.info(camera_info_before["Name"])
-        self.camera.set_id(0, new_id)
+        self.instrument.set_id(0, new_id)
         self.log.info("After Flash:")
-        camera_info_after = self.camera.get_camera_property()
+        camera_info_after = self.instrument.get_camera_property()
         self.log.info(camera_info_after["Name"])
 
     def __setup_control_values(self, exposure_time, subarray_x=None, subarray_y=None, width=None, height=None,
@@ -231,11 +238,11 @@ class ZwoCamera(Camera):
         self.bins = bins
 
         # Set up our custom control values.
-        self.camera.set_control_value(zwoasi.ASI_GAIN, gain)
-        self.camera.set_control_value(zwoasi.ASI_EXPOSURE, int(exposure_time.to(units.microsecond).magnitude))
+        self.instrument.set_control_value(self.instrument_lib.ASI_GAIN, gain)
+        self.instrument.set_control_value(self.instrument_lib.ASI_EXPOSURE, int(exposure_time.to(units.microsecond).magnitude))
 
         # Store the camera's detector shape.
-        cam_info = self.camera.get_camera_property()
+        cam_info = self.instrument.get_camera_property()
         detector_max_x = cam_info['MaxWidth']
         detector_max_y = cam_info['MaxHeight']
 
@@ -295,10 +302,10 @@ class ZwoCamera(Camera):
 
         # Set Region of Interest.
         if not full_image:
-            self.camera.set_roi(start_x=derived_start_x,
+            self.instrument.set_roi(start_x=derived_start_x,
                                 start_y=derived_start_y,
                                 width=width,
                                 height=height,
-                                image_type=zwoasi.ASI_IMG_RAW16,
+                                image_type=self.instrument_lib.ASI_IMG_RAW16,
                                 bins=bins)
 
