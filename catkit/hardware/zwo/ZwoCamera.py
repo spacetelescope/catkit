@@ -7,7 +7,7 @@ import sys
 from hicat.hicat_types import MetaDataEntry, units, quantity
 from catkit.interfaces.Camera import Camera
 from hicat.config import CONFIG_INI
-from hicat import util
+import catkit.util
 from hicat.hardware import testbed_state
 
 
@@ -85,7 +85,12 @@ class ZwoCamera(Camera):
 
         # Passing the initial_sleep and poll values prevent crashes. DO NOT REMOVE!!!
         poll = quantity(0.1, units.second)
-        image = self.instrument.capture(initial_sleep=exposure_time.to(units.second).magnitude, poll=poll.magnitude)
+        try:
+            image = self.instrument.capture(initial_sleep=exposure_time.to(units.second).magnitude, poll=poll.magnitude)
+        except zwoasi.ZWO_CaptureError as error:
+            # Maps to:
+            # https://github.com/stevemarple/python-zwoasi/blob/1aadf7924dd1cb3b8587d97689d82cd5f1a0b5f6/zwoasi/__init__.py#L889-L893
+            raise RuntimeError(f"Exposure status: {error.exposure_status}") from error
 
         return image.astype(np.dtype(np.int))
 
