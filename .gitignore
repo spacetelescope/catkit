@@ -4,3 +4,8 @@ __pycache__
 *.png
 *.fits
 *.log*
+.idea/instrument-interface-library.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/workspace.xml
+.idea/inspectionProfiles/profiles_settings.xml
