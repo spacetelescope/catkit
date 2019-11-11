@@ -113,7 +113,7 @@ class ZwoCamera(Camera):
         """
 
         unflipped_image = self.capture(exposure_time)
-        image = util.rotate_and_flip_image(unflipped_image, theta, fliplr)
+        image = catkit.util.rotate_and_flip_image(unflipped_image, theta, fliplr)
         
         return image 
     
