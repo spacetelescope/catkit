@@ -1,13 +1,12 @@
 import os
 import logging
-from hicat.hicat_types import ImageCentering
 from hicat.experiments.modules import double_sine
 from hicat.experiments.Experiment import Experiment
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
 from catkit.hardware.boston.commands import flat_command
 from catkit.hardware.boston.sin_command import sin_command
-from hicat.hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition
+from catkit.catkit_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition, ImageCentering
 
 
 class DoubleSinRemoveCrossterm(Experiment):

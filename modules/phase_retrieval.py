@@ -5,7 +5,7 @@ from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
 import hicat.util
 from catkit.hardware.boston.commands import flat_command
-from hicat.hicat_types import FpmPosition, MetaDataEntry
+from catkit.catkit_types import FpmPosition, MetaDataEntry
 
 
 def take_phase_retrieval_data(exposure_time,

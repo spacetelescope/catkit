@@ -1,6 +1,6 @@
 import os
 
-from hicat.hicat_types import FpmPosition, ImageCentering
+from catkit.catkit_types import FpmPosition, ImageCentering
 import hicat.util
 from hicat.hardware import testbed
 from hicat.config import CONFIG_INI

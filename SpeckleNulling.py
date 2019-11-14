@@ -9,7 +9,7 @@ from catkit.hardware.boston.sin_command import sin_command
 from catkit.hardware.boston.commands import flat_command
 
 from hicat.speckle_nulling import speckle_nulling
-from hicat.hicat_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition, ImageCentering
+from catkit.catkit_types import units, quantity, FpmPosition, SinSpecification, LyotStopPosition, ImageCentering
 from hicat.hardware import testbed
 from catkit.hardware.boston import DmCommand
 from hicat.config import CONFIG_INI

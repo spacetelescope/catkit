@@ -3,7 +3,7 @@ import numpy as np
 
 from hicat.experiments.Experiment import Experiment
 from hicat.experiments.modules import auto_focus
-from hicat.hicat_types import *
+from catkit.catkit_types import *
 
 
 class AutoFocus(Experiment):

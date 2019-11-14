@@ -5,7 +5,7 @@ from astropy.io import fits
 from hicat.data_pipeline import standard_file_pipeline
 from hicat.experiments.Experiment import Experiment
 from hicat.hardware import testbed_state
-from hicat.hicat_types import ImageCentering
+from catkit.catkit_types import ImageCentering
 import hicat.util
 from hicat.config import CONFIG_INI
 

@@ -13,7 +13,7 @@ from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from catkit.hardware.boston.commands import poke_command, flat_command
-from hicat.hicat_types import quantity, units
+from catkit.catkit_types import quantity, units
 
 
 class TakeDm4d952PokeData(Experiment):

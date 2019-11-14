@@ -11,7 +11,7 @@ import numpy as np
 from catkit.hardware.boston.commands import flat_command
 import hicat.util
 from hicat.hardware import testbed
-from hicat.hicat_types import *
+from catkit.catkit_types import *
 from hicat.config import CONFIG_INI
 
 

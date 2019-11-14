@@ -8,7 +8,7 @@ from hicat.hardware import testbed
 from catkit.hardware.FourDTechnology.Accufiz import Accufiz
 from hicat.config import CONFIG_INI
 import hicat.util
-from hicat.hicat_types import units, quantity
+from catkit.catkit_types import units, quantity
 
 
 class Dm4dActuatorAnalysis(Experiment):

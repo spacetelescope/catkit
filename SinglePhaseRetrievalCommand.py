@@ -9,7 +9,7 @@ from catkit.hardware.boston.DmCommand import DmCommand
 from hicat.experiments.modules.phase_retrieval import take_phase_retrieval_data
 from hicat.config import CONFIG_INI
 import hicat.util
-from hicat.hicat_types import units, quantity
+from catkit.catkit_types import units, quantity
 from hicat import wavefront_correction
 from catkit.hardware.boston.commands import flat_command
 import catkit.util

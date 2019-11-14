@@ -4,7 +4,7 @@ import os
 from catkit.hardware.FilterWheelAssembly import FilterWheelAssembly
 
 from hicat.experiments.Experiment import Experiment
-from hicat.hicat_types import * # OHNO
+from catkit.catkit_types import * # OHNO
 from catkit.hardware.boston.commands import flat_command
 from hicat.hardware import testbed
 from catkit.hardware.thorlabs.ThorlabsFW102C import ThorlabsFW102C

@@ -2,12 +2,11 @@ import os
 from astropy.io import fits
 from glob import glob
 
-from hicat.hicat_types import ImageCentering
 from catkit.hardware.boston.commands import flat_command
 from catkit.hardware.boston.sin_command import sin_command
 from hicat.hardware import testbed
 from hicat.util import write_fits, read_fits
-from hicat.hicat_types import LyotStopPosition, SinSpecification, quantity, units
+from catkit.catkit_types import LyotStopPosition, SinSpecification, quantity, units, ImageCentering
 
 
 positive_sin_dirname = "positive_sin"
