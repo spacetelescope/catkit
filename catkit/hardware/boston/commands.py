@@ -1,6 +1,6 @@
 import numpy as np
 
-from hicat.config import CONFIG_INI
+from catkit.config import CONFIG_INI
 from catkit.hardware.boston.DmCommand import DmCommand
 from catkit.catkit_types import units, quantity
 

@@ -10,7 +10,7 @@ from glob import glob
 
 from catkit.interfaces.FizeauInterferometer import FizeauInterferometer
 import catkit.util
-from hicat.config import CONFIG_INI
+from catkit.config import CONFIG_INI
 
 calibration_data_path = os.path.join(catkit.util.find_package_location("hicat"), "hardware", "FourDTechnology")
 

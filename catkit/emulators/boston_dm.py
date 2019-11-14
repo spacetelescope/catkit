@@ -114,7 +114,7 @@ class PoppyBmcEmulator:
             dm_command *= dm.max_volts
 
             # Convert to 2D image
-            dm_image = catkit.util.convert_dm_command_to_image(dm_command)
+            dm_image = catkit.hardware.boston.DmCommand.convert_dm_command_to_image(dm_command)
 
             # The 0 Volt DM surface is not flat. Attempt to simulate this.
             if dm.unbiased_flatmap_voltage is not None:
