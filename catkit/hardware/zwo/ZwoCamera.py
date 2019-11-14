@@ -7,7 +7,7 @@ import sys
 
 from catkit.catkit_types import MetaDataEntry, units, quantity
 from catkit.interfaces.Camera import Camera
-from hicat.config import CONFIG_INI
+from catkit.config import CONFIG_INI
 import catkit.util
 from catkit.hardware import testbed_state
 

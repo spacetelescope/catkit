@@ -1,7 +1,5 @@
 import os
 import functools
-import sys
-from types import ModuleType
 
 import astropy.units
 import numpy as np
@@ -11,26 +9,19 @@ from catkit.hardware.boston.DmCommand import DmCommand, get_m_per_volt_map
 import catkit.emulators.boston_dm
 import catkit.util
 import catkit.hardware
+from catkit.config import CONFIG_INI, load_config_ini
 
 data_dir = os.path.join(os.path.dirname(__file__), "data")
 
-
-@pytest.fixture(autouse=True)
-def dummy_testbed_state():
-    # Create dummy testbed_state module
-    dummy_testbed_state_module = ModuleType("dummy_testbed_state")
-    # Add the required attributes needed for the subsequent tests
-    dummy_testbed_state_module.dm1_command_object = None
-    dummy_testbed_state_module.dm2_command_object = None
-    # Add it to the module cache
-    if dummy_testbed_state_module.__name__ not in sys.modules:
-        sys.modules[dummy_testbed_state_module.__name__] = dummy_testbed_state_module
-    # Load/assign it to catkit.hardware.testbed_state
-    catkit.hardware.load_testbed_state(dummy_testbed_state_module)
+# Read, parse, and load CONFIG_INI now so that it is in scope for class attributes initialization,
+# i.e., for get_m_per_volt_map()
+config_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini")
+config = load_config_ini(config_filename)
 
 
+@pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
 class TestPoppyBostonDMController:
-    # Example specs mimic Boston Kilo 952 DM
+    config_id = "boston_kilo952"
     number_of_actuators = 952
     command_length = 2048
     dm_max_volts = 200
@@ -50,7 +41,7 @@ class TestPoppyBostonDMController:
                                                          influence_func=os.path.join(data_dir, "dm_influence_function_dm5v2.fits"),
                                                          actuator_spacing=300 * astropy.units.micron,
                                                          include_actuator_print_through=True,
-                                                         actuator_print_through_file=os.path.join(data_dir, "boston_mems_actuator_medres.fits"),
+                                                         actuator_print_through_file=os.path.join(data_dir,"boston_mems_actuator_medres.fits"),
                                                          actuator_mask_file=os.path.join(data_dir, "boston_kilodm-952_mask.fits"),
                                                          inclination_y=10)
 
@@ -72,7 +63,7 @@ class TestPoppyBostonDMController:
     poppy_dm2.flip_x = True
 
     instantiate_dm_controller = functools.partial(catkit.emulators.boston_dm.PoppyBostonDMController,
-                                                  config_id="boston_kilo952",
+                                                  config_id=config_id,
                                                   serial_number="00CW000#000",
                                                   dac_bit_width=14,
                                                   num_actuators=number_of_actuators,

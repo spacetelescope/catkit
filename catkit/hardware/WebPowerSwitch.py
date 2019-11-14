@@ -1,6 +1,6 @@
 import logging
 import requests
-from hicat.config import CONFIG_INI
+from catkit.config import CONFIG_INI
 from catkit.interfaces.RemotePowerSwitch import RemotePowerSwitch
 
 """

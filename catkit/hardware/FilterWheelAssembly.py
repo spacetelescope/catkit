@@ -4,7 +4,7 @@ from serial import SerialException
 
 from catkit.hardware.thorlabs.ThorlabsFW102C import ThorlabsFW102C
 from catkit.interfaces.Instrument import Instrument
-from hicat.config import CONFIG_INI
+from catkit.config import CONFIG_INI
 
 
 class FilterWheelAssembly(Instrument):

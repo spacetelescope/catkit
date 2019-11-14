@@ -1,7 +1,7 @@
 import logging
 import visa
 import platform
-from hicat.config import CONFIG_INI
+from catkit.config import CONFIG_INI
 from pyvisa import constants
 import time
 

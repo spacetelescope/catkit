@@ -1,7 +1,7 @@
 import numpy as np
 import logging
 
-from hicat.config import CONFIG_INI
+from catkit.config import CONFIG_INI
 from catkit.hardware import testbed_state
 from catkit.interfaces.MotorController import MotorController
 from catkit.hardware.newport.lib import XPS_Q8_drivers

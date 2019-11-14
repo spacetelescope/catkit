@@ -7,7 +7,7 @@ from skimage.transform import resize
 import catkit.util
 from catkit.hardware.boston.DmCommand import DmCommand
 from catkit.catkit_types import units
-from hicat.config import CONFIG_INI
+from catkit.config import CONFIG_INI
 
 
 dm_config_id = "boston_kilo952"
