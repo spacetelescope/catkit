@@ -53,3 +53,28 @@ SinSpecification = namedtuple("SinSpecification", "angle, ncycles, peak_to_valle
 # Create shortcuts for using Pint globally.
 units = UnitRegistry()
 quantity = units.Quantity
+
+
+class Pointer:
+    def __init__(self, ref):
+        super().__getattribute__("point_to")(ref)
+
+    def __getattribute__(self, name):
+        if name == "self":
+            return super().__getattribute__("ref")
+        elif name == "point_to":
+            return super().__getattribute__(name)
+        else:
+            return super().__getattribute__("ref").__getattribute__(name)
+
+    def __setattr__(self, name, value):
+        super().__getattribute__("ref").__setattr__(name, value)
+
+    def __delattr__(self, name):
+        super().__getattribute__("ref").__delattr__(name)
+
+    def __dir__(self, name):
+        super().__getattribute__("ref").__dir__(name)
+
+    def point_to(self, ref):
+        super().__setattr__("ref", ref)

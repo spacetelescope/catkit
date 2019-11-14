@@ -1,6 +1,6 @@
 import numpy as np
-from hicat.hardware import testbed_state
 
+from catkit.hardware import testbed_state
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 
 # BMC is Boston's library and it only works on windows.

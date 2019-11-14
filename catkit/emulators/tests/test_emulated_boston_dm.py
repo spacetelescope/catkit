@@ -1,5 +1,7 @@
 import os
 import functools
+import sys
+from types import ModuleType
 
 import astropy.units
 import numpy as np
@@ -8,8 +10,23 @@ import pytest
 from catkit.hardware.boston.DmCommand import DmCommand, get_m_per_volt_map
 import catkit.emulators.boston_dm
 import catkit.util
+import catkit.hardware
 
 data_dir = os.path.join(os.path.dirname(__file__), "data")
+
+
+@pytest.fixture(autouse=True)
+def dummy_testbed_state():
+    # Create dummy testbed_state module
+    dummy_testbed_state_module = ModuleType("dummy_testbed_state")
+    # Add the required attributes needed for the subsequent tests
+    dummy_testbed_state_module.dm1_command_object = None
+    dummy_testbed_state_module.dm2_command_object = None
+    # Add it to the module cache
+    if dummy_testbed_state_module.__name__ not in sys.modules:
+        sys.modules[dummy_testbed_state_module.__name__] = dummy_testbed_state_module
+    # Load/assign it to catkit.hardware.testbed_state
+    catkit.hardware.load_testbed_state(dummy_testbed_state_module)
 
 
 class TestPoppyBostonDMController:
