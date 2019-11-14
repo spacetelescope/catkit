@@ -2,7 +2,7 @@ import numpy as np
 
 from hicat.config import CONFIG_INI
 from catkit.hardware.boston.DmCommand import DmCommand
-from hicat.hicat_types import units, quantity
+from catkit.catkit_types import units, quantity
 
 # Read config file once here.
 config_name = "boston_kilo952"

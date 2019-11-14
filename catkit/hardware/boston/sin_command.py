@@ -6,7 +6,7 @@ from skimage.transform import resize
 
 import catkit.util
 from catkit.hardware.boston.DmCommand import DmCommand
-from hicat.hicat_types import units
+from catkit.catkit_types import units
 from hicat.config import CONFIG_INI
 
 
