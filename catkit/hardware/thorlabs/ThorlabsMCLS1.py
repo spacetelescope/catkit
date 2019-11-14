@@ -6,7 +6,7 @@ import time
 
 from catkit.interfaces.LaserSource import LaserSource
 from hicat.config import CONFIG_INI
-from hicat.hardware import testbed_state
+from catkit.hardware import testbed_state
 
 """Interface for a laser source."""
 
