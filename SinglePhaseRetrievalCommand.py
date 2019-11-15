@@ -13,6 +13,7 @@ from catkit.catkit_types import units, quantity
 from hicat import wavefront_correction
 from catkit.hardware.boston.commands import flat_command
 import catkit.util
+from catkit.hardware.boston.DmCommand import convert_dm_command_to_image
 
 
 class SinglePhaseRetrievalCommand(Experiment):
@@ -95,7 +96,7 @@ class SinglePhaseRetrievalCommand(Experiment):
             corrected_values.append(correction)
 
         # Update the DmCommand.
-        pr_command = DmCommand(catkit.util.convert_dm_command_to_image(corrected_values), 1, flat_map=True)
+        pr_command = DmCommand(convert_dm_command_to_image(corrected_values), 1, flat_map=True)
 
         print("Starting phase retrieval data set...")
         take_phase_retrieval_data(self.exposure_time,

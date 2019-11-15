@@ -15,7 +15,7 @@ import hicat.util
 from catkit.catkit_types import units, quantity
 from hicat import wavefront_correction
 import catkit.util
-from catkit.hardware.boston.DmCommand import convert_dm_image_to_command
+from catkit.hardware.boston.DmCommand import convert_dm_image_to_command, convert_dm_command_to_image
 
 
 class Dm4dShapeLoop(Experiment):
@@ -168,14 +168,14 @@ class Dm4dShapeLoop(Experiment):
 
 
                         # Update the DmCommand.
-                        command_object.data += catkit.util.convert_dm_command_to_image(corrected_values)
+                        command_object.data += convert_dm_command_to_image(corrected_values)
 
                         # Apply the new command.
                         dm.apply_shape(command_object, dm_num=self.dm_num)
 
                         print("Taking exposures with 4D...")
                         file_name = "iteration{}".format(i)
-                        hicat.util.write_fits(catkit.util.convert_dm_command_to_image([i * 1e9 for i in corrected_values]),
+                        hicat.util.write_fits(convert_dm_command_to_image([i * 1e9 for i in corrected_values]),
                                         os.path.join(self.path, p2v_string, file_name, "correction"))
 
                         image_path = four_d.take_measurement(path=os.path.join(self.path, p2v_string, file_name),

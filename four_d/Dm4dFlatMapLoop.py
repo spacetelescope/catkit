@@ -149,7 +149,7 @@ class Dm4dFlatMapLoop(Experiment):
                         corrected_values.append(correction)
 
                     # Update the DmCommand.
-                    command_object.data += catkit.util.convert_dm_command_to_image(corrected_values)
+                    command_object.data += DmCommand.convert_dm_command_to_image(corrected_values)
 
                     # Apply the new command.
                     dm.apply_shape(command_object, dm_num=self.dm_num)

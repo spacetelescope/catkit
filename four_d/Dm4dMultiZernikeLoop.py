@@ -14,8 +14,7 @@ from hicat.config import CONFIG_INI
 import hicat.util
 from catkit.catkit_types import units, quantity
 from hicat import wavefront_correction
-import catkit.util
-from catkit.hardware.boston.DmCommand import convert_dm_image_to_command
+from catkit.hardware.boston.DmCommand import convert_dm_image_to_command, convert_dm_command_to_image
 
 
 class Dm4dMultiZernikeLoop(Experiment):
@@ -185,7 +184,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                             corrected_values.append(correction)
 
                         # Update the DmCommand.
-                        command_object.data += catkit.util.convert_dm_command_to_image(corrected_values)
+                        command_object.data += convert_dm_command_to_image(corrected_values)
 
                         # Apply the new command.
                         dm.apply_shape(command_object, dm_num=self.dm_num)
