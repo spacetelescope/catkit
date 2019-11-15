@@ -5,7 +5,7 @@ import re
 import sys
 import warnings
 
-from hicat.config import CONFIG_INI
+from catkit.config import CONFIG_INI
 
 # WARNING - this is neither functionally complete, nor robust against 32b vs 64b nor against model revision of TSP01.
 # Some attempt has been made, however, I have been unable to load the Thorlabs TLTSP_<bit-length>.dll.
