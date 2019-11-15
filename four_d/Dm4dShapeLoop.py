@@ -15,6 +15,8 @@ import hicat.util
 from catkit.catkit_types import units, quantity
 from hicat import wavefront_correction
 import catkit.util
+from catkit.hardware.boston.DmCommand import convert_dm_image_to_command
+
 
 class Dm4dShapeLoop(Experiment):
     """
@@ -120,7 +122,7 @@ class Dm4dShapeLoop(Experiment):
                     renormalized_shape = self.shape * amp_nm
 
                     # Create the 1d shape.
-                    shape_1d = catkit.util.convert_dm_image_to_command(renormalized_shape)
+                    shape_1d = convert_dm_image_to_command(renormalized_shape)
 
                     for i in range(self.iterations):
                         image = fits.getdata(image_path)

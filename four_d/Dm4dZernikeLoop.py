@@ -15,6 +15,7 @@ import hicat.util
 from catkit.catkit_types import units, quantity
 from hicat import wavefront_correction
 import catkit.util
+from catkit.hardware.boston.DmCommand import convert_dm_image_to_command
 
 class Dm4dZernikeLoop(Experiment):
     """
@@ -119,7 +120,7 @@ class Dm4dZernikeLoop(Experiment):
                     p2v_string = str(p2v) + "_nm_p2v"
 
                     # Create the zernike shape.
-                    zernike_1d = catkit.util.convert_dm_image_to_command(my_zernike_module.create_zernike(self.zernike_index,p2v))
+                    zernike_1d = convert_dm_image_to_command(my_zernike_module.create_zernike(self.zernike_index,p2v))
 
                     for i in range(self.iterations):
                         # Using the actuator_map, find the intensities at each actuator pixel value.

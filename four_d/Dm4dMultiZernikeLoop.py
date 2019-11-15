@@ -15,6 +15,8 @@ import hicat.util
 from catkit.catkit_types import units, quantity
 from hicat import wavefront_correction
 import catkit.util
+from catkit.hardware.boston.DmCommand import convert_dm_image_to_command
+
 
 class Dm4dMultiZernikeLoop(Experiment):
     """
@@ -134,7 +136,7 @@ class Dm4dMultiZernikeLoop(Experiment):
                     # Create the zernike shape.
                     first_zernike_data = my_zernike_module.create_zernike(self.first_zernike, first_p2v_value)
                     second_zernike_data = my_zernike_module.create_zernike(self.second_zernike, second_p2v_value)
-                    combined_zernike_1d = catkit.util.convert_dm_image_to_command(first_zernike_data + second_zernike_data)
+                    combined_zernike_1d = convert_dm_image_to_command(first_zernike_data + second_zernike_data)
 
                     # Set up more path strings.
                     first_folder = self.first_zernike_name + "_" + str(first_p2v_value) + "_nm"
