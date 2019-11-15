@@ -11,8 +11,6 @@ import catkit.util
 
 m_per_volt_map = None  # for caching the conversion factor, to avoid reading from disk each time
 
-calibration_data_path = os.path.join(catkit.util.find_package_location("hicat"), "hardware", "boston")
-
 
 class DmCommand(object):
     def __init__(self, data, dm_num, flat_map=False, bias=False, as_voltage_percentage=False,
@@ -34,6 +32,10 @@ class DmCommand(object):
 
         """
 
+        calibration_data_package = CONFIG_INI.get("optics_lab", "calibration_data_package")
+        self.calibration_data_path = os.path.join(catkit.util.find_package_location(calibration_data_package),
+                                                  "hardware",
+                                                  "boston")
         self.dm_num = dm_num
         self.flat_map = flat_map
         self.bias = bias
@@ -106,11 +108,11 @@ class DmCommand(object):
             elif self.flat_map:
                 if self.dm_num == 1:
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-                    flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
+                    flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
                 else:
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-                    flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
+                    flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
 
             # Convert between 0-1.
@@ -185,6 +187,10 @@ def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
 
 
 def get_flat_map_volts(dm_num):
+    calibration_data_package = CONFIG_INI.get("optics_lab", "calibration_data_package")
+    calibration_data_path = os.path.join(catkit.util.find_package_location(calibration_data_package),
+                                         "hardware",
+                                         "boston")
     if dm_num == 1:
         flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
         flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
@@ -196,6 +202,10 @@ def get_flat_map_volts(dm_num):
 
 
 def get_m_per_volt_map():
+    calibration_data_package = CONFIG_INI.get("optics_lab", "calibration_data_package")
+    calibration_data_path = os.path.join(catkit.util.find_package_location(calibration_data_package),
+                                         "hardware",
+                                         "boston")
     global m_per_volt_map
     if m_per_volt_map is None:
         m_per_volt_map = fits.getdata(os.path.join(calibration_data_path,

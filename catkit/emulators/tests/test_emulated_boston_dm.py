@@ -5,11 +5,11 @@ import astropy.units
 import numpy as np
 import pytest
 
-from catkit.hardware.boston.DmCommand import DmCommand, get_m_per_volt_map
+from catkit.hardware.boston.DmCommand import DmCommand
 import catkit.emulators.boston_dm
 import catkit.util
 import catkit.hardware
-from catkit.config import CONFIG_INI, load_config_ini
+from catkit.config import load_config_ini
 
 data_dir = os.path.join(os.path.dirname(__file__), "data")
 
@@ -27,7 +27,7 @@ class TestPoppyBostonDMController:
     dm_max_volts = 200
     flat_map_bias_voltage = 140
     mask = catkit.util.get_dm_mask()
-    meter_per_volt_map = get_m_per_volt_map()
+    meter_per_volt_map = mask * 9.357333e-09
     dm1_flatmap = mask * flat_map_bias_voltage
     dm2_flatmap = dm1_flatmap
 
