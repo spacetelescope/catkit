@@ -12,7 +12,6 @@ from catkit.interfaces.FizeauInterferometer import FizeauInterferometer
 import catkit.util
 from catkit.config import CONFIG_INI
 
-calibration_data_path = os.path.join(catkit.util.find_package_location("hicat"), "hardware", "FourDTechnology")
 
 class Accufiz(FizeauInterferometer):
 
@@ -95,6 +94,10 @@ class Accufiz(FizeauInterferometer):
 
     @staticmethod
     def __get_mask_path(mask):
+        calibration_data_package = CONFIG_INI.get("optics_lab", "calibration_data_package")
+        calibration_data_path = os.path.join(catkit.util.find_package_location(calibration_data_package),
+                                             "hardware",
+                                             "FourDTechnology")
         return os.path.join(calibration_data_path, mask)
 
     @staticmethod
