@@ -2,7 +2,7 @@ import logging
 
 from pysnmp import hlapi
 from catkit.interfaces.BackupPower import BackupPower
-from hicat.config import CONFIG_INI
+from catkit.config import CONFIG_INI
 
 """Implementation of the White UPS using the BackupPower interface."""
 
