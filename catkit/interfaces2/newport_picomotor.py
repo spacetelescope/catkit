@@ -136,11 +136,11 @@ class NewportPicomotor:
 
     def reset_controller(self):
         """Function to reset the motors to where they started (or were last reset.)"""
-        
-        for axis in '1234':
-            self.command('exact_move', int(axis), 0)
-            self.command('home_position', int(axis), 0)
-            self.logger.info('Controller reset.')
+        for daisy_key in None, 1: 
+            for axis in '1234':
+                self.command('exact_move', int(axis), 0, daisy_key=daisy_key)
+                self.command('home_position', int(axis), 0, daisy_key=daisy_key)
+                self.logger.info('Controller reset.')
         
     def close_logger(self):
         """Function for the close logger behavior."""
