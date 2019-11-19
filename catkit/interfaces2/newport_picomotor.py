@@ -264,10 +264,10 @@ class NewportPicomotor:
         return state_dict
         
     @http_except
-    def reset(self):
+    def reset(self, daisy_key=None):
         """Resets the controller."""
         
-        message = self._build_message('reset', 'reset')
+        message = self._build_message(daisy_key, 'reset', 'reset')
         self._send_message(message, 'set')
         self.logger.info('Controller reset.')
 
