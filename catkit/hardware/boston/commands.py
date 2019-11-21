@@ -7,10 +7,6 @@ from catkit.catkit_types import units, quantity
 # Read config file once here.
 config_name = "boston_kilo952"
 
-# Load values from config.ini into variables.
-num_actuators_pupil = CONFIG_INI.getint(config_name, 'dm_length_actuators')
-total_actuators = CONFIG_INI.getint(config_name, 'number_of_actuators')
-
 
 def flat_command(bias=False,
                  flat_map=False,
@@ -33,6 +29,7 @@ def flat_command(bias=False,
     if bias:
         short_name += "_bias"
 
+    num_actuators_pupil = CONFIG_INI.getint(config_name, 'dm_length_actuators')
     zero_array = np.zeros((num_actuators_pupil, num_actuators_pupil))
     dm_command_object = DmCommand(zero_array, dm_num, flat_map=flat_map, bias=bias)
 
@@ -56,6 +53,7 @@ def poke_command(actuators, amplitude=quantity(700, units.nanometers), bias=Fals
     """
 
     short_name = "poke"
+    total_actuators = CONFIG_INI.getint(config_name, 'number_of_actuators')
     poke_array = np.zeros(total_actuators)
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
@@ -87,6 +85,7 @@ def poke_letter_f_command(amplitude=quantity(250, units.nanometers), bias=False,
     """
     Creates the letter F in normal orientation when viewed in DS9.
     """
+    num_actuators_pupil = CONFIG_INI.getint(config_name, 'dm_length_actuators')
     data = np.zeros((num_actuators_pupil, num_actuators_pupil))
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
@@ -111,6 +110,7 @@ def checkerboard_command(amplitude=quantity(250, units.nanometers), bias=False, 
     Creates a checkerboard pattern DM command.  Useful for phase retrieval or 4D images. Default values
     start with the zero index of the DM command ("first actuator").
     """
+    num_actuators_pupil = CONFIG_INI.getint(config_name, 'dm_length_actuators')
     data = np.zeros((num_actuators_pupil, num_actuators_pupil))
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
