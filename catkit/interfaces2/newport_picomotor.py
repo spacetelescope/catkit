@@ -41,13 +41,17 @@ def http_except(function):
 class NewportPicomotor:
     """ This class handles all the picomotor stufff. """
 
-    def __init__(self, ip=None, max_step=None, timeout=None, home_reset=True):
+    def __init__(self, motor_count, controller_count, ip=None, max_step=None, timeout=None, home_reset=True):
         """ Initial function to set up logging and 
         set the IP address for the controller. Anything set to None will attempt to
         pull from the config file.
         
         Parameters
         ----------
+        motor_count : int
+            Number of connected motors.
+        controller_count : int
+            Number of daisy chained controllers.
         ip : string
             The IP address for the controller. Defaults to None.
         max_step : float
@@ -58,6 +62,10 @@ class NewportPicomotor:
             Whether or not to reset to the home position on controller close.
             Defaults to True.
         """
+        
+        # Build a list of motors and controllers. 
+        self.motors = [n for n in range(1, motor_count+1)]
+        self.controllers = [None] + [n for n in range(2, controller_count+1)]
 
         # Set IP address
         if None in [ip, max_step, timeout]:
@@ -67,7 +75,7 @@ class NewportPicomotor:
             
             config = configparser.ConfigParser()
             config.read(config_path)
-            
+        
         self.ip = config.get('newport_picomotor_8743-CL_8745-PS', 'ip') if ip is None else ip
         self.max_step = config.get('newport_picomotor_8743-CL_8745-PS', 'max_step') if max_step is None else max_step
         self.timeout = config.get('newport_picomotor_8743-CL_8745-PS', 'timeout') if timeout is None else timeout
@@ -105,9 +113,10 @@ class NewportPicomotor:
         self.logger.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
         
         # Save current position as home.
-        for axis in '1234':
-            self.command('home_position', int(axis), 0)
-            self.logger.info('Current position saved as home.')
+        for daisy in self.controllers:
+            for axis in self.motors:
+                self.command('home_position', int(axis), 0, daisy_key=daisy)
+                self.logger.info('Current position saved as home.')
 
 
     def __enter__(self):
@@ -136,8 +145,8 @@ class NewportPicomotor:
 
     def reset_controller(self):
         """Function to reset the motors to where they started (or were last reset.)"""
-        for daisy_key in None, 1: 
-            for axis in '1234':
+        for daisy_key in self.controllers: 
+            for axis in self.motors:
                 self.command('exact_move', int(axis), 0, daisy_key=daisy_key)
                 self.command('home_position', int(axis), 0, daisy_key=daisy_key)
                 self.logger.info('Controller reset.')
@@ -180,7 +189,7 @@ class NewportPicomotor:
         if float(set_value) != value:
             self.logger.error('Something is wrong, {} != {}'.format(set_value, value)) 
          
-        self.logger.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
+        self.logger.info('Command sent. Action : {}. Axis : {}. Value : {}. Controller : {}.'.format(cmd_key, axis, value, daisy_key))
     
     def convert_move_to_pixel(self, img_before, img_after, move, axis):
         """ After two images taken some x_move or y_move apart, calculate how
@@ -267,23 +276,23 @@ class NewportPicomotor:
     def reset(self, daisy_key=None):
         """Resets the controller."""
         
-        message = self._build_message(daisy_key, 'reset', 'reset')
+        message = self._build_message('reset', 'reset', daisy_key=daisy_key)
         self._send_message(message, 'set')
         self.logger.info('Controller reset.')
 
-    def _build_message(self, daisy_key, cmd_key, cmd_type, axis=None, value=None):
+    def _build_message(self, cmd_key, cmd_type, daisy_key=None, axis=None, value=None):
         """Build a message for the newport picomotor controller.
 
         Parameters
         ----------
         cmd_key : str
             The command and hand, like position, reset, etc.
-        daisy_key : int, None
-            Which controller in the master/slave hierarchy.
         cmd_type : str
             The kind of command, whether to get, set, or reset.
         axis : int, optional
             The axis (1-4 are valid) to set. Defaults to None.
+        daisy_key : int, None
+            Which controller in the master/slave hierarchy.
         value : str 
         
         Returns
