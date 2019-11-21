@@ -15,25 +15,29 @@ class ThorlabsFW102C(FilterWheel):
     log = logging.getLogger(__name__)
 
     def initialize(self, *args, **kwargs):
-
-        rm = visa.ResourceManager('@py')
+        # Perform initialization but don't open hardware
 
         # Determine the os, and load the correct filter ID from the ini file.
         if platform.system().lower() == "darwin":
-            visa_id = CONFIG_INI.get(self.config_id, "mac_resource_name")
+            self.visa_id = CONFIG_INI.get(self.config_id, "mac_resource_name")
         elif platform.system().lower() == "windows":
-            visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
+            self.visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
         else:
-            visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
+            self.visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
+
+    def _open(self):
+        """Open connection. Return an object connected to the instrument.
+        """
+        rm = visa.ResourceManager('@py')
 
         # These values took a while to figure out, careful changing them.
-        return rm.open_resource(visa_id,
+        return rm.open_resource(self.visa_id,
                                 baud_rate=115200,
                                 data_bits=8,
                                 write_termination='\r',
                                 read_termination='\r')
 
-    def close(self):
+    def _close(self):
         self.instrument.close()
 
     def get_position(self):
