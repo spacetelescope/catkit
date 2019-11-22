@@ -6,6 +6,7 @@ from glob import glob
 
 from astropy.io import fits
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from matplotlib.colors import LogNorm
 import numpy as np
 
@@ -77,6 +78,10 @@ def auto_focus_mtf(filePath, threshold):
 
     print('Starting autofocus analysis')
 
+    # Create directory for diagnostics
+    mtf_dir = 'mtf_diagnostics'
+    os.makedirs(os.path.join(filePath, mtf_dir), exist_ok=True)
+
     # Read calibrated images
     im_list = glob(os.path.join(filePath, '*_cal.fits*'))
 
@@ -103,6 +108,9 @@ def auto_focus_mtf(filePath, threshold):
     for i in range(MTF.shape[0]):
         MTF[i] /= np.max(MTF[i])
 
+        # Save MTFs as fits
+        util.write_fits(MTF[i], os.path.join(filePath, mtf_dir, 'mtf_' + str(positions[i]) + '.fits'))
+
     # Define MTF support on image that is supposed to be best focus
     central_size = int(im_size/8)
     bg_zone = MTF[int(number_positions), 1:central_size, 1:central_size]   # Picking the central picture as reference
@@ -112,17 +120,27 @@ def auto_focus_mtf(filePath, threshold):
     bkgr = np.where(MTF[int(number_positions)] < (threshold*noise))
     mask[bkgr] = 0
 
+    # Save used background area
+    rect = Rectangle((1, 1), central_size, central_size, linewidth=1, edgecolor='r', facecolor='none')
+    plt.clf()
+    plt.imshow(MTF[0])
+    plt.gca().add_patch(rect)
+    plt.savefig(os.path.join(filePath, mtf_dir, 'background_area.pdf'))
+
+    # Save MTF support
+    plt.clf()
+    plt.imshow(mask)
+    plt.savefig(os.path.join(filePath, mtf_dir, 'mtf_support.pdf'))
+
     # Calculate sum of MTF. It gets smaller when we move away from best focus
     values_MTF = []
-    mtf_dir = 'mtf_plots'
-    os.makedirs(os.path.join(filePath, mtf_dir), exist_ok=True)
-
     for i in range(MTF.shape[0]):
         values_MTF.append(np.sum(MTF[i]*mask))
 
         # create MTF plot and save as pdf
         plt.clf()
         plt.imshow(MTF[i] * mask, norm=LogNorm())
+        plt.title(str(positions[i]) + ' mm')
         plt.savefig(os.path.join(filePath, mtf_dir, 'mtf_' + str(positions[i]) + '.pdf'))
 
     # Create motor position values and fit a 2. order curve to data
