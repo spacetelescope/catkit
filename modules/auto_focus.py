@@ -68,26 +68,33 @@ def collect_final_images(path):
         copyfile(img, os.path.join(path, os.path.basename(img)))
 
 
-def auto_focus_mtf(filePath, positions, threshold): 
+def auto_focus_mtf(filePath, threshold):
+    """
+    Perform MTF analysis to find best focus position for imaging camera.
+    :param filePath: path to autofocus data
+    :param threshold: threshold for background
+    """
 
     print('Starting autofocus analysis')
-    """
-    # Input parameters
-    filePath = the path the the data taken
-    positions = list of observed positions
-    threshold = 100 
 
-    #"""
-
-    # Check how many calibrated images there are
+    # Read calibrated images
     im_list = glob(os.path.join(filePath, '*_cal.fits*'))
+
+    # Determine at what camera positions the images were taken, in order they were read in
+    positions = []
+    for i in range(len(im_list)):
+        hdr = fits.getheader(im_list[i], 0)
+        positions.append(hdr['CAM_POS'] / 1e3)  # transform to mm
+    positions = np.array(positions)
+
+    # Set up array of all PSF images
     hdr = fits.getheader(im_list[0], 0)
     im_size = hdr['NAXIS1']
-    numer_positions = len(positions)/2
+    number_positions = len(positions)/2
     images = np.zeros((len(im_list), im_size, im_size))
 
     # Import calibrated images
-    for i,file in enumerate(im_list):
+    for i, file in enumerate(im_list):
         images[i] = fits.getdata(file)
 
     # Calculate the modulation transfer functions (MTF) and normalize them by their peaks
@@ -98,11 +105,11 @@ def auto_focus_mtf(filePath, positions, threshold):
 
     # Define MTF support on image that is supposed to be best focus
     central_size = int(im_size/8)
-    bg_zone = MTF[int(numer_positions), 1:central_size, 1:central_size]   # Picking the central picture as reference
+    bg_zone = MTF[int(number_positions), 1:central_size, 1:central_size]   # Picking the central picture as reference
     noise = np.std(bg_zone)
 
-    mask = np.ones_like(MTF[int(numer_positions)])
-    bkgr = np.where(MTF[int(numer_positions)] < (threshold*noise))
+    mask = np.ones_like(MTF[int(number_positions)])
+    bkgr = np.where(MTF[int(number_positions)] < (threshold*noise))
     mask[bkgr] = 0
 
     # Calculate sum of MTF. It gets smaller when we move away from best focus
@@ -121,7 +128,7 @@ def auto_focus_mtf(filePath, positions, threshold):
     # Create motor position values and fit a 2. order curve to data
     parab = np.polyfit(positions, values_MTF, 2)
     fit = np.poly1d(parab)
-    fit_x = np.linspace(positions[0], positions[-1], 50)   # this is for plotting at fine samplings
+    fit_x = np.linspace(np.min(positions), np.max(positions), 50)   # this is for plotting at fine samplings
 
     fit_data = fit(fit_x)
 
