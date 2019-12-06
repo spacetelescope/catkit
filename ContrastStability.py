@@ -23,8 +23,11 @@ from scripts.stroke_minimization import stroke_min
 # Redefine take image functions like in run_stroke_min
 exposure_time_coron = 100000
 exposure_time_direct = 100
-take_coron_exposure = functools.partial(stroke_min.take_coron_exposure_hicat, exposure_time=exposure_time_coron)
-take_direct_exposure = functools.partial(stroke_min.take_direct_exposure_hicat, exposure_time=exposure_time_direct)
+
+take_coron_exposure = functools.partial(stroke_min.take_exposure_hicat, exposure_time=exposure_time_coron,
+                                        exposure_type='coron')
+take_direct_exposure = functools.partial(stroke_min.take_exposure_hicat, exposure_time=exposure_time_direct,
+                                         exposure_type='direct')
 
 
 class ContrastStability(Experiment):
