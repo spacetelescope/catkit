@@ -109,7 +109,7 @@ def auto_focus_mtf(filePath, threshold):
         MTF[i] /= np.max(MTF[i])
 
         # Save MTFs as fits
-        util.write_fits(MTF[i], os.path.join(filePath, mtf_dir, 'mtf_' + str(positions[i]) + '.fits'))
+        hicat.util.write_fits(MTF[i], os.path.join(filePath, mtf_dir, 'mtf_' + str(positions[i]) + '.fits'))
 
     # Define MTF support on image that is supposed to be best focus
     central_size = int(im_size/8)
