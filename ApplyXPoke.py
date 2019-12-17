@@ -24,7 +24,7 @@ class ApplyXPoke(Experiment):
         dm_to_poke = self.dm_num
         dm_to_flat = 2 if self.dm_num == 1 else 1
 
-        poke_amplitude = 500 if self.dm_num == 1 else -500
+        poke_amplitude = 200 if self.dm_num == 1 else -150
 
         poke_pattern = commands.poke_command(self.actuators, dm_num=dm_to_poke,
                                              amplitude=quantity(poke_amplitude, units.nanometers))
