@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import warnings
+import time
 
 from catkit.config import CONFIG_INI
 
@@ -87,8 +88,16 @@ class TSP01:
         return available_devices
 
     def __init__(self, serial_number):
+
+        sleep_time_reset = 5  # estimated time for the reset of the device to be applied before instantiation (undocumented).
+        sleep_time_read = 1  # device cannot be read more often than 1 time per second (per documentation)
+
         self.connection = ctypes.c_void_p(None)
         self.serial_number = serial_number
+        self.sleep_time_read = sleep_time_read
+        self.sleep_time_reset = sleep_time_reset
+
+        time.sleep(self.sleep_time_reset)
 
         # Find the desired device resource name. This is not just the SN#.
         # NOTE: The revB call only finds revB devices.
@@ -123,6 +132,7 @@ class TSP01:
             self.connection = ctypes.c_void_p(None)
 
     def get_temp(self, channel):
+        time.sleep(self.sleep_time_read)
         temp = ctypes.c_double(0)
         # int TLTSPB_getTemperatureData(void * connection, int channel, double * temp)
         status = TSP01_LIB.TLTSPB_measTemperature(self.connection, int(channel), ctypes.byref(temp))
@@ -131,6 +141,7 @@ class TSP01:
         return temp.value
 
     def get_humidity(self):
+        time.sleep(self.sleep_time_read)
         humidity = ctypes.c_double(0)
         # int TLTSPB_getHumidityData(void * connection, ?, double * humidity)
         status = TSP01_LIB.TLTSPB_measHumidity(self.connection, ctypes.byref(humidity))
