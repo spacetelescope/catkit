@@ -7,6 +7,8 @@ import warnings
 import time
 
 from catkit.config import CONFIG_INI
+from catkit.hardware import testbed_state
+from catkit.interfaces.TemperaturePressureSensor import TemperaturePressureSensor
 
 # WARNING - this is neither functionally complete, nor robust against 32b vs 64b nor against model revision of TSP01.
 # Some attempt has been made, however, I have been unable to load the Thorlabs TLTSP_<bit-length>.dll.
@@ -38,24 +40,53 @@ except Exception as error:
     raise ImportError("TSP01: Failed to import '{}' library @ '{}'".format(TSP01_REQUIRED_LIB, TSP01_LIB_PATH)) from error
 
 
-class TSP01:
+class TSP01(TemperaturePressureSensor):
     # Don't use this class directly, instead use TSP01RevB.
+    instrument_lib = TSP01_LIB
 
+    # Where should these go...
     macro_definitions = {"TLTSP_BUFFER_SIZE": 256,
                          "TLTSP_TEMPER_CHANNEL_1": None,  # internal
                          "TLTSP_TEMPER_CHANNEL_2": None,  # external probe 1
                          "TLTSP_TEMPER_CHANNEL_3": None}  # external probe 2
+    
+    def initialize(self, serial_number):
+
+        self.serial_number = serial_number
+    
+    def _open(self):
+
+        connection = ctypes.c_void_p(None)
+        self.instrument = connection
+        self.connection = self.instrument
+        
+        # Find the desired device resource name. This is not just the SN#.
+        # NOTE: The revB call only finds revB devices.
+        available_devices = self.find_all()
+        self.device_name = [device for device in available_devices if self.serial_number in device]
+        if not self.device_name:
+            raise OSError("TSP01: device not found - SN# '{}'".format(self.serial_number))
+        if len(self.device_name) > 1:
+            raise OSError("TSP01: found multiple devices with the same SN# '{}'".format(self.serial_number))
+        self.device_name = self.device_name[0]
+
+        # int TLTSPB_init(char * device_name, bool id_query, bool reset_device, void ** connection)
+        status = instrument_lib.TLTSPB_init(self.device_name.encode(), True, True, ctypes.byref(self.instrument))
+        if status or self.instrument.value is None:
+            raise OSError("TSP01: Failed to connect - '{}'".format(self.get_error_message(status)))
+        
+        return self.instrument
 
     @classmethod
     def get_error_message(cls, status_code):
         """Convert error status to error message."""
         buffer_size = int(cls.macro_definitions["TLTSP_BUFFER_SIZE"])
-        error_message = ctypes.create_string_buffer(buffer_size)
+        status = ctypes.create_string_buffer(buffer_size)
         # int TLTSPB_errorMessage(void * connection, int status_code, char * error_message)
-        status = TSP01_LIB.TLTSPB_errorMessage(None, status_code, error_message)
+        status = instrument_lib.TLTSPB_errorMessage(None, status_code, status)
         if status:
             raise OSError("TSP01: Ironically failed to get error message - '{}'".format(cls.get_error_message(status)))
-        return error_message.value.decode()
+        return status.value.decode()
 
     @classmethod
     def create(cls, config_id):
@@ -69,7 +100,7 @@ class TSP01:
         # First find the total number of connected TSP01 devices.
         device_count = ctypes.c_int(0)
         # int TLTSPB_findRsrc(void * connection, int * device_count)
-        status = TSP01_LIB.TLTSPB_findRsrc(None, ctypes.byref(device_count))
+        status = instrument_lib.TLTSPB_findRsrc(None, ctypes.byref(device_count))
         if status:
             raise ImportError("TSP01: Failed when trying to find connected devices - '{}'".format(cls.get_error_message(status)))
 
@@ -80,62 +111,26 @@ class TSP01:
             buffer_size = int(cls.macro_definitions["TLTSP_BUFFER_SIZE"])
             buffer = ctypes.create_string_buffer(buffer_size)
             # int TLTSPB_getRsrcName(void * connection, int device_index, char * buffer)
-            status = TSP01_LIB.TLTSPB_getRsrcName(None, i, buffer)
+            status = instrument.TLTSPB_getRsrcName(None, i, buffer)
             if status:
                 raise ImportError("TSP01: Failed when trying to find connected devices - '{}'".format(cls.get_error_message(status)))
             available_devices.append(buffer.value.decode())
 
         return available_devices
 
-    def __init__(self, serial_number):
-
-        sleep_time_reset = 5  # estimated time for the reset of the device to be applied before instantiation (undocumented).
-        sleep_time_read = 1  # device cannot be read more often than 1 time per second (per documentation)
-
-        self.connection = ctypes.c_void_p(None)
-        self.serial_number = serial_number
-        self.sleep_time_read = sleep_time_read
-        self.sleep_time_reset = sleep_time_reset
-
-        time.sleep(self.sleep_time_reset)
-
-        # Find the desired device resource name. This is not just the SN#.
-        # NOTE: The revB call only finds revB devices.
-        available_devices = self.find_all()
-        self.device_name = [device for device in available_devices if self.serial_number in device]
-        if not self.device_name:
-            raise OSError("TSP01: device not found - SN# '{}'".format(self.serial_number))
-        if len(self.device_name) > 1:
-            raise OSError("TSP01: found multiple devices with the same SN# '{}'".format(self.serial_number))
-        self.device_name = self.device_name[0]
-
-        # int TLTSPB_init(char * device_name, bool id_query, bool reset_device, void ** connection)
-        status = TSP01_LIB.TLTSPB_init(self.device_name.encode(), True, True, ctypes.byref(self.connection))
-        if status or self.connection.value is None:
-            raise OSError("TSP01: Failed to connect - '{}'".format(self.get_error_message(status)))
-
-    def __enter__(self, *args, **kwargs):
-        return self
-
-    def __exit__(self, exception_type, exception_value, exception_traceback):
-        self.close()
-
-    def __del__(self):
-        self.close()
-
-    def close(self):
-        if self.connection.value:
+    def _close(self):
+        if self.instrument.value:
             # int TLTSPB_close(void * connection)
-            status = TSP01_LIB.TLTSPB_close(self.connection)
+            status = instrument_lib.TLTSPB_close(self.instrument)
             if status:
                 pass  # Don't do anything with this.
-            self.connection = ctypes.c_void_p(None)
+            self.instrument = ctypes.c_void_p(None)
 
     def get_temp(self, channel):
         time.sleep(self.sleep_time_read)
         temp = ctypes.c_double(0)
         # int TLTSPB_getTemperatureData(void * connection, int channel, double * temp)
-        status = TSP01_LIB.TLTSPB_measTemperature(self.connection, int(channel), ctypes.byref(temp))
+        status = instrument_lib.TLTSPB_measTemperature(self.instrument, int(channel), ctypes.byref(temp))
         if status:
             raise RuntimeError("TSP01: Failed to get temperature - '{}'".format(self.get_error_message(status)))
         return temp.value
@@ -144,7 +139,7 @@ class TSP01:
         time.sleep(self.sleep_time_read)
         humidity = ctypes.c_double(0)
         # int TLTSPB_getHumidityData(void * connection, ?, double * humidity)
-        status = TSP01_LIB.TLTSPB_measHumidity(self.connection, ctypes.byref(humidity))
+        status = instrument_lib.TLTSPB_measHumidity(self.instrument, ctypes.byref(humidity))
         if status:
             raise RuntimeError("TSP01: Failed to get humidity - '{}'".format(self.get_error_message(status)))
         return humidity.value
