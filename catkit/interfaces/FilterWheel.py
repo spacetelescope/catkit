@@ -1,5 +1,3 @@
-import logging
-
 from abc import abstractmethod
 from catkit.interfaces.Instrument import Instrument
 
@@ -7,7 +5,6 @@ from catkit.interfaces.Instrument import Instrument
 
 
 class FilterWheel(Instrument):
-    log = logging.getLogger(__name__)
 
     @abstractmethod
     def get_position(self):
