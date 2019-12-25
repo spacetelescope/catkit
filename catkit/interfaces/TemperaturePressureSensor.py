@@ -9,5 +9,13 @@ from catkit.interfaces.Instrument import Instrument
 class TemperaturePressureSensor(Instrument, ABC):
     
     @abstractmethod
-    def check_temperature_pressue(self):
+    def get_temp_humidity(self):
         """Checks for temperature and pressure."""
+
+    @abstractmethod
+    def get_temp(self, channel):
+        """ Checks for temperature."""
+
+    @abstractmethod
+    def get_humidity(self):
+        """ Checks for pressure."""
