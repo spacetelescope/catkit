@@ -36,7 +36,7 @@ class PoppyBostonDM(poppy.dms.ContinuousDeformableMirror):
         self.flat_map_bias_voltage = flat_map_bias_voltage
 
         # TODO: HICAT-652 - unbiasing the flatmap should obtain ``bias_voltage`` from the flatmap file meta.
-        self.unbiased_flatmap_voltage = self.flat_map_voltage
+        self.unbiased_flatmap_voltage = self.flat_map_voltage.copy()
         if self.flat_map_bias_voltage is not None:
             self.unbiased_flatmap_voltage -= self.flat_map_bias_voltage
 
@@ -118,7 +118,7 @@ class PoppyBmcEmulator:
 
             # The 0 Volt DM surface is not flat. Attempt to simulate this.
             if dm.unbiased_flatmap_voltage is not None:
-                dm_image -= dm.unbiased_flatmap_voltage
+                dm_image -= dm.flat_map_voltage
 
             # Convert to meters
             dm_surface = catkit.hardware.boston.DmCommand.convert_volts_to_m(dm_image, dm.meter_per_volt_map)
