@@ -1,4 +1,3 @@
-import logging
 import visa
 import platform
 from catkit.config import CONFIG_INI
@@ -12,28 +11,32 @@ from catkit.interfaces.FilterWheel import FilterWheel
 class ThorlabsFW102C(FilterWheel):
     """Abstract base class for filter wheels."""
 
-    log = logging.getLogger(__name__)
+    instrument_lib = visa
 
     def initialize(self, *args, **kwargs):
-
-        rm = visa.ResourceManager('@py')
+        """ Initializes class instance, but doesn't -- and shouldn't -- open a connection to the hardware."""
 
         # Determine the os, and load the correct filter ID from the ini file.
         if platform.system().lower() == "darwin":
-            visa_id = CONFIG_INI.get(self.config_id, "mac_resource_name")
+            self.visa_id = CONFIG_INI.get(self.config_id, "mac_resource_name")
         elif platform.system().lower() == "windows":
-            visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
+            self.visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
         else:
-            visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
+            self.visa_id = CONFIG_INI.get(self.config_id, "windows_resource_name")
 
-        # These values took a while to figure out, careful changing them.
-        return rm.open_resource(visa_id,
+    def _open(self):
+        """Open connection. Return an object connected to the instrument hardware.
+        """
+        rm = self.instrument_lib.ResourceManager('@py')
+
+        # These values took a while to figure out; be careful changing them.
+        return rm.open_resource(self.visa_id,
                                 baud_rate=115200,
                                 data_bits=8,
                                 write_termination='\r',
                                 read_termination='\r')
 
-    def close(self):
+    def _close(self):
         self.instrument.close()
 
     def get_position(self):
