@@ -8,14 +8,16 @@ from hicat.experiments.Experiment import Experiment
 
 class ApplyActuatorPattern(Experiment):
     """
-    Apply a DM map that is specified by a set of actuator numbers.
+    Apply a DM map that is specified by a set of actuator numbers on one or both DMs.
+
+    This calss is supposed to be inherited by child classes that actually initialize with a list of actuators.
     """
     name = "Apply Actuator Pattern"
 
     def __init__(self, apply_to_both=False, dm_num=1, output_path=None, suffix='apply_actuator_pattern', actuators=None):
         super().__init__(output_path=output_path, suffix=suffix)
         self.apply_to_both = apply_to_both
-        if apply_to_both:
+        if not apply_to_both:
             self.dm_num = dm_num
         self.actuators = actuators  # list of actuators
 
@@ -75,10 +77,6 @@ class ApplyCenterPoke(ApplyActuatorPattern):
         self.actuators = [458, 459, 492, 493]
         super().__init__(apply_to_both=apply_to_both, dm_num=dm_num, output_path=output_path, suffix=suffix, actuators=self.actuators)
 
-        # Previous poke amplitudes:
-        # DM1: 700 nm
-        # DM2: 100 nm
-
 
 class ApplyCenterPokePlus(ApplyActuatorPattern):
     """
@@ -101,7 +99,7 @@ class ApplyCenterPokePlus(ApplyActuatorPattern):
 
 class ApplyOuterPoke(ApplyActuatorPattern):
     """
-    Poke many actuators on outer (?) parts of one or both DMs.
+    Poke all edge actuators of one or both DMs.
     """
     name = "Apply Outer Poke"
 
