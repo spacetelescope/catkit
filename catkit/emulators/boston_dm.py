@@ -71,6 +71,14 @@ class PoppyBmcEmulator:
         return self.NO_ERR
 
     def close_dm(self):
+        """ Close connection to (simulated) DM hardware """
+        # When we're done, leave the simulated DMs in a flat state, to avoid persistent
+        # state between different simulation calls.
+        # This intentionally differs from hardware behavior in which an unpowered DM is non-flat.
+        # See https://github.com/spacetelescope/instrument-interface-library/issues/63
+        self.dm1.flatten()
+        if self.dm2 is not None:
+            self.dm2.flatten()
         return self.NO_ERR
 
     def send_data(self, full_dm_command):
