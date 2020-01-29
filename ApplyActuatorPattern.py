@@ -27,7 +27,7 @@ class ApplyActuatorPattern(Experiment):
             poke_pattern = commands.poke_command(self.actuators, dm_num=dm_to_poke,
                                                  amplitude=quantity(200, units.nanometers))
             dm_to_flat = 2
-            flat_pattern = commands.poke_command(self.actuators, dm_num=dm_to_poke,
+            flat_pattern = commands.poke_command(self.actuators, dm_num=dm_to_flat,
                                                  amplitude=quantity(-150, units.nanometers))
 
         else:
