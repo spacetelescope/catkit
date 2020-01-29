@@ -2,6 +2,7 @@ import time
 
 from catkit.catkit_types import units, quantity
 from catkit.hardware.boston import commands
+from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import Experiment
 from hicat.hardware import testbed
 
@@ -26,19 +27,24 @@ class ApplyActuatorPattern(Experiment):
         self.actuators = actuators  # list of actuators
 
     def experiment(self):
+
+        # Read ideal amplitude for poke patterns on the DMs
+        dm1_poke_amp = CONFIG_INI.getfloat('boston_kilo952', 'dm1_ideal_poke')
+        dm2_poke_amp = CONFIG_INI.getfloat('boston_kilo952', 'dm2_ideal_poke')
+
         if self.apply_to_both:
             dm_to_poke = 1
             poke_pattern = commands.poke_command(self.actuators, dm_num=dm_to_poke,
-                                                 amplitude=quantity(200, units.nanometers))
+                                                 amplitude=quantity(dm1_poke_amp, units.nanometers))
             dm_to_flat = 2
             flat_pattern = commands.poke_command(self.actuators, dm_num=dm_to_flat,
-                                                 amplitude=quantity(-150, units.nanometers))
+                                                 amplitude=quantity(dm2_poke_amp, units.nanometers))
 
         else:
             dm_to_poke = self.dm_num
             dm_to_flat = 2 if self.dm_num == 1 else 1
 
-            poke_amplitude = 200 if self.dm_num == 1 else -150
+            poke_amplitude = dm1_poke_amp if self.dm_num == 1 else dm2_poke_amp
 
             poke_pattern = commands.poke_command(self.actuators, dm_num=dm_to_poke,
                                                  amplitude=quantity(poke_amplitude, units.nanometers))
