@@ -71,13 +71,10 @@ class ApplyXPoke(ApplyActuatorPattern):
     dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply X Poke"
-
-    def __init__(self, apply_to_both=False, dm_num=1, output_path=None, suffix='apply_x_poke'):
-        self.actuators = [492, 525, 558, 591, 624, 657, 689, 720, 750, 779, 807, 833,  # top right cross beam
-                          459, 426, 393, 360, 327, 294, 262, 231, 201, 172, 144, 118,  # bottom left cross beam
-                          856, 828, 798, 767, 735, 702, 668, 633, 598, 563, 528, 493,  # top left cross beam
-                          458, 423, 388, 353, 318, 283, 249, 216, 184, 153, 123, 95]  # bottom right cross beam
-        super().__init__(apply_to_both=apply_to_both, dm_num=dm_num, output_path=output_path, suffix=suffix, actuators=self.actuators)
+    actuators = [492, 525, 558, 591, 624, 657, 689, 720, 750, 779, 807, 833,  # top right cross beam
+                 459, 426, 393, 360, 327, 294, 262, 231, 201, 172, 144, 118,  # bottom left cross beam
+                 856, 828, 798, 767, 735, 702, 668, 633, 598, 563, 528, 493,  # top left cross beam
+                 458, 423, 388, 353, 318, 283, 249, 216, 184, 153, 123, 95]  # bottom right cross beam
 
 
 class ApplyCenterPoke(ApplyActuatorPattern):
@@ -88,10 +85,7 @@ class ApplyCenterPoke(ApplyActuatorPattern):
     dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply Center Poke"
-
-    def __init__(self, apply_to_both=False, dm_num=1, output_path=None, suffix='apply_center_poke'):
-        self.actuators = [458, 459, 492, 493]
-        super().__init__(apply_to_both=apply_to_both, dm_num=dm_num, output_path=output_path, suffix=suffix, actuators=self.actuators)
+    actuators = [458, 459, 492, 493]
 
 
 class ApplyCenterPokePlus(ApplyActuatorPattern):
@@ -110,10 +104,7 @@ class ApplyCenterPokePlus(ApplyActuatorPattern):
     dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply Center Poke Plus"
-
-    def __init__(self, apply_to_both=False, dm_num=1, output_path=None, suffix='apply_center_poke_plus'):
-        self.actuators = [493, 492, 459, 458, 789, 788, 759, 758, 193, 192, 163, 162, 502, 501, 468, 467, 484, 483, 450, 449]
-        super().__init__(apply_to_both=apply_to_both, dm_num=dm_num, output_path=output_path, suffix=suffix, actuators=self.actuators)
+    actuators = [493, 492, 459, 458, 789, 788, 759, 758, 193, 192, 163, 162, 502, 501, 468, 467, 484, 483, 450, 449]
 
 
 class ApplyOuterPoke(ApplyActuatorPattern):
@@ -124,12 +115,8 @@ class ApplyOuterPoke(ApplyActuatorPattern):
     dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply Outer Poke"
-
-    def __init__(self, apply_to_both=False, dm_num=1, output_path=None, suffix='apply_outer_poke'):
-        self.actuators = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 26, 27, 46, 47, 69, 93, 119, 147, 177, 207, 239, 271,
-                          305, 339, 373, 407, 441, 475, 509, 543, 577, 611, 645, 679, 711, 743, 773, 803, 831, 857,
-                          881, 903, 923, 922, 939, 938, 951, 950, 949, 948, 947, 946, 945, 944, 943, 942, 941, 940,
-                          925, 924, 905, 904, 882, 858, 832, 804, 774, 744, 712, 680, 646, 612, 578, 544, 510, 476,
-                          442, 408, 374, 340, 306, 272, 240, 208, 178, 148, 120, 94, 70, 48, 28, 29, 12, 13]
-        super().__init__(apply_to_both=apply_to_both, dm_num=dm_num, output_path=output_path, suffix=suffix,
-                         actuators=self.actuators)
+    actuators = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 26, 27, 46, 47, 69, 93, 119, 147, 177, 207, 239, 271,
+                 305, 339, 373, 407, 441, 475, 509, 543, 577, 611, 645, 679, 711, 743, 773, 803, 831, 857,
+                 881, 903, 923, 922, 939, 938, 951, 950, 949, 948, 947, 946, 945, 944, 943, 942, 941, 940,
+                 925, 924, 905, 904, 882, 858, 832, 804, 774, 744, 712, 680, 646, 612, 578, 544, 510, 476,
+                 442, 408, 374, 340, 306, 272, 240, 208, 178, 148, 120, 94, 70, 48, 28, 29, 12, 13]
