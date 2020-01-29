@@ -11,6 +11,10 @@ class ApplyActuatorPattern(Experiment):
     Apply a DM map that is specified by a set of actuator numbers on one or both DMs.
 
     This class is supposed to be inherited by child classes that actually initialize with a list of actuators.
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to
+    actuators: list of actuators that build the poke pattern. Note how you need to subtract add 1 to this list if you
+                want to identify any given actuator on the actuator map provided by the manufacturer.
     """
     name = "Apply Actuator Pattern"
 
@@ -56,6 +60,9 @@ class ApplyActuatorPattern(Experiment):
 class ApplyXPoke(ApplyActuatorPattern):
     """
     Apply a center-symmetric cross poke pattern on DM 1 or DM2, or both.
+
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply X Poke"
 
@@ -70,6 +77,9 @@ class ApplyXPoke(ApplyActuatorPattern):
 class ApplyCenterPoke(ApplyActuatorPattern):
     """
     Poke the four central actuators on DM 1 or DM2, or both.
+
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply Center Poke"
 
@@ -89,6 +99,9 @@ class ApplyCenterPokePlus(ApplyActuatorPattern):
           []
 
     This is intended for DM1 to DM2 alignment, and apodizer to DM alignment.
+
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply Center Poke Plus"
 
@@ -100,6 +113,9 @@ class ApplyCenterPokePlus(ApplyActuatorPattern):
 class ApplyOuterPoke(ApplyActuatorPattern):
     """
     Poke all edge actuators of one or both DMs.
+
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply Outer Poke"
 
