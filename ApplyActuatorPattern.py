@@ -1,16 +1,16 @@
 import time
 
-from catkit.hardware.boston import commands
-from hicat.hardware import testbed
 from catkit.catkit_types import units, quantity
+from catkit.hardware.boston import commands
 from hicat.experiments.Experiment import Experiment
+from hicat.hardware import testbed
 
 
 class ApplyActuatorPattern(Experiment):
     """
     Apply a DM map that is specified by a set of actuator numbers on one or both DMs.
 
-    This calss is supposed to be inherited by child classes that actually initialize with a list of actuators.
+    This class is supposed to be inherited by child classes that actually initialize with a list of actuators.
     """
     name = "Apply Actuator Pattern"
 
