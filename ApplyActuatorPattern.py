@@ -18,9 +18,10 @@ class ApplyActuatorPattern(Experiment):
                 want to identify any given actuator on the actuator map provided by the manufacturer.
     """
     name = "Apply Actuator Pattern"
+    suffix = "apply_actuator_pattern"
 
-    def __init__(self, apply_to_both=False, dm_num=1, output_path=None, suffix='apply_actuator_pattern'):
-        super().__init__(output_path=output_path, suffix=suffix)
+    def __init__(self, apply_to_both=False, dm_num=1, output_path=None):
+        super().__init__(output_path=output_path, suffix=self.suffix)
         self.apply_to_both = apply_to_both
         if not apply_to_both:
             self.dm_num = dm_num
