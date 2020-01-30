@@ -53,9 +53,9 @@ class ApplyActuatorPattern(Experiment):
         with testbed.dm_controller() as dm:
             dm.apply_shape(poke_pattern, dm_num=dm_to_poke)
             dm.apply_shape(flat_pattern, dm_num=dm_to_flat)
-            self.log.info("{} applied.".format(self.suffix))
+            self.log.info("{} applied.".format(self.name))
             self.log.info(
-                " ** This will loop forever, maintaining the {}. You must cancel the script to terminate it. ** ".format(self.suffix))
+                " ** This will loop forever, maintaining the {}. You must cancel the script to terminate it. ** ".format(self.name))
             self.log.info(
                 " ** I.e. use square 'stop' button in PyCharm. Caution - be careful to single click, not double click it! ** ")
 
@@ -71,6 +71,7 @@ class ApplyXPoke(ApplyActuatorPattern):
     dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply X Poke"
+    suffix = "apply_x_poke"
     actuators = [492, 525, 558, 591, 624, 657, 689, 720, 750, 779, 807, 833,  # top right cross beam
                  459, 426, 393, 360, 327, 294, 262, 231, 201, 172, 144, 118,  # bottom left cross beam
                  856, 828, 798, 767, 735, 702, 668, 633, 598, 563, 528, 493,  # top left cross beam
@@ -85,6 +86,7 @@ class ApplyCenterPoke(ApplyActuatorPattern):
     dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply Center Poke"
+    suffix = "apply_center_poke"
     actuators = [458, 459, 492, 493]
 
 
@@ -104,6 +106,7 @@ class ApplyCenterPokePlus(ApplyActuatorPattern):
     dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply Center Poke Plus"
+    suffix = "apply_center_poke_plus"
     actuators = [493, 492, 459, 458, 789, 788, 759, 758, 193, 192, 163, 162, 502, 501, 468, 467, 484, 483, 450, 449]
 
 
@@ -115,6 +118,7 @@ class ApplyOuterPoke(ApplyActuatorPattern):
     dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply Outer Poke"
+    suffix = "apply_outer_poke"
     actuators = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 26, 27, 46, 47, 69, 93, 119, 147, 177, 207, 239, 271,
                  305, 339, 373, 407, 441, 475, 509, 543, 577, 611, 645, 679, 711, 743, 773, 803, 831, 857,
                  881, 903, 923, 922, 939, 938, 951, 950, 949, 948, 947, 946, 945, 944, 943, 942, 941, 940,
@@ -130,6 +134,7 @@ class ApplyApodizerStrutsPoke(ApplyActuatorPattern):
     dm_num: int, 1 or 2, which DM to apply the poke pattern to
     """
     name = "Apply Actuator Strut Poke"
+    suffix = "apply_actuator_strut_poke"
     actuators = [699, 631, 562, 763, 823,  # top left
                  559, 626, 692, 754, 812,  # top right
                  392, 325, 259, 197, 139,  # bottom left
