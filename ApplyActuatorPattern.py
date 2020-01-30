@@ -29,22 +29,22 @@ class ApplyActuatorPattern(Experiment):
     def experiment(self):
 
         # Read ideal amplitude for poke patterns on the DMs
-        dm1_poke_amp = CONFIG_INI.getfloat('boston_kilo952', 'dm1_ideal_poke')
-        dm2_poke_amp = CONFIG_INI.getfloat('boston_kilo952', 'dm2_ideal_poke')
+        dm1_poke_amplitude = CONFIG_INI.getfloat('boston_kilo952', 'dm1_ideal_poke')
+        dm2_poke_amplitude = CONFIG_INI.getfloat('boston_kilo952', 'dm2_ideal_poke')
 
         if self.apply_to_both:
             dm_to_poke = 1
             poke_pattern = commands.poke_command(self.actuators, dm_num=dm_to_poke,
-                                                 amplitude=quantity(dm1_poke_amp, units.nanometers))
+                                                 amplitude=quantity(dm1_poke_amplitude, units.nanometers))
             dm_to_flat = 2
             flat_pattern = commands.poke_command(self.actuators, dm_num=dm_to_flat,
-                                                 amplitude=quantity(dm2_poke_amp, units.nanometers))
+                                                 amplitude=quantity(dm2_poke_amplitude, units.nanometers))
 
         else:
             dm_to_poke = self.dm_num
             dm_to_flat = 2 if self.dm_num == 1 else 1
 
-            poke_amplitude = dm1_poke_amp if self.dm_num == 1 else dm2_poke_amp
+            poke_amplitude = dm1_poke_amplitude if self.dm_num == 1 else dm2_poke_amplitude
 
             poke_pattern = commands.poke_command(self.actuators, dm_num=dm_to_poke,
                                                  amplitude=quantity(poke_amplitude, units.nanometers))
