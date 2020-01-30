@@ -240,8 +240,8 @@ class StrokeMinimization(Experiment):
                                'num_exposures': self.num_exposures}
 
             # Take starting reference images, in direct and coron
-            image_before, _header = self.take_coron_exposure(
-                self.dm1_actuators, self.m2_actuators, devices,
+            image_before, coron_header = self.take_coron_exposure(
+                self.dm1_actuators, self.dm2_actuators, devices,
                 output_err=True, dark_zone_mask=self.dark_zone, **exposure_kwargs)
             direct, _header = self.take_direct_exposure(
                 self.dm1_actuators, self.dm2_actuators, devices, **exposure_kwargs)
@@ -254,7 +254,7 @@ class StrokeMinimization(Experiment):
             self.mean_contrasts_image.append(np.mean(image_before[self.dark_zone]))
 
             self.collect_metrics(devices)
-            est_snr = binned_header['SNR_DZ'] if binned_header['SNR_DZ'] > 0 else np.nan
+            est_snr = coron_header['SNR_DZ'] if coron_header['SNR_DZ'] > 0 else np.nan
             self.estimated_darkzone_SNRs = [est_snr]
             self.estimated_probe_SNRs = []
 
@@ -354,7 +354,7 @@ class StrokeMinimization(Experiment):
                 # Track temp and humidity. Measure as close to image acquisition as possible.
                 self.collect_metrics(devices)
                 self.log.info('Taking post-correction coronagraphic image and pupil image...')
-                image_after, _header = self.take_coron_exposure(self.dm1_actuators, self.dm2_actuators, devices,
+                image_after, coron_header = self.take_coron_exposure(self.dm1_actuators, self.dm2_actuators, devices,
                                                                 output_err=True, dark_zone_mask=self.dark_zone, **exposure_kwargs)
                 try:
                     self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
@@ -375,7 +375,7 @@ class StrokeMinimization(Experiment):
                 # Check SNR in dark zone image.
                 # Note, a value of -1 for this keyword indicates it can't be measured (typically for sim run with only 1 image),
                 # in which case don't adjust num exposures. ( Recall FITS doesn't support NaNs in header keywords, alas. Hence this kludge.).
-                est_snr = binned_header['SNR_DZ'] if binned_header['SNR_DZ'] > 0 else np.nan
+                est_snr = coron_header['SNR_DZ'] if coron_header['SNR_DZ'] > 0 else np.nan
                 self.estimated_darkzone_SNRs.append(est_snr)
                 # Save raw contrast from image
                 self.mean_contrasts_image.append(np.mean(image_after[self.dark_zone]))
@@ -389,15 +389,6 @@ class StrokeMinimization(Experiment):
                 # make diagnostic plots
                 self.show_status_plots(image_before, image_after, self.dm1_actuators, self.dm2_actuators, E_estimated)
 
-    def compute_correction(self, E_estimated, gamma, devices, exposure_kwargs, direct_image):
-        """
-        Calculate the DM actuator correction for a given field estimate and contrast decrease factor.
-        """
-        correction, mu_start, predicted_contrast, predicted_contrast_drop = stroke_min.stroke_minimization(
-            self.jacobian, E_estimated, self.dark_zone, gamma, self.mu_start)
-
-        return correction, mu_start, predicted_contrast, predicted_contrast_drop
-
                 # Before next iteration, check SNR in image. If it's too low, increase number of exposures.
                 # We should do this _after_ the plot, so the plot labels still reflect the values used
                 # in this iteration.
@@ -409,6 +400,16 @@ class StrokeMinimization(Experiment):
                     take_exposure_func = functools.partial(take_coron_exposure, **exposure_kwargs)
                     self.log.warning(("SNR per pixel in dark zone has dropped below {}. Doubling number of exposures to compensate. "
                                      "New num_exposures = {}").format(self.target_snr_per_pix, self.num_exposures))
+
+
+    def compute_correction(self, E_estimated, gamma, devices, exposure_kwargs, direct_image):
+        """
+        Calculate the DM actuator correction for a given field estimate and contrast decrease factor.
+        """
+        correction, mu_start, predicted_contrast, predicted_contrast_drop = stroke_min.stroke_minimization(
+            self.jacobian, E_estimated, self.dark_zone, gamma, self.mu_start)
+
+        return correction, mu_start, predicted_contrast, predicted_contrast_drop
 
 
     def adjust_gamma(self, iteration_number):
