@@ -120,3 +120,17 @@ class ApplyOuterPoke(ApplyActuatorPattern):
                  881, 903, 923, 922, 939, 938, 951, 950, 949, 948, 947, 946, 945, 944, 943, 942, 941, 940,
                  925, 924, 905, 904, 882, 858, 832, 804, 774, 744, 712, 680, 646, 612, 578, 544, 510, 476,
                  442, 408, 374, 340, 306, 272, 240, 208, 178, 148, 120, 94, 70, 48, 28, 29, 12, 13]
+
+
+class ApplyApodizerStrutsPoke(ApplyActuatorPattern):
+    """
+    Poke actuators behind the apodizer struts on one or both DMs.
+
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to
+    """
+    name = "Apply Actuator Strut Poke"
+    actuators = [699, 631, 562, 763, 823,  # top left
+                 559, 626, 692, 754, 812,  # top right
+                 392, 325, 259, 197, 139,  # bottom left
+                 389, 320, 252, 188, 128]  # bottom right
