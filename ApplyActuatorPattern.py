@@ -19,12 +19,11 @@ class ApplyActuatorPattern(Experiment):
     """
     name = "Apply Actuator Pattern"
 
-    def __init__(self, apply_to_both=False, dm_num=1, output_path=None, suffix='apply_actuator_pattern', actuators=None):
+    def __init__(self, apply_to_both=False, dm_num=1, output_path=None, suffix='apply_actuator_pattern'):
         super().__init__(output_path=output_path, suffix=suffix)
         self.apply_to_both = apply_to_both
         if not apply_to_both:
             self.dm_num = dm_num
-        self.actuators = actuators  # list of actuators
 
     def experiment(self):
 
