@@ -49,6 +49,10 @@ class HumidityTemperatureTest(SafetyTest):
     min_temp = CONFIG_INI.getfloat("safety", "min_temp")
     max_temp = CONFIG_INI.getfloat("safety", "max_temp")
 
+    def __init__(self):
+        self.sensor = None
+        self.sensor = testbed.temp_sensor()
+
     def check(self):
         for p in psutil.process_iter():
             try:
@@ -61,9 +65,7 @@ class HumidityTemperatureTest(SafetyTest):
                 # We don't care whether zombie processes (never present Windows).
                 continue
 
-
-
-        temp, humidity = testbed.temp_sensor().get_temp_humidity()
+        temp, humidity = self.sensor.get_temp_humidity()
         temp_ok = self.min_temp <= temp <= self.max_temp
 
         if temp_ok:
