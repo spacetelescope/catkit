@@ -66,22 +66,22 @@ class ApplyXPoke(ApplyActuatorPattern):
     """
     Apply a center-symmetric cross poke pattern on DM 1 or DM2, or both.
 
-    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
-    dm_num: int, 1 or 2, which DM to apply the poke pattern to
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator pattern will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to; will be ignored if apply_to_both=True
     """
     name = "Apply X Poke"
     actuators = [492, 525, 558, 591, 624, 657, 689, 720, 750, 779, 807, 833,  # top right cross beam
                  459, 426, 393, 360, 327, 294, 262, 231, 201, 172, 144, 118,  # bottom left cross beam
                  856, 828, 798, 767, 735, 702, 668, 633, 598, 563, 528, 493,  # top left cross beam
-                 458, 423, 388, 353, 318, 283, 249, 216, 184, 153, 123, 95]  # bottom right cross beam
+                 458, 423, 388, 353, 318, 283, 249, 216, 184, 153, 123, 95]   # bottom right cross beam
 
 
 class ApplyCenterPoke(ApplyActuatorPattern):
     """
     Poke the four central actuators on DM 1 or DM2, or both.
 
-    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
-    dm_num: int, 1 or 2, which DM to apply the poke pattern to
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator pattern will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to; will be ignored if apply_to_both=True
     """
     name = "Apply Center Poke"
     actuators = [458, 459, 492, 493]
@@ -99,8 +99,8 @@ class ApplyCenterPokePlus(ApplyActuatorPattern):
 
     This is intended for DM1 to DM2 alignment, and apodizer to DM alignment.
 
-    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
-    dm_num: int, 1 or 2, which DM to apply the poke pattern to
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator pattern will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to; will be ignored if apply_to_both=True
     """
     name = "Apply Center Poke Plus"
     actuators = [493, 492, 459, 458, 789, 788, 759, 758, 193, 192, 163, 162, 502, 501, 468, 467, 484, 483, 450, 449]
@@ -110,8 +110,8 @@ class ApplyOuterPoke(ApplyActuatorPattern):
     """
     Poke all edge actuators of one or both DMs.
 
-    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
-    dm_num: int, 1 or 2, which DM to apply the poke pattern to
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator pattern will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to; will be ignored if apply_to_both=True
     """
     name = "Apply Outer Poke"
     actuators = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 26, 27, 46, 47, 69, 93, 119, 147, 177, 207, 239, 271,
@@ -125,8 +125,8 @@ class ApplyApodizerStrutsPoke(ApplyActuatorPattern):
     """
     Poke actuators behind the apodizer struts on one or both DMs.
 
-    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
-    dm_num: int, 1 or 2, which DM to apply the poke pattern to
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator pattern will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to; will be ignored if apply_to_both=True
     """
     name = "Apply Actuator Strut Poke"
     actuators = [699, 631, 562, 763, 823,  # top left
