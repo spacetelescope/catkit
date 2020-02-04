@@ -19,11 +19,12 @@ class ApplyActuatorPattern(Experiment):
                identifying actuators on the actuator map provided by the manufacturer.
     """
     name = "Apply Actuator Pattern"
+    actuators = None
 
     def __init__(self, apply_to_both=False, dm_num=1, actuators=[], output_path=None):
         super().__init__(output_path=output_path, suffix=None)
         self.apply_to_both = apply_to_both
-        if actuators is not []:
+        if self.actuators is None:
             self.actuators = actuators
         if not apply_to_both:
             self.dm_num = dm_num
