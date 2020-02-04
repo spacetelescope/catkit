@@ -9,13 +9,13 @@ from hicat.hardware import testbed
 
 class ApplyActuatorPattern(Experiment):
     """
-    Apply a DM map that is specified by a set of actuator numbers on one or both DMs.
+    Apply a pattern of DM actuator pokes, specified by a set of actuator numbers, to one or both DMs.
 
     This class is supposed to be inherited by child classes that actually initialize with a list of actuators.
-    apply_to_both: bool, if True, dm_num will be ignored and the actuator map will be applied to both DMs simultaneously
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator pattern will be applied to both DMs simultaneously
     dm_num: int, 1 or 2, which DM to apply the poke pattern to
-    actuators: list of actuators that build the poke pattern. Note how you need to subtract add 1 to this list if you
-                want to identify any given actuator on the actuator map provided by the manufacturer.
+    actuators: list of actuators that build the poke pattern. Note how you need to subtract 1 from actuator numbers when
+                identifying actuators on the actuator map provided by the manufacturer.
     """
     name = "Apply Actuator Pattern"
 
