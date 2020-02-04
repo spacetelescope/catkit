@@ -4,7 +4,7 @@ from pysnmp import hlapi
 from catkit.interfaces.BackupPower import BackupPower
 from catkit.config import CONFIG_INI
 
-"""Implementation of the White UPS using the BackupPower interface."""
+"""Implementation of the UPS using the BackupPower interface."""
 
 
 class SnmpUps(BackupPower):
@@ -29,7 +29,7 @@ class SnmpUps(BackupPower):
                                         hlapi.ContextData(),
                                         hlapi.ObjectType(hlapi.ObjectIdentity(snmp_oid))):
             if error_indication or error_status:
-                raise Exception("Error communicating with White UPS.\n" +
+                raise Exception(f"Error communicating with the UPS: '{self.config_id}'.\n" +
                                 "Error Indication: " + str(error_indication) + "\n" +
                                 "Error Status: " + str(error_status))
             else:
