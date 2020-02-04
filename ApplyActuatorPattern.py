@@ -11,17 +11,20 @@ class ApplyActuatorPattern(Experiment):
     """
     Apply a pattern of DM actuator pokes, specified by a set of actuator numbers, to one or both DMs.
 
-    This class is supposed to be inherited by child classes that actually initialize with a list of actuators.
+    This class is can be inherited by child classes that initialize with a predefined list of actuators or it can be
+    used directly by initializing with an arbitrary list of actuators.
     apply_to_both: bool, if True, dm_num will be ignored and the actuator pattern will be applied to both DMs simultaneously
-    dm_num: int, 1 or 2, which DM to apply the poke pattern to
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to; will be ignored if apply_to_both=True
     actuators: list of actuators that build the poke pattern. Note how you need to subtract 1 from actuator numbers when
-                identifying actuators on the actuator map provided by the manufacturer.
+               identifying actuators on the actuator map provided by the manufacturer.
     """
     name = "Apply Actuator Pattern"
 
-    def __init__(self, apply_to_both=False, dm_num=1, output_path=None):
+    def __init__(self, apply_to_both=False, dm_num=1, actuators=[], output_path=None):
         super().__init__(output_path=output_path, suffix=None)
         self.apply_to_both = apply_to_both
+        if actuators is not []:
+            self.actuators = actuators
         if not apply_to_both:
             self.dm_num = dm_num
 
