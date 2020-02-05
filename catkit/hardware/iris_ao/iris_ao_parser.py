@@ -1,6 +1,25 @@
+"""
+Here there are several functions that can read in IrisAO commands that are in the form
+
+- .PTT111 file: File format of the command coming out of the IrisAO GUI
+- .ini file: File format of command that gets sent to the IrisAO controls
+- array: Format that POPPY outputs if generating command in POPPY
+
+Each of these formats can be used and have different formats. read_command takes in
+any of these three formats and converts it to a dictionary of the form:
+        {seg:(piston, tip, tilt)}
+"""
+
+from configparser import ConfigParser
 import re
 
+import astropy.units as u
+import numpy as np
 
+from catkit.hardware.iris_ao import util
+
+
+# Functions for reading the .PTT11 file
 def __clean_string(line):
     """
     Convenience function - not sure what it is doing
@@ -125,7 +144,7 @@ def read_segments(path):
             return None
 
 
-def read_file(path, num_segments=37):
+def read_ptt111(path):
     """
     Read the entirety of a PTT111 file
 
@@ -138,7 +157,7 @@ def read_file(path, num_segments=37):
 
         # Create a dictionary and apply global commands to all segments.
         command_dict = {}
-        for i in range(num_segments):
+        for i in range(util.IRIS_NUM_SEGMENTS):
             command_dict[i + 1] = global_command
         return command_dict
 
@@ -156,10 +175,8 @@ def read_file(path, num_segments=37):
     return None
 
 
-
-
-#TODO: add below to iris_ao_parser?
-def read_ini(path, num_segments=37):
+# Functions for reading ini file
+def read_ini(path):
     """
     Read the Iris AO segment PTT parameters from an .ini file into Iris AO style
     dictionary {segnum: (piston, tip, tilt)}.
@@ -167,95 +184,51 @@ def read_ini(path, num_segments=37):
     This expects 37 segments with centering such that it is in the center of the IrisAO
 
     :param path: path and filename of ini file to be read
-    :return: dict; {segnum: (piston, tip, tilt)}
+    :return command_dict: dict; {segnum: (piston, tip, tilt)}
     """
     config = ConfigParser()
     config.optionxform = str   # keep capital letters
     config.read(path)
 
-    nbSegment = config.getint('Param', 'nbSegment')
-    segment_commands = {}
-
-    for i in range(nbSegment):
+    command_dict = {}
+    for i in range(util.IRIS_NUM_SEGMENTS):
         section = 'Segment{}'.format(i+1)
         piston = float(config.get(section, 'z'))
         tip = float(config.get(section, 'xrad'))
         tilt = float(config.get(section, 'yrad'))
-        segment_commands[i+1] = (piston, tip, tilt)
+        command_dict[i+1] = (piston, tip, tilt)
 
-    return segment_commands
+    return command_dict
 
-def read_array(array, as_si=True):
-    #TODO Update for any number of segments
+
+#Read a POPPY-created array
+def read_poppy_array(array):
     """
-    Create an Iris AO wavefront map dictionary in microns and rad from an array in meters and radians.
+    Read in an array produced by POPPY for the number of segments in your pupil.
+    Each entry in array is a tuple of (piston, tip, tilt) values for that segment.
+    Segment numbering is TO BE DETERMINED
 
-    segments:
-    mapping: simcen -> simcen
-    :param wf_array:
-    :return: dict; Iris AO style wavefront map {seg: (piston, tip, tilt)}
+    Will convert the values in this array from si units to um and mrad, as expected
+    by IrisAO.
 
-
-    Take in an array of tuples of piston tip tilt for a set of segments.
-
-    Need to make some assumptions about this array. 
+    :param array: array, of length number of segments in pupil. Units of: ([m], [rad], [rad])
+    :return: dict; of the format {seg: (piston, tip, tilt)}
     """
-    # Create array of number segments we talk to.
-    segnum = array.shape[0]
-    if segnum != 19:   # we can currently work only with arrays with exactly 19 entries
-        raise Exception('Input array must have shape (19, 3).')
+    #The output from poppy
+    #doesn't matter length  - that is figured out in segmented_dm_command
+    #TODO: Check with Iva, which array should segnum be for outputs from Poppy
 
+    command_dict = util.create_dict_from_array(array, seglist=None)
 
-    seglist = np.arange(segnum)
-
-    # Put surface information in dict
-    command_dict = {seg: tuple(ptt) for seg, ptt in zip(seglist, wf_array)}
-
-    # Convert from meters and radians to um and mrad.
-    if as_si:
-        command_dict = convert_dict_from_si(command_dict)
+    # Convert from meters and radians (what Poppy outputs) to um and mrad.
+    command_dict = convert_dict_from_si(command_dict)
 
     # Round to 3 decimal points after zero.
     rounded = {seg: (np.round(ptt[0], 3), np.round(ptt[1], 3),
-                     np.round(ptt[2], 3)) for seg, ptt in list(wf_dict.items())}
+                     np.round(ptt[2], 3)) for seg, ptt in list(command_dict.items())}
 
     return rounded
 
-
-def read_command(command):
-    """
-    Take in command that can be .PTT111, .ini, array, or dictionary (of length #of segments in pupil)
-    Dictionary units must all be the same (microns and millirads?)
-    -- TODO - add function for converting units?
-    -- TODO - constantly check that the command is the correct length
-
-    :return command_dict: dict, command in the form of a dictionary
-    """
-    try:
-        if command.endswith("PTT111"):
-            command_dict = read_segments(command)
-            as_si = False
-        elif path.endswith("ini"):
-            command_dict = read_ini_to_dict(command)
-            as_si = False
-        else:
-            raise Exception("The command input format is not supported")
-    except:
-        if isinstance(command, dict):'
-            command_dict = command
-            as_si = True # TODO: UNITS! ? !
-        elif isinstance(command, (list, tuple, np.ndarray)):
-            # TODO: Currently dict_from_array expects m and radians
-            command_dict = read_array(command)
-            as_si = False
-        else:
-            raise Exception("The command input format is not supported")
-
-    # Check that lengths are correct
-    if len(command_dict) != self.number_segments_in_pupil:
-        raise Exception("The number of segments in your command MUST equal number of segments in the pupil")
-
-    return command_dict, as_si
 
 
 def convert_dict_from_si(command_dict):
@@ -263,6 +236,30 @@ def convert_dict_from_si(command_dict):
     Take a wf dict and convert from SI (meters and radians) to microns and millirads
     """
     converted = {seg: (ptt[0]*(u.m).to(u.um), ptt[1]*(u.rad).to(u.mrad), ptt[2]*(u.rad).to(u.mrad)) for
-                 seg, ptt in list(wf_dict.items())}
+                 seg, ptt in list(command_dict.items())}
 
     return converted
+
+
+def read_command(command):
+    """
+    Take in command that can be .PTT111, .ini, or array (of length #of segments in pupil)
+    Dictionary units must all be the same (microns and millirads?)
+
+    :param command: str, list, np.ndarray. Can be .PTT111, .ini files or array
+    :return command_dict: dict, command in the form of a dictionary
+    """
+    try:
+        if command.endswith("PTT111"):
+            command_dict = read_segments(command)
+        elif command.endswith("ini"):
+            command_dict = read_ini(command)
+        else:
+            raise Exception("The command input format is not supported")
+    except AttributeError:
+        if isinstance(command, (list, tuple, np.ndarray)):
+            command_dict = read_poppy_array(command)
+        else:
+            raise Exception("The command input format is not supported")
+
+    return command_dict
