@@ -147,8 +147,6 @@ def read_segments(path):
 def read_ptt111(path):
     """
     Read the entirety of a PTT111 file
-
-    #TODO: do I want to limit the number of segments?
     """
 
     # Read the global portion of the file, and return the command if it's present.
