@@ -91,7 +91,7 @@ class IrisAoController(DeformableMirrorController):
         self.__close_iris_controller_testbed_state()
 
 
-    def apply_shape(self, command_object, dm_num=None):
+    def apply_shape(self, command_object, dm_num=1):
         #TODO: Do I need to include dm_num here for compatibility?
         """
         Apply a command object to the Iris AO after adding the flatmap from the configfile.
@@ -99,8 +99,8 @@ class IrisAoController(DeformableMirrorController):
 
         :param command_object: instance of IrisCommand class
         """
-        if dm_num:
-            raise NotImplementedError("dm_num is not implmented for the Iris AO")
+        if dm_num != 1:
+            raise NotImplementedError("You can only control one Iris AO at a time")
 
         # Use DmCommand class to format the single command correctly.
         command = command_object.to_command()
