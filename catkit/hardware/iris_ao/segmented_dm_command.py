@@ -40,7 +40,7 @@ class IrisCommand(object):
         # If you are not using the full aperture, must include which segments are used
         try:
             self.segments_used = CONFIG_INI.get(config_id, 'segments_used')
-            self.number_segments_in_pupil = = CONFIG_INI.get(config_id, 'pupil_nb_seg')
+            self.number_segments_in_pupil = CONFIG_INI.get(config_id, 'pupil_nb_seg')
             if len(data) != len(self.segments_used):
                 raise Exception("The number of segments in your command MUST equal number of segments in the pupil")
             if self.segments_used[0] != 1:
@@ -90,7 +90,7 @@ class IrisCommand(object):
         """
         data1 = self.get_data
         data2 = iris_ao_parser.read_command(new_command)
-        
+
         if self._shift_center:
             data2 = shift_command(data2, self.segments_used)
 
