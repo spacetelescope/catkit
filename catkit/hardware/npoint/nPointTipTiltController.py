@@ -45,8 +45,8 @@ def usb_except(function):
     return wrapper
 
 
-class nPointTipTilt():
-    """nPointTipTilt connection class. 
+class nPointTipTiltController():
+    """nPointTipTiltController connection class. 
 
     This nPointTipTilt class acts as a useful connection and storage vehicle 
     for commands sent to the nPoint FTID LC400 controller. It has built in 
@@ -55,6 +55,8 @@ class nPointTipTilt():
     and set the default configuration. Memory managers in the back end 
     should close the connection when the time is right.
     """
+    
+    instrument_lib = usb.core
 
     # Define this library mapping as a static attribute.
     library_mapping = {'libusb0': libusb0, 'libusb1': libusb1}
@@ -119,7 +121,7 @@ class nPointTipTilt():
         self.logger.addHandler(ch)
         
         # Instantiate the device
-        self.dev = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id, backend=self.backend)
+        self.dev = self.instrument_lib.find(idVendor=self.vendor_id, idProduct=self.product_id, backend=self.backend)
         if self.dev is None:
             self.close_logger()
             raise NameError("Go get the device sorted you knucklehead.")
