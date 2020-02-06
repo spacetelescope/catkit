@@ -31,14 +31,16 @@ class IrisCommand(object):
     def __init__(self, data=None, flat_map=False):
 
         # Grab things from CONFIG_INI
-        self.filename_flat = CONFIG_INI.get('iris_ao', 'flatfile_ini') #format is .ini
+        config_id = 'iris_ao'
+        self.filename_flat = CONFIG_INI.get(config_id, 'flatfile_ini') #format is .ini
 
         # Define aperture - full iris or subaperture
-        self.number_segments = CONFIG_INI.getint('iris_ao', 'nb_segments')
+        self.number_segments = CONFIG_INI.getint(config_id, 'nb_segments')
 
         # If you are not using the full aperture, must include which segments are used
         try:
-            self.segments_used = CONFIG_INI.get('iris_ao', 'segments_used')
+            self.segments_used = CONFIG_INI.get(config_id, 'segments_used')
+            self.number_segments_in_pupil = = CONFIG_INI.get(config_id, 'pupil_nb_seg')
             if len(data) != len(self.segments_used):
                 raise Exception("The number of segments in your command MUST equal number of segments in the pupil")
             if self.segments_used[0] != 1:
@@ -77,19 +79,25 @@ class IrisCommand(object):
 
         return command
 
-    def add_map(self, new_map):
+    def add_map(self, new_command):
         """
-        Add some maps
-        """
-        old_command = self.get_data
+        Add a command to the one already loaded.
 
-        new_data = iris_ao_parser.read_command(new_map)
-        #TODO: Do we need to shift?? how to we make sure??
+        Will shift the new command if you are using a shifted pupil. Updates self.data
+        with combined commands.
+
+        :param new_command: str or array (.PTT111 or .ini file, or array from POPPY)
+        """
+        data1 = self.get_data
+        data2 = iris_ao_parser.read_command(new_command)
+        
         if self._shift_center:
-            new_data = shift_command(new_data, self.segments_used)
+            data2 = shift_command(data2, self.segments_used)
 
-        #now add them
-        # add using segnums
+        # Do magic adding only if segment exists in both
+        combined_data = {seg: tuple(np.asarray(data1.get(seg, (0., 0., 0.))) + np.asarray(data2.get(seg, (0., 0., 0.)))) for seg in set(data1) & set(data2)}
+
+        self.data = combined_data
 
 def shift_command(command_to_shift, custom_pupil, shift_to_hardware=True):
     """

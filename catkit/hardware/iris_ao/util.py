@@ -5,7 +5,6 @@ from configparser import ConfigParser
 
 import numpy as np
 
-from catkit.config import CONFIG_INI
 
 IRIS_NUM_SEGMENTS = 37
 IRIS_PUPIL_NUMBERING = np.arange(IRIS_NUM_SEGMENTS)+1
@@ -45,11 +44,11 @@ def create_dict_from_array(array, seglist=None):
     command_dict = {seg: tuple(ptt) for seg, ptt in zip(seglist, array)}
 
     return command_dict
-    
 
-def write_ini_from_dict(data, path):
+
+def write_ini(data, path, mirror_serial, driver_serial):
     """
-    Write a new ini file containing the dict wf map.
+    Write a new ConfigPTT.ini file containing the command for the Iris AO.
 
     segments:
     :param data: dict; wavefront map in Iris AO format
@@ -58,8 +57,6 @@ def write_ini_from_dict(data, path):
     """
 
     print("Creating config file: {}".format(path))
-    mirror_serial = CONFIG_INI.get('iris_ao', 'mirror_serial')
-    driver_serial = CONFIG_INI.get('iris_ao', 'driver_serial')
 
     config = ConfigParser()
     config.optionxform = str   # keep capital letters
