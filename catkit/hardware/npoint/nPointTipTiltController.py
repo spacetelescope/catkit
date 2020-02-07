@@ -13,7 +13,6 @@ CATKIT_LIBUSB_PATH = 'C:\\Users\\HICAT\\Desktop\\libusb-win32-bin-1.2.6.0\\bin\\
 
 ## -- IMPORTS
 
-import configparser
 import datetime
 import functools
 import logging
@@ -22,11 +21,15 @@ import struct
 import time
 import warnings
 
+import numpy
 from numpy import double
 
 from usb.backend import libusb0, libusb1
 import usb.core
 import usb.util
+
+from catkit.config import CONFIG_INI
+from catkit.interfaces.CloseLoopController import CloseLoopController
 
 
 ## -- FUNCTIONS and FIDDLING 
@@ -45,7 +48,7 @@ def usb_except(function):
     return wrapper
 
 
-class nPointTipTiltController():
+class nPointTipTiltController(CloseLoopController):
     """nPointTipTiltController connection class. 
 
     This nPointTipTilt class acts as a useful connection and storage vehicle 
@@ -60,10 +63,9 @@ class nPointTipTiltController():
 
     # Define this library mapping as a static attribute.
     library_mapping = {'libusb0': libusb0, 'libusb1': libusb1}
-    
-    def __init__(self, vendor_id=None, product_id=None, library_path=None, library=None):
 
-        """Initial function to configure logging and find the device. Anything 
+    def initialize(self, vendor_id=None, product_id=None, library_path=None, library=None):
+        """Initial function to set vendor and product ide parameters. Anything 
         set to None will attempt to pull from the config file.
         
         Parameters
@@ -79,22 +81,14 @@ class nPointTipTiltController():
         """
         
         # Pull device specifics from config file
-        if None in [vendor_id, product_id]:
-            config_path = os.environ.get('CATKIT_CONFIG')
-            if config_path is None:
-                raise OSError('No available config to specify npoint connection.')
-        
-            config = configparser.ConfigParser()
-            config.read(config_path)
-        
-        self.vendor_id = config.get('npoint_tiptilt_lc_400', 'vendor_id') if vendor_id is None else vendor_id
-        self.product_id = config.get('npoint_tiptilt_lc_400', 'product_id') if product_id is None else product_id
+        self.vendor_id = CONFIG_INI.get('npoint_tiptilt_lc_400', 'vendor_id') if vendor_id is None else vendor_id
+        self.product_id = CONFIG_INI.get('npoint_tiptilt_lc_400', 'product_id') if product_id is None else product_id
         
         self.library_path = os.environ.get('CATKIT_LIBUSB_PATH') if library_path is None else library_path
         if not self.library_path:
             raise OSError("No library path was passed to the npoint and CATKIT_LIBUSB_PATH is not set on your machine")
 
-        library = config.get('npoint_tiptilt_lc_400', 'libusb_library') if library is None else library
+        library = CONFIG_INI.get('npoint_tiptilt_lc_400', 'libusb_library') if library is None else library
         if library not in self.library_mapping:
             raise NotImplementedError(f"The backend you specified ({library}) is not available at this time.")
         elif not os.path.exists(self.library_path):
@@ -129,23 +123,6 @@ class nPointTipTiltController():
         # Set to default configuration -- for LC400 this is the right one.
         self.dev.set_configuration()
         self.logger.info('nPointTipTilt instantiated and logging online.')
-
-
-    def __enter__(self):
-        """ Enter function to allow for context management."""
-        
-        return self
-
-    def __exit__(self, ex_type, ex_value, traceback):
-        """ Exit function to open loop, reset gain parameters to 0, close the
-        logging handler, and maybe someday close the controller intelligently."""
-
-        self.close()
-    
-    def __del__(self):
-        """ Destructor with close behavior."""
-        
-        self.close()
 
     def _build_message(self, cmd_key, cmd_type, channel, value=None):
         """Builds the message to send to the controller. The messages
@@ -232,6 +209,26 @@ class nPointTipTiltController():
         
         return message
     
+    def _close(self):
+        """Function for the close controller behavior."""
+
+        for channel in [1, 2]:
+            for key in ["loop", "p_gain", "i_gain", "d_gain"]:
+                self.command(key, channel, 0)
+    
+    def _open(self):
+        """ Open function to connect to device. """
+
+        # Instantiate the device
+        self.instrument = self.instrument_lib.find(idVendor=self.vendor_id, idProduct=self.product_id)
+        if self.instrument is None:
+            raise NameError("Go get the device sorted you knucklehead.")
+             
+        # Set to default configuration -- for LC400 this is the right one.
+        self.instrument = self.instrument # For lecary purposes
+        self.instrument.set_configuration()
+        self.log.info('nPointTipTilt instantiated and logging online.')
+
 
     def _read_response(self, response_type, return_timer=False, max_tries=10):
         """Read response from controller.
@@ -267,7 +264,7 @@ class nPointTipTiltController():
         message_length = 100
         timeout = 1000
         while len(resp) < 4 and tries < max_tries:
-            resp = self.dev.read(endpoint, message_length, timeout) 
+            resp = self.instrument.read(endpoint, message_length, timeout) 
             tries += 1 
         time_elapsed = time.time() - start
         
@@ -275,9 +272,6 @@ class nPointTipTiltController():
             raise ValueError("No response was ever read.")
             
         else:
-            # Pull the address, which starts after 3 junk characters
-            addr = resp[3:7]
-            address = struct.unpack('<I', addr)
         
             # Value is never more than 8 bits, so grab those last ones
             val = resp[7:-1]
@@ -285,7 +279,6 @@ class nPointTipTiltController():
                 value = struct.unpack(response_type, val[:4])
             else:
                 value = struct.unpack(response_type, val)
-        
             # Value will be a 1D tuple and we want the value
             value = value[0]
 
@@ -307,29 +300,7 @@ class nPointTipTiltController():
         endpoint = 0x02
         timeout = 100
         for message in msg:
-            self.dev.write(endpoint, message, timeout)
-    
-    def close(self):
-        """ Function for the close behavior. Return every parameter to zero
-        and shut down the logging."""
-
-        self.close_controller()
-        self.close_logger()
-
-    def close_controller(self):
-        """Function for the close controller behavior."""
-
-        for channel in [1, 2]:
-            for key in ["loop", "p_gain", "i_gain", "d_gain"]:
-                self.command(key, channel, 0)
-        
-    def close_logger(self):
-        """Function for the close logger behavior."""
-
-        handlers = self.logger.handlers[:]
-        for handler in handlers:
-            handler.close()
-            self.logger.removeHandler(handler)
+            self.instrument.write(endpoint, message, timeout)
     
     @usb_except
     def command(self, cmd_key, channel, value):
@@ -357,19 +328,19 @@ class nPointTipTiltController():
             response_type = '<d'
         set_value, time_elapsed, tries = self._read_response(response_type, return_timer=True)
         
-        self.logger.info('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
+        self.log.info('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
         if value == set_value:
-            self.logger.info('Command successful: {} == {}.'.format(value, set_value))
+            self.log.info('Command successful: {} == {}.'.format(value, set_value))
         else:
-            raise ValueError('Command NOT successful : {} != {}.'.format(value, set_value))
+            self.log.info('Command was NOT sucessful : {} != {}.'.format(value, set_value))
 
     @usb_except
     def get_config(self):
         """Checks the feasible configurations for the device."""
         
-        for cfg in self.dev:
-            self.logger.info('Device config : ')
-            self.logger.info(cfg)
+        for cfg in self.instrument:
+            self.log.info('Device config : ')
+            self.log.info(cfg)
         
     @usb_except
     def get_status(self, channel):
@@ -393,7 +364,7 @@ class nPointTipTiltController():
                     'loop': self._build_message('loop', 'get', channel)}
         
         value_dict = {}
-        self.logger.info("For channel {}.".format(channel))
+        self.log.info("For channel {}.".format(channel))
         for key in read_msg:
             self._send_message(read_msg[key])
             if key == 'loop':
@@ -401,38 +372,9 @@ class nPointTipTiltController():
             else:
                 response_type = '<d'
             value = self._read_response(response_type)
-            self.logger.info("For parameter : {} the value is {}".format(key, value))
+            self.log.info("For parameter : {} the value is {}".format(key, value))
             value_dict[key] = value
 
         return value_dict 
 
 
-
-## -- MAIN with ex
-if __name__ == "__main__":
-    
-    # Quick demo of doing something.
-    
-    # Open the controller
-    ctrl = nPointTipTilt()
-
-    # Check the status for each channel
-    ctrl.get_status(1)
-    ctrl.get_status(2)
-
-    # Set the i_gain for channel 1 to 34.2
-    ctrl.command('i_gain', 34.2, 1)
-    # Set the p_gain for channel 2 to 304.103
-    ctrl.command('p_gain', 304.103, 2)
-
-    # Open the loop for each channel
-    ctrl.command('loop', 1, 1)
-    ctrl.command('loop', 1, 2)
-    
-    # Check the status for each chanel and see if the commands took
-    ctrl.get_status(1)
-    ctrl.get_status(2)
-
-    # Close the controller
-    ctrl.close()
-     
