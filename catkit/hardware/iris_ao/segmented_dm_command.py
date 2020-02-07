@@ -29,7 +29,7 @@ class IrisCommand(object):
     :returns command_dict: dictionary
     """
     def __init__(self, data=None, flat_map=False):
-
+        self._shift_center = False
         # Grab things from CONFIG_INI
         config_id = 'iris_ao'
         self.filename_flat = CONFIG_INI.get(config_id, 'flatfile_ini') #format is .ini
@@ -46,7 +46,7 @@ class IrisCommand(object):
             if self.segments_used[0] != 1:
                 self._shift_center = True # Pupil is centered elsewhere, must shift
         except Exception: #specifically NoOptionError but not recognized
-            self.segments_used = np.arange(util.IRIS_PUPIL_NUMBERING)
+            self.segments_used = util.IRIS_PUPIL_NUMBERING
 
         if not data:
             # If no data given, return dictionary of zeros
@@ -55,7 +55,7 @@ class IrisCommand(object):
 
         self.data = data
         self.flat_map = flat_map
-        self._shift_center = False
+
 
         if self._shift_center:
             self.data = shift_command(self.data, self.segments_used)
@@ -75,23 +75,25 @@ class IrisCommand(object):
         # Apply Flat Map
         if self.flat_map:
             flat_map = iris_ao_parser.read_command(self.filename_flat) #convert to dict
-            command.add_map(flat_map)
+            command.add_map(flat_map, flat=True)
 
         return command
 
-    def add_map(self, new_command):
+    def add_map(self, new_command, flat=False):
         """
         Add a command to the one already loaded.
 
         Will shift the new command if you are using a shifted pupil. Updates self.data
         with combined commands.
 
+        Will not shift the flat (flat=True) since the flat is segment-specific.
+
         :param new_command: str or array (.PTT111 or .ini file, or array from POPPY)
         """
         data1 = self.get_data
         data2 = iris_ao_parser.read_command(new_command)
 
-        if self._shift_center:
+        if self._shift_center and not flat:
             data2 = shift_command(data2, self.segments_used)
 
         # Do magic adding only if segment exists in both
@@ -136,7 +138,7 @@ def shift_command(command_to_shift, custom_pupil, shift_to_hardware=True):
     return shifted_map
 
 
-def load_command(command, flat_map=False):
+def load_command(command, flat_map=True):
     """
     Loads a command from a file or array and returns a IrisCommand object.
 

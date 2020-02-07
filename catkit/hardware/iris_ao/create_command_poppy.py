@@ -19,7 +19,7 @@ FLAT_TO_FLAT = CONFIG_INI.getfloat('iris_ao', 'flat_to_flat')  # in [mm]
 GAP_UM = CONFIG_INI.getint('iris_ao', 'gap_um')
 NUM_SEGS_IN_PUPIL = CONFIG_INI.getint('iris_ao', 'pupil_nb_seg')
 
-RADIUS = 0.003525 * u.m #TODO: radius of a segment - is there a better way to get this??
+RADIUS = 0.003525 * u.m #TODO: radius of a segment - CONFIG FILE = FLAT_TO_FLAT/2
 LAMBDA = (CONFIG_INI.getint('thorlabs_source_mcls1', 'lambda_nm')*u.nm).to(u.m)
 
 NTERMS = (NUM_SEGS_IN_PUPIL - 1) * 3
