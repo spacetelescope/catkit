@@ -257,6 +257,8 @@ def read_command(command):
     except AttributeError:
         if isinstance(command, (list, tuple, np.ndarray)):
             command_dict = read_poppy_array(command)
+        elif command is None:
+            command_dict = command
         else:
             raise Exception("The command input format is not supported")
 

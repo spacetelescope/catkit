@@ -2,9 +2,9 @@
 Utility functions to be used for controlling the IrisAO hardware
 """
 from configparser import ConfigParser
+import logging
 
 import numpy as np
-
 
 IRIS_NUM_SEGMENTS = 37
 IRIS_PUPIL_NUMBERING = np.arange(IRIS_NUM_SEGMENTS)+1
@@ -12,6 +12,8 @@ POPPY_NUMBERING = [0,   # Ring 0
                    1, 6, 5, 4, 3, 2,  # Ring 1
                    7, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8,  # Ring 2
                    19, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20]  # Ring 3
+
+log = logging.getLogger(__name__)
 
 def map_to_new_center(new_pupil, old_pupil):
     """
@@ -37,7 +39,7 @@ def create_dict_from_array(array, seglist=None):
     Seglist is a list of equal length with a single value equal to the segment number
     for the index in the array
     """
-    if not seglist:
+    if seglist is None:
         seglist = np.arange(len(array))
 
     # Put surface information in dict
@@ -56,7 +58,7 @@ def write_ini(data, path, mirror_serial, driver_serial):
     :return:
     """
 
-    print("Creating config file: {}".format(path))
+    log.info("Creating config file: {}".format(path))
 
     config = ConfigParser()
     config.optionxform = str   # keep capital letters

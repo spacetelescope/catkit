@@ -18,7 +18,7 @@ We have also included here some util functions that might come in handy and a mo
 Note that if you have an Iris AO segmented DM, you will need to add an "iris_ao" section to your config.ini file:
 
 * `mirror_serial`: The mirror serial number. This corresponds to a .mcf file that *MUST* include the driver serial number under "Smart Driver"
-* `driver_serial`: The dirver serial number. This corresponds to a .dcf file.
+* `driver_serial`: The driver serial number. This corresponds to a .dcf file.
 * `nb_segments`: The number of segments in your Iris AO DM (including any non-funtioning segments). Always 37. TODO: DO WE WANT THIS?
 * `pupil_nb_seg`: The number of segments in your specific pupil (for most, this is less than `nb_segments`). TODO: DO WE WANT THIS?
 * `segments_used`: A list of the segment numbers that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then counter clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20. For example, if your pupil is centered on segment 3 and is only one ring, then segments_used = [3, 9, 10, 11, 4, 1, 2]

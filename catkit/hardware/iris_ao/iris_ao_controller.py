@@ -12,11 +12,9 @@ from catkit.interfaces.DeformableMirrorController import DeformableMirrorControl
 from catkit.config import CONFIG_INI
 from catkit.hardware.iris_ao import util
 
+log = logging.getLogger(__name__)
 
 class IrisAoController(DeformableMirrorController):
-
-    log = logging.getLogger(__name__)
-
     #instrument_lib = iao #TODO: what I import for irisAO software - if anything
 
     def initialize(self, mirror_serial, driver_serial, disable_hardware, path_to_dm_exe,
@@ -87,12 +85,11 @@ class IrisAoController(DeformableMirrorController):
 
         self.dm.stdin.write(b'quit\n')
         self.dm.stdin.close()
-        print('Closing Iris AO.')
+        log.info('Closing Iris AO.')
         self.__close_iris_controller_testbed_state()
 
 
-    def apply_shape(self, command_object, dm_num=1):
-        #TODO: Do I need to include dm_num here for compatibility?
+    def apply_shape(self, dm_shape, dm_num=1):
         """
         Apply a command object to the Iris AO after adding the flatmap from the configfile.
         The units of said IrisCommand object are mrad for tip/tilt, um for piston.
@@ -103,7 +100,7 @@ class IrisAoController(DeformableMirrorController):
             raise NotImplementedError("You can only control one Iris AO at a time")
 
         # Use DmCommand class to format the single command correctly.
-        command = command_object.to_command()
+        command = dm_shape.to_command()
 
         # Send array to DM.
         self.send_data(command)
@@ -112,7 +109,7 @@ class IrisAoController(DeformableMirrorController):
         self.command = command
 
         # Update the testbed_state.
-        self.__update_iris_state(command_object)
+        self.__update_iris_state(dm_shape)
 
 
     def apply_shape_to_both(self):
