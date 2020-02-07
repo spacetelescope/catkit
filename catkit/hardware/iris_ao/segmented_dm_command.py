@@ -75,11 +75,11 @@ class IrisCommand(object):
         # Apply Flat Map
         if self.flat_map:
             flat_map = iris_ao_parser.read_command(self.filename_flat) #convert to dict
-            command.add_map(flat_map, flat=True)
+            self.add_map(command, flat_map, flat=True)
 
         return command
 
-    def add_map(self, new_command, flat=False):
+    def add_map(self, old_command, new_command, flat=False):
         """
         Add a command to the one already loaded.
 

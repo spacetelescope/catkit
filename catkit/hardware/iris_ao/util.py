@@ -64,13 +64,13 @@ def write_ini(data, path, mirror_serial, driver_serial):
     config.optionxform = str   # keep capital letters
 
     config.add_section('Param')
-    config.set('Param', 'nbSegment', IRIS_NUM_SEGMENTS)   # Iris AO has 37 segments
+    config.set('Param', 'nbSegment', str(IRIS_NUM_SEGMENTS))   # Iris AO has 37 segments
 
     config.add_section('SerialNb')
     config.set('SerialNb', 'mirrorSerial', mirror_serial)
     config.set('SerialNb', 'driverSerial', driver_serial)
 
-    for i in range(IRIS_PUPIL_NUMBERING):
+    for i in IRIS_PUPIL_NUMBERING:
         section = 'Segment{}'.format(i)
         config.add_section(section)
         # If the segment number is present in the dictionary
