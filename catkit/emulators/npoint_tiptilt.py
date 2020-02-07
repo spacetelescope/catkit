@@ -7,16 +7,13 @@ top.
 
 ## -- IMPORTS
 
-import configparser
-import datetime
-import functools
 import logging
-import os
 import struct
-import warnings
 
-from numpy import double
+import numpy as np
 
+from catkit.hardware.npoint.nPointTipTiltController import nPointTipTiltController
+from catkit.interfaces.Instrument import SimInstrument
 
 
 ## -- FUNCTIONS and FIDDLING 
@@ -32,21 +29,21 @@ class PyusbNpointEmulator():
     should close the connection when the time is right.
     """
 
-    def __init__(self):
+    def __init__(self, **super_kwargs):
         """ Since we'll need to respond as if commands are being sent and we
         can read values, this is where we'll initialize some dummy values that
         will get send in fake hex messages. """
 
+        self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
         self.dummy_values = {'{}'.format(n): {'loop':0, 'p_gain':0, 'i_gain':0,
-            'd_gain':0} for n in ('1', '2')}
-        self.expected_response = ''
+            'd_gain':0} for n in (1, 2)}
+        self.expected_response = None
 
-    def find(self, vendor_id, product_id):
+    def find(self, idVendor, idProduct):
         """ On hardware, locates device. In simulation, returns itself so we
         can keep going."""
 
-        self.logger.info('SIMULATED nPointTipTilt instantiated and logging online.')
-        
+        self.log.info('SIMULATED nPointTipTilt instantiated and logging online.')
         return self
 
     def __iter__(self):
@@ -56,7 +53,7 @@ class PyusbNpointEmulator():
         for cfg in ['< SIMULATED CONFIGUARTION 1: 0 mA>']:
             yield cfg
     
-    def set_configuration():
+    def set_configuration(self):
         """ On hardware, sets nPoint to its defaul configuration. In
         simulation, no behavior necesarry."""
         pass
@@ -70,31 +67,43 @@ class PyusbNpointEmulator():
     def write(self, endpoint, message, timeout):
         """ On hardware, writes a single message from device. In simulation,
         updates dummy values. """
-        
-        cmd_dict = {'084': 'loop', '720': 'p_gain', '728': 'i_gain', '730': 'd_gain'}
+        cmd_dict = {293802116: (1, 'loop'),
+                    293803808: (1, 'p_gain'),
+                    293803816: (1, 'i_gain'),
+                    293803824: (1, 'd_gain'),
+                    293806212: (2, 'loop'),
+                    293807904: (2, 'p_gain'),
+                    293807912: (2, 'i_gain'),
+                    293807920: (2, 'd_gain'),
+                    0: (0, 'second half of gain update')}
 
         # Do some backwards message parsing
         # Make them into strings of the numbers that map to command key and channel
-        address = str(message[2:4]).split('\\x')
-        channel = address[1][0]
-        cmd_val = addres[1][1] + addres[2][:-1]
-        cmd_key = cmd_dict[cmd_val] 
-        
+        address = message[1:5]
+        int_address = struct.unpack('<I', address)[0]
+        try:
+            channel, cmd_key = cmd_dict[int_address] 
+        except KeyError:
+            if int(str(int_address)[:3]) == 107:
+                channel, cmd_key = cmd_dict[0]
+            
         if message[0] == 164:
             # This is get message and we want a response
-            self.logger.info('Simulated response will not pass value check.')
-            self.logger.info('The stored value for {} is {}'.format(cmd_key,
-                self.dummy_values[channel][cmd_key]))
-            expected_response = struct.pack('<Q', int(b'0x0000000000000000', 16))
+            self.log.info('Simulated response will not pass value check.')
+            self.log.info('The stored value for {} is {}'.format(cmd_key,
+                self.dummy_values[str(channel)][cmd_key]))
+            expected_response = np.array([50, 96, 164, 32, 23, 131, 17, 0, 0, 0, 0, 0, 0, 0, 0, 85], dtype='B')
             self.expected_response = expected_response
-        elif message[1] == 162:
+        
+        elif message[0] == 162:
             # This is a set message and the message isn't spoofed well enough
             # for now.
             pass
-
+        elif message[0] == 163:
+            # This is the second half of a set message for float values.
+            pass
         else:
-            raise NotImplementedError('Not implemented message sent to nPoint
-            simulator.')
+            raise NotImplementedError('Not implemented command message sent to nPoint simulator.')
 
 
 class SimnPointTipTiltController(SimInstrument, nPointTipTiltController):
