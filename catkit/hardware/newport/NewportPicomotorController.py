@@ -46,7 +46,7 @@ class NewportPicomotorController(MotorController):
     
     instrument_lib = urllib
 
-    def __init__(self, config_id, ip=None, max_step=None, timeout=None, home_reset=True):
+    def inititialize(self, config_id, ip=None, max_step=None, timeout=None, home_reset=True):
         """ Initial function set the IP address for the controller. Anything set to None will attempt to
         pull from the config file.
         
