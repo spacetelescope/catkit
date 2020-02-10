@@ -81,8 +81,8 @@ class nPointTipTiltController(CloseLoopController):
         """
         
         # Pull device specifics from config file
-        self.vendor_id = CONFIG_INI.get('npoint_tiptilt_lc_400', 'vendor_id') if vendor_id is None else vendor_id
-        self.product_id = CONFIG_INI.get('npoint_tiptilt_lc_400', 'product_id') if product_id is None else product_id
+        self.vendor_id = CONFIG_INI.get(self.config_id, 'vendor_id') if vendor_id is None else vendor_id
+        self.product_id = CONFIG_INI.get(self.config_id, 'product_id') if product_id is None else product_id
         
         self.library_path = os.environ.get('CATKIT_LIBUSB_PATH') if library_path is None else library_path
         if not self.library_path:
@@ -225,10 +225,11 @@ class nPointTipTiltController(CloseLoopController):
             raise NameError("Go get the device sorted you knucklehead.")
              
         # Set to default configuration -- for LC400 this is the right one.
-        self.instrument = self.instrument # For lecary purposes
+        self.dev = self.instrument # For legacy purposes
         self.instrument.set_configuration()
         self.log.info('nPointTipTilt instantiated and logging online.')
-
+        
+        return self.instrument
 
     def _read_response(self, response_type, return_timer=False, max_tries=10):
         """Read response from controller.
