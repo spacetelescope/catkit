@@ -21,7 +21,7 @@ import urllib
 from urllib.parse import urlencode
 
 from catkit.config import CONFIG_INI
-from catkit.interfaces import MotorController
+from catkit.interfaces.MotorController import MotorController
 
 ## -- Let's go.
 
