@@ -9,35 +9,39 @@ from catkit.hardware.newport.lib import XPS_Q8_drivers
 """Implementation of the Newport motor controller interface."""
 
 
-class NewportMotorController(MotorController):
+class NewportXPSMotorController(MotorController):
 
-    log = logging.getLogger(__name__)
+    instrument_lib = XPS_Q8_drivers
 
     def initialize(self, initialize_to_nominal=True, use_testbed_state=True):
-        """Creates an instance of the controller library and opens a connection."""
+        """Pulls initial paramters from the config and sets attributes."""
+        
+        self.initialize_to_nominal=initialize_to_nominal
         self.use_testbed_state = use_testbed_state
-
-        # Create an instance of the XPS controller.
-        myxps = XPS_Q8_drivers.XPS()
-
+        
         # Grab attributes from the INI.
-        ip_address = CONFIG_INI.get(self.config_id, "ip_address")
-        port = CONFIG_INI.getint(self.config_id, "port")
-        timeout = CONFIG_INI.getint(self.config_id, "timeout")
+        self.ip_address = CONFIG_INI.get(self.config_id, "ip_address")
+        self.port = CONFIG_INI.getint(self.config_id, "port")
+        self.timeout = CONFIG_INI.getint(self.config_id, "timeout")
+    
 
+    def _open(self):
+        """Creates an instance of the controller library and opens a connection."""
+        # Create an instance of the XPS controller.
+        self.instrument = self.instrument_lib.XPS()
+        
         # Connect to a socket on the controller server.
-        socket_id = myxps.TCP_ConnectToServer(ip_address, port, timeout)
-
+        socket_id = self.instrument.TCP_ConnectToServer(self.ip_address, self.port, self.timeout)
         if self.socket_id == -1:
             self.log.error("Invalid socket")
             raise Exception("Connection to XPS failed, check IP & Port")
 
         self.socket_id = socket_id
-        self.motor_controller = myxps
+        self.motor_controller = self.instrument # for legacy purposes
         self.log.info("Initializing Newport XPS Motor Controller " + self.config_id + "...")
 
         # Initialize and move to nominal positions.
-        if initialize_to_nominal:
+        if self.initialize_to_nominal:
             motors = [s for s in CONFIG_INI.sections() if s.startswith('motor_')]
             for motor_name in motors:
                 self.__move_to_nominal(motor_name)
@@ -45,11 +49,13 @@ class NewportMotorController(MotorController):
         # Update the testbed_state for the FPM and Lyot Stop.
         self.__update_testbed_state("motor_lyot_stop_x")
         self.__update_testbed_state("motor_FPM_Y")
-        return myxps
+        
+        return self.instrument
 
-    def close(self):
+    def _close(self):
         """Close dm connection safely."""
-        self.motor_controller.TCP_CloseSocket(self.socket_id)
+        self.instrument.TCP_CloseSocket(self.socket_id)
+        self.log.info("Safely closed connection to Motor Controller " + self.config_id)
 
     def absolute_move(self, motor_id, position):
         """
@@ -65,7 +71,7 @@ class NewportMotorController(MotorController):
         if not np.isclose(current_position, position, atol=.001):
             # Move.
             self.log.info("Moving positioner " + positioner + " to " + str(position) + "...")
-            error_code, return_string = self.motor_controller.GroupMoveAbsolute(self.socket_id, positioner, [position])
+            error_code, return_string = self.instrument.GroupMoveAbsolute(self.socket_id, positioner, [position])
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupMoveAbsolute')
             else:
@@ -83,7 +89,7 @@ class NewportMotorController(MotorController):
 
         # Move.
         self.log.info("Moving positioner " + positioner + " by " + str(distance) + "...")
-        error_code, return_string = self.motor_controller.GroupMoveRelative(self.socket_id, positioner, [distance])
+        error_code, return_string = self.instrument.GroupMoveRelative(self.socket_id, positioner, [distance])
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupMoveRelative')
         else:
@@ -99,45 +105,45 @@ class NewportMotorController(MotorController):
         positioner = CONFIG_INI.get(motor_id, "positioner_name")
         self.__ensure_initialized(group)
 
-        error_code, current_position = self.motor_controller.GroupPositionCurrentGet(self.socket_id, positioner, 1)
+        error_code, current_position = self.instrument.GroupPositionCurrentGet(self.socket_id, positioner, 1)
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupPositionCurrentGet')
         else:
             return current_position
 
     def __ensure_initialized(self, group):
-        error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
+        error_code, current_status = self.instrument.GroupStatusGet(self.socket_id, group)
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupStatusGet')
 
         # Kill motor if it is not in a known good state.
         if current_status != 11 and current_status != 12 and current_status != 7 and current_status != 42:
-            error_code, return_string = self.motor_controller.GroupKill(self.socket_id, group)
+            error_code, return_string = self.instrument.GroupKill(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupKill')
             self.log.warning("Killed group " + group + " because it was not in state 11, 12, or 7")
 
             # Update the status.
-            error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
+            error_code, current_status = self.instrument.GroupStatusGet(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupStatusGet')
 
         # Initialize from killed state.
         if current_status == 7:
             # Initialize the group
-            error_code, return_string = self.motor_controller.GroupInitialize(self.socket_id, group)
+            error_code, return_string = self.instrument.GroupInitialize(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupInitialize')
             self.log.info("Initialized group " + group)
 
             # Update the status
-            error_code, current_status = self.motor_controller.GroupStatusGet(self.socket_id, group)
+            error_code, current_status = self.instrument.GroupStatusGet(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupStatusGet')
 
         # Home search
         if current_status == 42:
-            error_code, return_string = self.motor_controller.GroupHomeSearch(self.socket_id, group)
+            error_code, return_string = self.instrument.GroupHomeSearch(self.socket_id, group)
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupHomeSearch')
             self.log.info("Homed group " + group)
@@ -150,7 +156,7 @@ class NewportMotorController(MotorController):
     # Migrated from Newport demo code, now raises exceptions and does logging elsewhere.
     def __raise_exceptions(self, error_code, api_name):
         if (error_code != -2) and (error_code != -108):
-            error_code2, error_string = self.motor_controller.ErrorStringGet(self.socket_id, error_code)
+            error_code2, error_string = self.instrument.ErrorStringGet(self.socket_id, error_code)
             if error_code2 != 0:
                 raise Exception(api_name + ': ERROR ' + str(error_code))
             else:
