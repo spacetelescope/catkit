@@ -11,11 +11,7 @@ According to the manual, this should hold for models:
 """
 
 ## -- IMPORTS
-import configparser
-import datetime
 import functools
-import logging
-import os
 
 from http.client import IncompleteRead
 import numpy as np
@@ -65,10 +61,10 @@ class NewportPicomotorController(MotorController):
 
         # Set IP address
             
-        self.ip = config.get(config_id, 'ip') if ip is None else ip
-        self.max_step = config.get(config_id, 'max_step') if max_step is None else max_step
-        self.timeout = config.get(config_id, 'timeout') if timeout is None else timeout
-        self.home_reset = config.get(config_id, 'home_reset') if home_reset is None else home_reset
+        self.ip = CONFIG_INI.get(config_id, 'ip') if ip is None else ip
+        self.max_step = CONFIG_INI.get(config_id, 'max_step') if max_step is None else max_step
+        self.timeout = CONFIG_INI.get(config_id, 'timeout') if timeout is None else timeout
+        self.home_reset = CONFIG_INI.get(config_id, 'home_reset') if home_reset is None else home_reset
 
         # Initialize some command parameters
         self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
@@ -87,7 +83,6 @@ class NewportPicomotorController(MotorController):
         try:
             instrument.urlopen('http://{}'.format(self.ip), timeout=self.timeout)
         except (IncompleteRead, HTTPError, Exception) as e:
-            self.close_logger()
             raise OSError("The controller IP address is not responding.") from e
 
         self.instrument = instrument
@@ -113,7 +108,7 @@ class NewportPicomotorController(MotorController):
         for axis in '1234':
             self.command('exact_move', int(axis), 0)
             self.command('home_position', int(axis), 0)
-            self.logger.info('Controller reset.')
+            self.log.info('Controller reset.')
         
     def absolute_move(self, axis, value):
         """ Function to make an absolute move.
@@ -169,9 +164,9 @@ class NewportPicomotorController(MotorController):
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
         
         if float(set_value) != value:
-            self.logger.error('Something is wrong, {} != {}'.format(set_value, value)) 
+            self.log.error('Something is wrong, {} != {}'.format(set_value, value)) 
          
-        self.logger.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
+        self.log.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
 
     def convert_move_to_pixel(self, img_before, img_after, move, axis):
         """ After two images taken some x_move or y_move apart, calculate how
@@ -247,7 +242,7 @@ class NewportPicomotorController(MotorController):
             message = self._build_message(cmd_key, 'get', axis)
             value = self._send_message(message, 'get') 
             state_dict['{}_{}'.format(cmd_key, axis)] = value
-            self.logger.info('For axis {}, {} is set to {}'.format(axis, cmd_key, value))
+            self.log.info('For axis {}, {} is set to {}'.format(axis, cmd_key, value))
         
         return state_dict
         
@@ -257,7 +252,7 @@ class NewportPicomotorController(MotorController):
         
         message = self._build_message('reset', 'reset')
         self._send_message(message, 'set')
-        self.logger.info('Controller reset.')
+        self.log.info('Controller reset.')
 
     def _build_message(self, cmd_key, cmd_type, axis=None, value=None):
         """Build a message for the newport picomotor controller.
