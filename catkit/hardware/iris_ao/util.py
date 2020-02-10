@@ -2,18 +2,29 @@
 Utility functions to be used for controlling the IrisAO hardware
 """
 from configparser import ConfigParser
-import logging
 
 import numpy as np
 
-IRIS_NUM_SEGMENTS = 37
-IRIS_PUPIL_NUMBERING = np.arange(IRIS_NUM_SEGMENTS)+1
-POPPY_NUMBERING = [0,   # Ring 0
-                   1, 6, 5, 4, 3, 2,  # Ring 1
-                   7, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8,  # Ring 2
-                   19, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20]  # Ring 3
+from catkit.config import CONFIG_INI
 
-log = logging.getLogger(__name__)
+
+
+def iris_num_segments():
+    """Number of segments in your Iris AO"""
+    return CONFIG_INI.getint('iris_ao', 'nb_segments')
+
+def iris_pupil_numbering():
+    """Numbering of the Iris AO pupil """
+    return np.arange(iris_num_segments())+1
+
+def poppy_numbering():
+    """
+    Numbering of the pupil in POPPY. Specifically for a 37 segment Iris AO"""
+    return [0,   # Ring 0
+            1, 6, 5, 4, 3, 2,  # Ring 1
+            7, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8,  # Ring 2
+            19, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20]  # Ring 3
+
 
 def map_to_new_center(new_pupil, old_pupil):
     """
@@ -57,8 +68,6 @@ def write_ini(data, path, mirror_serial, driver_serial):
     :param path: full path incl. filename to save the configfile to
     :return:
     """
-
-    log.info("Creating config file: {}".format(path))
 
     config = ConfigParser()
     config.optionxform = str   # keep capital letters

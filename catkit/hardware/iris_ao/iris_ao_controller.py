@@ -43,6 +43,7 @@ class IrisAoController(DeformableMirrorController):
         and then use stdin.write(b'config\n') and stdin.flush() to send the command
         """
         # Write to ConfigPTT.ini
+        log.info("Creating config file: {}".format(self.filename_ptt_dm))
         util.write_ini(data, path=self.filename_ptt_dm, mirror_serial=self.mirror_serial,
                        driver_serial=self.driver_serial)
 
