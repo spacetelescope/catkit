@@ -21,8 +21,11 @@ from http.client import IncompleteRead
 import numpy as np
 from photutils import centroid_1dg
 from requests.exceptions import HTTPError
+import urllib
 from urllib.parse import urlencode
-from urllib.request import urlopen
+
+from catkit.config import CONFIG_INI
+from catkit.interfaces import MotorController
 
 ## -- Let's go.
 
@@ -38,12 +41,13 @@ def http_except(function):
 
     return wrapper
 
-class NewportPicomotor:
+class NewportPicomotorController(MotorController):
     """ This class handles all the picomotor stufff. """
+    
+    instrument_lib = urllib
 
-    def __init__(self, ip=None, max_step=None, timeout=None, home_reset=True):
-        """ Initial function to set up logging and 
-        set the IP address for the controller. Anything set to None will attempt to
+    def __init__(self, config_id, ip=None, max_step=None, timeout=None, home_reset=True):
+        """ Initial function set the IP address for the controller. Anything set to None will attempt to
         pull from the config file.
         
         Parameters
@@ -60,71 +64,41 @@ class NewportPicomotor:
         """
 
         # Set IP address
-        if None in [ip, max_step, timeout]:
-            config_path = os.environ.get('CATKIT_CONFIG')
-            if config_path is None:
-                raise OSError('No available config to specify picomotor connection.')
             
-            config = configparser.ConfigParser()
-            config.read(config_path)
-            
-        self.ip = config.get('newport_picomotor_8743-CL_8745-PS', 'ip') if ip is None else ip
-        self.max_step = config.get('newport_picomotor_8743-CL_8745-PS', 'max_step') if max_step is None else max_step
-        self.timeout = config.get('newport_picomotor_8743-CL_8745-PS', 'timeout') if timeout is None else timeout
-        self.home_reset = config.get('newport_picomotor_8743-CL_8745-PS', 'home_reset') if home_reset is None else home_reset
+        self.ip = config.get(config_id, 'ip') if ip is None else ip
+        self.max_step = config.get(config_id, 'max_step') if max_step is None else max_step
+        self.timeout = config.get(config_id, 'timeout') if timeout is None else timeout
+        self.home_reset = config.get(config_id, 'home_reset') if home_reset is None else home_reset
 
-        str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
-        self.logger = logging.getLogger('Newport-{}'.format(str_date))
-        self.logger.setLevel(logging.INFO)
-
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = 'newport_{}_{}.log'.format(self.ip, str_date)
-        fh = logging.FileHandler(filename=log_file)
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
-
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
-        
         # Initialize some command parameters
         self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
                          'relative_move': 'PR', 'reset': 'RS', 
                          'error_message': 'TB'}
 
         self.calibration = {} 
+        
 
+    def _open(self):
+        """ Function to test a connection (ping the address and see if it
+        sticks). NOTE : To follow the format of the other classes, I'm
+        literally setting self.instrument to urllib.request which feels like
+        cheating?"""
+        instrument = self.instrument_lib.request
         try:
-            urlopen('http://{}'.format(self.ip), timeout=self.timeout)
+            instrument.urlopen('http://{}'.format(self.ip), timeout=self.timeout)
         except (IncompleteRead, HTTPError, Exception) as e:
             self.close_logger()
             raise OSError("The controller IP address is not responding.") from e
 
-        self.logger.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
+        self.instrument = instrument
+        self.log.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
         
         # Save current position as home.
         for axis in '1234':
             self.command('home_position', int(axis), 0)
-            self.logger.info('Current position saved as home.')
-
-
-    def __enter__(self):
-        """ Enter function to allow context management."""
-
-        return self
-
-    def __exit__(self, ex_type, ex_value, traceback):
-        """ Exit function to open loop, reset parameters to 0, close the
-        logging handler."""
-
-        self.close()
-    
-    def __del__(self):
-        """ Destructor with close behavior."""
+            self.log.info('Current position saved as home.')
         
-        self.close()
+        return self.instrument
 
     def close(self):
         """ Function for the close behavior. Return every parameter to zero
@@ -132,7 +106,6 @@ class NewportPicomotor:
         
         if self.home_reset:
             self.reset_controller()
-        self.close_logger()
 
     def reset_controller(self):
         """Function to reset the motors to where they started (or were last reset.)"""
@@ -142,13 +115,35 @@ class NewportPicomotor:
             self.command('home_position', int(axis), 0)
             self.logger.info('Controller reset.')
         
-    def close_logger(self):
-        """Function for the close logger behavior."""
+    def absolute_move(self, axis, value):
+        """ Function to make an absolute move.
 
-        handlers = self.logger.handlers[:]
-        for handler in handlers:
-            handler.close()
-            self.logger.removeHandler(handler)
+        Parameters
+        ----------
+        axis : str
+            Which axis to move. NOTE : in MotorController
+            class this is called "motor_id".
+        value : int
+            Number of stpes. NOTE : in MotorController
+            class this is called "distance."
+        """
+
+        self.command('exact_move', axis, value)
+            
+    def relative_move(self, axis, value): 
+        """ Function to make a relative move.
+
+        Parameters
+        ----------
+        axis : str
+            Which axis to move. NOTE : in MotorController
+            class this is called "motor_id".
+        value : int
+            Number of stpes. NOTE : in MotorController
+            class this is called "distance."
+        """
+        
+        self.command('relative_move', axis, value)
 
     @http_except
     def command(self, cmd_key, axis, value):
@@ -177,7 +172,7 @@ class NewportPicomotor:
             self.logger.error('Something is wrong, {} != {}'.format(set_value, value)) 
          
         self.logger.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
-    
+
     def convert_move_to_pixel(self, img_before, img_after, move, axis):
         """ After two images taken some x_move or y_move apart, calculate how
         the picomoter move corresponds to pixel move.
@@ -333,7 +328,7 @@ class NewportPicomotor:
         """
         
         form_data = urlencode({'cmd': message, 'submit': 'Send'})
-        with urlopen('http://{}/cmd_send.cgi?{}'.format(self.ip, form_data), timeout=self.timeout) as html:
+        with self.instrument.urlopen('http://{}/cmd_send.cgi?{}'.format(self.ip, form_data), timeout=self.timeout) as html:
             resp = str(html.read())
         
         if cmd_type == 'get':
