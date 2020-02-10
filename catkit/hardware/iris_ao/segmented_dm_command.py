@@ -46,11 +46,11 @@ class IrisCommand(object):
             if self.segments_used[0] != 1:
                 self._shift_center = True # Pupil is centered elsewhere, must shift
         except Exception: #specifically NoOptionError but not recognized
-            self.segments_used = util.IRIS_PUPIL_NUMBERING
+            self.segments_used = util.iris_pupil_numbering()
 
         if not data:
             # If no data given, return dictionary of zeros
-            array = np.zeros((util.IRIS_NUM_SEGMENTS), dtype=(float, 3))
+            array = np.zeros((util.iris_num_segments()), dtype=(float, 3))
             data = util.create_dict_from_array(array, seglist=self.segments_used)
 
         self.data = data
@@ -101,7 +101,7 @@ class IrisCommand(object):
 
         self.data = combined_data
 
-def shift_command(command_to_shift, custom_pupil, shift_to_hardware=True):
+def shift_command(command_to_shift, custom_pupil, numbering, shift_to_hardware=False):
     """
     If using a custom pupil, you must shift the numbering from centering in the center
     of the Iris AO, to the center of your pupil.
@@ -125,12 +125,12 @@ def shift_command(command_to_shift, custom_pupil, shift_to_hardware=True):
 
     :returns shifted_map: dict, command shifted to expected center
     """
-    iris_numbering = util.IRIS_PUPIL_NUMBERING[:len(custom_pupil)]  # Match lengths of arrays
+    numbering = util.iris_pupil_numbering()[:len(custom_pupil)]  # Match lengths of arrays
 
     if shift_to_hardware:
-        mapping = util.map_to_new_center(custom_pupil, iris_numbering)
+        mapping = util.map_to_new_center(custom_pupil, numbering)
     else:
-        mapping = util.map_to_new_center(iris_numbering, custom_pupil)
+        mapping = util.map_to_new_center(numbering, custom_pupil)
 
     # Create the new map with the mapping of the input
     shifted_map = util.create_new_dictionary(command_to_shift, mapping)
