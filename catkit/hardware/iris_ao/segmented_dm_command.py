@@ -3,6 +3,7 @@ Holds the class IrisCommand that is used to create a dict that will be sent to t
 IrisAO hardware as a command.
 """
 
+import json
 import numpy as np
 
 from catkit.config import CONFIG_INI
@@ -44,7 +45,7 @@ class IrisCommand(object):
 
         # If you are not using the full aperture, must include which segments are used
         try:
-            self.segments_used = CONFIG_INI.get(config_id, 'segments_used')
+            self.segments_used = json.loads(CONFIG_INI.get(config_id, 'segments_used'))
             self.number_segments_in_pupil = CONFIG_INI.get(config_id, 'pupil_nb_seg')
             if len(data) != len(self.segments_used):
                 raise Exception("The number of segments in your command MUST equal number of segments in the pupil")
