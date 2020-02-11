@@ -6,7 +6,7 @@ IrisAO hardware as a command.
 import numpy as np
 
 from catkit.config import CONFIG_INI
-from catkit.hardware.iris_ao import iris_ao_parser, util
+from catkit.hardware.iris_ao import util
 
 
 class IrisCommand(object):
@@ -28,8 +28,13 @@ class IrisCommand(object):
 
     :returns command_dict: dictionary
     """
-    def __init__(self, data=None, flat_map=False):
+    def __init__(self, data=None, flat_map=False, source_pupil_numbering=None):
+        # Establish variables for pupil shifting
         self._shift_center = False
+        if not source_pupil_numbering:
+            source_pupil_numbering = util.iris_pupil_numbering()
+        self.source_pupil_numbering = source_pupil_numbering
+
         # Grab things from CONFIG_INI
         config_id = 'iris_ao'
         self.filename_flat = CONFIG_INI.get(config_id, 'flatfile_ini') #format is .ini
@@ -58,7 +63,7 @@ class IrisCommand(object):
 
 
         if self._shift_center:
-            self.data = shift_command(self.data, self.segments_used)
+            self.data = shift_command(self.data, self.segments_used, self.source_pupil_numbering)
 
 
     def get_data(self):
@@ -70,16 +75,16 @@ class IrisCommand(object):
     def to_command(self):
         """ Output command suitable for sending to the hardware driver
         """
-        command = np.copy(self.data)
-
         # Apply Flat Map
         if self.flat_map:
-            flat_map = iris_ao_parser.read_command(self.filename_flat) #convert to dict
-            self.add_map(command, flat_map, flat=True)
+            flat_map = util.read_command(self.filename_flat) #convert to dict
+            self.add_map(flat_map, flat=True)
+
+        command = np.copy(self.data)
 
         return command
 
-    def add_map(self, old_command, new_command, flat=False):
+    def add_map(self, new_command, flat=False):
         """
         Add a command to the one already loaded.
 
@@ -91,17 +96,18 @@ class IrisCommand(object):
         :param new_command: str or array (.PTT111 or .ini file, or array from POPPY)
         """
         data1 = self.get_data
-        data2 = iris_ao_parser.read_command(new_command)
+        data2 = util.read_command(new_command)
 
         if self._shift_center and not flat:
-            data2 = shift_command(data2, self.segments_used)
+            data2 = shift_command(data2, self.segments_used, self.source_pupil_numbering)
 
         # Do magic adding only if segment exists in both
         combined_data = {seg: tuple(np.asarray(data1.get(seg, (0., 0., 0.))) + np.asarray(data2.get(seg, (0., 0., 0.)))) for seg in set(data1) & set(data2)}
 
         self.data = combined_data
 
-def shift_command(command_to_shift, custom_pupil, numbering, shift_to_hardware=False):
+
+def shift_command(command_to_shift, to_pupil, from_pupil=None):
     """
     If using a custom pupil, you must shift the numbering from centering in the center
     of the Iris AO, to the center of your pupil.
@@ -110,27 +116,30 @@ def shift_command(command_to_shift, custom_pupil, numbering, shift_to_hardware=F
     to the custom center (shift_to_hardware = True), or will shift from the custom
     center to the center of the IrisAO (shift_to_hardware = False, USAGE UNKNOWN)
 
-    The different pupils are:
-    Full Iris pupil: <= 37 segments centered on 1 and numbered from 1-19 (and until 37)
-                     for overall Iris AO pupil
-    Custom pupil: >=19 segments centered on first segment number in "segments_used" in
-                  the config file and numbered specifically for a custom pupil, defining
-                  the custom pupil as part of the DM
+    Different pupil numbering systems include:
+    Full Iris: <= 37 segments centered on 1 and numbered from 1-19 (and until 37)
+               for overall Iris AO pupil. This is the default "from_pupil"
+               if None is given. This numbering is given by util.iris_pupil_numbering
+    Custom: >=19 segments centered on first segment number in "segments_used" in
+            the config file and numbered specifically for a custom pupil, defining
+            the custom pupil as part of the DM
+    Poppy: POPPY uses a different numbering scheme given by util.poppy_numbering
 
     :param command_to_shift: dict, wavefront map to be shifted, Iris AO format
-    :param custom_pupil: list, of segments in the pupil, starting at center and then
+    :param to_pupil: list, of segments in the pupil, starting at center and then
                          continuing counter clockwise
-    :param shift_to_hardware: bool, if True (default) you are shifting from the full
-                              Iris AO numbering to the specific pupil numbering
+    :param from_pupil: list, segments in the pupil with numbering system you are moving from.
+                       If None (default) the Iris AO numbering will be used
 
     :returns shifted_map: dict, command shifted to expected center
     """
-    numbering = util.iris_pupil_numbering()[:len(custom_pupil)]  # Match lengths of arrays
+    if from_pupil is None:
+        from_pupil = util.iris_pupil_numbering()
 
-    if shift_to_hardware:
-        mapping = util.map_to_new_center(custom_pupil, numbering)
-    else:
-        mapping = util.map_to_new_center(numbering, custom_pupil)
+    # Match lengths of arrays
+    from_pupil, to_pupil = util.match_lengths(from_pupil, to_pupil)
+
+    mapping = util.map_to_new_center(to_pupil, from_pupil)
 
     # Create the new map with the mapping of the input
     shifted_map = util.create_new_dictionary(command_to_shift, mapping)
@@ -147,5 +156,5 @@ def load_command(command, flat_map=True):
 
     :return: IrisCommand object representing the command dictionary.
     """
-    data = iris_ao_parser.read_command(command)
-    return IrisCommand(data, flat_map=flat_map)
+    data, source_pupil_numbering = util.read_command(command)
+    return IrisCommand(data, flat_map=flat_map, source_pupil_numbering=source_pupil_numbering)
