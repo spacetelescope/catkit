@@ -42,7 +42,7 @@ class NewportPicomotorController(MotorController):
     
     instrument_lib = urllib
 
-    def inititialize(self, config_id, ip=None, max_step=None, timeout=None, home_reset=True):
+    def inititialize(self, config_id, ip=None, max_step=None, timeout=None, daisy=None, home_reset=True):
         """ Initial function set the IP address for the controller. Anything set to None will attempt to
         pull from the config file.
         
@@ -65,7 +65,12 @@ class NewportPicomotorController(MotorController):
         self.max_step = CONFIG_INI.get(config_id, 'max_step') if max_step is None else max_step
         self.timeout = CONFIG_INI.get(config_id, 'timeout') if timeout is None else timeout
         self.home_reset = CONFIG_INI.get(config_id, 'home_reset') if home_reset is None else home_reset
-
+        
+        # If it's an Nth daisy chained controller, we want a 'N>' prefix before each message.
+        # Otherwise, we want nothing.
+        daisy = CONFIG_INI.get(config_id, 'daisy') if daisy is None else daisy
+        self.daisy = '{}>' if daisy == 0 else ''
+        
         # Initialize some command parameters
         self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
                          'relative_move': 'PR', 'reset': 'RS', 
@@ -301,7 +306,7 @@ class NewportPicomotorController(MotorController):
             elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > self.max_step:
                 raise ValueError('You can only move {} in any direction.'.format(self.max_step))
             else:
-                message = '{}{}{}'.format(axis, address, value)
+                message = '{}{}{}{}'.format(self.daisy, axis, address, value)
             
         return message
     
