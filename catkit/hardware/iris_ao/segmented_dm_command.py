@@ -62,7 +62,6 @@ class IrisCommand(object):
         self.data = data
         self.flat_map = flat_map
 
-
         if self._shift_center:
             self.data = shift_command(self.data, self.segments_used, self.source_pupil_numbering)
 
@@ -78,8 +77,7 @@ class IrisCommand(object):
         """
         # Apply Flat Map
         if self.flat_map:
-            flat_map = util.read_command(self.filename_flat) #convert to dict
-            self.add_map(flat_map, flat=True)
+            self.add_map(self.filename_flat, flat=True)
 
         command = np.copy(self.data)
 

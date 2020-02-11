@@ -69,7 +69,7 @@ class IrisAoController(DeformableMirrorController):
 
     def _zero(self, return_zeros=False):
         """Zero out DM"""
-        array = np.zeros((util.IRIS_NUM_SEGMENTS), dtype=(float, 3))
+        array = np.zeros((util.iris_num_segments()), dtype=(float, 3))
         zeros = util.create_dict_from_array(array)
         self.send_data(zeros)
 
