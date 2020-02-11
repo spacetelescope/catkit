@@ -79,9 +79,7 @@ class IrisCommand(object):
         if self.flat_map:
             self.add_map(self.filename_flat, flat=True)
 
-        command = np.copy(self.data)
-
-        return command
+        return self.data
 
     def add_map(self, new_command, flat=False):
         """
@@ -94,8 +92,8 @@ class IrisCommand(object):
 
         :param new_command: str or array (.PTT111 or .ini file, or array from POPPY)
         """
-        data1 = self.get_data
-        data2 = util.read_command(new_command)
+        data1 = self.get_data()
+        data2, _ = util.read_command(new_command)
 
         if self._shift_center and not flat:
             data2 = shift_command(data2, self.segments_used, self.source_pupil_numbering)
