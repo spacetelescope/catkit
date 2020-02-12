@@ -33,8 +33,6 @@ class IrisAoController(DeformableMirrorController):
         # Where to write ConfigPTT.ini file that gets read by the C++ code
         self.filename_ptt_dm = filename_ptt_dm
 
-        self.dm = None
-
 
     def send_data(self, data):
         """ To send data to the IrisAO, you must write to the ConfigPTT.ini file
@@ -46,16 +44,15 @@ class IrisAoController(DeformableMirrorController):
                        driver_serial=self.driver_serial)
 
         # Apply the written .ini file to DM
-        self.dm.stdin.write(b'config\n')
-        self.dm.stdin.flush()
+        self.instrument.stdin.write(b'config\n')
+        self.instrument.stdin.flush()
 
 
     def _open(self):
         """
         Open a connection to the IrisAO
         """
-        self.instrument = True #TODO: I understand nothing
-        self.dm = subprocess.Popen([self.full_path_dm_exe, self.disableHardware],
+        self.instrument = subprocess.Popen([self.full_path_dm_exe, self.disableHardware],
                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE,
                                    cwd=self.path_to_dm_exe, bufsize=1)
@@ -66,7 +63,7 @@ class IrisAoController(DeformableMirrorController):
         self.command = zeros
         self.__update_iris_state(self.command)
 
-        return self.instrument #TODO figure this out
+        return self.instrument
 
 
     def zero(self, return_zeros=False):
@@ -88,10 +85,10 @@ class IrisAoController(DeformableMirrorController):
             self.log.info('Closing Iris AO.')
             # Set IrisAO to zero
             self.zero()
-            self.dm.stdin.write(b'quit\n')
-            self.dm.stdin.close()
+            self.instrument.stdin.write(b'quit\n')
+            self.instrument.stdin.close()
         finally:
-            self.instrument = None # TODO: Figure out what else is needed here.
+            self.instrument = None
             self.__close_iris_controller_testbed_state()
 
 
