@@ -36,18 +36,18 @@ your config.ini file:
 
 * `mirror_serial`: The mirror serial number. This corresponds to a .mcf file that *MUST* include the driver serial number under "Smart Driver". See Important Note below.
 * `driver_serial`: The driver serial number. This corresponds to a .dcf file.
-* `nb_segments`: The number of segments in your Iris AO DM (including any non-funtioning segments). Always 37. TODO: DO WE WANT THIS?
-* `pupil_nb_seg`: The number of segments in your specific pupil (for most, this is less than `nb_segments`). TODO: DO WE WANT THIS?
-* `segments_used`: A list of the segment numbers that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then counter clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20. For example, if your pupil is centered on segment 3 and is only one ring, then segments_used = [3, 9, 10, 11, 4, 1, 2]
+* `number_of_segments`: The number of segments in your Iris AO DM (including any non-functioning segments). Always 37. TODO: DO WE WANT THIS?
+* `number_of_segments_pupil`: The number of segments in your specific pupil (for most, this is less than `number_of_segments`). TODO: DO WE WANT THIS?
+* `segments_in_pupil`: A list of the segment numbers that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then counter clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20. For example, if your pupil is centered on segment 3 and is only one ring, then segments_in_pupil = [3, 9, 10, 11, 4, 1, 2]
 
-* `flatfile_ini`: The location of the custom flat .ini file for your Iris AO DM.  
+* `flat_file_ini`: The location of the custom flat .ini file for your Iris AO DM.  
 * `config_ptt_file`: The location of the ConfigPTT.ini file which is the file that contains whatever command you want to put on the DM.
 * `path_to_dm_ex`: The path to the directory that houses the DM_Control.exe file
 * `full_path_dm_exe`: The path to (and including) the DM_Control.exe file
 
 Optional (if using POPPY, you will need these - they should be the same for all IrisAO DMs):
 
-* `flat_to_flat`: The flat side to flat side diameter of each segment in units of mm
+* `flat_to_flat_mm`: The flat side to flat side diameter of each segment in units of mm
 * `gap_um`: The size of the gap between segments in units of um
 
 
@@ -67,12 +67,12 @@ Each segmented DM from Iris AO was calibrated with a specific driver(s). This ca
 
     mirror_serial = 'PWA##-##-##-####'
     driver_serial = '########'
-    nb_segments = 37
-    pupil_nb_seg = 19
-    segments_used = [3, 9, 10, 11, 4, 1, 2, 21, 22, 23, 24, 25, 12, 13, 5, 6, 7, 19, 8]
-    flat_to_flat = 1.4
+    number_of_segments = 37
+    number_of_segments_pupil = 19
+    segments_in_pupil = [3, 9, 10, 11, 4, 1, 2, 21, 22, 23, 24, 25, 12, 13, 5, 6, 7, 19, 8]
+    flat_to_flat_mm = 1.4
     gap_um = 10
-    flatfile_ini = ${optics_lab:local_repo_path}/DM/MirrorControlFiles/CustomFLAT.ini
+    flat_file_ini = ${optics_lab:local_repo_path}/DM/MirrorControlFiles/CustomFLAT.ini
     config_ptt_file = ${optics_lab:local_repo_path}/DM/MirrorControlFiles/ConfigPTT.ini
     path_to_dm_exe = ${optics_lab:local_repo_path}Control DM/Code/release
 

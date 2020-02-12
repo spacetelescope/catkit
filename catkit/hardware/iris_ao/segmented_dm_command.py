@@ -38,32 +38,32 @@ class IrisCommand(object):
 
         # Grab things from CONFIG_INI
         config_id = 'iris_ao'
-        self.filename_flat = CONFIG_INI.get(config_id, 'flatfile_ini') #format is .ini
+        self.filename_flat = CONFIG_INI.get(config_id, 'flat_file_ini') #format is .ini
 
         # Define aperture - full iris or subaperture
-        self.number_segments = CONFIG_INI.getint(config_id, 'nb_segments')
+        self.number_segments = CONFIG_INI.getint(config_id, 'number_of_segmentss')
 
         # If you are not using the full aperture, must include which segments are used
         try:
-            self.segments_used = json.loads(CONFIG_INI.get(config_id, 'segments_used'))
-            self.number_segments_in_pupil = CONFIG_INI.get(config_id, 'pupil_nb_seg')
-            if len(data) != len(self.segments_used):
+            self.segments_in_pupil = json.loads(CONFIG_INI.get(config_id, 'segments_in_pupil'))
+            self.number_segments_in_pupil = CONFIG_INI.get(config_id, 'number_of_segments_pupil')
+            if len(data) != len(self.segments_in_pupil):
                 raise Exception("The number of segments in your command MUST equal number of segments in the pupil")
-            if self.segments_used[0] != 1:
+            if self.segments_in_pupil[0] != 1:
                 self._shift_center = True # Pupil is centered elsewhere, must shift
         except Exception: #specifically NoOptionError but not recognized
-            self.segments_used = util.iris_pupil_numbering()
+            self.segments_in_pupil = util.iris_pupil_numbering()
 
         if not data:
             # If no data given, return dictionary of zeros
             array = np.zeros((util.iris_num_segments()), dtype=(float, 3))
-            data = util.create_dict_from_array(array, seglist=self.segments_used)
+            data = util.create_dict_from_array(array, seglist=self.segments_in_pupil)
 
         self.data = data
         self.flat_map = flat_map
 
         if self._shift_center:
-            self.data = shift_command(self.data, self.segments_used, self.source_pupil_numbering)
+            self.data = shift_command(self.data, self.segments_in_pupil, self.source_pupil_numbering)
 
 
     def get_data(self):
@@ -96,7 +96,7 @@ class IrisCommand(object):
         data2, _ = util.read_command(new_command)
 
         if self._shift_center and not flat:
-            data2 = shift_command(data2, self.segments_used, self.source_pupil_numbering)
+            data2 = shift_command(data2, self.segments_in_pupil, self.source_pupil_numbering)
 
         # Do magic adding only if segment exists in both
         combined_data = {seg: tuple(np.asarray(data1.get(seg, (0., 0., 0.))) + np.asarray(data2.get(seg, (0., 0., 0.)))) for seg in set(data1) & set(data2)}
@@ -117,7 +117,7 @@ def shift_command(command_to_shift, to_pupil, from_pupil=None):
     Full Iris: <= 37 segments centered on 1 and numbered from 1-19 (and until 37)
                for overall Iris AO pupil. This is the default "from_pupil"
                if None is given. This numbering is given by util.iris_pupil_numbering
-    Custom: >=19 segments centered on first segment number in "segments_used" in
+    Custom: >=19 segments centered on first segment number in "segments_in_pupil" in
             the config file and numbered specifically for a custom pupil, defining
             the custom pupil as part of the DM
     Poppy: POPPY uses a different numbering scheme given by util.poppy_numbering
