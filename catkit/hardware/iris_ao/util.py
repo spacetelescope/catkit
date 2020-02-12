@@ -8,7 +8,7 @@ import astropy.units as u
 import numpy as np
 import poppy
 
-from catkit.config import CONFIG_INI #TODO: FIX ME
+from catkit.config import CONFIG_INI
 
 
 
@@ -66,7 +66,7 @@ def create_dict_from_array(array, seglist=None):
     return command_dict
 
 
-def write_ini(data, path, mirror_serial, driver_serial):
+def write_ini(data, path, mirror_serial=None, driver_serial=None):
     """
     Write a new ConfigPTT.ini file containing the command for the Iris AO.
 
@@ -75,12 +75,15 @@ def write_ini(data, path, mirror_serial, driver_serial):
     :param path: full path incl. filename to save the configfile to
     :return:
     """
+    if not mirror_serial and not driver_serial:
+        mirror_serial = CONFIG_INI.get("iris_ao", "mirror_serial")
+        driver_serial = CONFIG_INI.get("iris_ao", "driver_serial")
 
     config = ConfigParser()
     config.optionxform = str   # keep capital letters
 
     config.add_section('Param')
-    config.set('Param', 'nbSegment', str(iris_num_segments()))   # Iris AO has 37 segments
+    config.set('Param', 'nbSegment', str(iris_num_segments()))
 
     config.add_section('SerialNb')
     config.set('SerialNb', 'mirrorSerial', mirror_serial)
@@ -427,6 +430,9 @@ class PoppySegmentedCommand(object):
         coeff_array = poppy.zernike.opd_expand_segments(wavefront, nterms=self.num_terms,
                                                         basis=self.basis)
         coeff_array = np.reshape(coeff_array, (self.num_segs_in_pupil - 1, 3))
+
+        center_segment = np.array([0.0, 0.0, 0.0]) # Add zeros for center segment
+        coeff_array = np.vstack((center_segment, coeff_array))
 
         return coeff_array
 
