@@ -9,6 +9,7 @@ The `catkit` module for the Iris AO expects that you will be passing in one of t
 * *.PTT111* file: File format of the command coming out of the IrisAO GUI
 * *.ini* file: File format of command that gets sent to the IrisAO controls
 * array: Format that POPPY outputs if generating command in POPPY
+* dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
 
 Each of these types has to be handled slightly differently, but never fear, we figured that out for you!
 
@@ -18,6 +19,8 @@ We have also included here some util functions that might come in handy and a mo
 ## Using the IrisAO controller
 
 As with the other hardware in `catkit`, you can open and close a connection to the Iris AO as a context manager.
+
+Note that catkit.hardware.iris_ao.segmented_dm_command and catkit.hardware.iris_ao.util pull from CONFIG_INI any time you use either one, so you must import your local CONFIG_INI at the top of your module even if you do not explicitly use it in that module, this will ensure that you are grabbing the correct parameters for *your* testbed.
 
 ### Example:
 If putting *only* the flat map on the Iris AO:
@@ -52,7 +55,7 @@ Optional (if using POPPY, you will need these - they should be the same for all 
 
 
 ---
-Important Note:
+**Important Note**:
 
 Each segmented DM from Iris AO was calibrated with a specific driver(s). This calibration is captured in the .mcf file. Mixing a .mcf file with a .dcf file that *does not match* the driver serial number in the .mcf file could be *fatal* to your DM.
 
@@ -77,6 +80,7 @@ Each segmented DM from Iris AO was calibrated with a specific driver(s). This ca
     path_to_dm_exe = ${optics_lab:local_repo_path}Control DM/Code/release
 
 Note that the code expects to find `DM_Control.exe` in `path_to_dm_exe`.
+
 
 ## Update your `testbed_state.py` file
 The `iris_ao_controller` will update your `testbed_state.py` file with the current command being applied to the Iris AO. In order to do this, you will need to add to following to your file:
