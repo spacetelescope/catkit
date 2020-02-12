@@ -97,7 +97,7 @@ class IrisAoController(DeformableMirrorController):
         Apply a command object to the Iris AO after adding the flatmap from the configfile.
         The units of said IrisCommand object are mrad for tip/tilt, um for piston.
 
-        :param command_object: instance of IrisCommand class
+        :param dm_shape: instance of IrisCommand class
         """
         if dm_num != 1:
             raise NotImplementedError("You can only control one Iris AO at a time")
