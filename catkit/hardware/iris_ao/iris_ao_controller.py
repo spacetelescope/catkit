@@ -12,10 +12,8 @@ from catkit.interfaces.DeformableMirrorController import DeformableMirrorControl
 from catkit.config import CONFIG_INI
 from catkit.hardware.iris_ao import util
 
-log = logging.getLogger(__name__)
 
 class IrisAoController(DeformableMirrorController):
-    #instrument_lib = iao #TODO: what I import for irisAO software - if anything
 
     def initialize(self, mirror_serial, driver_serial, disable_hardware, path_to_dm_exe,
                    filename_ptt_dm):
@@ -43,7 +41,7 @@ class IrisAoController(DeformableMirrorController):
         and then use stdin.write(b'config\n') and stdin.flush() to send the command
         """
         # Write to ConfigPTT.ini
-        log.info("Creating config file: {}".format(self.filename_ptt_dm))
+        self.log.info("Creating config file: %s", self.filename_ptt_dm)
         util.write_ini(data, path=self.filename_ptt_dm, mirror_serial=self.mirror_serial,
                        driver_serial=self.driver_serial)
 
@@ -56,18 +54,22 @@ class IrisAoController(DeformableMirrorController):
         """
         Open a connection to the IrisAO
         """
+        self.instrument = True #TODO: I understand nothing
         self.dm = subprocess.Popen([self.full_path_dm_exe, self.disableHardware],
-                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE,
                                    cwd=self.path_to_dm_exe, bufsize=1)
         # Initialize the Iris to zeros.
-        zeros = self._zero(return_zeros=True)
+        zeros = self.zero(return_zeros=True)
 
         # Store the current dm_command values in class attributes.
         self.command = zeros
         self.__update_iris_state(self.command)
 
+        return self.instrument #TODO figure this out
 
-    def _zero(self, return_zeros=False):
+
+    def zero(self, return_zeros=False):
         """Zero out DM"""
         array = np.zeros((util.iris_num_segments()), dtype=(float, 3))
         zeros = util.create_dict_from_array(array)
@@ -82,12 +84,15 @@ class IrisAoController(DeformableMirrorController):
 
     def _close(self):
         """Close connection safely."""
-        self._zero()  # First zero out IrisAO
-
-        self.dm.stdin.write(b'quit\n')
-        self.dm.stdin.close()
-        log.info('Closing Iris AO.')
-        self.__close_iris_controller_testbed_state()
+        try:
+            self.log.info('Closing Iris AO.')
+            # Set IrisAO to zero
+            self.zero()
+            self.dm.stdin.write(b'quit\n')
+            self.dm.stdin.close()
+        finally:
+            self.instrument = None # TODO: Figure out what else is needed here.
+            self.__close_iris_controller_testbed_state()
 
 
     def apply_shape(self, dm_shape, dm_num=1):
