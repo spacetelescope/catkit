@@ -12,24 +12,37 @@ from catkit.hardware.iris_ao import util
 
 class IrisCommand(object):
     """
-    Class that will deal with Iris AO specific wavefront maps in terms of piston, tip
-    and tilt (PTT) per each segment. Expects a Iris AO-style command -
-    {seg: (piston, tip, tilt)} - that can be loaded onto the hardware.
-
-    Units are expect to be in um (for piston) and mrad (for tip and tilt)
-
-    :param data: dict, of the form {seg: (piston, tip, tilt)}. If None, will populate
-                 with dictionary of zeros for the segments used (This may be used if
-                 only adding the flat map)
-    :param flat_map: If true, add flat map correction to the data before creating command
+    Handle converting inputs into expected dictionary format to be sent to the Iris AO
 
     :attribute data: dict, Input data, shifted if custom pupil exists in config file
     :attribute flat_map: bool, whether or not to apply the flat map
+    :attribute source_pupil_numbering: list, numbering native to data
     :attribute command: dict, Final command with flat if flat_map = True and shift if applicable
+    :attribute filename_flat: str, path to flat
+    :attribute number_segments: int, number of segments in DM
+    :attribute segments_in_pupil: int, number of segments in the pupil
 
-    :returns command_dict: dictionary
+    Optional if not using full DM:
+    :attribute number_segments_in_pupil: int, the nubmer of segments in the pupil.
+
     """
     def __init__(self, data=None, flat_map=False, source_pupil_numbering=None):
+        """
+        Handle Iris AO specific commands in terms of piston, tip and tilt (PTT) per
+        each segment. Creates a Iris AO-style command -{seg: (piston, tip, tilt)} -
+        that can be loaded onto the hardware.
+
+        Units are expect to be in um (for piston) and mrad (for tip and tilt)
+
+        :param data: dict, of the form {seg: (piston, tip, tilt)}. If None, will populate
+                     with dictionary of zeros for the segments used (This may be used if
+                     only adding the flat map)
+        :param flat_map: If true, add flat map correction to the data before creating command
+        :param source_pupil_numbering: list, if a specific (non-Iris AO native) numbering
+                                       exists for this command, pass it in here. This is
+                                       particularly necessary for a command created with POPPY
+        """
+
         # Establish variables for pupil shifting
         self._shift_center = False
         if not source_pupil_numbering:
@@ -63,7 +76,8 @@ class IrisCommand(object):
         self.flat_map = flat_map
 
         if self._shift_center:
-            self.data = shift_command(self.data, self.segments_in_pupil, self.source_pupil_numbering)
+            self.data = shift_command(self.data, self.segments_in_pupil,
+                                      self.source_pupil_numbering)
 
 
     def get_data(self):
@@ -81,6 +95,7 @@ class IrisCommand(object):
 
         return self.data
 
+
     def add_map(self, new_command, flat=False):
         """
         Add a command to the one already loaded.
@@ -91,6 +106,7 @@ class IrisCommand(object):
         Will not shift the flat (flat=True) since the flat is segment-specific.
 
         :param new_command: str or array (.PTT111 or .ini file, or array from POPPY)
+        :param flat: bool, only True if the map being added is the flat (so that it is not shifted)
         """
         data1 = self.get_data()
         data2, _ = util.read_command(new_command)
@@ -128,7 +144,7 @@ def shift_command(command_to_shift, to_pupil, from_pupil=None):
     :param from_pupil: list, segments in the pupil with numbering system you are moving from.
                        If None (default) the Iris AO numbering will be used
 
-    :returns shifted_map: dict, command shifted to expected center
+    :return: dict, command shifted to expected center
     """
     if from_pupil is None:
         from_pupil = util.iris_pupil_numbering()
@@ -148,7 +164,8 @@ def load_command(command, flat_map=True):
     """
     Loads a command from a file or array and returns a IrisCommand object.
 
-    :param command: str, list, np.ndarray. Can be .PTT111, .ini files or array from POPPY
+    :param command: str, list, np.ndarray, dict. Can be .PTT111, .ini files, array from POPPY,
+                    or dictionary of the same form as the output
     :param flat_map: Apply a flat map in addition to the data.
 
     :return: IrisCommand object representing the command dictionary.

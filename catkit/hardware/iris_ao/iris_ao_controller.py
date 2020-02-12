@@ -1,6 +1,5 @@
 """Interface for IrisAO segmented deformable mirror controller."""
 
-import logging
 import os
 import subprocess
 
@@ -9,7 +8,6 @@ import numpy as np
 from catkit.hardware import testbed_state
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 
-from catkit.config import CONFIG_INI
 from catkit.hardware.iris_ao import util
 
 
@@ -17,7 +15,11 @@ class IrisAoController(DeformableMirrorController):
 
     def initialize(self, mirror_serial, driver_serial, disable_hardware, path_to_dm_exe,
                    filename_ptt_dm):
-        """ Initialize dm manufacturer specific object - this does not, nor should it, open a connection."""
+        """
+        Initialize dm manufacturer specific object - this does not, nor should it, open a
+        connection.
+        """
+
         self.log.info("Opening IrisAO connection")
         # Create class attributes for storing an individual command.
         self.command = None
@@ -35,8 +37,11 @@ class IrisAoController(DeformableMirrorController):
 
 
     def send_data(self, data):
-        """ To send data to the IrisAO, you must write to the ConfigPTT.ini file
-        and then use stdin.write(b'config\n') and stdin.flush() to send the command
+        """
+        To send data to the IrisAO, you must write to the ConfigPTT.ini file
+        to send the command
+
+        :param data: dict, the command to be sent to the DM
         """
         # Write to ConfigPTT.ini
         self.log.info("Creating config file: %s", self.filename_ptt_dm)
@@ -49,9 +54,7 @@ class IrisAoController(DeformableMirrorController):
 
 
     def _open(self):
-        """
-        Open a connection to the IrisAO
-        """
+        """Open a connection to the IrisAO"""
         self.instrument = subprocess.Popen([self.full_path_dm_exe, self.disableHardware],
                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE,
@@ -67,7 +70,7 @@ class IrisAoController(DeformableMirrorController):
 
 
     def zero(self, return_zeros=False):
-        """Zero out DM"""
+        """Put zeros on the DM"""
         array = np.zeros((util.iris_num_segments()), dtype=(float, 3))
         zeros = util.create_dict_from_array(array)
         self.send_data(zeros)
@@ -98,6 +101,8 @@ class IrisAoController(DeformableMirrorController):
         The units of said IrisCommand object are mrad for tip/tilt, um for piston.
 
         :param dm_shape: instance of IrisCommand class
+        :param dm_num: int, this must always be 1 since only one DM can be controlled
+                       with this controller.
         """
         if dm_num != 1:
             raise NotImplementedError("You can only control one Iris AO at a time")
@@ -115,7 +120,7 @@ class IrisAoController(DeformableMirrorController):
         self.__update_iris_state(dm_shape)
 
 
-    def apply_shape_to_both(self):
+    def apply_shape_to_both(self, dm1_shape=None, dm2_shape=None):
         """ Method only used by the BostomDmController"""
         raise NotImplementedError("apply_shape_to_both is not implmented for the Iris AO")
 
