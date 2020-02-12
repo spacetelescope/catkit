@@ -41,7 +41,7 @@ class IrisCommand(object):
         self.filename_flat = CONFIG_INI.get(config_id, 'flat_file_ini') #format is .ini
 
         # Define aperture - full iris or subaperture
-        self.number_segments = CONFIG_INI.getint(config_id, 'number_of_segmentss')
+        self.number_segments = CONFIG_INI.getint(config_id, 'number_of_segments')
 
         # If you are not using the full aperture, must include which segments are used
         try:

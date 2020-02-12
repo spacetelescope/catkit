@@ -14,7 +14,7 @@ from catkit.config import CONFIG_INI #TODO: FIX ME
 
 def iris_num_segments():
     """Number of segments in your Iris AO"""
-    return CONFIG_INI.getint('iris_ao', 'number_of_segmentss')
+    return CONFIG_INI.getint('iris_ao', 'number_of_segments')
 
 
 def iris_pupil_numbering():
