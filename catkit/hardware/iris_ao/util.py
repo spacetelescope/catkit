@@ -14,7 +14,7 @@ from catkit.config import CONFIG_INI #TODO: FIX ME
 
 def iris_num_segments():
     """Number of segments in your Iris AO"""
-    return CONFIG_INI.getint('iris_ao', 'nb_segments')
+    return CONFIG_INI.getint('iris_ao', 'number_of_segmentss')
 
 
 def iris_pupil_numbering():
@@ -381,12 +381,12 @@ class PoppySegmentedCommand(object):
     """
     def __init__(self, global_coefficients):
         # Grab pupil-specific values from config
-        self.flat_to_flat_mm = CONFIG_INI.getfloat('iris_ao', 'flat_to_flat')  # [mm]
-        self.gap_um = CONFIG_INI.getint('iris_ao', 'gap_um')  # [um]
-        self.num_segs_in_pupil = CONFIG_INI.getint('iris_ao', 'pupil_nb_seg')
+        self.flat_to_flat = CONFIG_INI.getfloat('iris_ao', 'flat_to_flat_mm')  # [mm]
+        self.gap = CONFIG_INI.getint('iris_ao', 'gap_um')  # [um]
+        self.num_segs_in_pupil = CONFIG_INI.getint('iris_ao', 'number_of_segments_pupil')
         self.wavelength = (CONFIG_INI.getint('thorlabs_source_mcls1', 'lambda_nm')*u.nm).to(u.m)
 
-        self.radius = (self.flat_to_flat_mm/2*u.mm).to(u.m)
+        self.radius = (self.flat_to_flat/2*u.mm).to(u.m)
         self.num_terms = (self.num_segs_in_pupil - 1) * 3
 
         self.global_coefficients = global_coefficients
@@ -400,8 +400,8 @@ class PoppySegmentedCommand(object):
         Create the basis needed for getting the per/segment coeffs back
         """
         pttbasis = poppy.zernike.Segment_PTT_Basis(rings=get_num_rings(self.num_segs_in_pupil),
-                                                   flattoflat=self.flat_to_flat_mm,
-                                                   gap=self.gap_um)
+                                                   flattoflat=self.flat_to_flat,
+                                                   gap=self.gap)
         return pttbasis
 
 
