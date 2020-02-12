@@ -14,10 +14,27 @@ Each of these types has to be handled slightly differently, but never fear, we f
 
 We have also included here some util functions that might come in handy and a module for creating your own custom command with POPPY.
 
-## `config.ini` additions
-Note that if you have an Iris AO segmented DM, you will need to add an "iris_ao" section to your config.ini file:
 
-* `mirror_serial`: The mirror serial number. This corresponds to a .mcf file that *MUST* include the driver serial number under "Smart Driver"
+## Using the IrisAO controller
+
+As with the other hardware in `catkit`, you can open and close a connection to the Iris AO as a context manager.
+
+### Example:
+If putting *only* the flat map on the Iris AO:
+
+    from catkit.hardware.iris_ao.segmented_dm_command import load_command
+
+    with testbed.segmented_dm() as iris:
+        iris_command = load_command(None, flat_map=True)
+        iris.apply_shape(iris_command)
+
+
+## `config.ini` additions
+
+Note that if you have an Iris AO segmented DM, you will need to add an "iris_ao" section to
+your config.ini file:
+
+* `mirror_serial`: The mirror serial number. This corresponds to a .mcf file that *MUST* include the driver serial number under "Smart Driver". See Important Note below.
 * `driver_serial`: The driver serial number. This corresponds to a .dcf file.
 * `nb_segments`: The number of segments in your Iris AO DM (including any non-funtioning segments). Always 37. TODO: DO WE WANT THIS?
 * `pupil_nb_seg`: The number of segments in your specific pupil (for most, this is less than `nb_segments`). TODO: DO WE WANT THIS?
@@ -34,7 +51,16 @@ Optional (if using POPPY, you will need these - they should be the same for all 
 * `gap_um`: The size of the gap between segments in units of um
 
 
-Example:
+---
+Important Note:
+
+Each segmented DM from Iris AO was calibrated with a specific driver(s). This calibration is captured in the .mcf file. Mixing a .mcf file with a .dcf file that *does not match* the driver serial number in the .mcf file could be *fatal* to your DM.
+
+***Make sure the mirror and driver serial numbers are correct in your config.ini file.***
+
+---
+
+### Example:
 
 
     [iris_ao]
