@@ -82,7 +82,7 @@ def create_dict_from_array(array, seglist=None):
              {seg: (piston, tip, tilt)}
     """
     if seglist is None:
-        seglist = np.arange(len(array))
+        seglist = np.arange(len(array))+1
 
     # Put surface information in dict
     command_dict = {seg: tuple(ptt) for seg, ptt in zip(seglist, array)}
