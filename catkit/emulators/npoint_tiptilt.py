@@ -1,5 +1,4 @@
-"""
-Interface for the nPoint Tip/Tilt close loop controller. 
+""" Interface for the nPoint Tip/Tilt close loop controller. 
 Connects to the controller via usb, and then sends and recieves hex
 messages to send commands, check the status, and put error handling over
 top. 
@@ -63,8 +62,7 @@ class PyusbNpointEmulator:
         simulation, no behavior necesarry."""
         
         if configuration is not None:
-            raise NotImplementedError("We don't have the ability to set or simulate non-default configuration."
-        
+            raise NotImplementedError("We don't have the ability to set or simulate non-default configuration.")
         pass
     
     def read(self, endpoint, message_length, timeout):
@@ -73,12 +71,13 @@ class PyusbNpointEmulator:
        
         return self.expected_response
 
+
     def write(self, endpoint, message, timeout):
         """ On hardware, writes a single message from device. In simulation,
         updates dummy values. """
         
         # Create a reverse version of the command dictionary
-        self.cmd_dict = {'084': 'loop', '720': 'p_gain', '728':  'i_gain', '730': 'd_gain'}
+        cmd_dict = {'084': 'loop', '720': 'p_gain', '728':  'i_gain', '730': 'd_gain'}
         
         # Set last and second to last messages
         self.second_to_last_message = self.last_message
