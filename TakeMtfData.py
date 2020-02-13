@@ -6,6 +6,8 @@ from hicat.hardware import testbed
 from catkit.catkit_types import units, quantity, FpmPosition
 from hicat.config import CONFIG_INI
 from hicat.wolfram_wrappers import run_mtf
+from hicat.experiments.modules import mtf_sampling
+
 
 
 class TakeMtfData(Experiment):
@@ -20,6 +22,7 @@ class TakeMtfData(Experiment):
                  output_path=None,
                  camera_type="imaging_camera",
                  suffix="mtf_calibration",
+                 mtf_snr_threshold=100,
                  **kwargs):
         super(TakeMtfData, self).__init__(output_path=output_path, suffix=suffix)
 
@@ -57,5 +60,5 @@ class TakeMtfData(Experiment):
                                                           filename=flat_file_name, camera_type=self.camera_type,
                                                           simulator=False,
                                                           **self.kwargs)
-        ps_wo_focus, ps_w_focus, focus = run_mtf(cal_file_path)
+        ps_wo_focus, ps_w_focus, focus = mtf_sampling(cal_file_path, self.mtf_snr_threshold)
         self.log.info("ps_wo_focus=" + str(ps_wo_focus) + " ps_w_focus=" +str(ps_w_focus) + " focus=" +str(focus) )
