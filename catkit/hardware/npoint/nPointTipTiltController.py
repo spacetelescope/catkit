@@ -160,7 +160,7 @@ class nPointTipTiltController(ClosedLoopController):
         cmd_dict = {'loop': 84, 'p_gain': 720, 'i_gain': 728, 'd_gain': 730}
 
         addr = 11830000 + 1000*channel + cmd_dict[cmd_key]
-        addr = '0x{}'.format(addr)
+        addr = f'0x{addr}'
         
         # Note that the < specifies the little endian/signifigance increasing order here
         addr = struct.pack('<Q', int(addr, 16))
@@ -326,11 +326,11 @@ class nPointTipTiltController(ClosedLoopController):
             response_type = '<d'
         set_value, time_elapsed, tries = self._read_response(response_type, return_timer=True)
         
-        self.log.info('It took {} seconds and {} tries for the message to return.'.format(time_elapsed, tries))
+        self.log.info('It took {time_elapsed} seconds and {tries} tries for the message to return.')
         if value == set_value:
-            self.log.info('Command successful: {} == {}.'.format(value, set_value))
+            self.log.info(f'Command successful: {value} == {set_value}.')
         else:
-            raise ValueError('Command was NOT sucessful : {} != {}.'.format(value, set_value))
+            raise ValueError(f'Command was NOT sucessful : {value} != {set_value}.')
 
     @usb_except
     def get_config(self):
@@ -362,7 +362,7 @@ class nPointTipTiltController(ClosedLoopController):
                     'loop': self._build_message('loop', 'get', channel)}
         
         value_dict = {}
-        self.log.info("For channel {}.".format(channel))
+        self.log.info(f"For channel {channel}.")
         for key in read_msg:
             self._send_message(read_msg[key])
             if key == 'loop':
@@ -370,7 +370,7 @@ class nPointTipTiltController(ClosedLoopController):
             else:
                 response_type = '<d'
             value = self._read_response(response_type)
-            self.log.info("For parameter : {} the value is {}".format(key, value))
+            self.log.info(f"For parameter : {key} the value is {value}")
             value_dict[key] = value
 
         return value_dict 
