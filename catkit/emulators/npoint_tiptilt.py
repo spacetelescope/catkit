@@ -35,9 +35,12 @@ class PyusbNpointEmulator():
         will get send in fake hex messages. """
 
         self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
-        self.dummy_values = {'{}'.format(n): {'loop':0, 'p_gain':0, 'i_gain':0,
-            'd_gain':0} for n in (1, 2)}
+        self.dummy_values = {'{}'.format(n): {'loop':0, 'p_gain':0, 'i_gain':0, 'd_gain':0} for n in (1, 2)}
         self.expected_response = None
+        self.last_message = None
+        self.second_to_last_message = None
+        self.first_half_float = None
+        self.second_half_float = None
 
     def find(self, idVendor, idProduct):
         """ On hardware, locates device. In simulation, returns itself so we
@@ -67,41 +70,76 @@ class PyusbNpointEmulator():
     def write(self, endpoint, message, timeout):
         """ On hardware, writes a single message from device. In simulation,
         updates dummy values. """
-        cmd_dict = {293802116: (1, 'loop'),
-                    293803808: (1, 'p_gain'),
-                    293803816: (1, 'i_gain'),
-                    293803824: (1, 'd_gain'),
-                    293806212: (2, 'loop'),
-                    293807904: (2, 'p_gain'),
-                    293807912: (2, 'i_gain'),
-                    293807920: (2, 'd_gain'),
-                    0: (0, 'second half of gain update')}
+        
+        # Set last and second to last messages
+        self.second_to_last_message = self.last_message
+        self.last_message = message
+        
+        
+        cmd_dict = {'084': 'loop', '720': 'p_gain', '728':  'i_gain', '730': 'd_gain'}
 
-        # Do some backwards message parsing
-        # Make them into strings of the numbers that map to command key and channel
-        address = message[1:5]
-        int_address = struct.unpack('<I', address)[0]
-        try:
-            channel, cmd_key = cmd_dict[int_address] 
-        except KeyError:
-            if int(str(int_address)[:3]) == 107:
-                channel, cmd_key = cmd_dict[0]
+        if message[0] == 163:
             
-        if message[0] == 164:
-            # This is get message and we want a response
-            self.log.info('Simulated response will not pass value check.')
-            self.log.info('The stored value for {} is {}'.format(cmd_key,
-                self.dummy_values[str(channel)][cmd_key]))
-            expected_response = np.array([50, 96, 164, 32, 23, 131, 17, 0, 0, 0, 0, 0, 0, 0, 0, 85], dtype='B')
-            self.expected_response = expected_response
+            # This is the second half of a set message for float values.
+            # This means there won't be an address to parse
+            self.second_half_float = message[1:-1]
+            float_message = self.first_half_float + self.second_half_float
+            val = struct.unpack('<d', float_message)[0]
+
+            addr = self.second_to_last_message[1:3]
+            # Pull a channel and key of the style ['0xnm_1', '0xm_2m_3']
+            # Where n is the channel 
+            # And m_1m_2m_3 make up a key
+            key = hex(addr[1])[3] + hex(addr[0])[2:]
+            channel = hex(addr[1])[2]
+            self.dummy_values[channel][cmd_dict[key]] = val
+            self.log.info('Setting channel {} key {} to {}'.format(channel, cmd_dict[key], val))
         
         elif message[0] == 162:
-            # This is a set message and the message isn't spoofed well enough
-            # for now.
-            pass
-        elif message[0] == 163:
-            # This is the second half of a set message for float values.
-            pass
+
+            # This is an int set or the first half of a float set
+            addr = message[1:3]
+
+            key = hex(addr[1])[3] + hex(addr[0])[2:]
+            channel = hex(addr[1])[2]
+
+            if key == '084':
+                # int set for open/close loop
+                val = message[-5:-1]
+                val = struct.unpack('<I', val)[0]
+                
+                self.dummy_values[channel]['loop'] = val
+                self.log.info('Setting channel {} key {} to {}'.format(channel, cmd_dict[key], val))
+                
+                full_address = [message[n] for n in range(1,5)]
+                full_val = [message[n] for n in (5,len(message)-1)]
+                full_message = [50, 96, 164] + full_address + full_val + [85]
+                self.expected_response = np.array(full_message, dtype='B')
+            
+            else:
+                # float set for gain
+                self.first_half_float = message[-5:-1]
+
+        
+        elif message[0] == 164:
+            # This is get message and we want a response
+            addr = message[1:3]
+            cmd_key = cmd_dict[hex(addr[1])[3] + hex(addr[0])[2:]]
+            channel = hex(addr[1])[2]
+            val = self.dummy_values[channel][cmd_key]
+            if cmd_key == 'loop':
+                # pack as an int and pad with zeros
+                hex_val = struct.pack('<I', val)
+                full_val = [hex_val[n] for n in range(len(hex_val))] + [0, 0, 0, 0]
+            else:
+                # pack as a double
+                hex_val = struct.pack('<d', float(val))
+                full_val = [hex_val[n] for n in range(len(hex_val))]
+            
+            full_address = [message[n] for n in range(1,5)]
+            full_message = [50, 96, 164] + full_address + full_val + [85]
+            self.expected_response = np.array(full_message, dtype='B')
+            
         else:
             raise NotImplementedError('Not implemented command message sent to nPoint simulator.')
 
