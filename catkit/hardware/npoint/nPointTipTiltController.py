@@ -80,47 +80,8 @@ class nPointTipTiltController(ClosedLoopController):
         # Device specifics
         self.vendor_id = vendor_id
         self.product_id = product_id
-        
-        self.library_path = os.environ.get('CATKIT_LIBUSB_PATH') if library_path is None else library_path
-        if not self.library_path:
-            raise OSError("No library path was passed to the npoint and CATKIT_LIBUSB_PATH is not set on your machine")
-
-        library = CONFIG_INI.get('npoint_tiptilt_lc_400', 'libusb_library') if library is None else library
-        if library not in self.library_mapping:
-            raise NotImplementedError(f"The backend you specified ({library}) is not available at this time.")
-        elif not os.path.exists(self.library_path):
-            raise FileNotFoundError(f"The library path you specified ({self.library_path}) does not exist.")
-        else:
-            self.library = self.library_mapping[library]
-            self.backend = self.library.get_backend(find_library=lambda x: self.library_path)
-        
-        # Set up the logging.
-        str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
-        self.logger = logging.getLogger('nPoint-{}-{}'.format(self.vendor_id, self.product_id, str_date))
-        self.logger.setLevel(logging.INFO)
-
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = 'npoint_tiptilt_log_{}.log'.format(str_date)
-        fh = logging.FileHandler(filename=log_file)
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
-        
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
-        
-        # Instantiate the device
-        self.dev = self.instrument_lib.find(idVendor=self.vendor_id, idProduct=self.product_id, backend=self.backend)
-        if self.dev is None:
-            self.close_logger()
-            raise NameError("Go get the device sorted you knucklehead.")
-             
-        # Set to default configuration -- for LC400 this is the right one.
-        self.dev.set_configuration()
-        self.logger.info('nPointTipTilt instantiated and logging online.')
-
+        self.dev = None
+    
     def _build_message(self, cmd_key, cmd_type, channel, value=None):
         """Builds the message to send to the controller. The messages
         must be 10 or 6 bytes, in significance increasing order (little 
@@ -219,7 +180,7 @@ class nPointTipTiltController(ClosedLoopController):
         # Instantiate the device
         self.instrument = self.instrument_lib.find(idVendor=self.vendor_id, idProduct=self.product_id)
         if self.instrument is None:
-            raise NameError("Go get the device sorted you knucklehead.")
+            raise NameError(f"Go get the device sorted you knucklehead.\nVendor id {self.vendor_id} and product id {self.product_id} could not be found and connected.")
              
         # Set to default configuration -- for LC400 this is the right one.
         self.dev = self.instrument # For legacy purposes
