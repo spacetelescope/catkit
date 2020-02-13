@@ -1,12 +1,11 @@
 import logging
 
-from hicat.experiments.Experiment import Experiment
-from catkit.hardware.boston.commands import flat_command
-from hicat.hardware import testbed
 from catkit.catkit_types import units, quantity, FpmPosition
+from catkit.hardware.boston.commands import flat_command
 from hicat.config import CONFIG_INI
-from hicat.experiments.modules import mtf_sampling
-
+from hicat.experiments.Experiment import Experiment
+from hicat.experiments.modules.mtf_sampling import mtf_sampling
+from hicat.hardware import testbed
 
 
 class CalculateSampling(Experiment):
@@ -30,6 +29,7 @@ class CalculateSampling(Experiment):
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.camera_type = camera_type
+        self.mtf_snr_threshold = mtf_snr_threshold
         self.kwargs = kwargs
 
     def experiment(self):
@@ -44,7 +44,7 @@ class CalculateSampling(Experiment):
                                                            bias=self.bias,
                                                            return_shortname=True,
                                                            dm_num=2)
-        direct_exp_time = self.exposure_time
+        direct_exp_time_estimate = self.exposure_time
         num_exposures = self.num_exposures
 
         with testbed.laser_source() as laser:
@@ -54,10 +54,10 @@ class CalculateSampling(Experiment):
             with testbed.dm_controller() as dm:
                 # Flat.
                 dm.apply_shape_to_both(flat_command_object1, flat_command_object2)
-                cal_file_path = testbed.run_hicat_imaging(direct_exp_time, num_exposures, FpmPosition.direct,
+                cal_file_path = testbed.run_hicat_imaging(direct_exp_time_estimate, num_exposures, FpmPosition.direct,
                                                           path=self.output_path, exposure_set_name="direct",
                                                           filename=flat_file_name, camera_type=self.camera_type,
                                                           simulator=False,
                                                           **self.kwargs)
-        pixel_sampling = mtf_sampling(cal_file_path, self.mtf_snr_threshold)
+        pixel_sampling = mtf_sampling(self.output_path, cal_file_path, self.mtf_snr_threshold)
         self.log.info("pixel sampling in focused image = {}".format(pixel_sampling))
