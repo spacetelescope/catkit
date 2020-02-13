@@ -28,7 +28,6 @@ from usb.backend import libusb0, libusb1
 import usb.core
 import usb.util
 
-from catkit.config import CONFIG_INI
 from catkit.interfaces.ClosedLoopController import ClosedLoopController
 
 
@@ -64,10 +63,8 @@ class nPointTipTiltController(ClosedLoopController):
     # Define this library mapping as a static attribute.
     library_mapping = {'libusb0': libusb0, 'libusb1': libusb1}
 
-    def initialize(self, vendor_id=None, product_id=None, library_path=None, library=None):
-        """Initial function to set vendor and product ide parameters. Anything 
-        set to None will attempt to pull from the config file.
-        
+    def initialize(self, vendor_id, product_id, library_path=None, library=None):
+        """Initial function to set vendor and product ide parameters.         
         Parameters
         ----------
         vendor_id : int
@@ -80,9 +77,9 @@ class nPointTipTiltController(ClosedLoopController):
             Which libusb library, right now supports libusb0 and libusb1. Defaults to None.
         """
         
-        # Pull device specifics from config file
-        self.vendor_id = CONFIG_INI.get(self.config_id, 'vendor_id') if vendor_id is None else vendor_id
-        self.product_id = CONFIG_INI.get(self.config_id, 'product_id') if product_id is None else product_id
+        # Device specifics
+        self.vendor_id = vendor_id
+        self.product_id = product_id
         
         self.library_path = os.environ.get('CATKIT_LIBUSB_PATH') if library_path is None else library_path
         if not self.library_path:
