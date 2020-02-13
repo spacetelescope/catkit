@@ -5,7 +5,9 @@ from catkit.hardware.boston.commands import flat_command
 from hicat.hardware import testbed
 from catkit.catkit_types import units, quantity, FpmPosition
 from hicat.config import CONFIG_INI
+from hicat.wolfram_wrappers import run_mtf
 from hicat.experiments.modules import mtf_sampling
+
 
 
 
@@ -59,5 +61,5 @@ class CalculateSampling(Experiment):
                                                           filename=flat_file_name, camera_type=self.camera_type,
                                                           simulator=False,
                                                           **self.kwargs)
-        pixel_sampling = mtf_sampling(cal_file_path, self.mtf_snr_threshold)
-        self.log.info("pixel sampling in focused image = {}".format(pixel_sampling))
+        ps_wo_focus, ps_w_focus, focus = mtf_sampling(cal_file_path, self.mtf_snr_threshold)
+        self.log.info("ps_wo_focus=" + str(ps_wo_focus) + " ps_w_focus=" +str(ps_w_focus) + " focus=" +str(focus) )
