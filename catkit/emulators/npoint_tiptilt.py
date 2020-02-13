@@ -35,7 +35,7 @@ class PyusbNpointEmulator():
         will get send in fake hex messages. """
 
         self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
-        self.dummy_values = {'{}'.format(n): {'loop':0, 'p_gain':0, 'i_gain':0, 'd_gain':0} for n in (1, 2)}
+        self.dummy_values = {f'{n}': {'loop':0, 'p_gain':0, 'i_gain':0, 'd_gain':0} for n in (1, 2)}
         self.expected_response = None
         self.last_message = None
         self.second_to_last_message = None
@@ -93,7 +93,7 @@ class PyusbNpointEmulator():
             key = hex(addr[1])[3] + hex(addr[0])[2:]
             channel = hex(addr[1])[2]
             self.dummy_values[channel][cmd_dict[key]] = val
-            self.log.info('Setting channel {} key {} to {}'.format(channel, cmd_dict[key], val))
+            self.log.info(f'Setting channel {channel} key {cmd_dict[key]} to {val}')
         
         elif message[0] == 162:
 
@@ -109,7 +109,7 @@ class PyusbNpointEmulator():
                 val = struct.unpack('<I', val)[0]
                 
                 self.dummy_values[channel]['loop'] = val
-                self.log.info('Setting channel {} key {} to {}'.format(channel, cmd_dict[key], val))
+                self.log.info(f'Setting channel {channel} key {cmd_dict[key]} to {val}')
                 
                 full_address = [message[n] for n in range(1,5)]
                 full_val = [message[n] for n in (5,len(message)-1)]
