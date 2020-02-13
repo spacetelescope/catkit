@@ -18,7 +18,7 @@ from catkit.interfaces.Instrument import SimInstrument
 
 ## -- FUNCTIONS and FIDDLING 
 
-class PyusbNpointEmulator():
+class PyusbNpointEmulator:
     """nPointTipTilt connection class. 
 
     This nPointTipTilt class acts as a useful connection and storage vehicle 
@@ -29,13 +29,15 @@ class PyusbNpointEmulator():
     should close the connection when the time is right.
     """
 
-    def __init__(self, **super_kwargs):
+    def __init__(self):
         """ Since we'll need to respond as if commands are being sent and we
         can read values, this is where we'll initialize some dummy values that
         will get send in fake hex messages. """
 
         self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
         self.dummy_values = {f'{n}': {'loop':0, 'p_gain':0, 'i_gain':0, 'd_gain':0} for n in (1, 2)}
+        self.commands = {'get': 164, 'set': 162, 'second_msg': 163}
+        
         self.expected_response = None
         self.last_message = None
         self.second_to_last_message = None
@@ -56,9 +58,13 @@ class PyusbNpointEmulator():
         for cfg in ['< SIMULATED CONFIGUARTION 1: 0 mA>']:
             yield cfg
     
-    def set_configuration(self):
+    def set_configuration(self, configuration=None):
         """ On hardware, sets nPoint to its defaul configuration. In
         simulation, no behavior necesarry."""
+        
+        if configuration is not None:
+            raise NotImplementedError("We don't have the ability to set or simulate non-default configuration."
+        
         pass
     
     def read(self, endpoint, message_length, timeout):
@@ -71,14 +77,14 @@ class PyusbNpointEmulator():
         """ On hardware, writes a single message from device. In simulation,
         updates dummy values. """
         
+        # Create a reverse version of the command dictionary
+        self.cmd_dict = {'084': 'loop', '720': 'p_gain', '728':  'i_gain', '730': 'd_gain'}
+        
         # Set last and second to last messages
         self.second_to_last_message = self.last_message
         self.last_message = message
         
-        
-        cmd_dict = {'084': 'loop', '720': 'p_gain', '728':  'i_gain', '730': 'd_gain'}
-
-        if message[0] == 163:
+        if message[0] == self.commands['second_msg']:
             
             # This is the second half of a set message for float values.
             # This means there won't be an address to parse
@@ -95,7 +101,7 @@ class PyusbNpointEmulator():
             self.dummy_values[channel][cmd_dict[key]] = val
             self.log.info(f'Setting channel {channel} key {cmd_dict[key]} to {val}')
         
-        elif message[0] == 162:
+        elif message[0] == self.commands['set']:
 
             # This is an int set or the first half of a float set
             addr = message[1:3]
@@ -111,17 +117,12 @@ class PyusbNpointEmulator():
                 self.dummy_values[channel]['loop'] = val
                 self.log.info(f'Setting channel {channel} key {cmd_dict[key]} to {val}')
                 
-                full_address = [message[n] for n in range(1,5)]
-                full_val = [message[n] for n in (5,len(message)-1)]
-                full_message = [50, 96, 164] + full_address + full_val + [85]
-                self.expected_response = np.array(full_message, dtype='B')
-            
             else:
                 # float set for gain
                 self.first_half_float = message[-5:-1]
 
         
-        elif message[0] == 164:
+        elif message[0] == self.commands['get']:
             # This is get message and we want a response
             addr = message[1:3]
             cmd_key = cmd_dict[hex(addr[1])[3] + hex(addr[0])[2:]]
