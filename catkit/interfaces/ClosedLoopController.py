@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from catkit.interfaces.Instrument import Instrument
 
 
-class CloseLoopController(Instrument, ABC):
-    """ Interface class for a close loop controller. """
+class ClosedLoopController(Instrument, ABC):
+    """ Interface class for a closed loop controller. """
 
 
     @abstractmethod

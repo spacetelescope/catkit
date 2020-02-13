@@ -1,5 +1,5 @@
 """
-Interface for the nPoint Tip/Tilt close loop controller. 
+Interface for the nPoint Tip/Tilt closed loop controller. 
 Connects to the controller via usb, and then sends and recieves hex
 messages to send commands, check the status, and put error handling over
 top. 
@@ -29,7 +29,7 @@ import usb.core
 import usb.util
 
 from catkit.config import CONFIG_INI
-from catkit.interfaces.CloseLoopController import CloseLoopController
+from catkit.interfaces.ClosedLoopController import ClosedLoopController
 
 
 ## -- FUNCTIONS and FIDDLING 
@@ -48,7 +48,7 @@ def usb_except(function):
     return wrapper
 
 
-class nPointTipTiltController(CloseLoopController):
+class nPointTipTiltController(ClosedLoopController):
     """nPointTipTiltController connection class. 
 
     This nPointTipTilt class acts as a useful connection and storage vehicle 
