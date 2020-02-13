@@ -333,7 +333,7 @@ class nPointTipTiltController(CloseLoopController):
         if value == set_value:
             self.log.info('Command successful: {} == {}.'.format(value, set_value))
         else:
-            self.log.info('Command was NOT sucessful : {} != {}.'.format(value, set_value))
+            raise ValueError('Command was NOT sucessful : {} != {}.'.format(value, set_value))
 
     @usb_except
     def get_config(self):
