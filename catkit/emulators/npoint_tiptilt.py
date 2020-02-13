@@ -141,7 +141,7 @@ class PyusbNpointEmulator:
             self.expected_response = np.array(full_message, dtype='B')
             
         else:
-            raise NotImplementedError('Not implemented command message sent to nPoint simulator.')
+            raise NotImplementedError('Non implemented command message sent to nPoint simulator.')
 
 
 class SimnPointTipTiltController(SimInstrument, nPointTipTiltController):
