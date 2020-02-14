@@ -288,7 +288,6 @@ def convert_dm_image_to_command(dm_image, path_to_save=None):
         catkit.util.write_fits(dm_command, path_to_save)
     return dm_command
 
-
 def create_flatmap_from_dm_command(dm_command_path, output_path, file_name=None, dm_num=1):
     """
     Converts a dm_command_2d.fits to the format used for the flatmap, and outputs a new flatmap fits file.
@@ -313,4 +312,27 @@ def create_flatmap_from_dm_command(dm_command_path, output_path, file_name=None,
     # Convert the dm command units to volts.
     max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
     dm_command_data *= max_volts
-    catkit.util.write_fits(dm_command_data, output_path)
+    catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
+
+
+def create_constant_flat_map(output_path, file_name=None, dm_num=1):
+    """
+    Creates a uniform flat map and outputs a new flatmap fits file.
+    :param output_path: Path to output the new flatmap fits file. Default is hardware/boston/
+    :param file_name: Filename for new flatmap fits file. Default is
+            flat_map_volts_dm_<1 or 2>_constant.fits
+    ;param dm_num: Which DM is this for?  Defaults to 1.
+    :return: None
+    """
+    if file_name is None:
+        # Create a string representation of the current timestamp.
+        # time_stamp = time.time()
+        # date_time_string = datetime.datetime.fromtimestamp(time_stamp).strftime("%Y-%m-%dT%H-%M-%S")
+        file_name = "flat_map_volts_dm_" + str(dm_num) + "_constant.fits"
+
+    bias_volts = CONFIG_INI.getint('boston_kilo952', f'bias_volts_dm{dm_num}')
+    mask = catkit.util.get_dm_mask()
+    dm_command_data = mask * bias_volts
+    catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
+
+
