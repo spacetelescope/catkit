@@ -98,9 +98,9 @@ class IrisAoDmController(DeformableMirrorController):
     def apply_shape(self, dm_shape, dm_num=1):
         """
         Apply a command object to the Iris AO after adding the flatmap from the configfile.
-        The units of said IrisCommand object are mrad for tip/tilt, um for piston.
+        The units of said SegmentedDmCommand object are mrad for tip/tilt, um for piston.
 
-        :param dm_shape: instance of IrisCommand class
+        :param dm_shape: instance of SegmentedDmCommand class
         :param dm_num: int, this must always be 1 since only one DM can be controlled
                        with this controller.
         """

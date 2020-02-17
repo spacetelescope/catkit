@@ -1,7 +1,8 @@
 """
-Holds the class IrisCommand that is used to create a dict that will be sent to the
+Holds the class SegmentedDmCommand that is used to create a dict that will be sent to the
 IrisAO hardware as a command.
 """
+from configparser import NoOptionError
 
 import json
 import numpy as np
@@ -10,7 +11,7 @@ from catkit.config import CONFIG_INI
 from catkit.hardware.iris_ao import util
 
 
-class IrisCommand(object):
+class SegmentedDmCommand(object):
     """
     Handle converting inputs into expected dictionary format to be sent to the Iris AO
 
@@ -61,10 +62,10 @@ class IrisCommand(object):
             self.segments_in_pupil = json.loads(CONFIG_INI.get(config_id, 'segments_in_pupil'))
             self.number_segments_in_pupil = CONFIG_INI.get(config_id, 'number_of_segments_pupil')
             if len(data) != len(self.segments_in_pupil):
-                raise Exception("The number of segments in your command MUST equal number of segments in the pupil")
+                raise ValueError("The number of segments in your command MUST equal number of segments in the pupil")
             if self.segments_in_pupil[0] != 1:
                 self._shift_center = True # Pupil is centered elsewhere, must shift
-        except Exception: #specifically NoOptionError but not recognized
+        except NoOptionError:
             self.segments_in_pupil = util.iris_pupil_numbering()
 
         if data is None:
@@ -108,14 +109,14 @@ class IrisCommand(object):
         :param new_command: str or array (.PTT111 or .ini file, or array from POPPY)
         :param flat: bool, only True if the map being added is the flat (so that it is not shifted)
         """
-        data1 = self.get_data()
-        data2, _ = util.read_command(new_command)
+        original_data = self.get_data()
+        data_to_add, _ = util.read_command(new_command)
 
         if self._shift_center and not flat:
-            data2 = shift_command(data2, self.segments_in_pupil, self.source_pupil_numbering)
+            data_to_add = shift_command(data_to_add, self.segments_in_pupil, self.source_pupil_numbering)
 
         # Do magic adding only if segment exists in both
-        combined_data = {seg: tuple(np.asarray(data1.get(seg, (0., 0., 0.))) + np.asarray(data2.get(seg, (0., 0., 0.)))) for seg in set(data1) & set(data2)}
+        combined_data = {seg: tuple(np.asarray(original_data.get(seg, (0., 0., 0.))) + np.asarray(data_to_add.get(seg, (0., 0., 0.)))) for seg in set(original_data) & set(data_to_add)}
 
         self.data = combined_data
 
@@ -162,13 +163,13 @@ def shift_command(command_to_shift, to_pupil, from_pupil=None):
 
 def load_command(command, flat_map=True):
     """
-    Loads a command from a file or array and returns a IrisCommand object.
+    Loads a command from a file or array and returns a SegmentedDmCommand object.
 
     :param command: str, list, np.ndarray, dict. Can be .PTT111, .ini files, array from POPPY,
                     or dictionary of the same form as the output
     :param flat_map: Apply a flat map in addition to the data.
 
-    :return: IrisCommand object representing the command dictionary.
+    :return: SegmentedDmCommand object representing the command dictionary.
     """
     data, source_pupil_numbering = util.read_command(command)
-    return IrisCommand(data, flat_map=flat_map, source_pupil_numbering=source_pupil_numbering)
+    return SegmentedDmCommand(data, flat_map=flat_map, source_pupil_numbering=source_pupil_numbering)

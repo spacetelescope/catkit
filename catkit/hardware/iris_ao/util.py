@@ -135,14 +135,17 @@ def write_ini(data, path, mirror_serial=None, driver_serial=None):
 
 ## Read commands
 # Functions for reading the .PTT11 file
-def __clean_string(line):
+def clean_string(filename):
     """
     Delete "\n", "\t", and "\s" from a given line
     """
-    return re.sub(r"[\n\t\s]*", "", line)
+    raw_line = filename.readline()
+    # Clean up the string.
+    clean_line = re.sub(r"[\n\t\s]*", "",raw_line)
+    return clean_line
 
 
-def __convert_to_float(string):
+def convert_to_float(string):
     """Convert a string to a float, if possible
     """
     return float(string) if string else 0.0
@@ -161,18 +164,15 @@ def read_global(path):
     :return: global commands if they exist
     """
     with open(path, "r") as irisao_file:
-        # Read global line
-        raw_line = irisao_file.readline()
-
         # Clean up the string.
-        clean_first_line = __clean_string(raw_line)
+        clean_first_line = clean_string(irisao_file)
 
         # Check that the type is "GV"
         if clean_first_line[1:3].upper() == "GV":
 
             # Remove white space, and split the values.
             global_values = clean_first_line.lstrip("[GV:").rstrip("]").split(",")
-            global_float = tuple(map(__convert_to_float, global_values))
+            global_float = tuple(map(convert_to_float, global_values))
 
             # If all zeros, then move on to the zernikes.
             if not all(v == 0 for v in global_float):
@@ -184,7 +184,7 @@ def read_global(path):
             raise Exception("Iris AO file formatting problem, can't process the global line:\n" + raw_line)
 
 
-def read_zerkines(path):
+def read_zernikes(path):
     """
     The section of a PTT111 file has one number per global Zernike mode, which are called MV.
     read_zernikes() reads those numbers directly, which is only useful if teh value gets passed
@@ -198,13 +198,11 @@ def read_zerkines(path):
     :return: zernike commands if they exist
     """
     with open(path, "r") as irisao_file:
-        raw_line = irisao_file.readline()
-        clean_line = __clean_string(raw_line)
+        clean_line = clean_string(irisao_file)
 
         # Skip to the zernike section:
         while clean_line[1:3].upper() != "MV":
-            raw_line = irisao_file.readline()
-            clean_line = __clean_string(raw_line)
+            clean_line = clean_string(irisao_file)
 
         zernike_commands = []
         while clean_line[1:3].upper() == "MV":
@@ -212,13 +210,12 @@ def read_zerkines(path):
             # Parse line and create of tuples (zernike, value).
             zernike_string_list = clean_line.lstrip("[MV:").rstrip("]").split(",")
             zernike_type = int(zernike_string_list[0])
-            zernike_value = __convert_to_float(zernike_string_list[1])
+            zernike_value = convert_to_float(zernike_string_list[1])
 
             if zernike_value != 0:
                 zernike_commands.append((zernike_type, zernike_value))
 
-            raw_line = irisao_file.readline()
-            clean_line = __clean_string(raw_line)
+            clean_line = clean_string(irisao_file)
 
         if zernike_commands:
             return zernike_commands
@@ -228,7 +225,7 @@ def read_zerkines(path):
 
 def read_segments(path):
     """
-    Read the zerinke values for P T T for each segment
+    Read the zernike values for P T T for each segment
     In this section of a PTT111 file, each segment gets a ptt command (ZV), which
     is read by this function. In this case, the lines are populated with the segment
     number, piston, tip, tilt.
@@ -240,13 +237,11 @@ def read_segments(path):
     :return: segment commands if they exist
     """
     with open(path, "r") as irisao_file:
-        raw_line = irisao_file.readline()
-        clean_line = __clean_string(raw_line)
+        clean_line = clean_string(irisao_file)
 
         # Skip to the segment section:
         while clean_line[1:3].upper() != "ZV":
-            raw_line = irisao_file.readline()
-            clean_line = __clean_string(raw_line)
+            clean_line = clean_string(irisao_file)
 
         segment_commands = {}
         while clean_line[1:3].upper() == "ZV":
@@ -254,15 +249,14 @@ def read_segments(path):
             # Parse into dictionary {segment: (piston, tip, tilt)}.
             segment_string_list = clean_line.lstrip("[ZV:").rstrip("]").split(",")
             segment_num = int(segment_string_list[0])
-            segment_tuple = __convert_to_float(segment_string_list[1]), \
-                            __convert_to_float(segment_string_list[2]), \
-                            __convert_to_float(segment_string_list[3])
+            segment_tuple = convert_to_float(segment_string_list[1]), \
+                            convert_to_float(segment_string_list[2]), \
+                            convert_to_float(segment_string_list[3])
 
             if any(segment_tuple):
                 segment_commands[segment_num] = segment_tuple
 
-            raw_line = irisao_file.readline()
-            clean_line = __clean_string(raw_line)
+            clean_line = clean_string(irisao_file)
 
         if segment_commands:
             # Prepare command for segments.
@@ -291,7 +285,7 @@ def read_ptt111(path):
         return command_dict
 
     # Read in the zernike aka "modal" lines and do error checking.
-    zernike_commands = read_zerkines(path)
+    zernike_commands = read_zernikes(path)
     if zernike_commands is not None:
         return zernike_commands
 
@@ -416,7 +410,7 @@ def read_command(command):
         elif command is None:
             command_dict = command
         else:
-            raise Exception("The command input format is not supported")
+            raise TypeError("The command input format is not supported")
 
     return command_dict, numbering
 
