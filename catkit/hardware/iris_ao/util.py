@@ -135,14 +135,18 @@ def write_ini(data, path, mirror_serial=None, driver_serial=None):
 
 ## Read commands
 # Functions for reading the .PTT11 file
-def clean_string(filename):
+def clean_string(filename, raw_line=False):
     """
     Delete "\n", "\t", and "\s" from a given line
     """
     raw_line = filename.readline()
     # Clean up the string.
-    clean_line = re.sub(r"[\n\t\s]*", "",raw_line)
-    return clean_line
+    clean_line = re.sub(r"[\n\t\s]*", "", raw_line)
+
+    if raw_line:
+        return clean_line, raw_line
+    else:
+        return clean_line
 
 
 def convert_to_float(string):
@@ -165,7 +169,7 @@ def read_global(path):
     """
     with open(path, "r") as irisao_file:
         # Clean up the string.
-        clean_first_line = clean_string(irisao_file)
+        clean_first_line, raw_line = clean_string(irisao_file, raw_line=True)
 
         # Check that the type is "GV"
         if clean_first_line[1:3].upper() == "GV":
