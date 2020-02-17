@@ -67,7 +67,7 @@ class IrisCommand(object):
         except Exception: #specifically NoOptionError but not recognized
             self.segments_in_pupil = util.iris_pupil_numbering()
 
-        if not data:
+        if data is None:
             # If no data given, return dictionary of zeros
             array = np.zeros((util.iris_num_segments()), dtype=(float, 3))
             data = util.create_dict_from_array(array, seglist=self.segments_in_pupil)
