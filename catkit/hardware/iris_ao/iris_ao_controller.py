@@ -11,7 +11,7 @@ from catkit.interfaces.DeformableMirrorController import DeformableMirrorControl
 from catkit.hardware.iris_ao import util
 
 
-class IrisAoController(DeformableMirrorController):
+class IrisAoDmController(DeformableMirrorController):
 
     def initialize(self, mirror_serial, driver_serial, disable_hardware, path_to_dm_exe,
                    filename_ptt_dm):

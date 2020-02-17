@@ -7,6 +7,19 @@ If you have an Iris AO segmented DM, congratulations! You are one of only a few.
 The `catkit` module for the Iris AO expects that you will be passing in one of the following types:
 
 * *.PTT111* file: File format of the command coming out of the IrisAO GUI
+
+  Example:
+
+        [GV: 0, 0, 0]
+        [MV: 0, 0]
+        [MV: 1, 0]
+        ...
+        [MV: 20, 0]
+        [ZV: 1, 0.01, 0, 0]
+        [ZV: 2, 0, 0.6, 0]
+        ...
+        [ZV: 37, 0, 0, 0]
+
 * *.ini* file: File format of command that gets sent to the IrisAO controls
 * array: Format that POPPY outputs if generating command in POPPY
 * dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
@@ -93,7 +106,7 @@ When there is no command on the the Iris AO, this variable will be changed back 
 ## Update your `testbed.py` file
 You also want to make sure you can open and close your Iris AO like other hardware, as a context manager.
 
-    from catkit.hardware.iris_ao.iris_ao_controller import IrisAoController # Iris AO
+    from catkit.hardware.iris_ao.iris_ao_controller import IrisAoDmController # Iris AO
 
     def segmented_dm_controller():
         """
@@ -110,7 +123,7 @@ You also want to make sure you can open and close your Iris AO like other hardwa
         path_to_dm_exe = CONFIG_INI.get(config_id, "path_to_dm_exe")
         filename_ptt_dm = CONFIG_INI.get(config_id, 'config_ptt_file')
 
-        return IrisAoController(config_id=config_id,
+        return IrisAoDmController(config_id=config_id,
                                     mirror_serial=mirror_serial,
                                     driver_serial=driver_serial,
                                     disable_hardware="false",
