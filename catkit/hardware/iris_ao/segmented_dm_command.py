@@ -27,7 +27,7 @@ class SegmentedDmCommand(object):
     :attribute number_segments_in_pupil: int, the nubmer of segments in the pupil.
 
     """
-    def __init__(self, data=None, flat_map=False, source_pupil_numbering=None):
+    def __init__(self, data=None, flat_map=False, source_pupil_numbering=None, config_id='iris_ao'):
         """
         Handle Iris AO specific commands in terms of piston, tip and tilt (PTT) per
         each segment. Creates a Iris AO-style command -{seg: (piston, tip, tilt)} -
@@ -51,7 +51,6 @@ class SegmentedDmCommand(object):
         self.source_pupil_numbering = source_pupil_numbering
 
         # Grab things from CONFIG_INI
-        config_id = 'iris_ao'
         self.filename_flat = CONFIG_INI.get(config_id, 'flat_file_ini') #format is .ini
 
         # Define aperture - full iris or subaperture

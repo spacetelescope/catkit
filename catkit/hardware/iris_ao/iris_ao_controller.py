@@ -13,6 +13,8 @@ from catkit.hardware.iris_ao import util
 
 class IrisAoDmController(DeformableMirrorController):
 
+    instrument_lib = subprocess
+
     def initialize(self, mirror_serial, driver_serial, disable_hardware, path_to_dm_exe,
                    filename_ptt_dm):
         """
@@ -55,16 +57,16 @@ class IrisAoDmController(DeformableMirrorController):
 
     def _open(self):
         """Open a connection to the IrisAO"""
-        self.instrument = subprocess.Popen([self.full_path_dm_exe, self.disableHardware],
-                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE,
-                                   cwd=self.path_to_dm_exe, bufsize=1)
+        self.instrument = instrument_lib.Popen([self.full_path_dm_exe, self.disableHardware],
+                                                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE,
+                                                cwd=self.path_to_dm_exe, bufsize=1)
         # Initialize the Iris to zeros.
         zeros = self.zero(return_zeros=True)
 
         # Store the current dm_command values in class attributes.
         self.command = zeros
-        self.__update_iris_state(self.command)
+        self._update_iris_state(self.command)
 
         return self.instrument
 
@@ -76,7 +78,7 @@ class IrisAoDmController(DeformableMirrorController):
         self.send_data(zeros)
 
         # Update the testbed state
-        self.__update_iris_state(zeros)
+        self._update_iris_state(zeros)
 
         if return_zeros:
             return zeros
@@ -92,7 +94,7 @@ class IrisAoDmController(DeformableMirrorController):
             self.instrument.stdin.close()
         finally:
             self.instrument = None
-            self.__close_iris_controller_testbed_state()
+            self._close_iris_controller_testbed_state()
 
 
     def apply_shape(self, dm_shape, dm_num=1):
@@ -117,7 +119,7 @@ class IrisAoDmController(DeformableMirrorController):
         self.command = command
 
         # Update the testbed_state.
-        self.__update_iris_state(dm_shape)
+        self._update_iris_state(dm_shape)
 
 
     def apply_shape_to_both(self, dm1_shape=None, dm2_shape=None):
@@ -126,9 +128,9 @@ class IrisAoDmController(DeformableMirrorController):
 
 
     @staticmethod
-    def __update_iris_state(command_object):
+    def _update_iris_state(command_object):
         testbed_state.iris_command_object = command_object
 
     @staticmethod
-    def __close_iris_controller_testbed_state():
+    def _close_iris_controller_testbed_state():
         testbed_state.iris_command_object = None
