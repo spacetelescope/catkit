@@ -72,9 +72,11 @@ class IrisAoDmController(DeformableMirrorController):
 
 
     def zero(self, return_zeros=False):
-        """Put zeros on the DM"""
-        array = np.zeros((util.iris_num_segments()), dtype=(float, 3))
-        zeros = util.create_dict_from_array(array)
+        """Put zeros on the DM
+
+        :return: If return_zeros=True, return a dictionary of zeros
+        """
+        zeros = util.create_zero_dictionary()
         self.send_data(zeros)
 
         # Update the testbed state
