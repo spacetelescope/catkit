@@ -52,9 +52,9 @@ your config.ini file:
 
 * `mirror_serial`: The mirror serial number. This corresponds to a .mcf file that *MUST* include the driver serial number under "Smart Driver". See Important Note below.
 * `driver_serial`: The driver serial number. This corresponds to a .dcf file.
-* `number_of_segments`: The number of segments in your Iris AO DM (including any non-functioning segments). Always 37. TODO: DO WE WANT THIS?
-* `number_of_segments_pupil`: The number of segments in your specific pupil (for most, this is less than `number_of_segments`). TODO: DO WE WANT THIS?
-* `segments_in_pupil`: A list of the segment numbers that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then counter clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20. For example, if your pupil is centered on segment 3 and is only one ring, then segments_in_pupil = [3, 9, 10, 11, 4, 1, 2]
+* `total_number_of_segments`: The number of segments in your Iris AO DM (including any non-functioning segments). Always 37. TODO: DO WE WANT THIS?
+* `active_number_of_segments`: (Optional) The number of segments in your specific pupil (for most, this is less than `total_number_of_segments`).
+* `active_segment_list`: (Optional) This parameter only needs to be provided if `active_number_of_segments` is less than `total_number_of_segments`. This will be a list of the segment numbers associated with the segments that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then counter clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20. For example, if your pupil is centered on segment 3 and is only one ring, then active_segment_list = [3, 9, 10, 11, 4, 1, 2]
 
 * `flat_file_ini`: The location of the custom flat .ini file for your Iris AO DM.  
 * `config_ptt_file`: The location of the ConfigPTT.ini file which is the file that contains whatever command you want to put on the DM.
@@ -83,9 +83,9 @@ Each segmented DM from Iris AO was calibrated with a specific driver(s). This ca
 
     mirror_serial = 'PWA##-##-##-####'
     driver_serial = '########'
-    number_of_segments = 37
-    number_of_segments_pupil = 19
-    segments_in_pupil = [3, 9, 10, 11, 4, 1, 2, 21, 22, 23, 24, 25, 12, 13, 5, 6, 7, 19, 8]
+    total_number_of_segments = 37
+    active_number_of_segments = 19
+    active_segment_list = [3, 9, 10, 11, 4, 1, 2, 21, 22, 23, 24, 25, 12, 13, 5, 6, 7, 19, 8]
     flat_to_flat_mm = 1.4
     gap_um = 10
     flat_file_ini = ${optics_lab:local_repo_path}/DM/MirrorControlFiles/CustomFLAT.ini
@@ -96,7 +96,7 @@ Note that the code expects to find `DM_Control.exe` in `path_to_dm_exe`.
 
 
 ## Update your `testbed_state.py` file
-The `iris_ao_controller` will update your `testbed_state.py` file with the current command being applied to the Iris AO. In order to do this, you will need to add to following to your file:
+The `iris_ao_controller` will update your `testbed_state.py` file with the current command being applied to the Iris AO. In order to do this, you will need to add the following to your file:
 
     # IrisAO command object currently being applied.
     iris_command_object = None

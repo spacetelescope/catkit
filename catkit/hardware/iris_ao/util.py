@@ -14,7 +14,7 @@ from catkit.config import CONFIG_INI
 
 def iris_num_segments():
     """Number of segments in your Iris AO"""
-    return CONFIG_INI.getint('iris_ao', 'number_of_segments')
+    return CONFIG_INI.getint('iris_ao', 'total_number_of_segments')
 
 
 def iris_pupil_numbering():
@@ -24,8 +24,8 @@ def iris_pupil_numbering():
 
 def map_to_new_center(new_pupil, old_pupil):
     """
-    Create a zipped dictionary of the pupil you moving to and the one you are moving
-    from
+    Create a zipped dictionary of the pupil you are moving to and the one you are
+    moving from
 
     :param new_pupil: list, the segment numbers of the pupil you are mapping to
     :param old_pupil: list, the segment numbers of the pupil you are mapping from
@@ -52,7 +52,7 @@ def match_lengths(list_a, list_b):
     return list_a, list_b
 
 
-def create_new_dictionary(ptt_dictionary, mapping_dict):
+def remap_dictionary(ptt_dictionary, mapping_dict):
     """
     Update the PTT dictionary segment numbers based on the mapping dictionary created
     by _map_to_new_center
@@ -88,6 +88,18 @@ def create_dict_from_array(array, seglist=None):
     command_dict = {seg: tuple(ptt) for seg, ptt in zip(seglist, array)}
 
     return command_dict
+
+
+def create_zero_dictionary():
+    """
+    Create a dictionary of zeros for the Iris AO
+
+    :return: dictionary of zeros the length of the number of total segments in the DM
+    """
+    array = np.zeros((iris_num_segments()), dtype=(float, 3))
+    zeros = create_dict_from_array(array)
+
+    return zeros
 
 
 def write_ini(data, path, mirror_serial=None, driver_serial=None):
@@ -328,18 +340,19 @@ def read_ini(path):
     return command_dict
 
 
-def read_poppy_array(array):
+def read_poppy_array(array, convert_from_si_units=True):
     """
-    Read in an array produced by POPPY for the number of segments in your pupil.
-    Each entry in array is a tuple of (piston, tip, tilt) values for that segment.
-    Segment numbering is TO BE DETERMINED
+    Read in an array produced by POPPY or other program for the number of segments in your
+    pupil. Each entry in array is a tuple of (piston, tip, tilt) values for that segment.
 
-    Will convert the values in this array from si units to um and mrad, as expected
-    by IrisAO.
+    This function will convert the values in this array from si units to um and mrad, as
+    expected by IrisAO .
 
-    :param array: array, of length number of segments in pupil. Units of: ([m], [rad], [rad])
+    :param array: array, of length number of segments in pupil from POPPY with units of:
+                  ([m], [rad], [rad])
 
     :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
+             with units of ([um], [mrad], [mrad])
     """
     command_dict = create_dict_from_array(array, seglist=None)
 
@@ -368,7 +381,7 @@ def convert_dict_from_si(command_dict):
     return converted
 
 
-def _check_dictionary(dictionary):
+def check_dictionary(dictionary):
     """Check that the dictionary is in the correct format"""
     # Check keys & values
     allowed_keys = iris_pupil_numbering()
@@ -379,40 +392,40 @@ def _check_dictionary(dictionary):
             raise TypeError("Dictionary values must be tuples of length 3")
 
 
-def read_command(command):
+def read_segment_values(segments_values):
     """
-    Each of the following formats can be tread in. read_command takes in
+    Each of the following formats can be read in. read_segment_values takes in
     any of these three formats and converts it to a dictionary of the form:
             {seg:(piston, tip, tilt)}
     With units of : ([um], [mrad], [mrad])
 
-    - .PTT111 file: File format of the command coming out of the IrisAO GUI
-    - .ini file: File format of command that gets sent to the IrisAO controls
-    - array: Format that POPPY outputs if generating command in POPPY
+    - .PTT111 file: File format of the segments values coming out of the IrisAO GUI
+    - .ini file: File format of segments values that gets sent to the IrisAO controls
+    - array: Format that POPPY outputs if generating segments_values in POPPY
     - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
 
-    :param command: str, list, np.ndarray. Can be .PTT111, .ini files or array
+    :param segments_values: str, list, np.ndarray. Can be .PTT111, .ini files or array
 
     :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
     """
     numbering = None
     try:
-        if command.endswith("PTT111"):
-            command_dict = read_segments(command)
-        elif command.endswith("ini"):
-            command_dict = read_ini(command)
+        if segments_values.endswith("PTT111"):
+            command_dict = read_segments(segments_values)
+        elif segments_values.endswith("ini"):
+            command_dict = read_ini(segments_values)
         else:
             raise Exception("The command input format is not supported")
     except AttributeError:
-        if isinstance(command, (list, tuple, np.ndarray)):
-            command_dict = read_poppy_array(command)
+        if isinstance(segments_values, (list, tuple, np.ndarray)):
+            command_dict = read_poppy_array(segments_values)
             numbering = poppy_numbering()
-        elif isinstance(command, dict):
+        elif isinstance(segments_values, dict):
             # Check that dictionary is in correct format
-            _check_dictionary(command)
-            command_dict = command
-        elif command is None:
-            command_dict = command
+            check_dictionary(segments_values)
+            command_dict = segments_values
+        elif segments_values is None:
+            command_dict = segments_values
         else:
             raise TypeError("The command input format is not supported")
 
@@ -449,7 +462,7 @@ class PoppySegmentedCommand(object):
         # Grab pupil-specific values from config
         self.flat_to_flat = CONFIG_INI.getfloat('iris_ao', 'flat_to_flat_mm')  # [mm]
         self.gap = CONFIG_INI.getint('iris_ao', 'gap_um')  # [um]
-        self.num_segs_in_pupil = CONFIG_INI.getint('iris_ao', 'number_of_segments_pupil')
+        self.num_segs_in_pupil = CONFIG_INI.getint('iris_ao', 'active_number_of_segments')
         self.wavelength = (CONFIG_INI.getint('thorlabs_source_mcls1', 'lambda_nm')*u.nm).to(u.m)
 
         self.radius = (self.flat_to_flat/2*u.mm).to(u.m)
@@ -527,7 +540,7 @@ class PoppySegmentedCommand(object):
 
 def get_num_rings(number_segments_in_pupil):
     """
-    Get the number of rings of segments from number_segments_in_pupil
+    Get the number of rings of segments from using the number_segments_in_pupil parameter
     This is specific for a segmented DM with 37 segments therefore:
       - 37 segments = 3 rings
       - 19 segments = 2 rings
