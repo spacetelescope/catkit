@@ -57,10 +57,10 @@ class IrisAoDmController(DeformableMirrorController):
 
     def _open(self):
         """Open a connection to the IrisAO"""
-        self.instrument = instrument_lib.Popen([self.full_path_dm_exe, self.disableHardware],
-                                                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                                stderr=subprocess.PIPE,
-                                                cwd=self.path_to_dm_exe, bufsize=1)
+        self.instrument = self.instrument_lib.Popen([self.full_path_dm_exe, self.disableHardware],
+                                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                    stderr=subprocess.PIPE,
+                                                    cwd=self.path_to_dm_exe, bufsize=1)
         # Initialize the Iris to zeros.
         zeros = self.zero(return_zeros=True)
 
