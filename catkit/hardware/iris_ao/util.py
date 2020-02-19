@@ -89,25 +89,27 @@ def create_dict_from_array(array, seglist=None):
     return command_dict
 
 
-def create_zero_dictionary():
+def create_zero_dictionary(number_of_segments, seglist=None):
     """
     Create a dictionary of zeros for the Iris AO
 
+    :param number_of_segments: int, the number of segments in your pupil
     :return: dictionary of zeros the length of the number of total segments in the DM
     """
-    array = np.zeros((iris_num_segments()), dtype=(float, 3))
-    zeros = create_dict_from_array(array)
+    array = np.zeros((number_of_segments), dtype=(float, 3))
+    zeros = create_dict_from_array(array, seglist)
 
     return zeros
 
 
-def update_one_segment(segment_num, ptt_tuple):
+def update_one_segment(segment_num, ptt_tuple, number_of_segments):
     """
     Create a dictionary that will change only specific segments
 
     :param segment_num: int, or list of ints, segments to be commanded
     :param ptt_tuple: tuple, or list of tuples, the piston-tip-tilt tuple to be applied
                       to the corresponding segment_num.
+    :param number_of_segments: int, number of active segments
 
     :return command_dict: the dictionary that will be the command on the DM:
                           {seg:(piston, tip, tilt)}
@@ -121,7 +123,7 @@ def update_one_segment(segment_num, ptt_tuple):
     if len(segment_num) != len(ptt_tuple):
         raise ValueError("segment_num and ptt_tuple must be the same length")
 
-    command_dict = create_zero_dictionary()
+    command_dict = create_zero_dictionary(number_of_segments)
     for seg, ptt in zip(segment_num, ptt_tuple):
         command_dict[seg] = ptt
 

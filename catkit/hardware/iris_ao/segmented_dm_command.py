@@ -48,7 +48,6 @@ class SegmentedDmCommand(object):
                                        exists for this command, pass it in here. This is
                                        particularly necessary for a command created with POPPY
         """
-
         # Establish variables for pupil shifting
         self._shift_center = False
 
@@ -59,9 +58,9 @@ class SegmentedDmCommand(object):
         # If you are not using the full aperture, must include which segments are used
         try:
             self.segments_in_pupil = json.loads(CONFIG_INI.get(config_id, 'active_segment_list'))
-            self.number_segments_in_pupil = CONFIG_INI.get(config_id, 'active_number_of_segments')
-            if len(data) != len(self.segments_in_pupil):
-                raise ValueError("The number of segments in your command MUST equal number of segments in the pupil")
+            self.number_segments_in_pupil = CONFIG_INI.getint(config_id, 'active_number_of_segments')
+            # if len(data) != len(self.segments_in_pupil):
+            #     raise ValueError("The number of segments in your command MUST equal number of segments in the pupil")
             if self.segments_in_pupil[0] != 1:
                 self._shift_center = True # Pupil is centered elsewhere, must shift
         except NoOptionError:
@@ -69,8 +68,8 @@ class SegmentedDmCommand(object):
 
         if data is None:
             # If no data given, return dictionary of zeros
-            array = np.zeros((iris_util.iris_num_segments()), dtype=(float, 3))
-            data = iris_util.create_dict_from_array(array, seglist=self.segments_in_pupil)
+            data = iris_util.create_zero_dictionary(self.number_segments_in_pupil,
+                                                    seglist=self.segments_in_pupil)
 
         self.data = data
         self.flat_map = flat_map
@@ -108,7 +107,7 @@ class SegmentedDmCommand(object):
         :param flat: bool, only True if the map being added is the flat (so that it is not shifted)
         """
         original_data = self.get_data()
-        data_to_add, _ = iris_util.read_segment_values(segment_values_to_add)
+        data_to_add = iris_util.read_segment_values(segment_values_to_add)
 
         if self._shift_center and not flat:
             data_to_add = shift_command(data_to_add, self.segments_in_pupil,
@@ -288,7 +287,6 @@ class PoppySegmentedCommand():
         # Give seglist so that you guarentee you start at 0
         dictionary = iris_util.create_dict_from_array(self.array_of_coefficients,
                                                       seglist=np.arange(len(self.array_of_coefficients)))
-
         # Convert from meters and radians (what Poppy outputs) to um and mrad.
         dictionary = iris_util.convert_dict_from_si(dictionary)
 
@@ -298,7 +296,7 @@ class PoppySegmentedCommand():
 
         # Re map to Iris AO
         if map_to_iris:
-            to_pupil = iris_util.iris_pupil_numbering()
+            to_pupil = iris_util.iris_pupil_numbering()[:self.num_segs_in_pupil]
             from_pupil = poppy_numbering()
             command_dict = shift_command(command_dict, to_pupil, from_pupil)
 
