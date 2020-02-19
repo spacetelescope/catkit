@@ -69,11 +69,13 @@ class NewportPicomotorController(MotorController):
         # If it's an Nth daisy chained controller, we want a 'N>' prefix before each message.
         # Otherwise, we want nothing.
         daisy = CONFIG_INI.get(self.config_id, 'daisy') if daisy is None else daisy
-        self.daisy = '{}>' if daisy == 0 else ''
+        print(daisy)
+        self.daisy = '{}>'.format(daisy) if int(daisy) > 1 else ''
         
         # Initialize some command parameters
         self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
-                         'relative_move': 'PR', 'reset': 'RS', 
+                         'relative_move': 'PR', 'reset': 'RS',
+                         'relative_move': 'PR', 'reset': 'RS',
                          'error_message': 'TB'}
 
         self.calibration = {} 
@@ -161,6 +163,7 @@ class NewportPicomotorController(MotorController):
         """
         
         set_message = self._build_message(cmd_key, 'set', axis, value)
+        print(set_message)
         get_message = self._build_message(cmd_key, 'get', axis)
         
         initial_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
@@ -253,6 +256,7 @@ class NewportPicomotorController(MotorController):
         
     @http_except
     def reset(self):
+    def reset(self):
         """Resets the controller."""
         
         message = self._build_message('reset', 'reset')
@@ -296,7 +300,7 @@ class NewportPicomotorController(MotorController):
                 raise ValueError("This command requires an integer axis.")
             elif value is not None:
                 raise ValueError('No value can be set during a status check.')
-            message = '{}{}?'.format(axis, address)
+            message = '{}{}{}?'.format(self.daisy, axis, address)
         
         elif cmd_type == 'set': 
             if axis is None or not isinstance(axis, int):
@@ -334,7 +338,8 @@ class NewportPicomotorController(MotorController):
         if cmd_type == 'get':
             # Pull out the response from the html on the page 
             # The output will be nestled between --> and \\r
-            response = resp.split('response')[1].split('-->')[1].split('\\r')[0]
+            response = resp.split('response')[1].split('-->')[1].split('\\r')[0].split('>')[-1]
+            print(response)
 
             return response
 
