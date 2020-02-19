@@ -76,7 +76,7 @@ class IrisAoDmController(DeformableMirrorController):
 
         :return: If return_zeros=True, return a dictionary of zeros
         """
-        zeros = iris_util.create_zero_dictionary()
+        zeros = iris_util.create_zero_dictionary(iris_util.iris_num_segments())
         self.send_data(zeros)
 
         # Update the testbed state
