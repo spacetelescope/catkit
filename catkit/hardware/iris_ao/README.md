@@ -21,8 +21,7 @@ The `catkit` module for the Iris AO expects that you will be passing in one of t
         [ZV: 37, 0, 0, 0]
 
 * *.ini* file: File format of command that gets sent to the IrisAO controls
-* array: Format that POPPY outputs if generating command in POPPY
-* dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
+* dictionary: Same format that gets returned: {segment number: (piston, tip, tilt)}
 
 Each of these types has to be handled slightly differently, but never fear, we figured that out for you!
 
@@ -52,7 +51,7 @@ your config.ini file:
 
 * `mirror_serial`: The mirror serial number. This corresponds to a .mcf file that *MUST* include the driver serial number under "Smart Driver". See Important Note below.
 * `driver_serial`: The driver serial number. This corresponds to a .dcf file.
-* `total_number_of_segments`: The number of segments in your Iris AO DM (including any non-functioning segments). Always 37. TODO: DO WE WANT THIS?
+* `total_number_of_segments`: The number of segments in your Iris AO DM (including any non-functioning segments).
 * `active_number_of_segments`: (Optional) The number of segments in your specific pupil (for most, this is less than `total_number_of_segments`).
 * `active_segment_list`: (Optional) This parameter only needs to be provided if `active_number_of_segments` is less than `total_number_of_segments`. This will be a list of the segment numbers associated with the segments that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then counter clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20. For example, if your pupil is centered on segment 3 and is only one ring, then active_segment_list = [3, 9, 10, 11, 4, 1, 2]
 
