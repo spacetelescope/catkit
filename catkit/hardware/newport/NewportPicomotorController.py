@@ -42,7 +42,7 @@ class NewportPicomotorController(MotorController):
     
     instrument_lib = urllib
 
-    def inititialize(self, config_id, ip=None, max_step=None, timeout=None, daisy=None, home_reset=True):
+    def initialize(self, ip=None, max_step=None, timeout=None, daisy=None, home_reset=True):
         """ Initial function set the IP address for the controller. Anything set to None will attempt to
         pull from the config file.
         
@@ -61,14 +61,14 @@ class NewportPicomotorController(MotorController):
 
         # Set IP address
             
-        self.ip = CONFIG_INI.get(config_id, 'ip') if ip is None else ip
-        self.max_step = CONFIG_INI.get(config_id, 'max_step') if max_step is None else max_step
-        self.timeout = CONFIG_INI.get(config_id, 'timeout') if timeout is None else timeout
-        self.home_reset = CONFIG_INI.get(config_id, 'home_reset') if home_reset is None else home_reset
+        self.ip = CONFIG_INI.get(self.config_id, 'ip_address') if ip is None else ip
+        self.max_step = CONFIG_INI.getint(self.config_id, 'max_step') if max_step is None else max_step
+        self.timeout = CONFIG_INI.getint(self.config_id, 'timeout') if timeout is None else timeout
+        self.home_reset = CONFIG_INI.getboolean(self.config_id, 'home_reset') if home_reset is None else home_reset
         
         # If it's an Nth daisy chained controller, we want a 'N>' prefix before each message.
         # Otherwise, we want nothing.
-        daisy = CONFIG_INI.get(config_id, 'daisy') if daisy is None else daisy
+        daisy = CONFIG_INI.get(self.config_id, 'daisy') if daisy is None else daisy
         self.daisy = '{}>' if daisy == 0 else ''
         
         # Initialize some command parameters
@@ -100,7 +100,7 @@ class NewportPicomotorController(MotorController):
         
         return self.instrument
 
-    def close(self):
+    def _close(self):
         """ Function for the close behavior. Return every parameter to zero
         and shut down the logging."""
         
