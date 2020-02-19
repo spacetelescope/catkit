@@ -201,18 +201,11 @@ def write_ini(data, path, mirror_serial=None, driver_serial=None):
 
 ## Read commands
 # Functions for reading the .PTT11 file
-def clean_string(filename, raw_line=False):
+def clean_string(line):#filename, raw_line=False):
     """
     Delete "\n", "\t", and "\s" from a given line
     """
-    raw_line = filename.readline()
-    # Clean up the string.
-    clean_line = re.sub(r"[\n\t\s]*", "", raw_line)
-
-    if raw_line:
-        return clean_line, raw_line
-    else:
-        return clean_line
+    return re.sub(r"[\n\t\s]*", "", line)
 
 
 def convert_to_float(string):
@@ -234,8 +227,13 @@ def read_global(path):
     :return: global commands if they exist
     """
     with open(path, "r") as irisao_file:
-        # Clean up the string.
-        clean_first_line, raw_line = clean_string(irisao_file, raw_line=True)
+        # Read global line
+        raw_line = irisao_file.readline()
+
+        # Clean up the string.	        # Clean up the string.
+        clean_first_line = clean_string(raw_line)
+        # # Clean up the string.
+        # clean_first_line, raw_line = clean_string(irisao_file, raw_line=True)
 
         # Check that the type is "GV"
         if clean_first_line[1:3].upper() == "GV":
@@ -268,11 +266,13 @@ def read_zernikes(path):
     :return: zernike commands if they exist
     """
     with open(path, "r") as irisao_file:
-        clean_line = clean_string(irisao_file)
+        raw_line = irisao_file.readline()
+        clean_line = clean_string(raw_line)
 
         # Skip to the zernike section:
         while clean_line[1:3].upper() != "MV":
-            clean_line = clean_string(irisao_file)
+            raw_line = irisao_file.readline()
+            clean_line = clean_string(raw_line)
 
         zernike_commands = []
         while clean_line[1:3].upper() == "MV":
@@ -285,7 +285,8 @@ def read_zernikes(path):
             if zernike_value != 0:
                 zernike_commands.append((zernike_type, zernike_value))
 
-            clean_line = clean_string(irisao_file)
+            raw_line = irisao_file.readline()
+            clean_line = clean_string(raw_line)
 
         if zernike_commands:
             return zernike_commands
@@ -307,11 +308,13 @@ def read_segments(path):
     :return: segment commands if they exist
     """
     with open(path, "r") as irisao_file:
-        clean_line = clean_string(irisao_file)
+        raw_line = irisao_file.readline()
+        clean_line = clean_string(raw_line)
 
         # Skip to the segment section:
         while clean_line[1:3].upper() != "ZV":
-            clean_line = clean_string(irisao_file)
+            raw_line = irisao_file.readline()
+            clean_line = clean_string(raw_line)
 
         segment_commands = {}
         while clean_line[1:3].upper() == "ZV":
@@ -326,7 +329,8 @@ def read_segments(path):
             if any(segment_tuple):
                 segment_commands[segment_num] = segment_tuple
 
-            clean_line = clean_string(irisao_file)
+            raw_line = irisao_file.readline()
+            clean_line = clean_string(raw_line)
 
         if segment_commands:
             # Prepare command for segments.
