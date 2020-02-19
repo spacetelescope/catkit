@@ -6,7 +6,6 @@ import re
 
 import astropy.units as u
 import numpy as np
-import poppy
 
 from catkit.config import CONFIG_INI
 
@@ -71,7 +70,7 @@ def create_dict_from_array(array, seglist=None):
     and convert to a dictionary
 
     Seglist is a list of equal length with a single value equal to the segment number
-    for the index in the array
+    for the index in the array. If seglist is None, will asssume Iris AO numbering
 
     :param array: np.ndarry, array with length equal to number of segments in the pupil
                   with each entry a tuple of piston, tip, tilt values.
@@ -100,6 +99,59 @@ def create_zero_dictionary():
     zeros = create_dict_from_array(array)
 
     return zeros
+
+
+def update_one_segment(segment_num, ptt_tuple):
+    """
+    Create a dictionary that will change only specific segments
+
+    :param segment_num: int, or list of ints, segments to be commanded
+    :param ptt_tuple: tuple, or list of tuples, the piston-tip-tilt tuple to be applied
+                      to the corresponding segment_num.
+
+    :return command_dict: the dictionary that will be the command on the DM:
+                          {seg:(piston, tip, tilt)}
+    """
+    if not isinstance(segment_num, (list, np.ndarray)):
+        segment_num = [segment_num]
+
+    if not isinstance(ptt_tuple, (list, np.ndarray)):
+        ptt_tuple = [ptt_tuple]
+
+    if len(segment_num) != len(ptt_tuple):
+        raise ValueError("segment_num and ptt_tuple must be the same length")
+
+    command_dict = create_zero_dictionary()
+    for seg, ptt in zip(segment_num, ptt_tuple):
+        command_dict[seg] = ptt
+
+    return command_dict
+
+
+def convert_dict_from_si(command_dict):
+    """
+    Take a wf dict and convert from SI (meters and radians) to microns and millirads
+
+    :param command_dict: dict, command in the form of a dictionary of the form
+                         {seg: (piston, tip, tilt)}
+
+    :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
+    """
+    converted = {seg: (ptt[0]*(u.m).to(u.um), ptt[1]*(u.rad).to(u.mrad), ptt[2]*(u.rad).to(u.mrad)) for
+                 seg, ptt in list(command_dict.items())}
+
+    return converted
+
+
+def check_dictionary(dictionary):
+    """Check that the dictionary is in the correct format"""
+    # Check keys & values
+    allowed_keys = iris_pupil_numbering()
+    for k, v in dictionary.items():
+        if k not in allowed_keys:
+            raise TypeError("Dictionary keys must be segments numbers from 1 to the number of segments")
+        if len(v) != 3:
+            raise TypeError("Dictionary values must be tuples of length 3")
 
 
 def write_ini(data, path, mirror_serial=None, driver_serial=None):
@@ -340,75 +392,21 @@ def read_ini(path):
     return command_dict
 
 
-def read_poppy_array(array, convert_from_si_units=True):
-    """
-    Read in an array produced by POPPY or other program for the number of segments in your
-    pupil. Each entry in array is a tuple of (piston, tip, tilt) values for that segment.
-
-    This function will convert the values in this array from si units to um and mrad, as
-    expected by IrisAO .
-
-    :param array: array, of length number of segments in pupil from POPPY with units of:
-                  ([m], [rad], [rad])
-
-    :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
-             with units of ([um], [mrad], [mrad])
-    """
-    command_dict = create_dict_from_array(array, seglist=None)
-
-    # Convert from meters and radians (what Poppy outputs) to um and mrad.
-    command_dict = convert_dict_from_si(command_dict)
-
-    # Round to 3 decimal points after zero.
-    rounded = {seg: (np.round(ptt[0], 3), np.round(ptt[1], 3),
-                     np.round(ptt[2], 3)) for seg, ptt in list(command_dict.items())}
-
-    return rounded
-
-
-def convert_dict_from_si(command_dict):
-    """
-    Take a wf dict and convert from SI (meters and radians) to microns and millirads
-
-    :param command_dict: dict, command in the form of a dictionary of the form
-                         {seg: (piston, tip, tilt)}
-
-    :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
-    """
-    converted = {seg: (ptt[0]*(u.m).to(u.um), ptt[1]*(u.rad).to(u.mrad), ptt[2]*(u.rad).to(u.mrad)) for
-                 seg, ptt in list(command_dict.items())}
-
-    return converted
-
-
-def check_dictionary(dictionary):
-    """Check that the dictionary is in the correct format"""
-    # Check keys & values
-    allowed_keys = iris_pupil_numbering()
-    for k, v in dictionary.items():
-        if k not in allowed_keys:
-            raise TypeError("Dictionary keys must be segments numbers from 1 to the number of segments")
-        if len(v) != 3:
-            raise TypeError("Dictionary values must be tuples of length 3")
-
-
 def read_segment_values(segments_values):
     """
-    Each of the following formats can be read in. read_segment_values takes in
+    Each of the following formats can be read in. This function takes in
     any of these three formats and converts it to a dictionary of the form:
             {seg:(piston, tip, tilt)}
     With units of : ([um], [mrad], [mrad])
 
     - .PTT111 file: File format of the segments values coming out of the IrisAO GUI
     - .ini file: File format of segments values that gets sent to the IrisAO controls
-    - array: Format that POPPY outputs if generating segments_values in POPPY
     - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
 
     :param segments_values: str, list, np.ndarray. Can be .PTT111, .ini files or array
 
     :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
     """
-    numbering = None
     try:
         if segments_values.endswith("PTT111"):
             command_dict = read_segments(segments_values)
@@ -417,10 +415,7 @@ def read_segment_values(segments_values):
         else:
             raise Exception("The command input format is not supported")
     except AttributeError:
-        if isinstance(segments_values, (list, tuple, np.ndarray)):
-            command_dict = read_poppy_array(segments_values)
-            numbering = poppy_numbering()
-        elif isinstance(segments_values, dict):
+        if isinstance(segments_values, dict):
             # Check that dictionary is in correct format
             check_dictionary(segments_values)
             command_dict = segments_values
@@ -429,153 +424,4 @@ def read_segment_values(segments_values):
         else:
             raise TypeError("The command input format is not supported")
 
-    return command_dict, numbering
-
-
-## POPPY
-def poppy_numbering():
-    """
-    Numbering of the pupil in POPPY. Specifically for a 37 segment Iris AO
-    """
-    return [0,   # Ring 0
-            1, 6, 5, 4, 3, 2,  # Ring 1
-            7, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8,  # Ring 2
-            19, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20]  # Ring 3
-
-
-class PoppySegmentedCommand(object):
-    """
-    Create an array command (in POPPY: wavefront error) using POPPY for your pupil.
-    This is limited to global shapes. This is an array of piston, tip, tilt for each
-    segments.
-
-    To use to get command for the Iris AO:
-
-      poppy_obj = PoppySegmentedCommand(global_coefficients)
-      coeffs_array = poppy_obj.to_array()
-      iris_command_obj = segmented_dm_command.load_command(coeffs_array)
-
-    :param global_coefficients: list of global zernike coefficients in the form
-                                [piston, tip, tilt, defocus, ...] (Noll convention)
-    """
-    def __init__(self, global_coefficients):
-        # Grab pupil-specific values from config
-        self.flat_to_flat = CONFIG_INI.getfloat('iris_ao', 'flat_to_flat_mm')  # [mm]
-        self.gap = CONFIG_INI.getint('iris_ao', 'gap_um')  # [um]
-        self.num_segs_in_pupil = CONFIG_INI.getint('iris_ao', 'active_number_of_segments')
-        self.wavelength = (CONFIG_INI.getint('thorlabs_source_mcls1', 'lambda_nm')*u.nm).to(u.m)
-
-        self.radius = (self.flat_to_flat/2*u.mm).to(u.m)
-        self.num_terms = (self.num_segs_in_pupil - 1) * 3
-
-        self.global_coefficients = global_coefficients
-
-        # Create the specific basis for this pupil
-        self.basis = self.create_ptt_basis()
-
-
-    def create_ptt_basis(self):
-        """
-        Create the basis needed for getting the per/segment coeffs back
-
-        :return: Poppy Segment_PTT_Basis object for the specified pupil
-        """
-        pttbasis = poppy.zernike.Segment_PTT_Basis(rings=get_num_rings(self.num_segs_in_pupil),
-                                                   flattoflat=self.flat_to_flat,
-                                                   gap=self.gap)
-        return pttbasis
-
-
-    def create_wavefront_from_global(self, global_coefficients):
-        """
-        Given an array of global coefficients, create wavefront
-
-        :param global_coefficients: list of global zernike coefficients in the form
-                                    [piston, tip, tilt, defocus, ...] (Noll convention)
-
-        :return: Poppy ZernikeWFE object, the global wavefront described by the input coefficients
-        """
-        wavefront = poppy.ZernikeWFE(radius=self.radius, coefficients=global_coefficients)
-        wavefront_out = wavefront.sample(wavelength=self.wavelength,
-                                         grid_size=2*self.radius,
-                                         npix=512, what='opd')
-        return wavefront_out
-
-
-    def get_coeffs_from_pttbasis(self, wavefront):
-        """
-        From a the speficic pttbasis, get back the coeff_array that will be sent as
-        a command to the Iris AO
-
-        :param wavefront: Poppy ZernikeWFE object, the global wavefront over the
-                          pupil
-
-        :return: np.ndarray, (piston, tip, tilt) values for each segment in the pupil
-                 in units of [m] for piston, and [rad] for tip and tilt
-        """
-        coeff_array = poppy.zernike.opd_expand_segments(wavefront, nterms=self.num_terms,
-                                                        basis=self.basis)
-        coeff_array = np.reshape(coeff_array, (self.num_segs_in_pupil - 1, 3))
-
-        center_segment = np.array([0.0, 0.0, 0.0]) # Add zeros for center segment
-        coeff_array = np.vstack((center_segment, coeff_array))
-
-        return coeff_array
-
-
-    def to_array(self):
-        """
-        From a global coeff array, get back the per-segment coefficient array
-
-        :return: np.ndarray of coefficients for piston, tip, and tilt, for your pupil
-        """
-        wavefront = self.create_wavefront_from_global(self.global_coefficients)
-
-        coeffs_array = self.get_coeffs_from_pttbasis(wavefront)
-
-        self.array_of_coefficients = coeffs_array
-
-        return coeffs_array
-
-
-def get_num_rings(number_segments_in_pupil):
-    """
-    Get the number of rings of segments from using the number_segments_in_pupil parameter
-    This is specific for a segmented DM with 37 segments therefore:
-      - 37 segments = 3 rings
-      - 19 segments = 2 rings
-      - 7 segments = 1 ring
-      - 1 segment = 0 rings
-
-    :param num_segs_in_pupil: int, the number of segments in the pupil.
-
-    :return: num_rings: int, the number of full rings of hexagonal segments in the pupil
-    """
-    # seg_nums: number of segments in a pupil of the corresponding # of rings
-    seg_nums = np.array([37, 19, 7, 1])
-    ring_nums = np.array([3, 2, 1, 0])
-
-    if number_segments_in_pupil not in seg_nums:
-        raise Exception("Invalid number of segments for number_segments_in_pupil.")
-
-    num_rings = [rings for segs, rings in zip(seg_nums,
-                                              ring_nums) if number_segments_in_pupil == segs][0]
-    return num_rings
-
-
-def get_wavefront_from_coeffs(basis, coeff_array):
-    """
-    Get the wavefront from the coefficients created by the basis given. This gives
-    the per-segment wavefront based on the global coefficients given and the basis
-    created.
-
-    :params basis: POPPY Segment_PTT_Basis object, basis created that represents
-                   pupil
-    :params coeff_array: array, per-segment array of piston, tip, tilt values for
-                         the pupil described by basis
-
-    :return wavefront, POPPY wavefront
-    """
-    wavefront = poppy.zernike.opd_from_zernikes(coeff_array, basis=basis)
-
-    return wavefront
+    return command_dict
