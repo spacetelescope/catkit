@@ -326,14 +326,14 @@ def read_segments(path):
                             convert_to_float(segment_string_list[2]), \
                             convert_to_float(segment_string_list[3])
 
-            if any(segment_tuple):
-                segment_commands[segment_num] = segment_tuple
+            segment_commands[segment_num] = segment_tuple
 
             raw_line = irisao_file.readline()
             clean_line = clean_string(raw_line)
 
         if segment_commands:
             # Prepare command for segments.
+            print(segment_commands)
             return segment_commands
         else:
             return None
