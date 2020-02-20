@@ -32,7 +32,7 @@ class SegmentedDmCommand(object):
     :attribute number_segments_in_pupil: int, the number of segments in the pupil.
 
     """
-    def __init__(self, data=None, flat_map=False, config_id='iris_ao'):
+    def __init__(self, data=None, flat_map=False, dm_mapping=None, config_id='iris_ao'):
         """
         Handle Iris AO specific commands in terms of piston, tip and tilt (PTT) per
         each segment. Creates a Iris AO-style command -{seg: (piston, tip, tilt)} -
@@ -59,9 +59,7 @@ class SegmentedDmCommand(object):
         try:
             self.segments_in_pupil = json.loads(CONFIG_INI.get(config_id, 'active_segment_list'))
             self.number_segments_in_pupil = CONFIG_INI.getint(config_id, 'active_number_of_segments')
-            # if len(data) != len(self.segments_in_pupil):
-            #     raise ValueError("The number of segments in your command MUST equal number of segments in the pupil")
-            if self.segments_in_pupil[0] != 1:
+            if (self.segments_in_pupil[0] != 1) or (not dm_mapping):
                 self._shift_center = True # Pupil is centered elsewhere, must shift
         except NoOptionError:
             self.segments_in_pupil = iris_util.iris_pupil_numbering()
@@ -170,8 +168,8 @@ def load_command(segment_values, flat_map=True):
 
     :return: SegmentedDmCommand object representing the command dictionary.
     """
-    data = iris_util.read_segment_values(segment_values)
-    return SegmentedDmCommand(data, flat_map=flat_map)
+    data, iris_mapping = iris_util.read_segment_values(segment_values)
+    return SegmentedDmCommand(data, flat_map=flat_map, dm_mapping=iris_mapping)
 
 
 ## POPPY

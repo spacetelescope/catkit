@@ -397,7 +397,7 @@ def read_ini(path):
     return command_dict
 
 
-def read_segment_values(segments_values):
+def read_segment_values(segments_values, iris_mapping=None):
     """
     Each of the following formats can be read in. This function takes in
     any of these three formats and converts it to a dictionary of the form:
@@ -415,8 +415,10 @@ def read_segment_values(segments_values):
     try:
         if segments_values.endswith("PTT111"):
             command_dict = read_segments(segments_values)
+            iris_mapping = True
         elif segments_values.endswith("ini"):
             command_dict = read_ini(segments_values)
+            iris_mapping = True
         else:
             raise ValueError("The command input format is not supported")
     except AttributeError:
@@ -424,9 +426,14 @@ def read_segment_values(segments_values):
             # Check that dictionary is in correct format
             check_dictionary(segments_values)
             command_dict = segments_values
+            iris_mapping = False
         elif segments_values is None:
             command_dict = segments_values
+            iris_mapping = None
         else:
             raise TypeError("The command input format is not supported")
 
-    return command_dict
+    if iris_mapping is not None:
+        iris_mapping = iris_mapping
+
+    return command_dict, iris_mapping
