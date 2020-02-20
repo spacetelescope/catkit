@@ -214,10 +214,10 @@ class NewportPicomotorController(MotorController):
         
         r_ratio = r/move
         
-        if axis in '13':
+        if axis in [1,3]:
             delta_theta = theta - 0
         
-        elif axis in '24':
+        elif axis in [2, 4]:
             delta_theta = theta - np.pi/2
         
         else:
@@ -255,7 +255,6 @@ class NewportPicomotorController(MotorController):
         return state_dict
         
     @http_except
-    def reset(self):
     def reset(self):
         """Resets the controller."""
         
