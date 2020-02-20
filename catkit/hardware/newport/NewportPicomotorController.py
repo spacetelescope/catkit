@@ -15,7 +15,7 @@ import functools
 
 from http.client import IncompleteRead
 import numpy as np
-from photutils import centroid_1dg
+from photutils import centroid_1dg, centroid_2dg
 from requests.exceptions import HTTPError
 import urllib
 from urllib.parse import urlencode
@@ -203,8 +203,8 @@ class NewportPicomotorController(MotorController):
             The difference between the angle from x and the picomotor axis.
         """
 
-        x1, y1 = centroid_1dg(img_before)
-        x2, y2 = centroid_1dg(img_after)
+        x1, y1 = centroid_2dg(img_before)
+        x2, y2 = centroid_2dg(img_after)
 
         x_move = x1 - x2
         y_move = y1 - y2
