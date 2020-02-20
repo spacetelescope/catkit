@@ -419,7 +419,7 @@ def read_segment_values(segments_values):
         elif segments_values.endswith("ini"):
             command_dict = read_ini(segments_values)
         else:
-            raise Exception("The command input format is not supported")
+            raise ValueError("The command input format is not supported")
     except AttributeError:
         if isinstance(segments_values, dict):
             # Check that dictionary is in correct format
