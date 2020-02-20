@@ -333,7 +333,6 @@ def read_segments(path):
 
         if segment_commands:
             # Prepare command for segments.
-            print(segment_commands)
             return segment_commands
         else:
             return None
