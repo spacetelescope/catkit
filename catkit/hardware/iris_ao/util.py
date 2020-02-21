@@ -408,17 +408,23 @@ def read_segment_values(segments_values, iris_mapping=None):
     - .ini file: File format of segments values that gets sent to the IrisAO controls
     - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
 
-    :param segments_values: str, list, np.ndarray. Can be .PTT111, .ini files or array
+    :param segments_values: str, dict. Can be .PTT111, .ini files or dictionary of the
+                            form {seg: (piston, tip, tilt)}
+    :param iris_mapping: bool or None, whether or not the input command is in the Iris
+                         frame already. If None, this will be determined by input type of
+                         segment_values. If segment_values is a .PTT111 or .ini file, assumes
+                         iris_mapping=True. If segment_values is a dictionary, assumes
+                         iris_mapping=False.
 
     :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
     """
     try:
         if segments_values.endswith("PTT111"):
             command_dict = read_segments(segments_values)
-            iris_mapping = True
+            dm_mapping = True
         elif segments_values.endswith("ini"):
             command_dict = read_ini(segments_values)
-            iris_mapping = True
+            dm_mapping = True
         else:
             raise ValueError("The command input format is not supported")
     except AttributeError:
@@ -426,14 +432,14 @@ def read_segment_values(segments_values, iris_mapping=None):
             # Check that dictionary is in correct format
             check_dictionary(segments_values)
             command_dict = segments_values
-            iris_mapping = False
+            dm_mapping = False
         elif segments_values is None:
             command_dict = segments_values
-            iris_mapping = None
+            dm_mapping = None
         else:
             raise TypeError("The command input format is not supported")
 
     if iris_mapping is not None:
-        iris_mapping = iris_mapping
+        dm_mapping = iris_mapping
 
-    return command_dict, iris_mapping
+    return command_dict, dm_mapping
