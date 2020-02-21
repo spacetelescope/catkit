@@ -16,9 +16,12 @@ def iris_num_segments():
     return CONFIG_INI.getint('iris_ao', 'total_number_of_segments')
 
 
-def iris_pupil_numbering():
+def iris_pupil_numbering(num_segments=None):
     """Numbering of the Iris AO pupil """
-    return np.arange(iris_num_segments())+1
+
+    num_segments = num_segments if num_segments else iris_num_segments()
+
+    return np.arange(num_segments)+1
 
 
 def map_to_new_center(new_pupil, old_pupil):

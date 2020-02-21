@@ -1,22 +1,33 @@
 """Interface for IrisAO segmented deformable mirror controller."""
 
+import collections
+import datetime
 import os
-import subprocess
+import time
 
+import IrisAO_Python
 import numpy as np
 
+import catkit.util
 from catkit.hardware import testbed_state
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
-
 from catkit.hardware.iris_ao import util as iris_util
+from catkit.hardware.iris_ao.segmented_dm_command import SegmentedDmCommand
 
 
 class IrisAoDmController(DeformableMirrorController):
 
-    instrument_lib = subprocess
+    instrument_lib = IrisAO_Python
 
-    def initialize(self, mirror_serial, driver_serial, disable_hardware, path_to_dm_exe,
-                   filename_ptt_dm):
+    mirror_config_file_ext = ".mcf"
+    driver_config_file_ext = ".dcf"
+
+    def initialize(self,
+                   mirror_serial,
+                   driver_serial,
+                   disable_hardware,
+                   config_file_dir_path,
+                   num_segments=iris_util.iris_num_segments()):
         """
         Initialize dm manufacturer specific object - this does not, nor should it, open a
         connection.
@@ -28,76 +39,113 @@ class IrisAoDmController(DeformableMirrorController):
 
         self.mirror_serial = mirror_serial
         self.driver_serial = driver_serial
-
-        # For the suprocess call
         self.disableHardware = disable_hardware
-        self.path_to_dm_exe = path_to_dm_exe
-        self.full_path_dm_exe = os.path.join(path_to_dm_exe, 'DM_Control.exe')
-
-        # Where to write ConfigPTT.ini file that gets read by the C++ code
-        self.filename_ptt_dm = filename_ptt_dm
+        self.num_segments = num_segments
 
 
-    def send_data(self, data):
+        # Determine filename paths for calibration/config files.
+        self.config_file_dir_path = os.path.abspath(config_file_dir_path)
+        if not os.path.isdir(self.config_file_dir_path):
+            raise FileNotFoundError(f"{self.config_id}: config_file_dir_path: '{self.config_file_dir_path}' not found.")
+        self.mirror_config_file_path = os.path.join(self.config_file_dir_path, self.mirror_serial + self.mirror_config_file_ext)
+        self.driver_config_file_path = os.path.join(self.config_file_dir_path, self.driver_serial + self.driver_config_file_ext)
+        if not os.path.isFile(self.mirror_config_file_path):
+            raise FileNotFoundError(f"{self.config_id}: '{self.mirror_config_file_path}' not found.")
+        if not os.path.isFile(self.driver_config_file_path):
+            raise FileNotFoundError(f"{self.config_id}: '{self.driver_config_file_path}' not found.")
+
+        # The IrisAO driver expects the .dcf and .mcf config files in the working dir.
+        # Neither adding them to PATH nor PYTHONPATH worked.
+        # This is a workaround.
+        # These files remain copied until their refs go out of scope, i.e., when this class instance drops out of scope.
+        cwd = os.path.abspath(os.getcwd())
+        self._mirror_config_file_copy = catkit.util.TempFileCopy(self.mirror_config_file_path, cwd)
+        self._driver_config_file_copy = catkit.util.TempFileCopy(self.driver_config_file_path, cwd)
+
+    def _send_data(self, data):
         """
         To send data to the IrisAO, you must write to the ConfigPTT.ini file
         to send the command
 
         :param data: dict, the command to be sent to the DM
         """
-        # Write to ConfigPTT.ini
-        self.log.info("Creating config file: %s", self.filename_ptt_dm)
-        iris_util.write_ini(data, path=self.filename_ptt_dm, mirror_serial=self.mirror_serial,
-                       driver_serial=self.driver_serial)
 
-        # Apply the written .ini file to DM
-        self.instrument.stdin.write(b'config\n')
-        self.instrument.stdin.flush()
+        if not self.instrument:
+            raise Exception(f"{self.config_id}: Open connection required.")
 
+        if not isinstance(data, dict):
+            raise TypeError(f"{self.config_id}: expected 'data' to be a dict and not '{type(data)}'.")
+
+        segments = list(data.keys())
+        ptt = list(data.values())
+
+        if len(segments) != len(ptt):
+            raise TypeError(f"{self.config_id}: Corrupt data - each segment must have a corresponding PTT and vice versa.")
+
+        try:
+            self.instrument_lib._setPosition(self.instrument, segments, len(segments), ptt)
+        except Exception as error:
+            raise Exception(f"{self.config_id}: Failed to send command data to device.") from error
 
     def _open(self):
         """Open a connection to the IrisAO"""
-        self.instrument = self.instrument_lib.Popen([self.full_path_dm_exe, self.disableHardware],
-                                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                                    stderr=subprocess.PIPE,
-                                                    cwd=self.path_to_dm_exe, bufsize=1)
-        # Initialize the Iris to zeros.
-        zeros = self.zero(return_zeros=True)
 
-        # Store the current dm_command values in class attributes.
-        self.command = zeros
-        self._update_iris_state(self.command)
+        hardware_enabled = not self.disableHardware
+        try:
+            self.instrument = self.instrument_lib._connect(self.mirror_serial.encode(),
+                                                           self.driver_serial.encode(),
+                                                           hardware_enabled)
+        except Exception as error:
+            self.instrument = None  # Don't try closing
+            raise Exception(f"{self.config_id}: Failed to connect to device.") from error
+
+        # Initialize the Iris to zeros
+        self.zero()
 
         return self.instrument
 
+    def zero(self):
+        """Put zeros on the DM"""
 
-    def zero(self, return_zeros=False):
-        """Put zeros on the DM
-
-        :return: If return_zeros=True, return a dictionary of zeros
-        """
-        zeros = iris_util.create_zero_dictionary(iris_util.iris_num_segments())
-        self.send_data(zeros)
-
-        # Update the testbed state
-        self._update_iris_state(zeros)
-
-        if return_zeros:
-            return zeros
-
+        self.apply_shape(SegmentedDmCommand(iris_util.create_zero_dictionary(self.num_segments), flat_map=False))
 
     def _close(self):
         """Close connection safely."""
+
         try:
-            self.log.info('Closing Iris AO.')
-            # Set IrisAO to zero
-            self.zero()
-            self.instrument.stdin.write(b'quit\n')
-            self.instrument.stdin.close()
+            try:
+                # Set IrisAO to zero
+                self.zero()
+            finally:
+                self.instrument_lib._release(self.instrument)
         finally:
             self.instrument = None
             self._close_iris_controller_testbed_state()
 
+    def get_position(self, segments=None):
+        """ Read the PTT for the given segments from the device itself. """
+
+        if not self.instrument:
+            raise Exception(f"{self.config_id}: Open connection required.")
+
+        segments = segments if segments else iris_util.iris_pupil_numbering(self.num_segments)
+
+        # _getMirrorPosition() expects a list of segments
+        if not isinstance(segments, collections.Iterable):
+            segments = [segments]
+
+        if isinstance(segments, np.ndarray):
+            segments = segments.tolist()
+
+        try:
+            ptt, _locked, _reachable = self.instrument_lib._getMirrorPosition(self.instrument, segments, len(segments))
+        except Exception as error:
+            raise Exception(f"{self.config_id}: Failed to get command data from device.") from error
+
+        if len(segments) != len(ptt):
+            raise TypeError(f"{self.config_id}: Corrupt data - each segment must have a corresponding PTT and vice versa.")
+
+        return SegmentedDmCommand(dict(zip(segments, ptt)), flat_map=False)
 
     def apply_shape(self, dm_shape, dm_num=1):
         """
@@ -111,23 +159,25 @@ class IrisAoDmController(DeformableMirrorController):
         if dm_num != 1:
             raise NotImplementedError("You can only control one Iris AO at a time")
 
+        if not isinstance(dm_shape, SegmentedDmCommand):
+            raise TypeError(f"{self.config_id}: expected 'dm_shape' to be of type `{SegmentedDmCommand.__qualname__}' and not '{type(dm_shape)}'.")
+
         # Use DmCommand class to format the single command correctly.
-        command = dm_shape.to_command()
+        command_dict = dm_shape.to_command()
 
         # Send array to DM.
-        self.send_data(command)
+        self._send_data(command_dict)
 
         # Update the dm_command class attribute.
-        self.command = command
+        # TODO: This should be stashing a SegmentedDmCommand object and not a naked dict.
+        self.command = command_dict
 
         # Update the testbed_state.
         self._update_iris_state(dm_shape)
 
-
     def apply_shape_to_both(self, dm1_shape=None, dm2_shape=None):
-        """ Method only used by the BostomDmController"""
-        raise NotImplementedError("apply_shape_to_both is not implmented for the Iris AO")
-
+        """ Method only used by the BostonDmController"""
+        raise NotImplementedError("apply_shape_to_both is not implemented for the Iris AO")
 
     @staticmethod
     def _update_iris_state(command_object):

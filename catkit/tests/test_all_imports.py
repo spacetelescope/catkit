@@ -24,7 +24,8 @@ for item in all_files:
 exclude_exceptions_containing = ["zwoas",
                                  "bmc",
                                  "TSP01",
-                                 "libftd2xx"]
+                                 "libftd2xx",
+                                 "IrisAO_Python"]
 
 @pytest.mark.parametrize("to_import", all_imports)
 def test_imports(to_import):
