@@ -12,6 +12,7 @@ According to the manual, this should hold for models:
 
 ## -- IMPORTS
 import functools
+import time
 
 from http.client import IncompleteRead
 import numpy as np
@@ -20,7 +21,6 @@ from requests.exceptions import HTTPError
 import urllib
 from urllib.parse import urlencode
 
-from catkit.config import CONFIG_INI
 from catkit.interfaces.MotorController2 import MotorController
 
 ## -- Let's go.
@@ -42,34 +42,39 @@ class NewportPicomotorController(MotorController):
     
     instrument_lib = urllib
 
-    def initialize(self, ip=None, max_step=None, timeout=None, daisy=None, home_reset=True):
+    def initialize(self, ip, max_step, timeout, daisy, calibration=None, home_reset=True, centroid_method=None):
         """ Initial function set the IP address for the controller. Anything set to None will attempt to
         pull from the config file.
         
         Parameters
         ----------
         ip : string
-            The IP address for the controller. Defaults to None.
+            The IP address for the controller.
         max_step : float
-            The max step the controller can take. Defaults to None. 
+            The max step the controller can take. 
         timeout : float
-            The timeout before the urlopen call gives up. Defaults to None.
-        home_reset : bool
+            The timeout before the urlopen call gives up.
+        daisy : int
+            The order of daisy chained controller. 
+        calibration : dict, optional
+            Precalculated calibration parameters. Default to None to
+            intialize empty.
+        home_reset : bool, optional
             Whether or not to reset to the home position on controller close.
             Defaults to True.
+        centroid_method : str, optional
+            '1d' or '2d' for centroid method. Defaults to 1d.
         """
 
-        # Set IP address
+        # Set vital connection parameters
             
-        self.ip = CONFIG_INI.get(self.config_id, 'ip_address') if ip is None else ip
-        self.max_step = CONFIG_INI.getint(self.config_id, 'max_step') if max_step is None else max_step
-        self.timeout = CONFIG_INI.getint(self.config_id, 'timeout') if timeout is None else timeout
-        self.home_reset = CONFIG_INI.getboolean(self.config_id, 'home_reset') if home_reset is None else home_reset
+        self.ip = ip
+        self.max_step = max_step
+        self.timeout = timeout
+        self.home_reset = home_reset
         
         # If it's an Nth daisy chained controller, we want a 'N>' prefix before each message.
         # Otherwise, we want nothing.
-        daisy = CONFIG_INI.get(self.config_id, 'daisy') if daisy is None else daisy
-        print(daisy)
         self.daisy = '{}>'.format(daisy) if int(daisy) > 1 else ''
         
         # Initialize some command parameters
@@ -77,9 +82,18 @@ class NewportPicomotorController(MotorController):
                          'relative_move': 'PR', 'reset': 'RS',
                          'relative_move': 'PR', 'reset': 'RS',
                          'error_message': 'TB'}
-
-        self.calibration = {} 
         
+        self.calibration = {} if calibration is None else calibration
+        
+        if centroid_method is None:
+            self.centroid_method = centroid_1dg
+        elif self.centroid_method == '1d':
+            self.centroid_method = centroid_1dg
+        elif centroid_method == '2d':
+            self.centroid_method = centroid_2dg
+        else:
+            raise NotImplementedError('Only 1D an 2D centroiding is available.')
+
 
     def _open(self):
         """ Function to test a connection (ping the address and see if it
@@ -169,6 +183,7 @@ class NewportPicomotorController(MotorController):
         initial_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
         
         self._send_message(set_message, 'set')
+        time.sleep(2)
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
         
         if float(set_value) != value:
@@ -203,8 +218,8 @@ class NewportPicomotorController(MotorController):
             The difference between the angle from x and the picomotor axis.
         """
 
-        x1, y1 = centroid_2dg(img_before)
-        x2, y2 = centroid_2dg(img_after)
+        x1, y1 = self.centroid_method(img_before)
+        x2, y2 = self.centroid_method(img_after)
 
         x_move = x1 - x2
         y_move = y1 - y2
@@ -341,4 +356,3 @@ class NewportPicomotorController(MotorController):
             print(response)
 
             return response
-
