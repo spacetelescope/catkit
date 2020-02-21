@@ -2,6 +2,7 @@ import importlib
 import os
 import logging
 import logging.handlers
+import shutil
 
 import numpy as np
 from astropy.io import fits
@@ -85,3 +86,41 @@ def rotate_and_flip_image(data, theta, flip):
         data_corr = np.fliplr(data_corr)
 
     return data_corr
+
+
+class TempFileCopy:
+    def __init__(self, source, destination):
+        self.own = False  # If the copy was successful we own it to delete it.
+
+        if not os.path.isfile(source):
+            raise ValueError(f"The source path '{source}' must be a file")
+        self.source = os.path.abspath(source)
+
+        if os.path.isdir(destination):
+            destination = os.path.join(destination, os.path.basename(self.source))
+        self.destination = os.path.abspath(destination)
+
+        self._copy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, exception_traceback):
+        self._delete()
+
+    def __del__(self):
+        self._delete()
+
+    def _copy(self):
+        shutil.copyfile(self.source, self.destination)
+        self.own = True
+
+    def _delete(self):
+        if not self.own:
+            return
+
+        try:
+            if os.path.exists(self.destination):
+                os.remove(self.destination)
+        finally:
+            self.own = False
