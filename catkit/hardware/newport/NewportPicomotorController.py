@@ -87,7 +87,7 @@ class NewportPicomotorController(MotorController):
         
         if centroid_method is None:
             self.centroid_method = centroid_1dg
-        elif self.centroid_method == '1d':
+        elif centroid_method == '1d':
             self.centroid_method = centroid_1dg
         elif centroid_method == '2d':
             self.centroid_method = centroid_2dg
@@ -353,6 +353,5 @@ class NewportPicomotorController(MotorController):
             # Pull out the response from the html on the page 
             # The output will be nestled between --> and \\r
             response = resp.split('response')[1].split('-->')[1].split('\\r')[0].split('>')[-1]
-            print(response)
 
             return response
