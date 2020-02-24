@@ -4,9 +4,11 @@ import datetime
 
 from astropy.io import fits
 import numpy as np
+from poppy import zernike
 
 from catkit.config import CONFIG_INI
 import catkit.util
+from hicat.experiments.modules import zernike as hicat_zernike_module
 
 
 m_per_volt_map1 = None  # for caching the conversion factor, to avoid reading from disk each time
@@ -337,26 +339,26 @@ def create_constant_flat_map(output_path, file_name=None, dm_num=1):
     dm_command_data = mask * bias_volts
     catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
 
-def add_zernike_to_flat_map(output_path, file_name=None, dm_num=1):
+def add_zernike_to_flat_map(output_path, file_name=None, dm_num=1, zernike_index=4, zerike_coeff_volts=10):
     """
-    Creates a uniform flat map and outputs a new flatmap fits file.
+    Creates a new flat map from the existing flat map for selected DM by adding a specified Zernike term with the
+    specified coefficient magnitude.
     :param output_path: Path to output the new flatmap fits file. Default is hardware/boston/
     :param file_name: Filename for new flatmap fits file. Default is
-            flat_map_volts_dm_<1 or 2>_constant.fits
+            flat_map_volts_dm_<1 or 2>_zernike_<zernike index>_<coefficient value>V.fits
     ;param dm_num: Which DM is this for?  Defaults to 1.
+    ;param zernike_index: What Zernike term are we applying, defaults to 4, which I think is focus, but should update if not
+    ;param zernike_coeff_volts: Coefficient of the Zernike term that we're adding in volts.  Defaults to +10, which for
+    ;                           most Zernike terms should be a P2V of 20.
     :return: None
     """
-    flat_map = get_flat_map_volts(dm_num)
+    flat_map_volts = get_flat_map_volts(dm_num)
 
+    flat_map_volts += hicat_zernike_module.create_zernike(zernike_index, zerike_coeff_volts)
+    flat_map_volts *= mask
 
     if file_name is None:
-        # Create a string representation of the current timestamp.
-        # time_stamp = time.time()
-        # date_time_string = datetime.datetime.fromtimestamp(time_stamp).strftime("%Y-%m-%dT%H-%M-%S")
-        file_name = "flat_map_volts_dm_" + str(dm_num) + "_constant.fits"
+        file_name = f"flat_map_volts_dm_{dm_num}_zernike_{zernike_index}_{zernike_coeff_volts}V.fits"
 
-    bias_volts = CONFIG_INI.getint('boston_kilo952', f'bias_volts_dm{dm_num}')
-    mask = catkit.util.get_dm_mask()
-    dm_command_data = mask * bias_volts
-    catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
+    catkit.util.write_fits(flat_map_volts, os.path.join(output_path, file_name))
 
