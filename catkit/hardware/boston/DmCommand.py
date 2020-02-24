@@ -111,11 +111,12 @@ class DmCommand(object):
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
                     flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
-                    # dm_command -= 90
+                    # dm_command -= 30
                 else:
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
                     flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
+                    # dm_command -= 30
 
             # Convert between 0-1.
             dm_command /= self.max_volts
@@ -336,4 +337,26 @@ def create_constant_flat_map(output_path, file_name=None, dm_num=1):
     dm_command_data = mask * bias_volts
     catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
 
+def add_zernike_to_flat_map(output_path, file_name=None, dm_num=1):
+    """
+    Creates a uniform flat map and outputs a new flatmap fits file.
+    :param output_path: Path to output the new flatmap fits file. Default is hardware/boston/
+    :param file_name: Filename for new flatmap fits file. Default is
+            flat_map_volts_dm_<1 or 2>_constant.fits
+    ;param dm_num: Which DM is this for?  Defaults to 1.
+    :return: None
+    """
+    flat_map = get_flat_map_volts(dm_num)
+
+
+    if file_name is None:
+        # Create a string representation of the current timestamp.
+        # time_stamp = time.time()
+        # date_time_string = datetime.datetime.fromtimestamp(time_stamp).strftime("%Y-%m-%dT%H-%M-%S")
+        file_name = "flat_map_volts_dm_" + str(dm_num) + "_constant.fits"
+
+    bias_volts = CONFIG_INI.getint('boston_kilo952', f'bias_volts_dm{dm_num}')
+    mask = catkit.util.get_dm_mask()
+    dm_command_data = mask * bias_volts
+    catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
 
