@@ -339,7 +339,7 @@ def create_constant_flat_map(output_path, file_name=None, dm_num=1):
     dm_command_data = mask * bias_volts
     catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
 
-def add_zernike_to_flat_map(output_path, file_name=None, dm_num=1, zernike_index=4, zerike_coeff_volts=10):
+def add_zernike_to_flat_map(output_path, file_name=None, dm_num=1, zernike_index=4, zernike_coeff_volts=10):
     """
     Creates a new flat map from the existing flat map for selected DM by adding a specified Zernike term with the
     specified coefficient magnitude.
@@ -354,8 +354,8 @@ def add_zernike_to_flat_map(output_path, file_name=None, dm_num=1, zernike_index
     """
     flat_map_volts = get_flat_map_volts(dm_num)
 
-    flat_map_volts += hicat_zernike_module.create_zernike(zernike_index, zerike_coeff_volts)
-    flat_map_volts *= mask
+    flat_map_volts += (hicat_zernike_module.create_zernike(zernike_index, zernike_coeff_volts) + zernike_coeff_volts/2)
+    flat_map_volts *= catkit.util.get_dm_mask()
 
     if file_name is None:
         file_name = f"flat_map_volts_dm_{dm_num}_zernike_{zernike_index}_{zernike_coeff_volts}V.fits"
