@@ -147,11 +147,12 @@ def convert_dict_from_si(command_dict):
 
 def check_dictionary(dictionary):
     """Check that the dictionary is in the correct format"""
-    # Check keys & values
-    allowed_keys = iris_pupil_numbering()
+    # Expecting a list starting at zero OR 1 to # of segs/segs+1
+    allowed_keys = np.arange(iris_num_segments()+1)
+
     for k, v in dictionary.items():
         if k not in allowed_keys:
-            raise TypeError("Dictionary keys must be segments numbers from 1 to the number of segments")
+            raise TypeError("Dictionary keys must be segments numbers from 0 or 1 to the number of segments")
         if len(v) != 3:
             raise TypeError("Dictionary values must be tuples of length 3")
 
@@ -397,26 +398,31 @@ def read_ini(path):
     return command_dict
 
 
-def read_segment_values(segments_values, iris_mapping=None):
+def read_segment_values(segments_values, native_mapping=None):
     """
     Each of the following formats can be read in. This function takes in
     any of these three formats and converts it to a dictionary of the form:
             {seg:(piston, tip, tilt)}
     With units of : ([um], [mrad], [mrad])
 
-    - .PTT111 file: File format of the segments values coming out of the IrisAO GUI
-    - .ini file: File format of segments values that gets sent to the IrisAO controls
-    - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
+    There are only two allowed mappings for the input formats, Native and Centered Pupil.
+    See the README for the Iris AO for more details.
+
+    - .PTT111 file: File format of the segments values coming out of the IrisAO GUI [Native]
+    - .ini file: File format of segments values that gets sent to the IrisAO controls [Native]
+    - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)} [Centered Pupil]
 
     :param segments_values: str, dict. Can be .PTT111, .ini files or dictionary of the
                             form {seg: (piston, tip, tilt)}
-    :param iris_mapping: bool or None, whether or not the input command is in the Iris
+    :param native_mapping: bool or None, whether or not the input command is in the Iris
                          frame already. If None, this will be determined by input type of
                          segment_values. If segment_values is a .PTT111 or .ini file, assumes
-                         iris_mapping=True. If segment_values is a dictionary, assumes
-                         iris_mapping=False.
+                         native_mapping=True. If segment_values is a dictionary, assumes
+                         native_mapping=False.
 
-    :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
+    :return: dict, bool, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
+             and a bool that if True, indicates Native numbering, and if False, indicates
+             Centered Pupil numbering
     """
     try:
         if segments_values.endswith("PTT111"):
@@ -439,7 +445,7 @@ def read_segment_values(segments_values, iris_mapping=None):
         else:
             raise TypeError("The command input format is not supported")
 
-    if iris_mapping is not None:
-        dm_mapping = iris_mapping
+    if native_mapping is not None:
+        dm_mapping = native_mapping
 
     return command_dict, dm_mapping
