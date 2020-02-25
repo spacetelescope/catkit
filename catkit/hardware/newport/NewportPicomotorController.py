@@ -183,7 +183,8 @@ class NewportPicomotorController(MotorController):
         initial_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
         
         self._send_message(set_message, 'set')
-        time.sleep(2)
+        move_time = 2 if value < 1000 else value/500
+        time.sleep(move_time)
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
         
         if float(set_value) != value:
