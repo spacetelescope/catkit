@@ -2,11 +2,30 @@
 
 If you have an Iris AO segmented DM, congratulations! You are one of only a few.
 
-## Input
+
+## Segment numbering and input formats
+
+There are only two allowed mappings for the input formats, Native and Centered Pupil.
+
+_Native_:
+This numbering is tied directly to the Iris AO numbering. In this frame, the center of the hardware is 1 and the numbering continues up and **counter-clockwise**. Any input in this numbering means that the piston, tip, tilt, values correspond directly to the segment number given. Segment values input in this frame will not be shifted, only cropped if you are only using a sub-aperture of the DM. Even if you are only using a sub-aperture, the numbers of the segments will not change. For example: If you are using a sub-aperture that is centered on segment 3, the code will pull the values for segment 3 from the input and use that as your center segment value. See figure below.
+
+![](figures/native_numbering.png)
+
+
+_Centered Pupil_:
+This numbering system starts in the center of your pupil, regardless of where it is in the DM, continues up and **clockwise**. This the default numbering for POPPY and also intuitive for someone starting from an array. As an example, if you are using a sup-aperture of the DM start starts at segment 3 (same as in the example above), in the input, segment 0 will actually corresponds to segment 3 on the DM and the input will be shifted accordingly. See figure below.
+
+![](figures/centered_pupil_numbering.png)
+
+For each of the input formats, we give, in brackets, the default/expected numbering for each base on the above options.
+
+
+## Input formats
 
 The `catkit` module for the Iris AO expects that you will be passing in one of the following types:
 
-* *.PTT111* file: File format of the command coming out of the IrisAO GUI
+* *.PTT111* file: File format of the command coming out of the IrisAO GUI [Native]
 
   Example:
 
@@ -20,8 +39,8 @@ The `catkit` module for the Iris AO expects that you will be passing in one of t
         ...
         [ZV: 37, 0, 0, 0]
 
-* *.ini* file: File format of command that gets sent to the IrisAO controls
-* dictionary: Same format that gets returned: {segment number: (piston, tip, tilt)}
+* *.ini* file: File format of command that gets sent to the IrisAO controls [Native]
+* dictionary: Same format that gets returned: {segment number: (piston, tip, tilt)} [Centered Pupil]
 
 Each of these types has to be handled slightly differently, but never fear, we figured that out for you!
 
