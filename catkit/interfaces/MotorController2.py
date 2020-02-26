@@ -4,7 +4,7 @@ from catkit.interfaces.Instrument import Instrument
 """Interface for a motor controller."""
 
 
-class MotorController(Instrument, ABC):
+class MotorController2(Instrument, ABC):
 
     @abstractmethod
     def absolute_move(self, motor_id, position):
