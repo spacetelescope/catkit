@@ -21,7 +21,7 @@ from requests.exceptions import HTTPError
 import urllib
 from urllib.parse import urlencode
 
-from catkit.interfaces.MotorController2 import MotorController
+from catkit.interfaces.MotorController2 import MotorController2
 
 ## -- Let's go.
 
@@ -37,12 +37,13 @@ def http_except(function):
 
     return wrapper
 
-class NewportPicomotorController(MotorController):
+class NewportPicomotorController(MotorController2):
     """ This class handles all the picomotor stufff. """
     
-    instrument_lib = urllib
+    instrument_lib = urllib.request
 
-    def initialize(self, ip, max_step, timeout, daisy, calibration=None, home_reset=True, centroid_method=None):
+    def initialize(self, ip, max_step, timeout, daisy, min_sleep_per_move, sleep_per_step, 
+            calibration=None, home_reset=True, centroid_method=None):
         """ Initial function set the IP address for the controller. Anything set to None will attempt to
         pull from the config file.
         
@@ -55,7 +56,8 @@ class NewportPicomotorController(MotorController):
         timeout : float
             The timeout before the urlopen call gives up.
         daisy : int
-            The order of daisy chained controller. 
+            The order of daisy chained controller. I.e. 0 for the master
+            controller, and then 2, 3, and so on.  
         calibration : dict, optional
             Precalculated calibration parameters. Default to None to
             intialize empty.
@@ -72,10 +74,13 @@ class NewportPicomotorController(MotorController):
         self.max_step = max_step
         self.timeout = timeout
         self.home_reset = home_reset
+        self.min_sleep_per_move = min_seep_per_move # .75 
+        self.sleep_per_step = sleep_per_step # 1/2000
+        move_time = self.min_sleep_per_move + value*self.sleep_per_step 
         
         # If it's an Nth daisy chained controller, we want a 'N>' prefix before each message.
         # Otherwise, we want nothing.
-        self.daisy = '{}>'.format(daisy) if int(daisy) > 1 else ''
+        self.daisy = f'{daisy}>' if int(daisy) > 1 else ''
         
         # Initialize some command parameters
         self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
@@ -100,14 +105,15 @@ class NewportPicomotorController(MotorController):
         sticks). NOTE : To follow the format of the other classes, I'm
         literally setting self.instrument to urllib.request which feels like
         cheating?"""
-        instrument = self.instrument_lib.request
+        instrument = True 
         try:
-            instrument.urlopen('http://{}'.format(self.ip), timeout=self.timeout)
-        except (IncompleteRead, HTTPError, Exception) as e:
-            raise OSError("The controller IP address is not responding.") from e
-
+            instrument_lib.urlopen(f'http://{self.ip}', timeout=self.timeout)
+        except  Exception as e:
+            raise OSError(f"The controller IP address : {self.ip} is not responding.") from e
+            self.log.critical(f"The controller IP address : {self.ip} is not responding.")
+            
         self.instrument = instrument
-        self.log.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
+        self.log.info(f'IP address : {self.ip}, is online, and logging instantiated.')
         
         # Save current position as home.
         for axis in '1234':
@@ -140,7 +146,7 @@ class NewportPicomotorController(MotorController):
             Which axis to move. NOTE : in MotorController
             class this is called "motor_id".
         value : int
-            Number of stpes. NOTE : in MotorController
+            Number of steps. NOTE : in MotorController
             class this is called "distance."
         """
 
@@ -177,20 +183,24 @@ class NewportPicomotorController(MotorController):
         """
         
         set_message = self._build_message(cmd_key, 'set', axis, value)
-        print(set_message)
         get_message = self._build_message(cmd_key, 'get', axis)
         
         initial_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
         
         self._send_message(set_message, 'set')
-        move_time = 2 if value < 1000 else value/500
+        
+        # Calculate time move will take so we don't overlap messages
+        # Default velocity is 2000 steps/second
+        # Also add half second time for following jiggle.
+        move_time = self.min_sleep_per_move + value*self.sleep_per_step 
         time.sleep(move_time)
+        
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
         
         if float(set_value) != value:
-            self.log.error('Something is wrong, {} != {}'.format(set_value, value)) 
+            self.log.error(f'Something is wrong, {set_value} != {value}') 
          
-        self.log.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
+        self.log.info(f'Command sent. Action : {cmd_key}. Axis : {axis}. Value : {value}')
 
     def convert_move_to_pixel(self, img_before, img_after, move, axis):
         """ After two images taken some x_move or y_move apart, calculate how
@@ -239,8 +249,8 @@ class NewportPicomotorController(MotorController):
         else:
             raise NotImplementedError('Only axis 1 through 4 are defined.')
         
-        self.calibration['r_ratio_{}'.format(axis)] = r_ratio
-        self.calibration['delta_theta_{}'.format(axis)] = delta_theta
+        self.calibration[f'r_ratio_{axis}'] = r_ratio
+        self.calibration[f'delta_theta_{axis}'] = delta_theta
         
         return r, theta, r_ratio, delta_theta
     
@@ -265,8 +275,8 @@ class NewportPicomotorController(MotorController):
             
             message = self._build_message(cmd_key, 'get', axis)
             value = self._send_message(message, 'get') 
-            state_dict['{}_{}'.format(cmd_key, axis)] = value
-            self.log.info('For axis {}, {} is set to {}'.format(axis, cmd_key, value))
+            state_dict[f'{cmd_key}_{axis}'] = value
+            self.log.info(f'For axis {axis}, {cmd_key} is set to {value}')
         
         return state_dict
         
@@ -315,7 +325,7 @@ class NewportPicomotorController(MotorController):
                 raise ValueError("This command requires an integer axis.")
             elif value is not None:
                 raise ValueError('No value can be set during a status check.')
-            message = '{}{}{}?'.format(self.daisy, axis, address)
+            message = f'{daisy}{axis}{address}?'
         
         elif cmd_type == 'set': 
             if axis is None or not isinstance(axis, int):
@@ -323,9 +333,9 @@ class NewportPicomotorController(MotorController):
             elif value is None or not isinstance(value, int):
                 raise ValueError("This command requires an integer value.")
             elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > self.max_step:
-                raise ValueError('You can only move {} in any direction.'.format(self.max_step))
+                raise ValueError(f'You can only move {self.max_step} in any direction.')
             else:
-                message = '{}{}{}{}'.format(self.daisy, axis, address, value)
+                message = f'{daisy}{axis}{address}{value}'
             
         return message
     
@@ -347,12 +357,12 @@ class NewportPicomotorController(MotorController):
         """
         
         form_data = urlencode({'cmd': message, 'submit': 'Send'})
-        with self.instrument.urlopen('http://{}/cmd_send.cgi?{}'.format(self.ip, form_data), timeout=self.timeout) as html:
+        with self.instrument_lib.urlopen(f'http://{self.ip}/cmd_send.cgi?{form_data}', timeout=self.timeout) as html:
             resp = str(html.read())
         
         if cmd_type == 'get':
             # Pull out the response from the html on the page 
             # The output will be nestled between --> and \\r
-            response = resp.split('response')[1].split('-->')[1].split('\\r')[0].split('>')[-1]
+            response = resp.split('response')[1].split('-->')[1].split('\\r')[0]
 
             return response
