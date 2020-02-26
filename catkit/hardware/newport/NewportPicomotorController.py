@@ -74,9 +74,8 @@ class NewportPicomotorController(MotorController2):
         self.max_step = max_step
         self.timeout = timeout
         self.home_reset = home_reset
-        self.min_sleep_per_move = min_seep_per_move # .75 
+        self.min_sleep_per_move = min_sleep_per_move # .75 
         self.sleep_per_step = sleep_per_step # 1/2000
-        move_time = self.min_sleep_per_move + value*self.sleep_per_step 
         
         # If it's an Nth daisy chained controller, we want a 'N>' prefix before each message.
         # Otherwise, we want nothing.
@@ -107,7 +106,7 @@ class NewportPicomotorController(MotorController2):
         cheating?"""
         instrument = True 
         try:
-            instrument_lib.urlopen(f'http://{self.ip}', timeout=self.timeout)
+            self.instrument_lib.urlopen(f'http://{self.ip}', timeout=self.timeout)
         except  Exception as e:
             raise OSError(f"The controller IP address : {self.ip} is not responding.") from e
             self.log.critical(f"The controller IP address : {self.ip} is not responding.")
@@ -325,7 +324,7 @@ class NewportPicomotorController(MotorController2):
                 raise ValueError("This command requires an integer axis.")
             elif value is not None:
                 raise ValueError('No value can be set during a status check.')
-            message = f'{daisy}{axis}{address}?'
+            message = f'{self.daisy}{axis}{address}?'
         
         elif cmd_type == 'set': 
             if axis is None or not isinstance(axis, int):
@@ -335,7 +334,7 @@ class NewportPicomotorController(MotorController2):
             elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > self.max_step:
                 raise ValueError(f'You can only move {self.max_step} in any direction.')
             else:
-                message = f'{daisy}{axis}{address}{value}'
+                message = f'{self.daisy}{axis}{address}{value}'
             
         return message
     
