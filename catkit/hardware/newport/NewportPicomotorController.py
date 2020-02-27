@@ -42,7 +42,7 @@ class NewportPicomotorController(MotorController2):
     
     instrument_lib = urllib.request
 
-    def initialize(self, ip, max_step, timeout, daisy, min_sleep_per_move, sleep_per_step, 
+    def initialize(self, ip, max_step, timeout, daisy, sleep_per_step=0.0005, 
             calibration=None, home_reset=True, centroid_method=None):
         """ Initial function set the IP address for the controller. Anything set to None will attempt to
         pull from the config file.
@@ -56,7 +56,7 @@ class NewportPicomotorController(MotorController2):
         timeout : float
             The timeout before the urlopen call gives up.
         daisy : int
-            The order of daisy chained controller. I.e. 0 for the master
+            The oridinal of daisy chained controller. I.e. 0 for the master
             controller, and then 2, 3, and so on.  
         calibration : dict, optional
             Precalculated calibration parameters. Default to None to
@@ -74,8 +74,7 @@ class NewportPicomotorController(MotorController2):
         self.max_step = max_step
         self.timeout = timeout
         self.home_reset = home_reset
-        self.min_sleep_per_move = min_sleep_per_move # .75 
-        self.sleep_per_step = sleep_per_step # 1/2000
+        self.sleep_per_step = sleep_per_step 
         
         # If it's an Nth daisy chained controller, we want a 'N>' prefix before each message.
         # Otherwise, we want nothing.
@@ -101,17 +100,16 @@ class NewportPicomotorController(MotorController2):
 
     def _open(self):
         """ Function to test a connection (ping the address and see if it
-        sticks). NOTE : To follow the format of the other classes, I'm
-        literally setting self.instrument to urllib.request which feels like
-        cheating?"""
-        instrument = True 
+        sticks). """
         try:
             self.instrument_lib.urlopen(f'http://{self.ip}', timeout=self.timeout)
         except  Exception as e:
             raise OSError(f"The controller IP address : {self.ip} is not responding.") from e
             self.log.critical(f"The controller IP address : {self.ip} is not responding.")
             
-        self.instrument = instrument
+        # Since there's no useful "object" to connect to here, instrument is
+        # set to True to allow for open/close behavior 
+        self.instrument = True
         self.log.info(f'IP address : {self.ip}, is online, and logging instantiated.')
         
         # Save current position as home.
@@ -142,10 +140,10 @@ class NewportPicomotorController(MotorController2):
         Parameters
         ----------
         axis : str
-            Which axis to move. NOTE : in MotorController
+            Which axis to move. NOTE : in MotorController2
             class this is called "motor_id".
         value : int
-            Number of steps. NOTE : in MotorController
+            Number of steps. NOTE : in MotorController2
             class this is called "distance."
         """
 
@@ -157,10 +155,10 @@ class NewportPicomotorController(MotorController2):
         Parameters
         ----------
         axis : str
-            Which axis to move. NOTE : in MotorController
+            Which axis to move. NOTE : in MotorController2
             class this is called "motor_id".
         value : int
-            Number of stpes. NOTE : in MotorController
+            Number of stpes. NOTE : in MotorController2
             class this is called "distance."
         """
         
@@ -190,8 +188,7 @@ class NewportPicomotorController(MotorController2):
         
         # Calculate time move will take so we don't overlap messages
         # Default velocity is 2000 steps/second
-        # Also add half second time for following jiggle.
-        move_time = self.min_sleep_per_move + value*self.sleep_per_step 
+        move_time = value*self.sleep_per_step 
         time.sleep(move_time)
         
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
