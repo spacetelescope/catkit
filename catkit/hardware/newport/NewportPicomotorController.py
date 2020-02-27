@@ -11,18 +11,17 @@ According to the manual, this should hold for models:
 """
 
 ## -- IMPORTS
-import configparser
-import datetime
 import functools
-import logging
-import os
+import time
 
 from http.client import IncompleteRead
 import numpy as np
-from photutils import centroid_1dg
+from photutils import centroid_1dg, centroid_2dg
 from requests.exceptions import HTTPError
+import urllib
 from urllib.parse import urlencode
-from urllib.request import urlopen
+
+from catkit.interfaces.MotorController2 import MotorController2
 
 ## -- Let's go.
 
@@ -38,101 +37,94 @@ def http_except(function):
 
     return wrapper
 
-class NewportPicomotor:
+class NewportPicomotorController(MotorController2):
     """ This class handles all the picomotor stufff. """
+    
+    instrument_lib = urllib.request
 
-    def __init__(self, ip=None, max_step=None, timeout=None, home_reset=True):
-        """ Initial function to set up logging and 
-        set the IP address for the controller. Anything set to None will attempt to
+    def initialize(self, ip, max_step, timeout, daisy, sleep_per_step=0.0005, 
+            calibration=None, home_reset=True, centroid_method=None):
+        """ Initial function set the IP address for the controller. Anything set to None will attempt to
         pull from the config file.
         
         Parameters
         ----------
         ip : string
-            The IP address for the controller. Defaults to None.
+            The IP address for the controller.
         max_step : float
-            The max step the controller can take. Defaults to None. 
+            The max step the controller can take. 
         timeout : float
-            The timeout before the urlopen call gives up. Defaults to None.
-        home_reset : bool
+            The timeout before the urlopen call gives up.
+        daisy : int
+            The oridinal of daisy chained controller. I.e. 0 for the master
+            controller, and then 2, 3, and so on.  
+        calibration : dict, optional
+            Precalculated calibration parameters. Default to None to
+            intialize empty.
+        home_reset : bool, optional
             Whether or not to reset to the home position on controller close.
             Defaults to True.
+        centroid_method : str, optional
+            '1d' or '2d' for centroid method. Defaults to 1d.
         """
 
-        # Set IP address
-        if None in [ip, max_step, timeout]:
-            config_path = os.environ.get('CATKIT_CONFIG')
-            if config_path is None:
-                raise OSError('No available config to specify picomotor connection.')
+        # Set vital connection parameters
             
-            config = configparser.ConfigParser()
-            config.read(config_path)
-            
-        self.ip = config.get('newport_picomotor_8743-CL_8745-PS', 'ip') if ip is None else ip
-        self.max_step = config.get('newport_picomotor_8743-CL_8745-PS', 'max_step') if max_step is None else max_step
-        self.timeout = config.get('newport_picomotor_8743-CL_8745-PS', 'timeout') if timeout is None else timeout
-        self.home_reset = config.get('newport_picomotor_8743-CL_8745-PS', 'home_reset') if home_reset is None else home_reset
-
-        str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
-        self.logger = logging.getLogger('Newport-{}'.format(str_date))
-        self.logger.setLevel(logging.INFO)
-
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        log_file = 'newport_{}_{}.log'.format(self.ip, str_date)
-        fh = logging.FileHandler(filename=log_file)
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
-
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
+        self.ip = ip
+        self.max_step = max_step
+        self.timeout = timeout
+        self.home_reset = home_reset
+        self.sleep_per_step = sleep_per_step 
+        
+        # If it's an Nth daisy chained controller, we want a 'N>' prefix before each message.
+        # Otherwise, we want nothing.
+        self.daisy = f'{daisy}>' if int(daisy) > 1 else ''
         
         # Initialize some command parameters
         self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
-                         'relative_move': 'PR', 'reset': 'RS', 
+                         'relative_move': 'PR', 'reset': 'RS',
+                         'relative_move': 'PR', 'reset': 'RS',
                          'error_message': 'TB'}
+        
+        self.calibration = {} if calibration is None else calibration
+        
+        if centroid_method is None:
+            self.centroid_method = centroid_1dg
+        elif centroid_method == '1d':
+            self.centroid_method = centroid_1dg
+        elif centroid_method == '2d':
+            self.centroid_method = centroid_2dg
+        else:
+            raise NotImplementedError('Only 1D an 2D centroiding is available.')
 
-        self.calibration = {} 
 
+    def _open(self):
+        """ Function to test a connection (ping the address and see if it
+        sticks). """
         try:
-            urlopen('http://{}'.format(self.ip), timeout=self.timeout)
-        except (IncompleteRead, HTTPError, Exception) as e:
-            self.close_logger()
-            raise OSError("The controller IP address is not responding.") from e
-
-        self.logger.info('IP address : {}, is online, and logging instantiated.'.format(self.ip))
+            self.instrument_lib.urlopen(f'http://{self.ip}', timeout=self.timeout)
+        except  Exception as e:
+            raise OSError(f"The controller IP address : {self.ip} is not responding.") from e
+            self.log.critical(f"The controller IP address : {self.ip} is not responding.")
+            
+        # Since there's no useful "object" to connect to here, instrument is
+        # set to True to allow for open/close behavior 
+        self.instrument = True
+        self.log.info(f'IP address : {self.ip}, is online, and logging instantiated.')
         
         # Save current position as home.
         for axis in '1234':
             self.command('home_position', int(axis), 0)
-            self.logger.info('Current position saved as home.')
-
-
-    def __enter__(self):
-        """ Enter function to allow context management."""
-
-        return self
-
-    def __exit__(self, ex_type, ex_value, traceback):
-        """ Exit function to open loop, reset parameters to 0, close the
-        logging handler."""
-
-        self.close()
-    
-    def __del__(self):
-        """ Destructor with close behavior."""
+            self.log.info('Current position saved as home.')
         
-        self.close()
+        return self.instrument
 
-    def close(self):
+    def _close(self):
         """ Function for the close behavior. Return every parameter to zero
         and shut down the logging."""
         
         if self.home_reset:
             self.reset_controller()
-        self.close_logger()
 
     def reset_controller(self):
         """Function to reset the motors to where they started (or were last reset.)"""
@@ -140,15 +132,37 @@ class NewportPicomotor:
         for axis in '1234':
             self.command('exact_move', int(axis), 0)
             self.command('home_position', int(axis), 0)
-            self.logger.info('Controller reset.')
+            self.log.info('Controller reset.')
         
-    def close_logger(self):
-        """Function for the close logger behavior."""
+    def absolute_move(self, axis, value):
+        """ Function to make an absolute move.
 
-        handlers = self.logger.handlers[:]
-        for handler in handlers:
-            handler.close()
-            self.logger.removeHandler(handler)
+        Parameters
+        ----------
+        axis : str
+            Which axis to move. NOTE : in MotorController2
+            class this is called "motor_id".
+        value : int
+            Number of steps. NOTE : in MotorController2
+            class this is called "distance."
+        """
+
+        self.command('exact_move', axis, value)
+            
+    def relative_move(self, axis, value): 
+        """ Function to make a relative move.
+
+        Parameters
+        ----------
+        axis : str
+            Which axis to move. NOTE : in MotorController2
+            class this is called "motor_id".
+        value : int
+            Number of stpes. NOTE : in MotorController2
+            class this is called "distance."
+        """
+        
+        self.command('relative_move', axis, value)
 
     @http_except
     def command(self, cmd_key, axis, value):
@@ -171,13 +185,19 @@ class NewportPicomotor:
         initial_value = self._send_message(get_message, 'get') if cmd_key == 'relative_move' else 0
         
         self._send_message(set_message, 'set')
+        
+        # Calculate time move will take so we don't overlap messages
+        # Default velocity is 2000 steps/second
+        move_time = value*self.sleep_per_step 
+        time.sleep(move_time)
+        
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
         
         if float(set_value) != value:
-            self.logger.error('Something is wrong, {} != {}'.format(set_value, value)) 
+            self.log.error(f'Something is wrong, {set_value} != {value}') 
          
-        self.logger.info('Command sent. Action : {}. Axis : {}. Value : {}'.format(cmd_key, axis, value))
-    
+        self.log.info(f'Command sent. Action : {cmd_key}. Axis : {axis}. Value : {value}')
+
     def convert_move_to_pixel(self, img_before, img_after, move, axis):
         """ After two images taken some x_move or y_move apart, calculate how
         the picomoter move corresponds to pixel move.
@@ -205,8 +225,8 @@ class NewportPicomotor:
             The difference between the angle from x and the picomotor axis.
         """
 
-        x1, y1 = centroid_1dg(img_before)
-        x2, y2 = centroid_1dg(img_after)
+        x1, y1 = self.centroid_method(img_before)
+        x2, y2 = self.centroid_method(img_after)
 
         x_move = x1 - x2
         y_move = y1 - y2
@@ -216,17 +236,17 @@ class NewportPicomotor:
         
         r_ratio = r/move
         
-        if axis in '13':
+        if axis in [1,3]:
             delta_theta = theta - 0
         
-        elif axis in '24':
+        elif axis in [2, 4]:
             delta_theta = theta - np.pi/2
         
         else:
             raise NotImplementedError('Only axis 1 through 4 are defined.')
         
-        self.calibration['r_ratio_{}'.format(axis)] = r_ratio
-        self.calibration['delta_theta_{}'.format(axis)] = delta_theta
+        self.calibration[f'r_ratio_{axis}'] = r_ratio
+        self.calibration[f'delta_theta_{axis}'] = delta_theta
         
         return r, theta, r_ratio, delta_theta
     
@@ -251,8 +271,8 @@ class NewportPicomotor:
             
             message = self._build_message(cmd_key, 'get', axis)
             value = self._send_message(message, 'get') 
-            state_dict['{}_{}'.format(cmd_key, axis)] = value
-            self.logger.info('For axis {}, {} is set to {}'.format(axis, cmd_key, value))
+            state_dict[f'{cmd_key}_{axis}'] = value
+            self.log.info(f'For axis {axis}, {cmd_key} is set to {value}')
         
         return state_dict
         
@@ -262,7 +282,7 @@ class NewportPicomotor:
         
         message = self._build_message('reset', 'reset')
         self._send_message(message, 'set')
-        self.logger.info('Controller reset.')
+        self.log.info('Controller reset.')
 
     def _build_message(self, cmd_key, cmd_type, axis=None, value=None):
         """Build a message for the newport picomotor controller.
@@ -301,7 +321,7 @@ class NewportPicomotor:
                 raise ValueError("This command requires an integer axis.")
             elif value is not None:
                 raise ValueError('No value can be set during a status check.')
-            message = '{}{}?'.format(axis, address)
+            message = f'{self.daisy}{axis}{address}?'
         
         elif cmd_type == 'set': 
             if axis is None or not isinstance(axis, int):
@@ -309,9 +329,9 @@ class NewportPicomotor:
             elif value is None or not isinstance(value, int):
                 raise ValueError("This command requires an integer value.")
             elif cmd_key in ['exact_move', 'relative_move'] and np.abs(value) > self.max_step:
-                raise ValueError('You can only move {} in any direction.'.format(self.max_step))
+                raise ValueError(f'You can only move {self.max_step} in any direction.')
             else:
-                message = '{}{}{}'.format(axis, address, value)
+                message = f'{self.daisy}{axis}{address}{value}'
             
         return message
     
@@ -333,7 +353,7 @@ class NewportPicomotor:
         """
         
         form_data = urlencode({'cmd': message, 'submit': 'Send'})
-        with urlopen('http://{}/cmd_send.cgi?{}'.format(self.ip, form_data), timeout=self.timeout) as html:
+        with self.instrument_lib.urlopen(f'http://{self.ip}/cmd_send.cgi?{form_data}', timeout=self.timeout) as html:
             resp = str(html.read())
         
         if cmd_type == 'get':
@@ -342,4 +362,3 @@ class NewportPicomotor:
             response = resp.split('response')[1].split('-->')[1].split('\\r')[0]
 
             return response
-
