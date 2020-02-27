@@ -60,5 +60,5 @@ class TakeMtfData(Experiment):
                                                           filename=flat_file_name, camera_type=self.camera_type,
                                                           simulator=False,
                                                           **self.kwargs)
-        ps_wo_focus, ps_w_focus, focus = mtf_sampling(cal_file_path, self.mtf_snr_threshold)
-        self.log.info("ps_wo_focus=" + str(ps_wo_focus) + " ps_w_focus=" +str(ps_w_focus) + " focus=" +str(focus) )
+        ps_w_focus = mtf_sampling(cal_file_path, self.mtf_snr_threshold)
+        self.log.info( " ps_w_focus=" +str(ps_w_focus))
