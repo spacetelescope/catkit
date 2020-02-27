@@ -187,8 +187,9 @@ class NewportPicomotorController(MotorController2):
         self._send_message(set_message, 'set')
         
         # Calculate time move will take so we don't overlap messages
+        # Keep in mind sometimes steps are negative
         # Default velocity is 2000 steps/second
-        move_time = value*self.sleep_per_step 
+        move_time = np.abs(value*self.sleep_per_step)
         time.sleep(move_time)
         
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
