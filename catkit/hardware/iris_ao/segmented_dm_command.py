@@ -112,7 +112,7 @@ class SegmentedDmCommand(object):
         if self._shift_center and not flat:
             data_to_add = shift_command(data_to_add, self.segments_in_pupil,
                                         iris_util.iris_pupil_numbering())
-        elif flat: #Set flag to False so the flat map is only applied once
+        if flat: #Set flag to False so the flat map is only applied once
             self.flat_map = False
 
         # Do magic adding only if segment exists in both
