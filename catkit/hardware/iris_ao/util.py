@@ -398,7 +398,7 @@ def read_ini(path):
     return command_dict
 
 
-def read_segment_values(segments_values, native_mapping=None):
+def read_segment_values(segments_values, segment_mapping=None):
     """
     Each of the following formats can be read in. This function takes in
     any of these three formats and converts it to a dictionary of the form:
@@ -414,38 +414,47 @@ def read_segment_values(segments_values, native_mapping=None):
 
     :param segments_values: str, dict. Can be .PTT111, .ini files or dictionary of the
                             form {seg: (piston, tip, tilt)}
-    :param native_mapping: bool or None, whether or not the input command is in the Iris
-                         frame already. If None, this will be determined by input type of
-                         segment_values. If segment_values is a .PTT111 or .ini file, assumes
-                         native_mapping=True. If segment_values is a dictionary, assumes
-                         native_mapping=False.
+    :param segment_mapping: str or None. If None, this will be determined by input type of
+                            segment_values (see list above). If you know that the default
+                            is incorrect, you can overwrite with "native" or "centered"
+                            depending on if the segment values are in the native (Iris)
+                            numbering system, or if the are centered in the middle of the
+                            pupil (start at 0).
 
     :return: dict, bool, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
              and a bool that if True, indicates Native numbering, and if False, indicates
              Centered Pupil numbering
     """
+    # Read in file
     try:
         if segments_values.endswith("PTT111"):
             command_dict = read_segments(segments_values)
-            dm_mapping = True
+            mapping = "native"
         elif segments_values.endswith("ini"):
             command_dict = read_ini(segments_values)
-            dm_mapping = True
+            mapping = "native"
         else:
-            raise ValueError("The command input format is not supported")
+            raise ValueError("The segment values input format is not supported")
+    # Read in dictionary
     except AttributeError:
         if isinstance(segments_values, dict):
-            # Check that dictionary is in correct format
-            check_dictionary(segments_values)
+            check_dictionary(segments_values) # Check dictionary formating
             command_dict = segments_values
-            dm_mapping = False
+            mapping = "centered"
         elif segments_values is None:
             command_dict = segments_values
-            dm_mapping = None
+            mapping = None
         else:
-            raise TypeError("The command input format is not supported")
+            raise TypeError("The segment values input format is not supported")
 
-    if native_mapping is not None:
-        dm_mapping = native_mapping
+    # Allow user to override the above mapping, if, for ex. they build their own dict
+    if segment_mapping is not None:
+        convert_to_native_mapping = segment_mapping
+    elif mapping is None or mapping.lower() == "native":
+        convert_to_native_mapping = False
+    elif mapping.lower() == "centered":
+        convert_to_native_mapping = True
+    else:
+        raise ValueError("The mapping input format is not supported")
 
-    return command_dict, dm_mapping
+    return command_dict, convert_to_native_mapping
