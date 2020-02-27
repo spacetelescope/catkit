@@ -9,7 +9,8 @@ from catkit.config import CONFIG_INI
 import catkit.util
 
 
-m_per_volt_map = None  # for caching the conversion factor, to avoid reading from disk each time
+m_per_volt_map1 = None  # for caching the conversion factor, to avoid reading from disk each time
+m_per_volt_map2 = None  # for caching the conversion factor, to avoid reading from disk each time
 
 
 class DmCommand(object):
@@ -201,15 +202,25 @@ def get_flat_map_volts(dm_num):
         return flat_map_volts[0].data
 
 
-def get_m_per_volt_map():
+def get_m_per_volt_map(dn_num):
     calibration_data_package = CONFIG_INI.get("optics_lab", "calibration_data_package")
     calibration_data_path = os.path.join(catkit.util.find_package_location(calibration_data_package),
                                          "hardware",
                                          "boston")
-    global m_per_volt_map
-    if m_per_volt_map is None:
-        m_per_volt_map = fits.getdata(os.path.join(calibration_data_path,
-                                               CONFIG_INI.get("boston_kilo952", "meters_per_volt_map")))
+    if dm_num == 1:
+        global m_per_volt_map1
+        if m_per_volt_map1 is None:
+            m_per_volt_map1 = fits.getdata(os.path.join(calibration_data_path,
+                                               CONFIG_INI.get("boston_kilo952", "gain_map_dm1")))
+        m_per_volt_map = m_per_volt_map1
+
+    elif dm_num == 2:
+        global m_per_volt_map2
+        if m_per_volt_map2 is None:
+            m_per_volt_map2 = fits.getdata(os.path.join(calibration_data_path,
+                                               CONFIG_INI.get("boston_kilo952", "gain_map_dm2")))
+        m_per_volt_map = m_per_volt_map2
+
     return m_per_volt_map
 
 
