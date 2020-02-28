@@ -90,6 +90,7 @@ class SegmentedDmCommand(object):
         # Apply Flat Map
         if self.flat_map:
             self.add_map(self.filename_flat, flat=True)
+            self.flat_map = False # Prevent the flat map from being applied multiple times
 
         return self.data
 
@@ -112,8 +113,6 @@ class SegmentedDmCommand(object):
         if self._shift_center and not flat:
             data_to_add = shift_command(data_to_add, self.segments_in_pupil,
                                         iris_util.iris_pupil_numbering())
-        if flat: #Set flag to False so the flat map is only applied once
-            self.flat_map = False
 
         # Do magic adding only if segment exists in both
         combined_data = {seg: tuple(np.asarray(original_data.get(seg, (0., 0., 0.))) + np.asarray(data_to_add.get(seg, (0., 0., 0.)))) for seg in set(original_data) & set(data_to_add)}
