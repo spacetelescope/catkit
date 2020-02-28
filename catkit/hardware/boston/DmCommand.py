@@ -99,10 +99,7 @@ class DmCommand(object):
         # Otherwise convert meters to volts and apply appropriate corrections and bias.
         else:
             if not self.as_volts:
-                if self.dm_num == 1:
-                    dm_command = convert_m_to_volts(self.data, 1)
-                elif self.dm_num == 2:
-                    dm_command = convert_m_to_volts(self.data, 2)
+                dm_command = convert_m_to_volts(self.data, self.dm_num)
 
             # Apply bias.
             if self.bias:
@@ -176,13 +173,11 @@ class DmCommand(object):
         # Save raw data as input to the simulator.
         catkit.util.write_fits(self.data, os.path.join(dir_path, "dm{}_command_2d_noflat".format(self.dm_num)))
 
-# Why is this default to dm_num=1?  Other functions do not have this default behavior. seems like it would be
-# better to crash rather than use the wrong dm if the parameter is omitted.
 def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
     """
     Loads a DM command fits file from disk and returns a DmCommand object.
     :param path: Path to the "2d_noflat" dm command.
-    :param dm_num: Which DM to create the command for.
+    :param dm_num: Which DM to load the command for.
     :param flat_map: Apply a flat map in addition to the data.
     :param bias: Apply a constant bias to the command.
     :return: DmCommand object representing the dm command fits file.
@@ -209,7 +204,7 @@ def get_flat_map_volts(dm_num):
 def get_m_per_volt_map(dm_num):
     """
     Get the gain map for a given dm.  The gain map is in meter per volt for each actuator
-    :param dm_num: Which DM to create the command for.
+    :param dm_num: Which DM to load the command for.
     :return: gain map for the selected DM. This function caches the map to avoid multiple disk access
     """
     calibration_data_package = CONFIG_INI.get("optics_lab", "calibration_data_package")
@@ -240,7 +235,7 @@ def convert_volts_to_m(data, dm_num, meter_to_volt_map=None):
 
     :param data: array-like
         DM commands in volts
-    :param dm_num: Which DM to create the command for.
+    :param dm_num: Which DM is used
     :param meter_to_volt_map: array-like
         The calibration array used to map/convert volts to DM surface height in meters.
     :return: DM commands in meters
@@ -257,7 +252,7 @@ def convert_m_to_volts(data, dm_num, meter_to_volt_map=None):
     Inverse of convert_volts_to_m
 
     :param data:  DM commands in meters
-    :param dm_num: Which DM to create the command for.
+    :param dm_num: Which DM is used.
     :param meter_to_volt_map: array-like
         The calibration array used to map/convert volts to DM surface height in meters.
     :return: DM commands in volts
