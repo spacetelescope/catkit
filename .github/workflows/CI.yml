@@ -83,8 +83,8 @@ jobs:
         python setup.py develop
         cd ../
         git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
-        git checkout feature/HICAT-721-DM-gain-map
         cd hicat-package
+        git checkout feature/HICAT-721-DM-gain-map
         python setup.py develop
       shell: bash
     - name: Test with pytest
