@@ -113,12 +113,12 @@ class DmCommand(object):
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
                     flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
-                    # dm_command -= 30
+                    #dm_command -= 15
                 else:
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
                     flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
                     dm_command += flat_map_volts[0].data
-                    # dm_command -= 30
+                    #dm_command -= 60
 
             # Convert between 0-1.
             dm_command /= self.max_volts
