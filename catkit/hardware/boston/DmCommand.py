@@ -211,21 +211,16 @@ def get_m_per_volt_map(dm_num):
     calibration_data_path = os.path.join(catkit.util.find_package_location(calibration_data_package),
                                          "hardware",
                                          "boston")
-    if dm_num == 1:
-        global m_per_volt_map1
-        if m_per_volt_map1 is None:
-            m_per_volt_map1 = fits.getdata(os.path.join(calibration_data_path,
+
+    global m_per_volt_map1, m_per_volt_map2
+    if m_per_volt_map1 is None:
+        m_per_volt_map1 = fits.getdata(os.path.join(calibration_data_path,
                                                CONFIG_INI.get("boston_kilo952", "gain_map_dm1")))
-        m_per_volt_map = m_per_volt_map1
-
-    elif dm_num == 2:
-        global m_per_volt_map2
-        if m_per_volt_map2 is None:
-            m_per_volt_map2 = fits.getdata(os.path.join(calibration_data_path,
+    if m_per_volt_map2 is None:
+        m_per_volt_map2 = fits.getdata(os.path.join(calibration_data_path,
                                                CONFIG_INI.get("boston_kilo952", "gain_map_dm2")))
-        m_per_volt_map = m_per_volt_map2
 
-    return m_per_volt_map
+    return m_per_volt_map1 if dm_num == 1 else m_per_volt_map2
 
 
 def convert_volts_to_m(data, dm_num, meter_to_volt_map=None):
@@ -240,6 +235,9 @@ def convert_volts_to_m(data, dm_num, meter_to_volt_map=None):
         The calibration array used to map/convert volts to DM surface height in meters.
     :return: DM commands in meters
     """
+
+    if meter_to_volt_map is not None and dm_num is not None:
+        raise Exception("both gain map and dm_num given to convert_volts_to_m.")
 
     if meter_to_volt_map is None:
         meter_to_volt_map = get_m_per_volt_map(dm_num)
