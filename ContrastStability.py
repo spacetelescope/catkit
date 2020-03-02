@@ -17,8 +17,7 @@ from hicat.hardware import testbed
 import hicat.plotting.animation
 import hicat.plotting
 from hicat import util
-from scripts.stroke_minimization import stroke_min
-
+from hicat.experiments.modules import stroke_min
 
 # Redefine take image functions like in run_stroke_min
 exposure_time_coron = 100000
