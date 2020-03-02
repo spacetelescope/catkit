@@ -7,7 +7,7 @@ from hicat.hardware import testbed
 from catkit.catkit_types import units, quantity, LyotStopPosition
 from hicat.experiments.Experiment import Experiment
 import hicat.util
-from hicat.experiments.modules.stroke_min import take_pupilcam_hicat
+from hicat.wfc_algorithms.stroke_min import take_pupilcam_hicat
 from hicat.hardware.testbed import move_lyot_stop
 
 

@@ -16,10 +16,9 @@ import hcipy
 import hicat.plotting
 import hicat.plotting.animation
 from hicat.experiments.Experiment import Experiment
-from hicat.experiments.SafetyTest import SafetyException
 from hicat.hardware import testbed
 import hicat.util
-from hicat.experiments.modules import stroke_min
+from hicat.wfc_algorithms import stroke_min
 
 
 class StrokeMinimization(Experiment):
