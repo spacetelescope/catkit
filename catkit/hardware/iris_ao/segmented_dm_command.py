@@ -88,13 +88,12 @@ class SegmentedDmCommand(object):
         """
         # Apply Flat Map
         if self.flat_map:
-            self.add_map(self.filename_flat, flat=True)
-            self.flat_map = False # Prevent the flat map from being applied multiple times
+            self.add_map(self.filename_flat, apply_shift=False)
 
         return self.data
 
 
-    def add_map(self, segment_values_to_add, flat=False):
+    def add_map(self, segment_values_to_add, apply_shift=True):
         """
         Add a command to the one already loaded.
 
@@ -109,7 +108,7 @@ class SegmentedDmCommand(object):
         original_data = self.get_data()
         data_to_add, _ = iris_util.read_segment_values(segment_values_to_add)
 
-        if self._shift_center and not flat:
+        if self._shift_center and apply_shift:
             data_to_add = shift_command(data_to_add, self.segments_in_pupil,
                                         iris_util.iris_pupil_numbering())
 
