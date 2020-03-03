@@ -84,7 +84,6 @@ jobs:
         cd ../
         git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
         cd hicat-package
-        git checkout feature/HICAT-721-DM-gain-map
         python setup.py develop
       shell: bash
     - name: Test with pytest
@@ -120,7 +119,6 @@ jobs:
         cd ../
         git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
         cd hicat-package
-        git checkout feature/HICAT-721-DM-gain-map
         conda env update --name catkit --file environment.yml
         python setup.py develop
       shell: bash
