@@ -129,7 +129,8 @@ class PoppyBmcEmulator:
                 dm_image -= dm.flat_map_voltage
 
             # Convert to meters
-            dm_surface = catkit.hardware.boston.DmCommand.convert_volts_to_m(dm_image, dm.meter_per_volt_map)
+            dm_surface = catkit.hardware.boston.DmCommand.convert_volts_to_m(dm_image, None, dm.meter_per_volt_map)
+
             return dm_surface
 
         if self.dm1:
