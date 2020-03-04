@@ -236,8 +236,8 @@ def convert_volts_to_m(data, dm_num, meter_to_volt_map=None):
     :return: DM commands in meters
     """
 
-    if meter_to_volt_map.all() and dm_num:
-        raise Exception("both gain map and dm_num given to convert_volts_to_m.")
+    if meter_to_volt_map is not None and dm_num:
+        raise ValueError("Please pass only 'meter_to_volt_map' or 'dm_num' but NOT both.")
 
     if meter_to_volt_map is None:
         meter_to_volt_map = get_m_per_volt_map(dm_num)
