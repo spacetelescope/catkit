@@ -67,9 +67,12 @@ jobs:
       max-parallel: 1
       matrix:
         python-version: [3.6]
-        os: [ubuntu-latest]
+        os: [windows-latest, ubuntu-latest]
     steps:
     - uses: actions/checkout@v1
+    - uses: goanpeca/setup-miniconda@v1
+      with:
+          auto-update-conda: true
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
@@ -79,18 +82,18 @@ jobs:
     - name: Install dependencies
       run: |
         conda env create --file environment.yml
-        source activate catkit
+        conda activate catkit
         python setup.py develop
         cd ../
         git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
         cd hicat-package
         python setup.py develop
-      shell: bash
+      shell: bash -l {0}
     - name: Test with pytest
       run: |
-        source activate catkit
+        conda activate catkit
         pytest .
-      shell: bash
+      shell: bash -l {0}
 
   hicat-pytest:
     name: hicat pytests on Python ${{ matrix.python-version }} and ${{ matrix.os }}
@@ -100,11 +103,14 @@ jobs:
       max-parallel: 1
       matrix:
         python-version: [3.6]
-        os: [ubuntu-latest]
+        os: [windows-latest, ubuntu-latest]
     steps:
     - uses: actions/checkout@v1
       with:
         lfs: true
+    - uses: goanpeca/setup-miniconda@v1
+      with:
+          auto-update-conda: true
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
@@ -114,18 +120,18 @@ jobs:
     - name: Install dependencies
       run: |
         conda env create --file environment.yml
-        source activate catkit
+        conda activate catkit
         python setup.py develop
         cd ../
         git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
         cd hicat-package
         conda env update --name catkit --file environment.yml
         python setup.py develop
-      shell: bash
+      shell: bash -l {0}
     - name: Test with pytest
       run: |
-        source activate catkit
+        conda activate catkit
         cd ../hicat-package
         git lfs pull
         pytest hicat
-      shell: bash
+      shell: bash -l {0}
