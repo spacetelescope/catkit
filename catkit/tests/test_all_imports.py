@@ -1,6 +1,7 @@
 import glob
 import importlib
 import os
+import platform
 
 import pytest
 
@@ -18,7 +19,8 @@ all_files = [os.path.relpath(f, start=os.path.join(package_path, "..")) for f in
 all_imports = []
 for item in all_files:
     # Convert file system paths to python imports.
-    all_imports.append(os.path.splitext(item)[0].replace("/", "."))
+    replace = "\\" if platform.system() == "Windows" else "/"
+    all_imports.append(os.path.normpath(os.path.splitext(item)[0]).replace(replace, "."))
 
 # Ignore known ImportErrors due to missing 3rd party drivers.
 exclude_exceptions_containing = ["zwoas",
@@ -26,8 +28,12 @@ exclude_exceptions_containing = ["zwoas",
                                  "TSP01",
                                  "libftd2xx"]
 
+
 @pytest.mark.parametrize("to_import", all_imports)
 def test_imports(to_import):
+    if any(exclusion in str(to_import) for exclusion in exclude_exceptions_containing):
+        return
+
     try:
         importlib.__import__(to_import)
     except ImportError as error:
