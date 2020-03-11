@@ -32,7 +32,7 @@ class UpsSafetyTest(SafetyTest):
 
     name = "UPS Safety Test"
 
-    # Create a SnmpUPS object to monitor the Blue UPS.
+    # Create a SnmpUPS object to monitor the UPS.
     ups = testbed.backup_power()
 
     def check(self):
