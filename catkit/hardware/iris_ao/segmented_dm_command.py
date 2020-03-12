@@ -90,6 +90,7 @@ class SegmentedDmCommand(object):
         # Apply Flat Map
         if self.flat_map:
             self.add_map(self.filename_flat, flat=True)
+            self.flat_map = False # Prevent the flat map from being applied multiple times
 
         return self.data
 
