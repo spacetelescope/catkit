@@ -5,7 +5,6 @@ from catkit.hardware.boston.commands import flat_command
 from hicat.hardware import testbed
 from catkit.catkit_types import units, quantity, FpmPosition
 from hicat.config import CONFIG_INI
-from hicat.wolfram_wrappers import run_mtf
 from hicat.experiments.modules import mtf_sampling
 
 
