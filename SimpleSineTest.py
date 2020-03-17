@@ -18,6 +18,9 @@ class SimpleSineTest(Experiment):
     This reads the DM translation from the simulator section in the configfile and applies it if this is run on the
     simulator. If run on hwardware, the DM translation from the config.ini will still be used to create teh full data
     path.
+    :param cycles: range, cycles per aperture (spatial frequency) in lambda/D
+    :param orientation_angles: list, rotation angles for the sine wave in degrees
+    :param phase_shifts: list, phase between DM patterns in degrees - affects relative brightness of resulting speckles
     """
     def __init__(self, cycles, orientation_angles, phase_shifts):
         super().__init__()
