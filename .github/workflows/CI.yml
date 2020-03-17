@@ -70,28 +70,33 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     steps:
     - uses: actions/checkout@v1
+      with:
+          lfs: true
+    - uses: actions/setup-python@v1
+      with:
+          python-version: ${{ matrix.python-version }}
     - uses: goanpeca/setup-miniconda@v1
       with:
           auto-update-conda: true
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Include $CONDA in $PATH
-      run: echo ::add-path::$CONDA/bin
+          auto-activate-base: false
     - name: Install dependencies
       run: |
-        conda env create --file environment.yml
-        conda activate catkit
-        python setup.py develop
+        sed -E 's/[ \t]*-[ \t]*python[=<>0-9.,]*/  - python=${{ matrix.python-version }}/' environment.yml > environment2.yml
+        conda env create --name ci-env --file environment2.yml
         cd ../
         git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
         cd hicat-package
+        git checkout develop
+        sed -E 's/[ \t]*-[ \t]*python[=<>0-9.,]*/  - python=${{ matrix.python-version }}/' environment.yml > environment2.yml
+        conda env update --name ci-env --file environment2.yml
+        conda activate ci-env
+        python setup.py develop
+        cd ../instrument-interface-library
         python setup.py develop
       shell: bash -l {0}
     - name: Test with pytest
       run: |
-        conda activate catkit
+        conda activate ci-env
         pytest .
       shell: bash -l {0}
 
@@ -107,30 +112,32 @@ jobs:
     steps:
     - uses: actions/checkout@v1
       with:
-        lfs: true
+          lfs: true
+    - uses: actions/setup-python@v1
+      with:
+          python-version: ${{ matrix.python-version }}
     - uses: goanpeca/setup-miniconda@v1
       with:
           auto-update-conda: true
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Include $CONDA in $PATH
-      run: echo ::add-path::$CONDA/bin
+          auto-activate-base: false
     - name: Install dependencies
       run: |
-        conda env create --file environment.yml
-        conda activate catkit
-        python setup.py develop
+        sed -E 's/[ \t]*-[ \t]*python[=<>0-9.,]*/  - python=${{ matrix.python-version }}/' environment.yml > environment2.yml
+        conda env create --name ci-env --file environment2.yml
         cd ../
         git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
         cd hicat-package
-        conda env update --name catkit --file environment.yml
+        git checkout develop
+        sed -E 's/[ \t]*-[ \t]*python[=<>0-9.,]*/  - python=${{ matrix.python-version }}/' environment.yml > environment2.yml
+        conda env update --name ci-env --file environment2.yml
+        conda activate ci-env
+        python setup.py develop
+        cd ../instrument-interface-library
         python setup.py develop
       shell: bash -l {0}
     - name: Test with pytest
       run: |
-        conda activate catkit
+        conda activate ci-env
         cd ../hicat-package
         git lfs pull
         pytest hicat
