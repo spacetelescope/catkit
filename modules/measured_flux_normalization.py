@@ -99,4 +99,4 @@ def get_normalization_factor(coron_data, direct_data, out_path):
     direct_countrate = direct_ap_sum / direct_exptime
 
     factor = coron_countrate / direct_countrate  # type: float
-    return factor
+    return direct_table, coron_table, factor
