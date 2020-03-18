@@ -1,13 +1,15 @@
 import logging
 
-from catkit.catkit_types import units, quantity, FpmPosition
+from hicat.experiments.Experiment import Experiment
 from catkit.hardware.boston.commands import flat_command
+from hicat.hardware import testbed
+from catkit.catkit_types import units, quantity, FpmPosition
 from hicat.config import CONFIG_INI
 from hicat.experiments.modules import mtf_sampling
 
 
 
-class CalculateSampling(Experiment):
+class MtfSamplingCalculation(Experiment):
     name = "Mtf Sampling Calculation"
     log = logging.getLogger(__name__)
 
@@ -28,7 +30,6 @@ class CalculateSampling(Experiment):
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.camera_type = camera_type
-        self.mtf_snr_threshold = mtf_snr_threshold
         self.kwargs = kwargs
 
     def experiment(self):
@@ -58,5 +59,5 @@ class CalculateSampling(Experiment):
                                                           filename=flat_file_name, camera_type=self.camera_type,
                                                           simulator=False,
                                                           **self.kwargs)
-        ps_w_focus = mtf_sampling(cal_file_path, self.mtf_snr_threshold)
-        self.log.info( " ps_w_focus=" +str(ps_w_focus))
+        pixel_sampling = mtf_sampling(cal_file_path, self.mtf_snr_threshold)
+        self.log.info( " pixel sampling in focused image =" +str(pixel_sampling))
