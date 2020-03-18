@@ -355,10 +355,14 @@ def add_zernike_to_flat_map(output_path, file_name=None, dm_num=1, zernike_index
     flat_map_volts = get_flat_map_volts(dm_num)
 
     flat_map_volts += (hicat_zernike_module.create_zernike(zernike_index, zernike_coeff_volts) + zernike_coeff_volts/2)
-    flat_map_volts *= catkit.util.get_dm_mask()
+    mask = catkit.util.get_dm_mask().astype('bool')
+    flat_map_volts *= mask
+    flat_map_volts_masked = flat_map_volts[mask]
+    flat_map_volts_masked[flat_map_volts_masked < 0] = 0
+    flat_map_volts[mask] = flat_map_volts_masked
 
     if file_name is None:
-        file_name = f"flat_map_volts_dm_{dm_num}_zernike_{zernike_index}_{zernike_coeff_volts}V.fits"
+        file_name = f"flat_map_volts_dm_{dm_num}_zernike_{zernike_index}_{zernike_coeff_volts:.2f}V.fits"
 
     catkit.util.write_fits(flat_map_volts, os.path.join(output_path, file_name))
 
