@@ -90,6 +90,16 @@ def get_normalization_factor(coron_data, direct_data, out_path):
     if len(direct_table) != 1:
         print('Likely Problem with direct img photometry')
 
+    # Add filter info to photometry tables
+    color_filter_coron, nd_filter_coron = coron_header['FILTERS'].split(',')
+    color_filter_dir, nd_filter_dir = direct_header['FILTERS'].split(',')
+
+    coron_table['color_filter'] = color_filter_coron
+    coron_table['nd_filter'] = nd_filter_coron
+    direct_table['color_filter'] = color_filter_dir
+    direct_table['nd_filter'] = nd_filter_dir
+
+    # Calculate count rates
     coron_ap_sum = coron_table['aperture_sum'][0]
     coron_exptime = coron_header['EXP_TIME']
     coron_countrate = coron_ap_sum / coron_exptime
@@ -98,5 +108,7 @@ def get_normalization_factor(coron_data, direct_data, out_path):
     direct_exptime = direct_header['EXP_TIME']
     direct_countrate = direct_ap_sum / direct_exptime
 
+    # Calculate flux normalization factor
     factor = coron_countrate / direct_countrate  # type: float
+
     return direct_table, coron_table, factor
