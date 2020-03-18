@@ -1,31 +1,33 @@
-from astropy.io import fits
-import numpy as np
-import matplotlib.pyplot as plt
 import os
 
-from photutils import CircularAperture
-from photutils import aperture_photometry
+from astropy.io import fits
+from astropy.stats import sigma_clipped_stats
 from astropy.visualization import ZScaleInterval
+import matplotlib.pyplot as plt
+import numpy as np
+from photutils import aperture_photometry
+from photutils import CircularAperture
+from photutils import DAOStarFinder
 
 zscale = ZScaleInterval(contrast=0.10).get_limits
 
-from astropy.stats import sigma_clipped_stats
-from photutils import DAOStarFinder
 
-
-def satellite_photometry(data, im_type, save_fig=True, zoom_in=False):
-    '''
+def satellite_photometry(data, im_type, rad=30, sigma=3.0, fwhm=35., save_fig=True, zoom_in=False):
+    """
     Performs source detection and extraction on 'data' within spatial limits.
-    data = fits.getdata('imagefile.fits')
-    save_fig = True (saves a plot)
-    im_type = 'direct' or 'coron' (used to name plot)
-    zoom_in = True (saves a cropped image with the aperture inmore detail).
-    '''
-    mean, median, std = sigma_clipped_stats(data, sigma=3.0)
+    :param data: array, image to analyze
+    :param im_type: string, 'direct' or 'coron' (only used to name plot)
+    :param rad: int, radius of photometry aperture
+    :param sigma: float, number of stddevs for clipping limit
+    :param fwhm: float, full-width-half-max of source
+    :param save_fig: bool, toggle to save figures
+    :param zoom_in: bool, saves a cropped image with the aperture in more detail
+    :return:
+    """
+    mean, median, std = sigma_clipped_stats(data, sigma=sigma)
+    daofind = DAOStarFinder(fwhm=fwhm, threshold=7. * std)
 
-    daofind = DAOStarFinder(fwhm=35.0, threshold=7. * std)
-
-    #     Mask out all sources except top source
+    # Mask out all sources except top source - this region is for the 712 x 712 px HiCAT image
     mask = np.zeros(data.shape, dtype=bool)
     mask[570:712, 0:300] = True
     mask[0:570, 0:712] = True
@@ -33,17 +35,17 @@ def satellite_photometry(data, im_type, save_fig=True, zoom_in=False):
 
     sources = daofind(data - median, mask=mask)
     positions = np.transpose((sources['xcentroid'], sources['ycentroid']))
-    apertures = CircularAperture(positions, r=30.)
+    apertures = CircularAperture(positions, r=rad)
 
     phot_table = aperture_photometry(data, apertures)
 
-    if save_fig == True:
+    if save_fig:
         fig = plt.figure(figsize=(5, 5))
         vmin, vmax = zscale(data)
 
         plt.imshow(data, vmin=vmin, vmax=vmax, origin='lower')
-        plt.colorbar();
-        if zoom_in == True:
+        plt.colorbar()
+        if zoom_in:
             plt.ylim(sources['ycentroid'] - 100, 712)
             plt.xlim(sources['xcentroid'] - 100, sources['xcentroid'] + 100)
 
@@ -57,18 +59,16 @@ def satellite_photometry(data, im_type, save_fig=True, zoom_in=False):
 def get_normalization_factor(coron_data, direct_data):
     """
     Calculate flux normalization factor for direct vs. coron data.
-
-    Parameters:
-        coron_data (tuple or filepath): (img, header) Pass a tuple of the coron img and header.
-        direct_data (tuple or filepath): (img, header) Pass a tuple of the direct img and header.
+    :param coron_data: tuple or string, (img, header) Pass a tuple of the coron img and header; or filepath to image.
+    :param direct_data: tuple or string, (img, header) Pass a tuple of the direct img and header; or filepath to image.
     """
-    #     Unpack a Tuple header
+    # Unpack a Tuple header
     coron_header = coron_data[1]
     coron_img = coron_data[0]
     direct_header = direct_data[1]
     direct_img = direct_data[0]
 
-    #     If a filepath is passed
+    # If a filepath is passed
     if type(coron_data) == str:
         if os.path.exists(coron_data):
             coron_header = fits.getheader(coron_data)
