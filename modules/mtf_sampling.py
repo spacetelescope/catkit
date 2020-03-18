@@ -1,19 +1,14 @@
 """
 module for pixel sampling determination
 """
-
-from shutil import copyfile
-
+from glob import glob
 import logging
 import os
-from glob import glob
 
 from astropy.io import fits
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 from matplotlib.colors import LogNorm
 import numpy as np
-from scipy.ndimage.interpolation import affine_transform
 
 
 def collect_final_images(path):
@@ -61,6 +56,6 @@ def mtf_sampling(path,threshold):
 	cutoff_eq = np.sqrt(area/np.pi)
 	sampling = float(imsize) / float(cutoff_eq)
 
-	return(sampling)
+	return sampling
 
 
