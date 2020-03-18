@@ -12,11 +12,12 @@ from photutils import DAOStarFinder
 zscale = ZScaleInterval(contrast=0.10).get_limits
 
 
-def satellite_photometry(data, im_type, rad=30, sigma=3.0, fwhm=35., save_fig=True, zoom_in=False):
+def satellite_photometry(data, im_type, output_path='', rad=30, sigma=3.0, fwhm=35., save_fig=True, zoom_in=False):
     """
     Performs source detection and extraction on 'data' within spatial limits.
     :param data: array, image to analyze
     :param im_type: string, 'direct' or 'coron' (only used to name plot)
+    :param output_path: string, path to save outputs to
     :param rad: int, radius of photometry aperture
     :param sigma: float, number of stddevs for clipping limit
     :param fwhm: float, full-width-half-max of source
@@ -25,7 +26,7 @@ def satellite_photometry(data, im_type, rad=30, sigma=3.0, fwhm=35., save_fig=Tr
     :return:
     """
     mean, median, std = sigma_clipped_stats(data, sigma=sigma)
-    daofind = DAOStarFinder(fwhm=fwhm, threshold=7. * std)
+    daofind = DAOStarFinder(fwhm=fwhm, threshold=7.*std)
 
     # Mask out all sources except top source - this region is for the 712 x 712 px HiCAT image
     mask = np.zeros(data.shape, dtype=bool)
@@ -50,49 +51,47 @@ def satellite_photometry(data, im_type, rad=30, sigma=3.0, fwhm=35., save_fig=Tr
             plt.xlim(sources['xcentroid'] - 100, sources['xcentroid'] + 100)
 
         apertures.plot(color='red', lw=1.5, alpha=1)
-        fig.savefig('diagnostic_{}_photometry.png'.format(im_type), dpi=300, bbox_inches='tight')
+        fig.savefig(os.path.join(output_path, 'diagnostic_{}_photometry.pdf'.format(im_type)), dpi=300, bbox_inches='tight')
         plt.close(fig)
 
     return phot_table
 
 
-def get_normalization_factor(coron_data, direct_data):
+def get_normalization_factor(coron_data, direct_data, out_path):
     """
-    Calculate flux normalization factor for direct vs. coron data.
+    Calculate flux normalization factor for direct and coron data.
     :param coron_data: tuple or string, (img, header) Pass a tuple of the coron img and header; or filepath to image.
     :param direct_data: tuple or string, (img, header) Pass a tuple of the direct img and header; or filepath to image.
+    :param out_path: string, path to save outputs to
     """
-    # Unpack a Tuple header
-    coron_header = coron_data[1]
-    coron_img = coron_data[0]
-    direct_header = direct_data[1]
-    direct_img = direct_data[0]
-
-    # If a filepath is passed
-    if type(coron_data) == str:
+    if type(coron_data) == tuple:
+        coron_header = coron_data[1]
+        coron_img = coron_data[0]
+    elif type(coron_data) == str:
         if os.path.exists(coron_data):
             coron_header = fits.getheader(coron_data)
             coron_img = fits.getdata(coron_data)
+    else:
+        raise TypeError('Invalid data reference for direct image passed.')
 
-    if type(direct_data) == str:
+    if type(direct_data) == tuple:
+        direct_header = direct_data[1]
+        direct_img = direct_data[0]
+    elif type(direct_data) == str:
         if os.path.exists(direct_data):
             direct_header = fits.getheader(direct_data)
             direct_img = fits.getdata(direct_data)
+    else:
+        raise TypeError('Invalid data reference for coronagraphic image passed.')
 
-    coron_type = coron_header['FILENAME'].split('_')[0]
-    direct_type = coron_header['FILENAME'].split('_')[0]
-
-    coron_filter = coron_header['FILTERS'].split(',')[0]
-    direct_filter = coron_header['FILTERS'].split(',')[0]
-
-    coron_table = satellite_photometry(coron_img, save_fig=True, im_type=coron_type, zoom_in=False)
-    direct_table = satellite_photometry(direct_img, save_fig=True, im_type=direct_type, zoom_in=False)
+    coron_table = satellite_photometry(data=coron_img, im_type='coron', output_path=out_path)
+    direct_table = satellite_photometry(data=direct_img, im_type='direct', output_path=out_path)
 
     if len(coron_table) != 1:
-        print('Likely Problem with Coronagraphic img Photometry')
+        print('Likely Problem with coronagraphic img photometry')
 
     if len(direct_table) != 1:
-        print('Likely Problem with Direct img Photometry')
+        print('Likely Problem with direct img photometry')
 
     coron_ap_sum = coron_table['aperture_sum'][0]
     coron_exptime = coron_header['EXP_TIME']
