@@ -10,11 +10,11 @@ from photutils import CircularAperture
 from photutils import DAOStarFinder
 
 
-def satellite_photometry(data, im_type, output_path='', rad=30, sigma=3.0, fwhm=35., save_fig=True, zoom_in=False):
+def satellite_photometry(data, im_spec, output_path='', rad=30, sigma=3.0, fwhm=35., save_fig=True, zoom_in=False):
     """
     Performs source detection and extraction on 'data' within spatial limits.
     :param data: array, image to analyze
-    :param im_type: string, 'direct' or 'coron' (only used to name plot)
+    :param im_spec: string, 'direct' or 'coron' (only used to name plot)
     :param output_path: string, path to save outputs to
     :param rad: int, radius of photometry aperture
     :param sigma: float, number of stddevs for clipping limit
@@ -48,7 +48,7 @@ def satellite_photometry(data, im_type, output_path='', rad=30, sigma=3.0, fwhm=
             plt.xlim(sources['xcentroid'] - 100, sources['xcentroid'] + 100)
 
         apertures.plot(color='red', lw=1.5, alpha=1)
-        fig.savefig(os.path.join(output_path, 'diagnostic_{}_photometry.pdf'.format(im_type)), dpi=300, bbox_inches='tight')
+        fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_spec)), dpi=300, bbox_inches='tight')
         plt.close(fig)
 
     return phot_table
@@ -81,8 +81,13 @@ def get_normalization_factor(coron_data, direct_data, out_path):
     else:
         raise TypeError('Invalid data reference for coronagraphic image passed.')
 
-    coron_table = satellite_photometry(data=coron_img, im_type='coron', output_path=out_path)
-    direct_table = satellite_photometry(data=direct_img, im_type='direct', output_path=out_path)
+    # Read filter info
+    color_filter_coron, nd_filter_coron = coron_header['FILTERS'].split(',')
+    color_filter_dir, nd_filter_dir = direct_header['FILTERS'].split(',')
+
+    # Get photometry
+    coron_table = satellite_photometry(data=coron_img, im_spec='coron-{}-{}'.format(nd_filter_coron, color_filter_coron), output_path=out_path)
+    direct_table = satellite_photometry(data=direct_img, im_spec='direct-{}-{}'.format(nd_filter_dir, color_filter_dir), output_path=out_path)
 
     if len(coron_table) != 1:
         print('Likely Problem with coronagraphic img photometry')
@@ -91,9 +96,6 @@ def get_normalization_factor(coron_data, direct_data, out_path):
         print('Likely Problem with direct img photometry')
 
     # Add filter info to photometry tables
-    color_filter_coron, nd_filter_coron = coron_header['FILTERS'].split(',')
-    color_filter_dir, nd_filter_dir = direct_header['FILTERS'].split(',')
-
     coron_table['color_filter'] = color_filter_coron
     coron_table['nd_filter'] = nd_filter_coron
     direct_table['color_filter'] = color_filter_dir
