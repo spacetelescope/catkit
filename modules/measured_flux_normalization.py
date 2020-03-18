@@ -2,14 +2,12 @@ import os
 
 from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
-from astropy.visualization import ZScaleInterval
+from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
 import numpy as np
 from photutils import aperture_photometry
 from photutils import CircularAperture
 from photutils import DAOStarFinder
-
-zscale = ZScaleInterval(contrast=0.10).get_limits
 
 
 def satellite_photometry(data, im_type, output_path='', rad=30, sigma=3.0, fwhm=35., save_fig=True, zoom_in=False):
@@ -42,9 +40,8 @@ def satellite_photometry(data, im_type, output_path='', rad=30, sigma=3.0, fwhm=
 
     if save_fig:
         fig = plt.figure(figsize=(5, 5))
-        vmin, vmax = zscale(data)
 
-        plt.imshow(data, vmin=vmin, vmax=vmax, origin='lower')
+        plt.imshow(data, norm=LogNorm())
         plt.colorbar()
         if zoom_in:
             plt.ylim(sources['ycentroid'] - 100, 712)
