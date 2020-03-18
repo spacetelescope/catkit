@@ -9,8 +9,7 @@ from hicat.experiments.modules import mtf_sampling
 
 
 
-
-class CalculateSampling(Experiment):
+class MtfSamplingCalculation(Experiment):
     name = "Mtf Sampling Calculation"
     log = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class CalculateSampling(Experiment):
                  suffix="mtf_calibration",
                  mtf_snr_threshold=100,
                  **kwargs):
-        super().__init__(output_path=output_path, suffix=suffix)
+        super(MtfSamplingCalculation, self).__init__(output_path=output_path, suffix=suffix)
 
         self.bias = bias
         self.flat_map = flat_map
@@ -60,5 +59,5 @@ class CalculateSampling(Experiment):
                                                           filename=flat_file_name, camera_type=self.camera_type,
                                                           simulator=False,
                                                           **self.kwargs)
-        ps_w_focus = mtf_sampling(cal_file_path, self.mtf_snr_threshold)
-        self.log.info( " ps_w_focus=" +str(ps_w_focus))
+        pixel_sampling = mtf_sampling(cal_file_path, self.mtf_snr_threshold)
+        self.log.info( " pixel sampling in focused image =" +str(pixel_sampling))
