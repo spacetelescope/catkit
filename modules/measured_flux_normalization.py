@@ -21,7 +21,7 @@ def satellite_photometry(data, im_spec, output_path='', rad=30, sigma=3.0, fwhm=
     :param fwhm: float, full-width-half-max of source
     :param save_fig: bool, toggle to save figures
     :param zoom_in: bool, saves a cropped image with the aperture in more detail
-    :return:
+    :return: astropy.table.table.Qtabl, photometry table of input image
     """
     mean, median, std = sigma_clipped_stats(data, sigma=sigma)
     daofind = DAOStarFinder(fwhm=fwhm, threshold=7.*std)
@@ -60,6 +60,7 @@ def get_normalization_factor(coron_data, direct_data, out_path):
     :param coron_data: tuple or string, (img, header) Pass a tuple of the coron img and header; or filepath to image.
     :param direct_data: tuple or string, (img, header) Pass a tuple of the direct img and header; or filepath to image.
     :param out_path: string, path to save outputs to
+    :return: photometry tables for direct and coron (astropy.table.table.Qtable), and flux normalization factor (float)
     """
     if type(coron_data) == tuple:
         coron_header = coron_data[1]
