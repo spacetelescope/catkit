@@ -32,7 +32,7 @@ def satellite_photometry(data, im_spec, output_path='', rad=30, sigma=3.0, fwhm=
     mask[0:570, 0:712] = True
     mask[570:712, 400:712] = True
 
-    sources = daofind(data - median, mask=mask)
+    sources = daofind(data, mask=mask)
     positions = np.transpose((sources['xcentroid'], sources['ycentroid']))
     apertures = CircularAperture(positions, r=rad)
 
