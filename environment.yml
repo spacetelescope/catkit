@@ -16,6 +16,7 @@ dependencies:
   - conda-forge::pyusb
   - arrow
   - configparser
+  - flake8
   - future
   - h5py
   - imageio
