@@ -2,6 +2,7 @@ import os
 
 from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
+from astropy.table import QTable
 from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -54,12 +55,51 @@ def satellite_photometry(data, im_spec, output_path='', rad=30, sigma=3.0, fwhm=
     return phot_table
 
 
-def get_normalization_factor(coron_data, direct_data, out_path):
+
+def rectangle_photometry(data, im_spec, x_lims=(30,250), y_lims=(30,682), output_path='', save_fig=True):
+    """
+    Performs source detection and extraction on 'data' within spatial limits.
+    :param data: array, image to analyze
+    :param im_spec: string, 'direct' or 'coron' (only used to name plot)
+    :param x_lims: tuple (float), lower and upper x limits of extraction region.
+    :param y_lims: tuple (float), lower and upper y limits of extraction region.
+    :param output_path: string, path to save outputs to
+    :param save_fig: bool, toggle to save figures
+    :param zoom_in: bool, saves a cropped image with the aperture in more detail
+    :return: astropy.table.table.Qtabl, photometry table of input image
+    """
+
+    region_sum = np.sum(data[y_lims[0]:y_lims[1],x_lims[0]:x_lims[1]])
+    region_table = table.QTable(data=[[region_sum], [x_lims], [y_lims]], masked=False, names=('aperture_sum','x_lims','y_lims'))
+
+    if save_fig:
+        fig, ax = plt.subplots(1)
+        fig.set_figheight(5)
+        fig.set_figwidth(5)
+
+        im = ax.imshow(data, norm=LogNorm())
+
+        # Create a Rectangle patch
+        rect = patches.Rectangle((x_lims[0],y_lims[0]), x_lims[1]-x_lims[0], y_lims[1]-y_lims[0], lw=1.5, alpha=1, edgecolor='r',facecolor='none')
+        # Add the patch to the Axes
+        ax.add_patch(rect)
+
+        cbar_ax = fig.add_axes([0.9, 0.125, 0.05, 0.755])
+        fig.colorbar(im, cax=cbar_ax)
+
+        fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_spec)), dpi=300, bbox_inches='tight')
+        plt.close(fig)
+
+    return region_table
+
+
+def get_normalization_factor(coron_data, direct_data, out_path, apodizer = False):
     """
     Calculate flux normalization factor for direct and coron data.
     :param coron_data: tuple or string, (img, header) Pass a tuple of the coron img and header; or filepath to image.
     :param direct_data: tuple or string, (img, header) Pass a tuple of the direct img and header; or filepath to image.
     :param out_path: string, path to save outputs to
+    :parag aplc: bool, true if apodized, false if classic
     :return: photometry tables for direct and coron (astropy.table.table.Qtable), and flux normalization factor (float)
     """
     if type(coron_data) == tuple:
@@ -82,14 +122,21 @@ def get_normalization_factor(coron_data, direct_data, out_path):
     else:
         raise TypeError('Invalid data reference for coronagraphic image passed.')
 
-    # Read filter info
-    color_filter_coron, nd_filter_coron = coron_header['FILTERS'].split(',')
-    color_filter_dir, nd_filter_dir = direct_header['FILTERS'].split(',')
+    if apodizer:
+        coron_table = rectangle_photometry(data=coron_img, im_spec='coron-{}-{}'.format(nd_filter_coron, color_filter_coron), output_path=out_path)
+        direct_table = rectangle_photometry(data=direct_img, im_spec='direct-{}-{}'.format(nd_filter_dir, color_filter_dir), output_path=out_path)
 
-    # Get photometry
-    coron_table = satellite_photometry(data=coron_img, im_spec='coron-{}-{}'.format(nd_filter_coron, color_filter_coron), output_path=out_path)
-    direct_table = satellite_photometry(data=direct_img, im_spec='direct-{}-{}'.format(nd_filter_dir, color_filter_dir), output_path=out_path)
+    elif apodizer == False:
 
+        # Read filter info
+        color_filter_coron, nd_filter_coron = coron_header['FILTERS'].split(',')
+        color_filter_dir, nd_filter_dir = direct_header['FILTERS'].split(',')
+
+        # Get photometry
+        coron_table = satellite_photometry(data=coron_img, im_spec='coron-{}-{}'.format(nd_filter_coron, color_filter_coron), output_path=out_path)
+        direct_table = satellite_photometry(data=direct_img, im_spec='direct-{}-{}'.format(nd_filter_dir, color_filter_dir), output_path=out_path)
+    else:
+        raise TypeError('Invalid data reference for apodizer passed. Expected bool.')
     if len(coron_table) != 1:
         print('Likely Problem with coronagraphic img photometry')
 
