@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# This hook is called with the following parameters:
+#
+# $1 -- Name of the remote to which the push is being done
+# $2 -- URL to which the push is being done
+#
+# If pushing without using a named remote those arguments will be equal.
+#
+# Information about the commits which are being pushed is supplied as lines to
+# the standard input in the form:
+#
+#   <local ref> <local sha1> <remote ref> <remote sha1>
+
+# To use this githook copy this file to .git/hooks (in repo root dir)
+# The file permissions may need changing using ``chmod +x .git/hooks/pre-push``
+
+REMOTE="$1"
+URL="$2"
+
+EXCLUDE_DIRS=catkit/hardware/newport/lib,catkit/hardware/boston/sdk
+SELECTIONS=E9,E4,E7,W6,F821,F822
+IGNORE=W605
+
+# Only run test when pushing to original, i.e., not fork.
+if [[ $URL = *"github.com/spacetelescope"* ]]; then
+    echo Running flake8 linter tests...
+    TEST_RESULTS=$(flake8 . --max-line-length=127 --count --statistics --exclude=$EXCLUDE_DIRS --select=$SELECTIONS --ignore=$IGNORE)
+    RETURN_VALUE=$?
+    if [ $RETURN_VALUE != 0 ]; then
+      echo "$TEST_RESULTS"
+      exit 1
+    fi
+    echo PASSED
+fi
