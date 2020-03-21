@@ -65,7 +65,6 @@ def rectangle_photometry(data, im_spec, x_lims=(30,250), y_lims=(30,682), output
     :param y_lims: tuple (float), lower and upper y limits of extraction region.
     :param output_path: string, path to save outputs to
     :param save_fig: bool, toggle to save figures
-    :param zoom_in: bool, saves a cropped image with the aperture in more detail
     :return: astropy.table.table.Qtabl, photometry table of input image
     """
 
@@ -93,13 +92,13 @@ def rectangle_photometry(data, im_spec, x_lims=(30,250), y_lims=(30,682), output
     return region_table
 
 
-def get_normalization_factor(coron_data, direct_data, out_path, apodizer = False):
+def get_normalization_factor(coron_data, direct_data, out_path, apodizer ='no_apodizer'):
     """
     Calculate flux normalization factor for direct and coron data.
     :param coron_data: tuple or string, (img, header) Pass a tuple of the coron img and header; or filepath to image.
     :param direct_data: tuple or string, (img, header) Pass a tuple of the direct img and header; or filepath to image.
     :param out_path: string, path to save outputs to
-    :parag aplc: bool, true if apodized, false if classic
+    :param apodizer: string, 'no_apodizer' or 'cnt2_apodizer'
     :return: photometry tables for direct and coron (astropy.table.table.Qtable), and flux normalization factor (float)
     """
     if type(coron_data) == tuple:
@@ -122,11 +121,11 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer = False
     else:
         raise TypeError('Invalid data reference for coronagraphic image passed.')
 
-    if apodizer:
+    if apodizer == 'cnt2_apodizer':
         coron_table = rectangle_photometry(data=coron_img, im_spec='coron-{}-{}'.format(nd_filter_coron, color_filter_coron), output_path=out_path)
         direct_table = rectangle_photometry(data=direct_img, im_spec='direct-{}-{}'.format(nd_filter_dir, color_filter_dir), output_path=out_path)
 
-    elif apodizer == False:
+    elif apodizer == 'no_apodizer':
 
         # Read filter info
         color_filter_coron, nd_filter_coron = coron_header['FILTERS'].split(',')
@@ -135,13 +134,15 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer = False
         # Get photometry
         coron_table = satellite_photometry(data=coron_img, im_spec='coron-{}-{}'.format(nd_filter_coron, color_filter_coron), output_path=out_path)
         direct_table = satellite_photometry(data=direct_img, im_spec='direct-{}-{}'.format(nd_filter_dir, color_filter_dir), output_path=out_path)
-    else:
-        raise TypeError('Invalid data reference for apodizer passed. Expected bool.')
-    if len(coron_table) != 1:
-        print('Likely Problem with coronagraphic img photometry')
+        if len(coron_table) != 1:
+            print('Likely Problem with coronagraphic img satellite photometry')
 
-    if len(direct_table) != 1:
-        print('Likely Problem with direct img photometry')
+        if len(direct_table) != 1:
+            print('Likely Problem with direct img satellite photometry')
+
+    else:
+        raise TypeError('Invalid data reference for apodizer passed. Expected string.')
+
 
     # Add filter info to photometry tables
     coron_table['color_filter'] = color_filter_coron
