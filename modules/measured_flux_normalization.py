@@ -69,7 +69,7 @@ def rectangle_photometry(data, im_spec, x_lims=(30,250), y_lims=(30,682), output
     """
 
     region_sum = np.sum(data[y_lims[0]:y_lims[1],x_lims[0]:x_lims[1]])
-    region_table = table.QTable(data=[[region_sum], [x_lims], [y_lims]], masked=False, names=('aperture_sum','x_lims','y_lims'))
+    region_table = QTable(data=[[region_sum], [x_lims], [y_lims]], masked=False, names=('aperture_sum','x_lims','y_lims'))
 
     if save_fig:
         fig, ax = plt.subplots(1)
