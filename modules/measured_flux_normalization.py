@@ -13,7 +13,7 @@ from photutils import CircularAperture
 from photutils import DAOStarFinder
 
 
-def satellite_photometry(data, im_spec, output_path='', rad=30, sigma=3.0, fwhm=35., save_fig=True, zoom_in=False):
+def satellite_photometry(data, im_spec, output_path='', rad=8, sigma=3.0, fwhm=5., save_fig=True, zoom_in=False):
     """
     Performs source detection and extraction on 'data' within spatial limits.
     :param data: array, image to analyze
@@ -33,11 +33,11 @@ def satellite_photometry(data, im_spec, output_path='', rad=30, sigma=3.0, fwhm=
     mean, median, std = sigma_clipped_stats(data, sigma=sigma)
     daofind = DAOStarFinder(fwhm=fwhm, threshold=7.*std)
 
-    # Mask out all sources except top source - this region is for the 712 x 712 px HiCAT image
+    # Mask out all sources except top source - this region is for the binned 178 x 178 px HiCAT image
     mask = np.zeros(data.shape, dtype=bool)
-    mask[570:712, 0:300] = True
-    mask[0:570, 0:712] = True
-    mask[570:712, 400:712] = True
+    mask[145:178, 0:60] = True
+    mask[0:145, 0:178] = True
+    mask[145:178, 120:178] = True
 
     sources = daofind(data, mask=mask)
     positions = np.transpose((sources['xcentroid'], sources['ycentroid']))
@@ -51,8 +51,8 @@ def satellite_photometry(data, im_spec, output_path='', rad=30, sigma=3.0, fwhm=
         plt.imshow(data, norm=LogNorm())
         plt.colorbar()
         if zoom_in:
-            plt.ylim(sources['ycentroid'] - 100, 712)
-            plt.xlim(sources['xcentroid'] - 100, sources['xcentroid'] + 100)
+            plt.ylim(sources['ycentroid'] - 15, 178)
+            plt.xlim(sources['xcentroid'] - 15, sources['xcentroid'] + 15)
 
         apertures.plot(color='red', lw=1.5, alpha=1)
         fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_spec)), dpi=300, bbox_inches='tight')
@@ -61,7 +61,7 @@ def satellite_photometry(data, im_spec, output_path='', rad=30, sigma=3.0, fwhm=
     return phot_table
 
 
-def rectangle_photometry(data, im_spec, x_lims=(30,250), y_lims=(30,682), output_path='', save_fig=True):
+def rectangle_photometry(data, im_spec, x_lims=(7,60), y_lims=(7,171), output_path='', save_fig=True):
     """
     Performs source detection and extraction on 'data' within spatial limits.
     :param data: array, image to analyze
