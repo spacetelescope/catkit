@@ -3,6 +3,7 @@ import os
 from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
 from astropy.table import QTable
+import hcipy
 from matplotlib.colors import LogNorm
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
@@ -25,6 +26,10 @@ def satellite_photometry(data, im_spec, output_path='', rad=30, sigma=3.0, fwhm=
     :param zoom_in: bool, saves a cropped image with the aperture in more detail
     :return: astropy.table.table.Qtabl, photometry table of input image
     """
+    # Cast to numpy.array if it's an hcipy.Field
+    if type(data) == hcipy.field.field.Field:
+        data = np.array(data.shaped)
+
     mean, median, std = sigma_clipped_stats(data, sigma=sigma)
     daofind = DAOStarFinder(fwhm=fwhm, threshold=7.*std)
 
@@ -67,6 +72,9 @@ def rectangle_photometry(data, im_spec, x_lims=(30,250), y_lims=(30,682), output
     :param save_fig: bool, toggle to save figures
     :return: astropy.table.table.Qtabl, photometry table of input image
     """
+    # Cast to numpy.array if it's an hcipy.Field
+    if type(data) == hcipy.field.field.Field:
+        data = np.array(data.shaped)
 
     region_sum = np.sum(data[y_lims[0]:y_lims[1],x_lims[0]:x_lims[1]])
     region_table = QTable(data=[[region_sum], [x_lims], [y_lims]], masked=False, names=('aperture_sum','x_lims','y_lims'))
