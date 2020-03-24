@@ -14,10 +14,11 @@ def mtf_sampling(dirpath, im_path, threshold):
 	os.makedirs(os.path.join(dirpath, mtf_dir), exist_ok=True)
 
 	psf = fits.getdata(im_path)
-	imsize = psf.shape[1]
+	psf_sub = psf[90:620,90:620]
+	imsize = psf_sub.shape[1]
 
 	# Calculate the OTF
-	otf = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(psf)))
+	otf = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(psf_sub)))
 	mtf = np.abs(otf)
 	mtfmax = np.max(mtf)
 	mtf = mtf / mtfmax
