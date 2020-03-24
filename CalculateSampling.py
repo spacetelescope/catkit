@@ -1,12 +1,11 @@
 import logging
 
-from hicat.experiments.Experiment import Experiment
-from catkit.hardware.boston.commands import flat_command
-from hicat.hardware import testbed
 from catkit.catkit_types import units, quantity, FpmPosition
+from catkit.hardware.boston.commands import flat_command
 from hicat.config import CONFIG_INI
+from hicat.experiments.Experiment import Experiment
 from hicat.experiments.modules.mtf_sampling import mtf_sampling
-
+from hicat.hardware import testbed
 
 
 class CalculateSampling(Experiment):
