@@ -30,6 +30,7 @@ class CalculateSampling(Experiment):
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.camera_type = camera_type
+        self.mtf_snr_threshold = mtf_snr_threshold
         self.kwargs = kwargs
 
     def experiment(self):
