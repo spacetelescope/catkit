@@ -7,6 +7,7 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import numpy as np
+import hicat.util
 
 
 def mtf_sampling(dirpath, im_path, threshold):
@@ -14,8 +15,11 @@ def mtf_sampling(dirpath, im_path, threshold):
 	os.makedirs(os.path.join(dirpath, mtf_dir), exist_ok=True)
 
 	psf = fits.getdata(im_path)
-	psf_sub = psf[90:620,90:620]
+	psf_sub = psf[200:512, 200:512]
 	imsize = psf_sub.shape[1]
+
+	# Save cropped image to diagnostics
+	hicat.util.write_fits(psf_sub, os.path.join(dirpath, mtf_dir, 'cropped_image.fits'))
 
 	# Calculate the OTF
 	otf = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(psf_sub)))
@@ -38,7 +42,7 @@ def mtf_sampling(dirpath, im_path, threshold):
 	plt.clf()
 	plt.imshow(mask)
 	plt.savefig(os.path.join(dirpath, mtf_dir, 'mtf_support.pdf'))
-	mtf_masked = mtf*mask
+	mtf_masked = mtf * mask
 	plt.clf()
 	plt.imshow(mtf_masked, norm=LogNorm())
 	plt.title('Modulation transfer function (MTF) Masked')
