@@ -1,8 +1,6 @@
 """
 module for pixel sampling determination
 """
-from glob import glob
-import logging
 import os
 
 from astropy.io import fits
@@ -11,17 +9,10 @@ from matplotlib.colors import LogNorm
 import numpy as np
 
 
-def collect_final_images(path):
-	results = glob(os.path.join(path, "*_cal.fits"))
-	im = str(results[0])
-	return im
-
-
-def mtf_sampling(path,threshold):
+def mtf_sampling(dirpath, im_path, threshold):
 	mtf_dir = 'mtf_diagnostics'
-	os.makedirs(os.path.join(path, mtf_dir), exist_ok=True)
+	os.makedirs(os.path.join(dirpath, mtf_dir), exist_ok=True)
 
-	im_path = collect_final_images(path)
 	psf = fits.getdata(im_path)
 	imsize = psf.shape[1]
 
@@ -34,7 +25,7 @@ def mtf_sampling(path,threshold):
 	plt.clf()
 	plt.imshow(mtf)
 	plt.title('Modulation transfer function (MTF)')
-	plt.savefig(os.path.join(path, mtf_dir, 'MTF.pdf'))
+	plt.savefig(os.path.join(dirpath, mtf_dir, 'MTF.pdf'))
 
 	bg_zone = mtf[1:int(imsize/8), 1:int(imsize/8)]
 	med = np.median(bg_zone)
@@ -45,12 +36,12 @@ def mtf_sampling(path,threshold):
 
 	plt.clf()
 	plt.imshow(mask)
-	plt.savefig(os.path.join(path, mtf_dir, 'mtf_support.pdf'))	
+	plt.savefig(os.path.join(dirpath, mtf_dir, 'mtf_support.pdf'))
 	mtf_masked = mtf*mask
 	plt.clf()
 	plt.imshow(mtf_masked, norm=LogNorm())
 	plt.title('Modulation transfer function (MTF) Masked')
-	plt.savefig(os.path.join(path, mtf_dir, 'mtf_masked.pdf'))
+	plt.savefig(os.path.join(dirpath, mtf_dir, 'mtf_masked.pdf'))
 
 	area = np.count_nonzero(mtf_masked)
 	cutoff_eq = np.sqrt(area/np.pi)

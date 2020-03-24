@@ -59,5 +59,5 @@ class CalculateSampling(Experiment):
                                                           filename=flat_file_name, camera_type=self.camera_type,
                                                           simulator=False,
                                                           **self.kwargs)
-        pixel_sampling = mtf_sampling(self.output_path, self.mtf_snr_threshold)
+        pixel_sampling = mtf_sampling(self.output_path, cal_file_path, self.mtf_snr_threshold)
         self.log.info("pixel sampling in focused image = {}".format(pixel_sampling))
