@@ -156,7 +156,7 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
 
     # Read filter info
     color_filter_coron, nd_filter_coron = coron_header['FILTERS'].split(',')
-    color_filter_dir, nd_filter_dir = direct_header['FILTERS'].split(',')
+    color_filter_direct, nd_filter_direct = direct_header['FILTERS'].split(',')
 
     # Get photometry
     if 'no_' in apodizer:
@@ -164,7 +164,7 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
                                            im_type='coron-{}-{}'.format(nd_filter_coron, color_filter_coron),
                                            output_path=out_path)
         direct_table = satellite_photometry(data=direct_img,
-                                            im_type='direct-{}-{}'.format(nd_filter_dir, color_filter_dir),
+                                            im_type='direct-{}-{}'.format(nd_filter_direct, color_filter_direct),
                                             output_path=out_path)
         if len(coron_table) != 1:
             print('Likely Problem with coronagraphic img satellite photometry')
@@ -177,7 +177,7 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
                                            im_type='coron-{}-{}'.format(nd_filter_coron, color_filter_coron),
                                            output_path=out_path)
         direct_table = rectangle_photometry(data=direct_img,
-                                            im_type='direct-{}-{}'.format(nd_filter_dir, color_filter_dir),
+                                            im_type='direct-{}-{}'.format(nd_filter_direct, color_filter_direct),
                                             output_path=out_path)
 
     else:
@@ -186,8 +186,8 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
     # Add filter info to photometry tables
     coron_table['color_filter'] = color_filter_coron
     coron_table['nd_filter'] = nd_filter_coron
-    direct_table['color_filter'] = color_filter_dir
-    direct_table['nd_filter'] = nd_filter_dir
+    direct_table['color_filter'] = color_filter_direct
+    direct_table['nd_filter'] = nd_filter_direct
 
     # Extract count rates
     coron_countrate = coron_table['aperture_sum'][0]
