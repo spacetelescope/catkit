@@ -159,15 +159,7 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
     color_filter_dir, nd_filter_dir = direct_header['FILTERS'].split(',')
 
     # Get photometry
-    if apodizer == 'cnt2_apodizer':
-        coron_table = rectangle_photometry(data=coron_img,
-                                           im_type='coron-{}-{}'.format(nd_filter_coron, color_filter_coron),
-                                           output_path=out_path)
-        direct_table = rectangle_photometry(data=direct_img,
-                                            im_type='direct-{}-{}'.format(nd_filter_dir, color_filter_dir),
-                                            output_path=out_path)
-
-    elif apodizer == 'no_apodizer':
+    if 'no_' in apodizer:
         coron_table = satellite_photometry(data=coron_img,
                                            im_type='coron-{}-{}'.format(nd_filter_coron, color_filter_coron),
                                            output_path=out_path)
@@ -179,6 +171,14 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
 
         if len(direct_table) != 1:
             print('Likely Problem with direct img satellite photometry')
+
+    elif '_apodizer' in apodizer:
+        coron_table = rectangle_photometry(data=coron_img,
+                                           im_type='coron-{}-{}'.format(nd_filter_coron, color_filter_coron),
+                                           output_path=out_path)
+        direct_table = rectangle_photometry(data=direct_img,
+                                            im_type='direct-{}-{}'.format(nd_filter_dir, color_filter_dir),
+                                            output_path=out_path)
 
     else:
         raise TypeError('Invalid reference for apodizer status passed. Expected cnt2_apodizer or no_apodizer.')
