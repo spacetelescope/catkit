@@ -106,12 +106,13 @@ def rectangle_photometry(data, im_spec, output_path='', save_fig=True):
         fig, ax = plt.subplots(1)
         fig.set_figheight(5)
         fig.set_figwidth(5)
-        #         im = ax.imshow(data[y_lims[0]:y_lims[1],x_lims[0]:x_lims[1]],norm=LogNorm())
+
         im = ax.imshow(data, norm=LogNorm())
 
         # Create a Rectangle patch
         rect = patches.Rectangle((x_lims[0], y_lims[0]), x_lims[1] - x_lims[0], y_lims[1] - y_lims[0], lw=1.5, alpha=1,
                                  edgecolor='r', facecolor='none')
+
         # Add the patch to the Axes
         ax.add_patch(rect)
 
@@ -119,7 +120,7 @@ def rectangle_photometry(data, im_spec, output_path='', save_fig=True):
         fig.colorbar(im, cax=cbar_ax)
 
         fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_spec)), dpi=300, bbox_inches='tight')
-    #         plt.close(fig)
+        plt.close(fig)
 
     return region_table
 
