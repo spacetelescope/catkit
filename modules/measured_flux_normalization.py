@@ -13,15 +13,13 @@ from photutils import CircularAperture
 from photutils import DAOStarFinder
 
 
-def satellite_photometry(data, im_spec, output_path='', rad=8, sigma=3.0, fwhm=5., save_fig=True, zoom_in=False):
+def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True, zoom_in=False):
     """
     Performs source detection and extraction on 'data' within spatial limits.
     :param data: array, image to analyze
-    :param im_spec: string, 'direct' or 'coron' (only used to name plot)
+    :param im_type: string, 'direct' or 'coron' (only used to name plot)
     :param output_path: string, path to save outputs to
-    :param rad: int, radius of photometry aperture
     :param sigma: float, number of stddevs for clipping limit
-    :param fwhm: float, full-width-half-max of source
     :param save_fig: bool, toggle to save figures
     :param zoom_in: bool, saves a cropped image with the aperture in more detail
     :return: astropy.table.table.Qtabl, photometry table of input image
@@ -30,42 +28,63 @@ def satellite_photometry(data, im_spec, output_path='', rad=8, sigma=3.0, fwhm=5
     if type(data) == hcipy.field.field.Field:
         data = np.array(data.shaped)
 
+    # Scale distances and source detection parameters via img shape.
+    im_shape = np.shape(data)
+    fwhm = int(np.round(im_shape[0] * 0.03))
+    radius = int(np.round(im_shape[0] * 0.045))
+
+    # Find sources in entire image.
     mean, median, std = sigma_clipped_stats(data, sigma=sigma)
-    daofind = DAOStarFinder(fwhm=fwhm, threshold=7.*std)
+    daofind = DAOStarFinder(fwhm=fwhm, threshold=30 * std)
 
-    # Mask out all sources except top source - this region is for the binned 178 x 178 px HiCAT image
+    # Mask out all sources except upper-middle satellite source.
     mask = np.zeros(data.shape, dtype=bool)
-    mask[145:178, 0:60] = True
-    mask[0:145, 0:178] = True
-    mask[145:178, 120:178] = True
+    mask[int(np.round(im_shape[0] * 0.82)):, 0:int(np.round(im_shape[1] * 0.34))] = True
+    mask[0:int(np.round(im_shape[0] * 0.82)), :] = True
+    mask[int(np.round(im_shape[0] * 0.82)):, int(np.round(im_shape[1] * 0.68)):] = True
 
+    # Detect sources
     sources = daofind(data, mask=mask)
-    positions = np.transpose((sources['xcentroid'], sources['ycentroid']))
-    apertures = CircularAperture(positions, r=rad)
 
+    # Transpose to have xy-pairs (x,y), especially if there are multiple sources.
+    positions = np.transpose((sources['xcentroid'], sources['ycentroid']))
+    apertures = CircularAperture(positions, r=radius)
     phot_table = aperture_photometry(data, apertures)
+
+    # Adjust for multiple source detections. This should not occur often with adjusted parameters.
+    if len(phot_table) > 1:
+        print('WARNING: Multiple elligible sources found initially. Brightest will be selected.'
+              , 'Confirm correct source in image.')
+        phot_table = phot_table[phot_table['aperture_sum'] == phot_table['aperture_sum'].max()]
+        coord_list = [phot_table['xcenter'].value[0], phot_table['ycenter'].value[0]]
+        positions = np.array([coord_list])
+        apertures = CircularAperture(positions, r=rad)
 
     if save_fig:
         fig = plt.figure(figsize=(5, 5))
 
-        plt.imshow(data, norm=LogNorm())
-        plt.colorbar()
         if zoom_in:
-            plt.ylim(sources['ycentroid'] - 15, 178)
-            plt.xlim(sources['xcentroid'] - 15, sources['xcentroid'] + 15)
+            plt.ylim(sources['ycentroid'] - int(np.round(im_shape[0] * 0.08)), int(np.round(im_shape[0])))
+            plt.xlim(sources['xcentroid'] - int(np.round(im_shape[1] * 0.08)),
+                     sources['xcentroid'] + int(np.round(im_shape[1] * 0.08)))
 
+        im = plt.imshow(data, norm=LogNorm())
         apertures.plot(color='red', lw=1.5, alpha=1)
-        fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_spec)), dpi=300, bbox_inches='tight')
+
+        cbar_ax = fig.add_axes([0.9, 0.125, 0.05, 0.755])
+        fig.colorbar(im, cax=cbar_ax)
+
+        fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_type)), dpi=100, bbox_inches='tight')
         plt.close(fig)
 
     return phot_table
 
 
-def rectangle_photometry(data, im_spec, x_lims=(7,60), y_lims=(7,171), output_path='', save_fig=True):
+def rectangle_photometry(data, im_type, x_lims=(7, 60), y_lims=(7, 171), output_path='', save_fig=True):
     """
     Performs source detection and extraction on 'data' within spatial limits.
     :param data: array, image to analyze
-    :param im_spec: string, 'direct' or 'coron' (only used to name plot)
+    :param im_type: string, 'direct' or 'coron' (only used to name plot)
     :param x_lims: tuple (float), lower and upper x limits of extraction region.
     :param y_lims: tuple (float), lower and upper y limits of extraction region.
     :param output_path: string, path to save outputs to
@@ -76,8 +95,9 @@ def rectangle_photometry(data, im_spec, x_lims=(7,60), y_lims=(7,171), output_pa
     if type(data) == hcipy.field.field.Field:
         data = np.array(data.shaped)
 
-    region_sum = np.sum(data[y_lims[0]:y_lims[1],x_lims[0]:x_lims[1]])
-    region_table = QTable(data=[[region_sum], [x_lims], [y_lims]], masked=False, names=('aperture_sum','x_lims','y_lims'))
+    region_sum = np.sum(data[y_lims[0]:y_lims[1], x_lims[0]:x_lims[1]])
+    region_table = QTable(data=[[region_sum], [x_lims], [y_lims]], masked=False,
+                          names=('aperture_sum', 'x_lims', 'y_lims'))
 
     if save_fig:
         fig, ax = plt.subplots(1)
@@ -87,14 +107,15 @@ def rectangle_photometry(data, im_spec, x_lims=(7,60), y_lims=(7,171), output_pa
         im = ax.imshow(data, norm=LogNorm())
 
         # Create a Rectangle patch
-        rect = patches.Rectangle((x_lims[0],y_lims[0]), x_lims[1]-x_lims[0], y_lims[1]-y_lims[0], lw=1.5, alpha=1, edgecolor='r',facecolor='none')
+        rect = patches.Rectangle((x_lims[0], y_lims[0]), x_lims[1] - x_lims[0], y_lims[1] - y_lims[0], lw=1.5, alpha=1,
+                                 edgecolor='r', facecolor='none')
         # Add the patch to the Axes
         ax.add_patch(rect)
 
         cbar_ax = fig.add_axes([0.9, 0.125, 0.05, 0.755])
         fig.colorbar(im, cax=cbar_ax)
 
-        fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_spec)), dpi=300, bbox_inches='tight')
+        fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_type)), dpi=300, bbox_inches='tight')
         plt.close(fig)
 
     return region_table
@@ -135,12 +156,20 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
 
     # Get photometry
     if apodizer == 'cnt2_apodizer':
-        coron_table = rectangle_photometry(data=coron_img, im_spec='coron-{}-{}'.format(nd_filter_coron, color_filter_coron), output_path=out_path)
-        direct_table = rectangle_photometry(data=direct_img, im_spec='direct-{}-{}'.format(nd_filter_dir, color_filter_dir), output_path=out_path)
+        coron_table = rectangle_photometry(data=coron_img,
+                                           im_type='coron-{}-{}'.format(nd_filter_coron, color_filter_coron),
+                                           output_path=out_path)
+        direct_table = rectangle_photometry(data=direct_img,
+                                            im_type='direct-{}-{}'.format(nd_filter_dir, color_filter_dir),
+                                            output_path=out_path)
 
     elif apodizer == 'no_apodizer':
-        coron_table = satellite_photometry(data=coron_img, im_spec='coron-{}-{}'.format(nd_filter_coron, color_filter_coron), output_path=out_path)
-        direct_table = satellite_photometry(data=direct_img, im_spec='direct-{}-{}'.format(nd_filter_dir, color_filter_dir), output_path=out_path)
+        coron_table = satellite_photometry(data=coron_img,
+                                           im_type='coron-{}-{}'.format(nd_filter_coron, color_filter_coron),
+                                           output_path=out_path)
+        direct_table = satellite_photometry(data=direct_img,
+                                            im_type='direct-{}-{}'.format(nd_filter_dir, color_filter_dir),
+                                            output_path=out_path)
         if len(coron_table) != 1:
             print('Likely Problem with coronagraphic img satellite photometry')
 
