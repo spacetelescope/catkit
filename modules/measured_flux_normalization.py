@@ -172,7 +172,7 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
         if len(direct_table) != 1:
             print('Likely Problem with direct img satellite photometry')
 
-    elif '_apodizer' in apodizer:
+    elif ('_apodizer' in apodizer) & ('no' not in apodizer):
         coron_table = rectangle_photometry(data=coron_img,
                                            im_type='coron-{}-{}'.format(nd_filter_coron, color_filter_coron),
                                            output_path=out_path)
