@@ -58,7 +58,7 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
         phot_table = phot_table[phot_table['aperture_sum'] == phot_table['aperture_sum'].max()]
         coord_list = [phot_table['xcenter'].value[0], phot_table['ycenter'].value[0]]
         positions = np.array([coord_list])
-        apertures = CircularAperture(positions, r=rad)
+        apertures = CircularAperture(positions, r=radius)
 
     if save_fig:
         fig = plt.figure(figsize=(5, 5))
@@ -80,13 +80,11 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
     return phot_table
 
 
-def rectangle_photometry(data, im_type, x_lims=(7, 60), y_lims=(7, 171), output_path='', save_fig=True):
+def rectangle_photometry(data, im_spec, output_path='', save_fig=True):
     """
     Performs source detection and extraction on 'data' within spatial limits.
     :param data: array, image to analyze
-    :param im_type: string, 'direct' or 'coron' (only used to name plot)
-    :param x_lims: tuple (float), lower and upper x limits of extraction region.
-    :param y_lims: tuple (float), lower and upper y limits of extraction region.
+    :param im_spec: string, 'direct' or 'coron' (only used to name plot)
     :param output_path: string, path to save outputs to
     :param save_fig: bool, toggle to save figures
     :return: astropy.table.table.Qtabl, photometry table of input image
@@ -94,6 +92,11 @@ def rectangle_photometry(data, im_type, x_lims=(7, 60), y_lims=(7, 171), output_
     # Cast to numpy.array if it's an hcipy.Field
     if type(data) == hcipy.field.field.Field:
         data = np.array(data.shaped)
+
+    # Scale distances and source detection parameters via img shape.
+    im_shape = np.shape(data)
+    y_lims = (int(np.round(im_shape[0] * (0.78))), int(np.round(im_shape[0] - 0.05 * (im_shape[0]))))
+    x_lims = (int(np.round(im_shape[1] * (0.32))), int(np.round(im_shape[1] * (0.68))))
 
     region_sum = np.sum(data[y_lims[0]:y_lims[1], x_lims[0]:x_lims[1]])
     region_table = QTable(data=[[region_sum], [x_lims], [y_lims]], masked=False,
@@ -103,7 +106,7 @@ def rectangle_photometry(data, im_type, x_lims=(7, 60), y_lims=(7, 171), output_
         fig, ax = plt.subplots(1)
         fig.set_figheight(5)
         fig.set_figwidth(5)
-
+        #         im = ax.imshow(data[y_lims[0]:y_lims[1],x_lims[0]:x_lims[1]],norm=LogNorm())
         im = ax.imshow(data, norm=LogNorm())
 
         # Create a Rectangle patch
@@ -115,8 +118,8 @@ def rectangle_photometry(data, im_type, x_lims=(7, 60), y_lims=(7, 171), output_
         cbar_ax = fig.add_axes([0.9, 0.125, 0.05, 0.755])
         fig.colorbar(im, cax=cbar_ax)
 
-        fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_type)), dpi=300, bbox_inches='tight')
-        plt.close(fig)
+        fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_spec)), dpi=300, bbox_inches='tight')
+    #         plt.close(fig)
 
     return region_table
 
