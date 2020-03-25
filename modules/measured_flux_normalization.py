@@ -156,14 +156,9 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
     direct_table['color_filter'] = color_filter_dir
     direct_table['nd_filter'] = nd_filter_dir
 
-    # Calculate count rates
-    coron_ap_sum = coron_table['aperture_sum'][0]
-    coron_exptime = coron_header['EXP_TIME']
-    coron_countrate = coron_ap_sum / coron_exptime
-
-    direct_ap_sum = direct_table['aperture_sum'][0]
-    direct_exptime = direct_header['EXP_TIME']
-    direct_countrate = direct_ap_sum / direct_exptime
+    # Extract count rates
+    coron_countrate = coron_table['aperture_sum'][0]
+    direct_countrate = direct_table['aperture_sum'][0]
 
     # Calculate flux normalization factor
     factor = coron_countrate / direct_countrate  # type: float
