@@ -130,12 +130,7 @@ class ZwoCamera(Camera):
 
         :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
         :param num_exposures: Number of exposures.
-        :param file_mode: If true fits file will be written to disk
-        :param raw_skip: Skips x images for every one taken, when used images will be stored in memory and returned.
-        :param path: Path of the directory to save fits file to, required if write_raw_fits is true.
-        :param filename: Name for file, required if write_raw_fits is true.
         :param extra_metadata: Will be appended to metadata created and written to fits header.
-        :param resume: If True, skips exposure if filename exists on disk already. Doesn't support data-only mode.
         :param return_metadata: If True, returns a list of meta data as a second return parameter.
         :param subarray_x: X coordinate of center pixel of the subarray.
         :param subarray_y: Y coordinate of center pixel of the subarray.
@@ -146,6 +141,10 @@ class ZwoCamera(Camera):
         :param bins: Integer value for number of bins.
         :return: Two parameters: Image list (numpy data or paths), Metadata list of MetaDataEntry objects.
         """
+
+        if file_mode or raw_skip:
+            raise NotImplementedError("See HICAT-762")
+
 
         # Convert exposure time to contain units if not already a Pint quantity.
         if type(exposure_time) is int or type(exposure_time) is float:
@@ -169,91 +168,10 @@ class ZwoCamera(Camera):
         
         # DATA MODE: Takes images and returns data and metadata (does not write anything to disk).
         img_list = []
-        if not file_mode:
-            # Take exposures and add to list.
-            for i in range(num_exposures):
-                img = self.capture_and_orient(exposure_time, self.theta, self.fliplr)
-                img_list.append(img)
-            if return_metadata:
-                return img_list, meta_data
-            else:
-                return img_list
-        else:
-            # Check that path and filename are specified.
-            if path is None or filename is None:
-                raise Exception("You need to specify path and filename when file_mode=True.")
-
-        # FILE MODE:
-        # Check for fits extension.
-        if not (filename.endswith(".fit") or filename.endswith(".fits")):
-            filename += ".fits"
-
-        # Split the filename once here, code below may append _frame=xxx to basename.
-        file_split = os.path.splitext(filename)
-        file_root = file_split[0]
-        file_ext = file_split[1]
-
-        # Create directory if it doesn't exist.
-        if not os.path.exists(path):
-            os.makedirs(path)
-        
-        # Take exposures. Use Astropy to handle fits format.
-        skip_counter = 0
+        # Take exposures and add to list.
         for i in range(num_exposures):
-
-            # For multiple exposures append frame number to end of base file name.
-            if num_exposures > 1:
-                filename = file_root + "_frame" + str(i + 1) + file_ext
-            full_path = os.path.join(path, filename)
-
-            # If Resume is enabled, continue if the file already exists on disk.
-            if resume and os.path.isfile(full_path):
-                self.log.info("File already exists: " + full_path)
-                img_list.append(full_path)
-                continue
-
-            # Take exposure.
             img = self.capture_and_orient(exposure_time, self.theta, self.fliplr)
-
-            # Skip writing the fits files per the raw_skip value, and keep img data in memory.
-            if raw_skip != 0:
-                img_list.append(img)
-                if skip_counter == (raw_skip + 1):
-                    skip_counter = 0
-                if skip_counter == 0:
-                    # Write fits.
-                    skip_counter += 1
-                elif skip_counter > 0:
-                    # Skip fits.
-                    skip_counter += 1
-
-                    continue
-
-            # Create a PrimaryHDU object to encapsulate the data.
-            hdu = fits.PrimaryHDU(img)
-
-            # Add headers.
-            hdu.header["FRAME"] = i + 1
-            hdu.header["FILENAME"] = filename
-
-            # Add testbed state metadata.
-            for entry in meta_data:
-                if len(entry.name_8chars) > 8:
-                    self.log.warning("Fits Header Keyword: " + entry.name_8chars +
-                          " is greater than 8 characters and will be truncated.")
-                if len(entry.comment) > 47:
-                    self.log.warning("Fits Header comment for " + entry.name_8chars +
-                          " is greater than 47 characters and will be truncated.")
-                hdu.header[entry.name_8chars[:8]] = (entry.value, entry.comment)
-
-            # Create a HDUList to contain the newly created primary HDU, and write to a new file.
-            fits.HDUList([hdu])
-            hdu.writeto(full_path, overwrite=True)
-            self.log.info("wrote " + full_path)
-            if raw_skip == 0:
-                img_list.append(full_path)
-
-        # If data mode, return meta_data with data.
+            img_list.append(img)
         if return_metadata:
             return img_list, meta_data
         else:
