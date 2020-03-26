@@ -27,7 +27,7 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
     :return: astropy.table.table.Qtabl, photometry table of input image
     """
     # Cast to numpy.array if it's an hcipy.Field
-    if type(data) == hcipy.field.field.Field:
+    if type(data) == hcipy.Field:
         data = np.array(data.shaped)
 
     # Scale distances and source detection parameters via img shape.
@@ -92,7 +92,7 @@ def rectangle_photometry(data, im_type, output_path='', save_fig=True):
     :return: astropy.table.table.Qtabl, photometry table of input image
     """
     # Cast to numpy.array if it's an hcipy.Field
-    if type(data) == hcipy.field.field.Field:
+    if type(data) == hcipy.Field:
         data = np.array(data.shaped)
 
     # Scale distances and source detection parameters via img shape.
