@@ -12,6 +12,8 @@ from photutils import aperture_photometry
 from photutils import CircularAperture
 from photutils import DAOStarFinder
 
+import hicat.util
+
 
 def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True, zoom_in=False):
     """
@@ -134,23 +136,10 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
     :param apodizer: string, 'no_apodizer' or 'cnt2_apodizer'
     :return: photometry tables for direct and coron (astropy.table.table.Qtable), and flux normalization factor (float)
     """
-    if type(coron_data) == tuple:
-        coron_header = coron_data[1]
-        coron_img = coron_data[0]
-    elif type(coron_data) == str and os.path.exists(coron_data):
-        coron_header = fits.getheader(coron_data)
-        coron_img = fits.getdata(coron_data)
-    else:
-        raise TypeError('Invalid data reference for direct image passed.')
 
-    if type(direct_data) == tuple:
-        direct_header = direct_data[1]
-        direct_img = direct_data[0]
-    elif type(direct_data) == str and os.path.exists(direct_data):
-        direct_header = fits.getheader(direct_data)
-        direct_img = fits.getdata(direct_data)
-    else:
-        raise TypeError('Invalid data reference for coronagraphic image passed.')
+    # Unpack image and header
+    coron_img, coron_header = hicat.util.unpack_image_data(coron_data)
+    direct_img, direct_header = hicat.util.unpack_image_data(direct_data)
 
     # Read filter info
     color_filter_coron, nd_filter_coron = coron_header['FILTERS'].split(',')
