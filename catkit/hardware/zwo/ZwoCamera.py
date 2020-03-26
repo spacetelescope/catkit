@@ -125,13 +125,35 @@ class ZwoCamera(Camera):
                        return_metadata=False,
                        subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
                        bins=None):
+        """ Wrapper to take exposures and also save them if `file_mode` is used. """
+
+        images, meta = self.just_take_exposures(exposure_time=exposure_time,
+                                                num_exposures=num_exposures,
+                                                extra_metadata=extra_metadata,
+                                                full_image=full_image, subarray_x=subarray_x, subarray_y=subarray_y,
+                                                width=width, height=height,
+                                                gain=gain,
+                                                bins=bins)
+
+        if file_mode:
+            catkit.util.save_images(images, meta, path=path, base_filename=filename, resume=resume, raw_skip=raw_skip)
+
+        # TODO: Nuke this and always return both, eventually returning a HDUList (HICAT-794).
+        if return_metadata:
+            return images, meta
+        else:
+            return images
+
+    def just_take_exposures(self, exposure_time, num_exposures,
+                            extra_metadata=None,
+                            subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
+                            bins=None):
         """
         Low level method to take exposures using a Zwo camera. By default keeps image data in.
 
         :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
         :param num_exposures: Number of exposures.
         :param extra_metadata: Will be appended to metadata created and written to fits header.
-        :param return_metadata: If True, returns a list of meta data as a second return parameter.
         :param subarray_x: X coordinate of center pixel of the subarray.
         :param subarray_y: Y coordinate of center pixel of the subarray.
         :param width: Desired width of image.
@@ -141,10 +163,6 @@ class ZwoCamera(Camera):
         :param bins: Integer value for number of bins.
         :return: Two parameters: Image list (numpy data or paths), Metadata list of MetaDataEntry objects.
         """
-
-        if file_mode or raw_skip:
-            raise NotImplementedError("See HICAT-762")
-
 
         # Convert exposure time to contain units if not already a Pint quantity.
         if type(exposure_time) is int or type(exposure_time) is float:
@@ -172,10 +190,8 @@ class ZwoCamera(Camera):
         for i in range(num_exposures):
             img = self.capture_and_orient(exposure_time, self.theta, self.fliplr)
             img_list.append(img)
-        if return_metadata:
-            return img_list, meta_data
-        else:
-            return img_list
+
+        return img_list, meta_data
 
     def flash_id(self, new_id):
         """
