@@ -85,3 +85,87 @@ def rotate_and_flip_image(data, theta, flip):
         data_corr = np.fliplr(data_corr)
 
     return data_corr
+
+
+def save_images(images, meta_data, path, base_filename, resume=False, raw_skip=0):
+    """
+    :param raw_skip: Skips x writes for every one taken.
+    :param path: Path of the directory to save fits file to.
+    :param base_filename: Name for file.
+    :param resume: If True, skips exposure if filename exists on disk already. Doesn't support data-only mode.
+    :return: None
+    """
+
+    if not images:
+        return
+
+    # Check that path and filename are specified.
+    if path is None or base_filename is None:
+        raise Exception("You need to specify path and filename.")
+
+    log = logging.getLogger()
+    filename = base_filename
+    # Check for fits extension.
+    if not (base_filename.endswith(".fit") or base_filename.endswith(".fits")):
+        filename += ".fits"
+
+    # Split the filename once here, code below may append _frame=xxx to basename.
+    file_split = os.path.splitext(filename)
+    file_root = file_split[0]
+    file_ext = file_split[1]
+
+    # Create directory if it doesn't exist.
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    num_exposures = len(images)
+
+    skip_counter = 0
+    for i, img in enumerate(images):
+
+        # For multiple exposures append frame number to end of base file name.
+        if num_exposures > 1:
+            filename = file_root + "_frame" + str(i + 1) + file_ext
+        full_path = os.path.join(path, filename)
+
+        # If Resume is enabled, continue if the file already exists on disk.
+        if resume and os.path.isfile(full_path):
+            log.info("File already exists: " + full_path)
+            continue
+
+        # Take exposure.
+        # img = self.capture_and_orient(exposure_time, self.theta, self.fliplr)
+
+        # Skip writing the fits files per the raw_skip value, and keep img data in memory.
+        if raw_skip != 0:
+            if skip_counter == (raw_skip + 1):
+                skip_counter = 0
+            if skip_counter == 0:
+                # Write fits.
+                skip_counter += 1
+            elif skip_counter > 0:
+                # Skip fits.
+                skip_counter += 1
+                continue
+
+        # Create a PrimaryHDU object to encapsulate the data.
+        hdu = fits.PrimaryHDU(img)
+
+        # Add headers.
+        hdu.header["FRAME"] = i + 1
+        hdu.header["FILENAME"] = filename
+
+        # Add testbed state metadata.
+        for entry in meta_data:
+            if len(entry.name_8chars) > 8:
+                log.warning("Fits Header Keyword: " + entry.name_8chars +
+                            " is greater than 8 characters and will be truncated.")
+            if len(entry.comment) > 47:
+                log.warning("Fits Header comment for " + entry.name_8chars +
+                            " is greater than 47 characters and will be truncated.")
+            hdu.header[entry.name_8chars[:8]] = (entry.value, entry.comment)
+
+        # Create a HDUList to contain the newly created primary HDU, and write to a new file.
+        fits.HDUList([hdu])
+        hdu.writeto(full_path, overwrite=True)
+        log.info(f"'{full_path}' written to disk.")
