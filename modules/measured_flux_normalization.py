@@ -24,7 +24,7 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
     :param sigma: float, number of stddevs for clipping limit
     :param save_fig: bool, toggle to save figures
     :param zoom_in: bool, saves a cropped image with the aperture in more detail
-    :return: astropy.table.table.Qtabl, photometry table of input image
+    :return: astropy.table.table.Qtable, photometry table of input image
     """
     # Cast to numpy.array if it's an hcipy.Field
     if type(data) == hcipy.Field:
@@ -89,7 +89,7 @@ def rectangle_photometry(data, im_type, output_path='', save_fig=True):
     :param im_type: string, 'direct' or 'coron' (only used to name plot)
     :param output_path: string, path to save outputs to
     :param save_fig: bool, toggle to save figures
-    :return: astropy.table.table.Qtabl, photometry table of input image
+    :return: astropy.table.table.Qtable, photometry table of input image
     """
     # Cast to numpy.array if it's an hcipy.Field
     if type(data) == hcipy.Field:
@@ -133,7 +133,7 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
     :param coron_data: tuple or string, (img, header) Pass a tuple of the coron img and header; or filepath to image.
     :param direct_data: tuple or string, (img, header) Pass a tuple of the direct img and header; or filepath to image.
     :param out_path: string, path to save outputs to
-    :param apodizer: string, 'no_apodizer' or 'cnt2_apodizer'
+    :param apodizer: string, 'no_apodizer' or one of the apodizers (e.g. 'cnt2_apodizer')
     :return: photometry tables for direct and coron (astropy.table.table.Qtable), and flux normalization factor (float)
     """
 
