@@ -137,20 +137,18 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
     if type(coron_data) == tuple:
         coron_header = coron_data[1]
         coron_img = coron_data[0]
-    elif type(coron_data) == str:
-        if os.path.exists(coron_data):
-            coron_header = fits.getheader(coron_data)
-            coron_img = fits.getdata(coron_data)
+    elif type(coron_data) == str and os.path.exists(coron_data):
+        coron_header = fits.getheader(coron_data)
+        coron_img = fits.getdata(coron_data)
     else:
         raise TypeError('Invalid data reference for direct image passed.')
 
     if type(direct_data) == tuple:
         direct_header = direct_data[1]
         direct_img = direct_data[0]
-    elif type(direct_data) == str:
-        if os.path.exists(direct_data):
-            direct_header = fits.getheader(direct_data)
-            direct_img = fits.getdata(direct_data)
+    elif type(direct_data) == str and os.path.exists(direct_data):
+        direct_header = fits.getheader(direct_data)
+        direct_img = fits.getdata(direct_data)
     else:
         raise TypeError('Invalid data reference for coronagraphic image passed.')
 
