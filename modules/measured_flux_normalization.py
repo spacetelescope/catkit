@@ -66,9 +66,8 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
         fig = plt.figure(figsize=(5, 5))
 
         if zoom_in:
-            plt.ylim(sources['ycentroid'] - int(np.round(im_shape[0] * 0.08)), int(np.round(im_shape[0])))
-            plt.xlim(sources['xcentroid'] - int(np.round(im_shape[1] * 0.08)),
-                     sources['xcentroid'] + int(np.round(im_shape[1] * 0.08)))
+            plt.ylim(sources['ycentroid'] - fwhm * 2, sources['ycentroid'] + fwhm * 2)
+            plt.xlim(sources['xcentroid'] - fwhm * 2, sources['xcentroid'] + fwhm * 2)
 
         im = plt.imshow(data, norm=LogNorm())
         apertures.plot(color='red', lw=1.5, alpha=1)
