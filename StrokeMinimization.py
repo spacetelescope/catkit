@@ -64,9 +64,11 @@ class StrokeMinimization(Experiment):
                  dm_command_dir_to_restore=None,
                  dm_calibration_fudge=1,
                  mu_start=1e-7,
-                 suffix = 'stroke_minimization'):
+                 suffix = 'stroke_minimization',
+                 file_mode=True):
         super(StrokeMinimization, self).__init__(suffix=suffix)
 
+        self.file_mode = file_mode
         self.jacobian_filename = jacobian_filename
         self.probe_filename = probe_filename
         try:
@@ -139,11 +141,13 @@ class StrokeMinimization(Experiment):
         # Bind exposure time to exposure functions to ensure consistency throughout experiment
         self.take_coron_exposure = functools.partial(stroke_min.take_exposure_hicat,
                                                      exposure_time=self.exposure_time_coron,
-                                                     exposure_type='coron')
+                                                     exposure_type='coron',
+                                                     file_mode=self.file_mode)
 
         self.take_direct_exposure = functools.partial(stroke_min.take_exposure_hicat,
                                                       exposure_time=self.exposure_time_direct,
-                                                      exposure_type='direct')
+                                                      exposure_type='direct',
+                                                      file_mode=self.file_mode)
 
         # Initialize output path and logging
         self.output_path = hicat.util.create_data_path(suffix=self.suffix)
