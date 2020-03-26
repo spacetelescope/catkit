@@ -331,12 +331,10 @@ class StrokeMinimization(Experiment):
                 image_after, _header = self.take_coron_exposure(self.dm1_actuators, self.dm2_actuators, devices,
                                                            **exposure_kwargs)
                 try:
-                    self.latest_pupil_filename = stroke_min.take_pupilcam_hicat(devices, initial_path=exposure_kwargs['initial_path'])[0]
+                    self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices, num_exposures=1, initial_path=exposure_kwargs['initial_path'])[0]
                 except Exception:
                     # FIXME temporary workaround
                     self.log.warning("PUPIL CAM EXCEPTION ENCOUNTERED - IGNORING AND CONTINUING")
-
-                self.latest_pupil_image = fits.getdata(self.latest_pupil_filename)
 
                 if np.mod(i, self.direct_every) == 0:
                     self.log.info('Taking direct image for comparison...')

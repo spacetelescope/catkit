@@ -61,9 +61,8 @@ class DMAlignmentData(Experiment):
             flat_dm1 = commands.flat_command(bias=False, flat_map=True, dm_num=1)
             flat_dm2 = commands.flat_command(bias=False, flat_map=True, dm_num=2)
             dm.apply_shape_to_both(flat_dm1, flat_dm2)
-            pupil_filenames = take_pupilcam_hicat(devices, initial_path=self.output_path, suffix='pupilcam_dms_both_flat',
-                                                 exposure_time=self.exptime_pupil)
-            pupil_reference = fits.getdata(pupil_filenames[0])
+            pupil_reference = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix='pupilcam_dms_both_flat',
+                                                 exposure_time=self.exptime_pupil)[0]
             fits.writeto(os.path.join(self.output_path, 'pupilcam_both_flat.fits'), pupil_reference)
 
             # Apply pattern to target DM, and zero to the other
@@ -85,9 +84,8 @@ class DMAlignmentData(Experiment):
 
                         # Take pupil exposure.
                         suffix = '_pattern{}_dm{}_amp{}'.format(i,dmnum,amp)
-                        pupil_filenames = take_pupilcam_hicat(devices, initial_path=self.output_path, suffix='pupilcam'+suffix,
-                                            exposure_time=self.exptime_pupil)
-                        pupil_image = fits.getdata(pupil_filenames[0])
+                        pupil_image = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix='pupilcam'+suffix,
+                                            exposure_time=self.exptime_pupil)[0]
 
                         # Now do the subtraction of the reference (flat) pupil image from that pupil image
                         fits.writeto(os.path.join(self.output_path, 'pupilcam_delta{}.fits'.format(suffix)),
