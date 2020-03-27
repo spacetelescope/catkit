@@ -11,6 +11,16 @@ import hicat.util
 
 
 def mtf_sampling(dirpath, im_path, threshold):
+	"""
+	Calculate the MTF pixel sampling using the equivalent area method.
+	    Inputs
+	        dirpath: string, path to the to the directory for the MTF data
+	        im_path: string, path to the focused input image
+	        threshold: int, the background threshold used to calculate the MTF  support
+
+	    Output
+	        sampling: float, the MTF sampling in pixels per lambda/D
+	"""
 	mtf_dir = 'mtf_diagnostics'
 	os.makedirs(os.path.join(dirpath, mtf_dir), exist_ok=True)
 
