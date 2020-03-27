@@ -10,7 +10,7 @@ import hicat.util
 def test_get_normalization_factor():
     """Test that the factor is a positive number."""
 
-    column_names = ['id', 'xcenter', 'ycenter', 'aperture_sum', 'color_filter', 'nd_filter']
+    column_names = ['id', 'xcenter', 'ycenter', 'aperture_sum', 'fwhm', 'aperture_radius', 'color_filter', 'nd_filter']
 
     coron_im = 'coron_image_cal.fits'
     direct_im = 'direct_image_cal.fits'
