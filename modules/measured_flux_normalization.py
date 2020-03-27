@@ -52,6 +52,8 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
     positions = np.transpose((sources['xcentroid'], sources['ycentroid']))
     apertures = CircularAperture(positions, r=radius)
     phot_table = aperture_photometry(data, apertures)
+    phot_table['fwhm'] = fwhm
+    phot_table['aperture_radius'] = radius
 
     # Adjust for multiple source detections. This should not occur often with adjusted parameters.
     if len(phot_table) > 1:
