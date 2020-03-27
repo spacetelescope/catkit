@@ -62,6 +62,10 @@ def mtf_sampling(dirpath, im_path, threshold):
 	cutoff_eq = np.sqrt(area/np.pi)
 	sampling = float(imsize) / float(cutoff_eq)
 
+	with open(os.path.join(mtf_dir, 'sampling_params.txt'), 'w') as f:
+		f.write('sampling: {}\n'.format(sampling))
+		f.write('threshold: {}'.format(threshold))
+
 	return sampling
 
 
