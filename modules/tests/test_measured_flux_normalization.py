@@ -27,8 +27,8 @@ def test_get_normalization_factor():
                                                                  apodizer='no_apodizer')
 
     # These need to be QTables
-    assert type(direct_table) == QTable, 'direct_table is no astropy.QTable'
-    assert type(coron_table) == QTable, 'coron_table is no astropy.QTable'
+    assert isinstance(direct_table, QTable), 'direct_table is no astropy.QTable'
+    assert isinstance(coron_table, QTable), 'coron_table is no astropy.QTable'
 
     # We rely on proper naming of the columns
     assert direct_table.keys() == column_names, 'Column names in direct_table are wrong.'
@@ -40,6 +40,7 @@ def test_get_normalization_factor():
 
     # If the resulting normalization factor is negative, something is terribly off
     assert factor > 0, 'Flux normalization factor cannot be negative.'
+
 
 def test_satellite_photometry():
     """Test that the extracted aperture is in the image boundaries"""
@@ -58,8 +59,8 @@ def test_satellite_photometry():
     coron_table = satellite_photometry(coron_img_data, 'coron', output_path='', save_fig=False)
 
     # These need to be QTables
-    assert type(direct_table) == QTable, 'direct_table is no astropy.QTable'
-    assert type(coron_table) == QTable, 'coron_table is no astropy.QTable'
+    assert isinstance(direct_table, QTable), 'direct_table is no astropy.QTable'
+    assert isinstance(coron_table, QTable) == QTable, 'coron_table is no astropy.QTable'
 
     # We rely on proper naming of the columns
     assert direct_table.keys() == column_names, 'Column names in direct_table are wrong.'
