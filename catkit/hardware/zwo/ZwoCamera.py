@@ -89,7 +89,7 @@ class ZwoCamera(Camera):
             # Maps to:
             # https://github.com/stevemarple/python-zwoasi/blob/1aadf7924dd1cb3b8587d97689d82cd5f1a0b5f6/zwoasi/__init__.py#L889-L893
             raise RuntimeError(f"Exposure status: {error.exposure_status}") from error
-        return image.astype(np.dtype(np.int))
+        return image.astype(np.dtype(np.float32))
 
     def capture_and_orient(self, exposure_time, theta, fliplr):
         """ Takes and image and flips according to theta and l/r input.
