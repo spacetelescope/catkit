@@ -60,7 +60,7 @@ def test_satellite_photometry():
 
     # These need to be QTables
     assert isinstance(direct_table, QTable), 'direct_table is no astropy.QTable'
-    assert isinstance(coron_table, QTable) == QTable, 'coron_table is no astropy.QTable'
+    assert isinstance(coron_table, QTable), 'coron_table is no astropy.QTable'
 
     # We rely on proper naming of the columns
     assert direct_table.keys() == column_names, 'Column names in direct_table are wrong.'
