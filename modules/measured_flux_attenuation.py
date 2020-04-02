@@ -3,6 +3,7 @@ import os
 from astropy.stats import sigma_clipped_stats
 from astropy.table import QTable
 import hcipy
+import logging
 from matplotlib.colors import LogNorm
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
@@ -12,6 +13,7 @@ from photutils import CircularAperture
 from photutils import DAOStarFinder
 
 import hicat.util
+log = logging.getLogger(__name__)
 
 
 def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True, zoom_in=False):
@@ -56,8 +58,7 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
 
     # Adjust for multiple source detections. This should not occur often with adjusted parameters.
     if len(phot_table) > 1:
-        print('WARNING: Multiple elligible sources found initially. Brightest will be selected.'
-              , 'Confirm correct source in image.')
+        log.warning('Multiple elligible sources found initially. Brightest will be selected.')
         phot_table = phot_table[phot_table['aperture_sum'] == phot_table['aperture_sum'].max()]
         coord_list = [phot_table['xcenter'].value[0], phot_table['ycenter'].value[0]]
         positions = np.array([coord_list])
@@ -166,10 +167,10 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
     direct_table = photometry_func(data=direct_img, im_type=f'direct-{nd_filter_direct}-{color_filter_direct}',
                                    output_path=out_path)
     if len(coron_table) != 1:
-        print('Likely Problem with coronagraphic img satellite photometry')
+        log.warning('Likely Problem with coronagraphic img satellite photometry')
 
     if len(direct_table) != 1:
-        print('Likely Problem with direct img satellite photometry')
+        log.warning('Likely Problem with direct img satellite photometry')
 
     # Add filter info to photometry tables
     coron_table['color_filter'] = color_filter_coron
