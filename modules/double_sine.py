@@ -142,7 +142,9 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                    filename=sin_file_name, auto_exposure_time=auto_exposure_time,
                                                    simulator=simulator, centering=centering,
                                                    auto_exposure_mask_size=auto_exposure_mask_size,
-                                                   resume=resume, **kwargs)
+                                                   resume=resume,
+                                                   pipeline=True,
+                                                   **kwargs)
 
         # Negative.
         dm.apply_shape(negative_sin_command_object, dm_to_control)
@@ -155,7 +157,9 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                    filename=sin_file_name, auto_exposure_time=auto_exposure_time,
                                                    simulator=simulator, centering=centering,
                                                    auto_exposure_mask_size=auto_exposure_mask_size,
-                                                   resume=resume, **kwargs)
+                                                   resume=resume,
+                                                   pipeline=True,
+                                                   **kwargs)
 
         # Flat (always use PSF image centering).
         dm.apply_shape(flat_command_object, dm_to_control)
@@ -168,7 +172,9 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                filename=sin_file_name, auto_exposure_time=auto_exposure_time,
                                                simulator=simulator, centering=centering,
                                                auto_exposure_mask_size=auto_exposure_mask_size,
-                                               resume=resume, **kwargs)
+                                               resume=resume,
+                                               pipeline=True,
+                                               **kwargs)
 
     # Create the final file from adding speckles and subtracting the flat.
     if file_mode:

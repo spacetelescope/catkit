@@ -119,6 +119,7 @@ def take_exposures_both_dm_commands(dm2_command_list,
                            suffix=None,
                            centering=centering)
 
+
 def take_exposures(dm1_command_object,
                    dm2_command_object,
                    exposure_time,
@@ -156,10 +157,10 @@ def take_exposures(dm1_command_object,
 
         with testbed.dm_controller() as dm:
             dm.apply_shape_to_both(dm1_command_object, dm2_command_object)
-            path = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position, path=path,
+            return testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
+                                             path=path,
                                              filename=filename,
                                              exposure_set_name=exposure_set_name,
                                              camera_type=camera_type,
                                              pipeline=pipeline,
                                              **kwargs)
-    return path

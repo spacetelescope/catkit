@@ -54,22 +54,21 @@ class UpdateSubarray(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-        path = take_exposures(self.dm1_command_object,
-                              self.dm2_command_object,
-                              self.exposure_time,
-                              1,  # Number of exposures
-                              self.camera_type,
-                              False,  # Coronograph
-                              False,  # Pipeline
-                              self.output_path,
-                              self.filename,
-                              self.exposure_set_name,
-                              self.suffix,
-                              **self.kwargs)
+        images, _background_images = take_exposures(dm1_command_object=self.dm1_command_object,
+                                                   dm2_command_object=self.dm2_command_object,
+                                                   exposure_time=self.exposure_time,
+                                                   num_exposures=1,
+                                                   camera_type=self.camera_type,
+                                                   coronograph=False,
+                                                   pipeline=False,
+                                                   path=self.output_path,
+                                                   filename=self.filename,
+                                                   exposure_set_name=self.exposure_set_name,
+                                                   suffix=self.suffix,
+                                                   **self.kwargs)
 
-        # Open the raw image and use the PSF to find the center.
-        file_path = path[0]
-        psf_image = hicat.util.read_fits(file_path, return_header=False)
+        # Use the PSF to find the center.
+        psf_image = images[0]
 
         # Find the brightest peak (should be the core of the psf).
         mean, median, std = sigma_clipped_stats(psf_image, sigma=3)

@@ -54,10 +54,14 @@ class CalculateSampling(Experiment):
             with testbed.dm_controller() as dm:
                 # Flat.
                 dm.apply_shape_to_both(flat_command_object1, flat_command_object2)
-                cal_file_path = testbed.run_hicat_imaging(direct_exp_time_estimate, num_exposures, FpmPosition.direct,
-                                                          path=self.output_path, exposure_set_name="direct",
-                                                          filename=flat_file_name, camera_type=self.camera_type,
-                                                          simulator=False,
-                                                          **self.kwargs)
+                cal_image, meta = testbed.run_hicat_imaging(direct_exp_time_estimate, num_exposures, FpmPosition.direct,
+                                                      path=self.output_path, exposure_set_name="direct",
+                                                      filename=flat_file_name, camera_type=self.camera_type,
+                                                      simulator=False,
+                                                      pipeline=True,
+                                                      return_pipeline_metadata=True
+                                                      **self.kwargs)
+
+        cal_file_path = meta["PATH"]
         pixel_sampling = mtf_sampling(self.output_path, cal_file_path, self.mtf_snr_threshold)
         self.log.info("pixel sampling in focused image = {}".format(pixel_sampling))
