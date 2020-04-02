@@ -1,6 +1,5 @@
 import os
 
-from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
 from astropy.table import QTable
 import hcipy
@@ -128,14 +127,28 @@ def rectangle_photometry(data, im_type, output_path='', save_fig=True):
     return region_table
 
 
-def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apodizer'):
+def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apodizer'):
     """
-    Calculate flux normalization factor for direct and coron data.
+    Calculate flux attenuation factor for direct and coron data.
+
+    The HiCAT direct images are taken with an ND filter, which includes some losses due to the fiber coupling, when
+    using the light source assembly (LSA). Calculate the attenuation caused by the ND filter and the fiber coupling
+    by comparing the count rates in a well-exposed direct image (ND + coupling) and a well-exposed coron image (no ND
+    and no coupling).
+
+    In CLC mode, perform aperture photometry on the central top satellite spot in direct and coron image, and the
+    returned flux attenuation factor for the direct image is the sum of pixels in aperture in coron / sum of pixels
+    over aperture in direct. This also means that this attenuation factor equals 1 for coron by definition and does
+    hence not need to be calculated.
+
+    In APLC mode, we do the same except that we measure the flux in an area in the outer part of the images as opposed
+    to an aperture over a satellite spot.
+
     :param coron_data: tuple or string, (img, header) Pass a tuple of the coron img and header; or filepath to image.
     :param direct_data: tuple or string, (img, header) Pass a tuple of the direct img and header; or filepath to image.
     :param out_path: string, path to save outputs to
     :param apodizer: string, 'no_apodizer' or one of the apodizers (e.g. 'cnt2_apodizer')
-    :return: photometry tables for direct and coron (astropy.table.table.Qtable), and flux normalization factor (float)
+    :return: photometry tables for direct and coron (astropy.table.table.Qtable), and flux attenuation factor (float)
     """
 
     # Unpack image and header
@@ -168,7 +181,7 @@ def get_normalization_factor(coron_data, direct_data, out_path, apodizer='no_apo
     coron_countrate = coron_table['aperture_sum'][0]
     direct_countrate = direct_table['aperture_sum'][0]
 
-    # Calculate flux normalization factor
-    factor = coron_countrate / direct_countrate  # type: float
+    # Calculate flux attenuation factor
+    attenuation_factor = coron_countrate / direct_countrate  # type: float
 
-    return direct_table, coron_table, factor
+    return direct_table, coron_table, attenuation_factor

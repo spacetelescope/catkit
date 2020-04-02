@@ -5,14 +5,13 @@ from astropy.table import QTable
 from astropy.io import fits
 import numpy as np
 
-from hicat.experiments.modules.measured_flux_normalization import get_normalization_factor
-from hicat.experiments.modules.measured_flux_normalization import satellite_photometry
-
+from hicat.experiments.modules.measured_flux_attenuation import calc_attenuation_factor
+from hicat.experiments.modules.measured_flux_attenuation import satellite_photometry
 import hicat.util
 
 
-def test_get_normalization_factor():
-    """Test that the factor is a positive number."""
+def test_calc_attenuation_factor():
+    """Test that the attenuation factor is a positive number."""
 
     column_names = ['id', 'xcenter', 'ycenter', 'aperture_sum', 'fwhm', 'aperture_radius', 'color_filter', 'nd_filter']
 
@@ -21,7 +20,7 @@ def test_get_normalization_factor():
 
     file_location = os.path.join(hicat.util.find_repo_location(), 'hicat', 'experiments', 'modules', 'tests')
 
-    direct_table, coron_table, factor = get_normalization_factor(os.path.join(file_location, coron_im),
+    direct_table, coron_table, attenuation_factor = calc_attenuation_factor(os.path.join(file_location, coron_im),
                                                                  os.path.join(file_location, direct_im),
                                                                  out_path='',
                                                                  apodizer='no_apodizer')
@@ -38,8 +37,8 @@ def test_get_normalization_factor():
     assert len(direct_table) == 1, 'More than one photometric result in direct_table.'
     assert len(coron_table) == 1, 'More than one photometric result in coron_table.'
 
-    # If the resulting normalization factor is negative, something is terribly off
-    assert factor > 0, 'Flux normalization factor cannot be negative.'
+    # If the resulting attenuation factor is negative, something is terribly off
+    assert attenuation_factor > 0, 'Flux attenuation factor cannot be negative.'
 
 
 def test_satellite_photometry():
