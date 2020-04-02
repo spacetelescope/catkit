@@ -154,6 +154,7 @@ def save_images(images, meta_data, path, base_filename, resume=False, raw_skip=0
         # Add headers.
         hdu.header["FRAME"] = i + 1
         hdu.header["FILENAME"] = filename
+        hdu.header["PATH"] = full_path
 
         # Add testbed state metadata.
         for entry in meta_data:
