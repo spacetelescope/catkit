@@ -183,4 +183,4 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     if file_mode:
         __remove_crossterm_files(path, simulator=simulator)
     else:
-        return remove_crossterm(positive_final, negative_final, flat_final)
+        return remove_crossterm(positive_final[0], negative_final[0], flat_final[0])
