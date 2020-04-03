@@ -33,19 +33,18 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
 
     # Scale distances and source detection parameters via img shape.
     im_shape = np.shape(data)
-    fwhm = int(np.round(im_shape[0] * 0.03))
-    radius = int(np.round(im_shape[0] * 0.045))
+    fwhm = int(np.round(im_shape[0] * 0.03))      #TODO: HICAT-770
+    radius = int(np.round(im_shape[0] * 0.045))   #TODO: HICAT-770
 
     # Find sources in entire image.
     mean, median, std = sigma_clipped_stats(data, sigma=sigma)
-    daofind = DAOStarFinder(fwhm=fwhm, threshold=30 * std)
+    daofind = DAOStarFinder(fwhm=fwhm, threshold=30 * std)    #TODO: HICAT-770
 
     # Mask out all sources except upper-middle satellite source.
     mask = np.zeros(data.shape, dtype=bool)
-    mask[int(np.round(im_shape[0] * 0.82)):, 0:int(np.round(im_shape[1] * 0.34))] = True
-    mask[0:int(np.round(im_shape[0] * 0.82)), :] = True
-    mask[int(np.round(im_shape[0] * 0.82)):, int(np.round(im_shape[1] * 0.68)):] = True
-
+    mask[int(np.round(im_shape[0] * 0.82)):, 0:int(np.round(im_shape[1] * 0.34))] = True    #TODO: HICAT-770
+    mask[0:int(np.round(im_shape[0] * 0.82)), :] = True    #TODO: HICAT-770
+    mask[int(np.round(im_shape[0] * 0.82)):, int(np.round(im_shape[1] * 0.68)):] = True    #TODO: HICAT-770
     # Detect sources
     sources = daofind(data, mask=mask)
 
@@ -98,8 +97,8 @@ def rectangle_photometry(data, im_type, output_path='', save_fig=True):
 
     # Scale distances and source detection parameters via img shape.
     im_shape = np.shape(data)
-    y_limits = (int(np.round(im_shape[0] * 0.78)), int(np.round(im_shape[0] - 0.05 * (im_shape[0]))))
-    x_limits = (int(np.round(im_shape[1] * 0.32)), int(np.round(im_shape[1] * 0.68)))
+    y_limits = (int(np.round(im_shape[0] * 0.78)), int(np.round(im_shape[0] - 0.05 * (im_shape[0]))))   #TODO: HICAT-770
+    x_limits = (int(np.round(im_shape[1] * 0.32)), int(np.round(im_shape[1] * 0.68)))    #TODO: HICAT-770
 
     region_sum = np.sum(data[y_limits[0]:y_limits[1], x_limits[0]:x_limits[1]])
     region_table = QTable(data=[[region_sum], [x_limits], [y_limits]], masked=False,
@@ -122,7 +121,7 @@ def rectangle_photometry(data, im_type, output_path='', save_fig=True):
         cbar_ax = fig.add_axes([0.9, 0.125, 0.05, 0.755])
         fig.colorbar(im, cax=cbar_ax)
 
-        fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_type)), dpi=300, bbox_inches='tight')
+        fig.savefig(os.path.join(output_path, f'photometry-{im_type}.pdf'), dpi=300, bbox_inches='tight')
         plt.close(fig)
 
     return region_table
