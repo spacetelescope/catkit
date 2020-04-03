@@ -97,6 +97,9 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     If file_mode=True: Nothing is returned.
     """
 
+    if simulator:
+        raise NotImplementedError("No longer implemented, see HICAT-774")
+
     dm_to_control = dm
     dm_to_flatten = 2 if dm==1 else 1
 
@@ -140,7 +143,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                    file_mode=file_mode, raw_skip=raw_skip, path=path,
                                                    exposure_set_name=positive_sin_dirname,
                                                    filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                                   simulator=simulator, centering=centering,
+                                                   centering=centering,
                                                    auto_exposure_mask_size=auto_exposure_mask_size,
                                                    resume=resume,
                                                    pipeline=True,
@@ -155,7 +158,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                    file_mode=file_mode, raw_skip=raw_skip, path=path,
                                                    exposure_set_name=negative_sin_dirname,
                                                    filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                                   simulator=simulator, centering=centering,
+                                                   centering=centering,
                                                    auto_exposure_mask_size=auto_exposure_mask_size,
                                                    resume=resume,
                                                    pipeline=True,
@@ -170,7 +173,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                file_mode=file_mode, raw_skip=raw_skip, path=path,
                                                exposure_set_name=flat_dirname,
                                                filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                               simulator=simulator, centering=centering,
+                                               centering=centering,
                                                auto_exposure_mask_size=auto_exposure_mask_size,
                                                resume=resume,
                                                pipeline=True,

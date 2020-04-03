@@ -160,7 +160,7 @@ class SpeckleNulling(Experiment):
                                                   path=phase_path, auto_exposure_time=False,
                                                   centering=self.centering,
                                                   exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + name,
-                                                  simulator=False, **self.kwargs)
+                                                  **self.kwargs)
 
                     # Run control on the set of phase shifted data.
                     new_phase = speckle_nulling.speckle_control_phase(iteration_path, exp_set_name)
@@ -185,7 +185,7 @@ class SpeckleNulling(Experiment):
                                                   centering=self.centering,
                                                   path=amplitude_path, auto_exposure_time=False,
                                                   exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + name,
-                                                  simulator=False, **self.kwargs)
+                                                  **self.kwargs)
 
                     # Run control on the set of phase shifted data.
                     new_amplitude_tmp = speckle_nulling.speckle_control_amplitude(iteration_path, exp_set_name)
@@ -213,7 +213,7 @@ class SpeckleNulling(Experiment):
                                               path=os.path.join(self.output_path + "broadband"),
                                               exposure_set_name=folder_string + "_coron",
                                               filename=folder_string + ".fits",
-                                              simulator=False, **self.kwargs)
+                                              **self.kwargs)
 
                     testbed.run_hicat_imaging(self.exposure_time, 12, FpmPosition.direct,
                                               centering=ImageCentering.cross_correlation,
@@ -221,7 +221,7 @@ class SpeckleNulling(Experiment):
                                               path=os.path.join(self.output_path + "broadband"),
                                               exposure_set_name=folder_string + "_direct",
                                               filename=folder_string + ".fits",
-                                              simulator=False, **self.kwargs)
+                                              **self.kwargs)
 
     @staticmethod
     def __make_global_alignment_mask():
