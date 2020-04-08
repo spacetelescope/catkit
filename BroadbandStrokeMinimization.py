@@ -230,11 +230,16 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
         # Add flux factor to header, both on disk as well as in local variable
         # Find latest subdir - latest modified, not necessarily created, but should suffice for this application
-        latest_dir = max(glob.glob(os.path.join(initial_path, '*/')), key=os.path.getmtime)
-        for processed_im in ['*cal.fits', '*bin.fits']:
-            file_path = glob.glob(os.path.join(latest_dir, '*{}'.format(exposure_type), '*{}'.format(exposure_type), processed_im))[0]
-            fits.setval(filename=file_path, keyword='ATTENFAC', value=flux_attenuation_factor)
         header['ATTENFAC'] = flux_attenuation_factor
+        latest_dir = os.path.dirname(header["PATH"])
+        for processed_im in ['*cal.fits', '*bin.fits']:
+            # This assumes ``file_mode=True`` so that files exist on disk.
+            search_str = os.path.join(latest_dir, processed_im)
+            file_path = glob.glob(search_str)
+            if not file_path:
+                raise FileNotFoundError("Failed: glob.glob('{search_str}')")
+            fits.setval(filename=file_path[0], keyword='ATTENFAC', value=flux_attenuation_factor)
+
 
         return image, header
 
