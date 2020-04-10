@@ -7,7 +7,6 @@ import time
 import logging
 from catkit.interfaces.FlipMotor import FlipMotor
 from catkit.config import CONFIG_INI
-from catkit.hardware import testbed_state
 
 """Implementation of the FlipMotor interface for the Thorlabs MFF101 Flip Mount."""
 
@@ -42,7 +41,6 @@ class ThorlabsMFF101(FlipMotor):
         self.log.info("Moving to 'up' position")
         up_command = b"\x6A\x04\x00\x01\x21\x01"
         self.motor.write(up_command)
-        testbed_state.background = True
         time.sleep(1)
 
     def move_to_position2(self):
@@ -50,7 +48,6 @@ class ThorlabsMFF101(FlipMotor):
         self.log.info("Moving to 'down' position")
         down_command = b"\x6A\x04\x00\x02\x21\x01"
         self.motor.write(down_command)
-        testbed_state.background = False
         time.sleep(1)
 
     def blink_led(self):
