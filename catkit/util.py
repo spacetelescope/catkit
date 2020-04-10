@@ -166,7 +166,5 @@ def save_images(images, meta_data, path, base_filename, resume=False, raw_skip=0
                             " is greater than 47 characters and will be truncated.")
             hdu.header[entry.name_8chars[:8]] = (entry.value, entry.comment)
 
-        # Create a HDUList to contain the newly created primary HDU, and write to a new file.
-        fits.HDUList([hdu])
         hdu.writeto(full_path, overwrite=True)
         log.info(f"'{full_path}' written to disk.")
