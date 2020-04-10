@@ -54,7 +54,7 @@ class UpdateSubarray(Experiment):
         self.kwargs = kwargs
 
     def experiment(self):
-        images, _background_images = take_exposures(dm1_command_object=self.dm1_command_object,
+        images, _header = take_exposures(dm1_command_object=self.dm1_command_object,
                                                    dm2_command_object=self.dm2_command_object,
                                                    exposure_time=self.exposure_time,
                                                    num_exposures=1,

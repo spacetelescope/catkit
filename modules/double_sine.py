@@ -138,46 +138,46 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
         dm.apply_shape(sin_command_object, dm_to_control)
         if opposite:
             dm.apply_shape(negative_sin_command_object, dm_to_flatten)
-        positive_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
-                                                   lyot_stop_position=lyot_stop_position,
-                                                   file_mode=file_mode, raw_skip=raw_skip, path=path,
-                                                   exposure_set_name=positive_sin_dirname,
-                                                   filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                                   centering=centering,
-                                                   auto_exposure_mask_size=auto_exposure_mask_size,
-                                                   resume=resume,
-                                                   pipeline=True,
-                                                   **kwargs)
+        positive_final, _header = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
+                                                            lyot_stop_position=lyot_stop_position,
+                                                            file_mode=file_mode, raw_skip=raw_skip, path=path,
+                                                            exposure_set_name=positive_sin_dirname,
+                                                            filename=sin_file_name, auto_exposure_time=auto_exposure_time,
+                                                            centering=centering,
+                                                            auto_exposure_mask_size=auto_exposure_mask_size,
+                                                            resume=resume,
+                                                            pipeline=True,
+                                                            **kwargs)
 
         # Negative.
         dm.apply_shape(negative_sin_command_object, dm_to_control)
         if opposite:
             dm.apply_shape(sin_command_object, dm_to_flatten)
-        negative_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
-                                                   lyot_stop_position=lyot_stop_position,
-                                                   file_mode=file_mode, raw_skip=raw_skip, path=path,
-                                                   exposure_set_name=negative_sin_dirname,
-                                                   filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                                   centering=centering,
-                                                   auto_exposure_mask_size=auto_exposure_mask_size,
-                                                   resume=resume,
-                                                   pipeline=True,
-                                                   **kwargs)
+        negative_final, header = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
+                                                           lyot_stop_position=lyot_stop_position,
+                                                           file_mode=file_mode, raw_skip=raw_skip, path=path,
+                                                           exposure_set_name=negative_sin_dirname,
+                                                           filename=sin_file_name, auto_exposure_time=auto_exposure_time,
+                                                           centering=centering,
+                                                           auto_exposure_mask_size=auto_exposure_mask_size,
+                                                           resume=resume,
+                                                           pipeline=True,
+                                                           **kwargs)
 
         # Flat (always use PSF image centering).
         dm.apply_shape(flat_command_object, dm_to_control)
         if opposite:
             dm.apply_shape(flat_command_object, dm_to_flatten)
-        flat_final = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
-                                               lyot_stop_position=lyot_stop_position,
-                                               file_mode=file_mode, raw_skip=raw_skip, path=path,
-                                               exposure_set_name=flat_dirname,
-                                               filename=sin_file_name, auto_exposure_time=auto_exposure_time,
-                                               centering=centering,
-                                               auto_exposure_mask_size=auto_exposure_mask_size,
-                                               resume=resume,
-                                               pipeline=True,
-                                               **kwargs)
+        flat_final , header = testbed.run_hicat_imaging(exposure_time, num_exposures, fpm_position,
+                                                        lyot_stop_position=lyot_stop_position,
+                                                        file_mode=file_mode, raw_skip=raw_skip, path=path,
+                                                        exposure_set_name=flat_dirname,
+                                                        filename=sin_file_name, auto_exposure_time=auto_exposure_time,
+                                                        centering=centering,
+                                                        auto_exposure_mask_size=auto_exposure_mask_size,
+                                                        resume=resume,
+                                                        pipeline=True,
+                                                        **kwargs)
 
     # Create the final file from adding speckles and subtracting the flat.
     if file_mode:

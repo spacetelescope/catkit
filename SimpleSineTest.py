@@ -70,17 +70,17 @@ class SimpleSineTest(Experiment):
                 dm.apply_shape(sin_command_object_dm2, dm_num=2)
 
                 # Take images
-                final_image = testbed.run_hicat_imaging(exposure_time=quantity(50, units.millisecond),
-                                                        num_exposures=1,
-                                                        fpm_position=FpmPosition.coron,
-                                                        lyot_stop_position=LyotStopPosition.in_beam,
-                                                        file_mode=True,
-                                                        raw_skip=False,
-                                                        path=saveto_path,
-                                                        exposure_set_name='coron',
-                                                        filename=sin_file_name_dm1,
-                                                        auto_exposure_time=True,
-                                                        centering=ImageCentering.custom_apodizer_spots,
-                                                        auto_exposure_mask_size=5.5,
-                                                        resume=False,
-                                                        pipeline=True)[0]
+                testbed.run_hicat_imaging(exposure_time=quantity(50, units.millisecond),
+                                          num_exposures=1,
+                                          fpm_position=FpmPosition.coron,
+                                          lyot_stop_position=LyotStopPosition.in_beam,
+                                          file_mode=True,
+                                          raw_skip=False,
+                                          path=saveto_path,
+                                          exposure_set_name='coron',
+                                          filename=sin_file_name_dm1,
+                                          auto_exposure_time=True,
+                                          centering=ImageCentering.custom_apodizer_spots,
+                                          auto_exposure_mask_size=5.5,
+                                          resume=False,
+                                          pipeline=True)
