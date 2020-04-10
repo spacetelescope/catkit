@@ -62,12 +62,17 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                  nd_coron=None,
                  control_weights=None,
                  spectral_weights=None,
-                 perfect_knowledge_mode=False):
+                 perfect_knowledge_mode=False,
+                 file_mode=True,
+                 raw_skip=0):
         super(StrokeMinimization, self).__init__(suffix=suffix)
 
         # TODOs:
         # - Don't correct for ND filter flux in monochromatic mode
         # - Don't take data for wavelengths that have 0 weight
+
+        self.file_mode = file_mode
+        self.raw_skip = raw_skip
 
         if CONFIG_INI['testbed']['laser_source'] == 'thorlabs_source_mcls1':
             self.log.warning('Using monochromatic MCLS1 source.  Overriding wavelength list and using only 640 nm.')
@@ -184,6 +189,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
     def take_exposure(self, devices, exposure_type, wavelength, initial_path, flux_attenuation_factor=1., suffix=None,
                       dm1_actuators=None, dm2_actuators=None, exposure_time=None):
+
         """
         Take an exposure on HiCAT.
 
@@ -222,7 +228,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         image, header = stroke_min.take_exposure_hicat(
             dm1_actuators, dm2_actuators, devices, wavelength=wavelength,
             exposure_type=exposure_type, exposure_time=exposure_time,
-            initial_path=initial_path, num_exposures=self.num_exposures, suffix=suffix)
+            initial_path=initial_path, num_exposures=self.num_exposures, suffix=suffix,
+            file_mode=self.file_mode, raw_skip=self.raw_skip)
 
         # For coronagraphic images, this factor is 1 by definition
         if exposure_type == 'direct':
@@ -239,7 +246,6 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 if not file_path:
                     raise FileNotFoundError("Failed: glob.glob('{search_str}')")
                 fits.setval(filename=file_path[0], keyword='ATTENFAC', value=flux_attenuation_factor)
-
 
         return image, header
 
@@ -286,6 +292,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     exp_time_direct_flux_norm = CONFIG_INI.getfloat('calibration', 'flux_norm_exp_time_direct_aplc') #TODO: revisit this when in APLC mode on hardware (HiCAT-764)
                     exp_time_coron_flux_norm = exp_time_direct_flux_norm / 10
 
+                # TODO: Add file_mode and raw_skip params to this func. Might we always want to save these?
                 flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=self.wavelengths,
                                                                          exp_dir=exp_time_direct_flux_norm,
                                                                          exp_coron=exp_time_coron_flux_norm,
@@ -443,8 +450,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
                 self.log.info('Taking post-correction coronagraphic images and pupil image...')
 
-                self.latest_pupil_filename = stroke_min.take_pupilcam_hicat(devices, initial_path=exposure_kwargs['initial_path'])[0]
-                self.latest_pupil_image = fits.getdata(self.latest_pupil_filename)
+                self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices, num_exposures=1, initial_path=exposure_kwargs['initial_path'])[0]
 
                 # Capture images after DM correction
                 if np.mod(i, self.direct_every) == 0:
