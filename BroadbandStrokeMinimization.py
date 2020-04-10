@@ -302,7 +302,9 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                                                                          devices=devices,
                                                                          dm1_act=self.dm1_actuators,
                                                                          dm2_act=self.dm2_actuators,
-                                                                         num_exp=self.num_exposures)
+                                                                         num_exp=self.num_exposures,
+                                                                         file_mode=self.file_mode,
+                                                                         raw_skip=self.raw_skip)
             else:
                 flux_norm_dir = {}
                 for wavelength in self.wavelengths:
