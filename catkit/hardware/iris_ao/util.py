@@ -146,13 +146,17 @@ def convert_dict_from_si(command_dict):
 
 
 def check_dictionary(dictionary):
-    """Check that the dictionary is in the correct format"""
-    # Expecting a list starting at zero OR 1 to # of segs/segs+1
+    """Check that the dictionary is in the correct format
+
+    The dictionary can have segments starting at 0 or 1, to the total number of
+    segments in the pupil (see the README for additional information on numbering)
+    """
+    # Expecting a list starting at 0 or 1 to # of segs
     allowed_keys = np.arange(iris_num_segments()+1)
 
     for k, v in dictionary.items():
         if k not in allowed_keys:
-            raise TypeError("Dictionary keys must be segments numbers from 0 or 1 to the number of segments")
+            raise TypeError("Dictionary keys must start at 0 or 1 to the number of segments")
         if len(v) != 3:
             raise TypeError("Dictionary values must be tuples of length 3")
 
@@ -398,7 +402,7 @@ def read_ini(path):
     return command_dict
 
 
-def read_segment_values(segments_values, segment_mapping=None):
+def read_segment_values(segment_values, segment_mapping=None):
     """
     Each of the following formats can be read in. This function takes in
     any of these three formats and converts it to a dictionary of the form:
@@ -412,7 +416,7 @@ def read_segment_values(segments_values, segment_mapping=None):
     - .ini file: File format of segments values that gets sent to the IrisAO controls [Native]
     - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)} [Centered Pupil]
 
-    :param segments_values: str, dict. Can be .PTT111, .ini files or dictionary of the
+    :param segment_values: str, dict. Can be .PTT111, .ini files or dictionary of the
                             form {seg: (piston, tip, tilt)}
     :param segment_mapping: str or None. If None, this will be determined by input type of
                             segment_values (see list above). If you know that the default
@@ -425,32 +429,28 @@ def read_segment_values(segments_values, segment_mapping=None):
              and a bool that if True, indicates Native numbering, and if False, indicates
              Centered Pupil numbering
     """
+    mapping = None # Only needed to account for future possible exception handling.
     # Read in file
-    try:
-        if segments_values.endswith("PTT111"):
-            command_dict = read_segments(segments_values)
-            mapping = "native"
-        elif segments_values.endswith("ini"):
-            command_dict = read_ini(segments_values)
-            mapping = "native"
-        else:
-            raise ValueError("The segment values input format is not supported")
-    # Read in dictionary
-    except AttributeError:
-        if isinstance(segments_values, dict):
-            check_dictionary(segments_values) # Check dictionary formating
-            command_dict = segments_values
-            mapping = "centered"
-        elif segments_values is None:
-            command_dict = segments_values
-            mapping = None
-        else:
-            raise TypeError("The segment values input format is not supported")
+    if segment_values is None:
+        command_dict = None
+    elif isinstance(segment_values, str):
+        if segment_values.endswith("PTT111"):
+            command_dict = read_segments(segment_values)
+        elif segment_values.endswith("ini"):
+            command_dict = read_ini(segment_values)
+        mapping = "native"
+    elif isinstance(segment_values, dict):
+        check_dictionary(segment_values)
+        command_dict = segment_values
+        mapping = "centered"
+    else:
+        raise TypeError("The segment values input format is not supported")
 
     # Allow user to override the above mapping, if, for ex. they build their own dict
     if segment_mapping is not None:
-        convert_to_native_mapping = segment_mapping
-    elif mapping is None or mapping.lower() == "native":
+        mapping = segment_mapping
+
+    if mapping is None or mapping.lower() == "native":
         convert_to_native_mapping = False
     elif mapping.lower() == "centered":
         convert_to_native_mapping = True
