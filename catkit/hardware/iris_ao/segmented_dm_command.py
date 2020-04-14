@@ -21,9 +21,9 @@ class SegmentedDmCommand(object):
     Does NOT interact with hardware directly.
 
     :attribute data: dict, Input data, shifted if custom pupil exists in config file
-    :attribute flat_map: bool, whether or not to apply the flat map
+    :attribute apply_flat_map: bool, whether or not to apply the flat map
     :attribute source_pupil_numbering: list, numbering native to data
-    :attribute command: dict, Final command with flat if flat_map = True and shift if applicable
+    :attribute command: dict, Final command with flat if apply_flat_map = True and shift if applicable
     :attribute filename_flat: str, path to flat
     :attribute total_number_segments: int, total number of segments in DM
     :attribute active_segment_list: int, number of active segments in the DM
@@ -32,7 +32,7 @@ class SegmentedDmCommand(object):
     :attribute number_segments_in_pupil: int, the number of segments in the pupil.
 
     """
-    def __init__(self, data=None, convert_to_native_mapping=False, flat_map=False,
+    def __init__(self, data=None, convert_to_native_mapping=False, apply_flat_map=False,
                  config_id='iris_ao'):
         """
         Handle Iris AO specific commands in terms of piston, tip and tilt (PTT) per
@@ -44,10 +44,10 @@ class SegmentedDmCommand(object):
         :param data: dict, of the form {seg: (piston, tip, tilt)}. If None, will populate
                      with dictionary of zeros for the segments used (This may be used if
                      only adding the flat map)
-        :param flat_map: If true, add flat map correction to the data before creating command
+        :param apply_flat_map: If true, add flat map correction to the data before creating command
         :param convert_to_native_mapping: bool, if True, convert the input command to the
                                           Iris native numbering. If False, the command is
-                                          in the Iris frame already.
+                                          assumed to be in the Iris frame already.
         """
         # Establish variables for pupil shifting
         self._shift_center = False
@@ -71,7 +71,7 @@ class SegmentedDmCommand(object):
                                                     seglist=self.segments_in_pupil)
 
         self.data = data
-        self.flat_map = flat_map
+        self.apply_flat_map = apply_flat_map
 
         if self._shift_center:
             self.data = shift_command(self.data, self.segments_in_pupil)
@@ -87,7 +87,7 @@ class SegmentedDmCommand(object):
         """ Output command suitable for sending to the hardware driver
         """
         # Apply Flat Map
-        if self.flat_map:
+        if self.apply_flat_map:
             self.add_map(self.filename_flat, apply_shift=False)
 
         return self.data
@@ -157,17 +157,17 @@ def shift_command(command_to_shift, to_pupil, from_pupil=None):
     return shifted_map
 
 
-def load_command(segment_values, segment_mapping=None, flat_map=True, config_id='iris_ao'):
+def load_command(segment_values, segment_mapping=None, apply_flat_map=True, config_id='iris_ao'):
     """
     Loads the segment_values from a file, array, or dictionary and returns a
     SegmentedDmCommand object.
 
-    There are only two allowed mappings for the input formats, Native and Centered Pupil.
+    There are only two allowed segment mappings for the input formats, Native and Centered Pupil.
     See the README for the Iris AO for more details.
 
     :param segment_values: str or dict. Can be .PTT111, .ini files,
                            array from POPPY, or dictionary of the same form as the output
-    :param flat_map: Apply a flat map in addition to the data.
+    :param apply_flat_map: Apply a flat map in addition to the data.
 
     :return: SegmentedDmCommand object representing the command dictionary.
     """
@@ -175,7 +175,7 @@ def load_command(segment_values, segment_mapping=None, flat_map=True, config_id=
                                                                     segment_mapping)
     return SegmentedDmCommand(data,
                               convert_to_native_mapping=convert_to_native_mapping,
-                              flat_map=flat_map,
+                              apply_flat_map=apply_flat_map,
                               config_id=config_id)
 
 
@@ -284,8 +284,8 @@ class PoppySegmentedCommand():
         This function will convert the values in this array from si units to um and mrad, as
         expected by IrisAO .
 
-        :param array: array, of length number of segments in pupil from POPPY with units of:
-                      ([m], [rad], [rad])
+        :param map_to_iris: bool, if True, you are putting this command directly on the hardware.
+                            If False, the command will remain in the Poppy numbering
 
         :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
                  with units of ([um], [mrad], [mrad])
@@ -416,12 +416,9 @@ def display(segment_values, instrument_fov, active_segment_list=None,
     # Shift TO Poppy from the Iris AO
     if not active_segment_list:
         active_segment_list = iris_util.iris_pupil_numbering()
-    if not centered_mapping:
-        command = shift_command(data, poppy_numbering()[:len(active_segment_list)],
-                                active_segment_list)
-    else:
-        command = data
-    print(command)
+    command = data if centered_mapping else shift_command(data,
+                                                          poppy_numbering()[:len(active_segment_list)],
+                                                          active_segment_list)
     iris = poppy.dms.HexSegmentedDeformableMirror(name='Iris DM',
                                                   rings=num_rings,
                                                   flattoflat=flat_to_flat,
