@@ -113,9 +113,7 @@ def save_images(images, meta_data, path, base_filename, resume=False, raw_skip=0
         filename += ".fits"
 
     # Split the filename once here, code below may append _frame=xxx to basename.
-    file_split = os.path.splitext(filename)
-    file_root = file_split[0]
-    file_ext = file_split[1]
+    file_root, file_ext = os.path.splitext(filename)
 
     # Create directory if it doesn't exist.
     if not os.path.exists(path):
