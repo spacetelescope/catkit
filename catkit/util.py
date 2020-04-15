@@ -156,15 +156,16 @@ def save_images(images, meta_data, path, base_filename, resume=False, raw_skip=0
         hdu.header["FILENAME"] = filename
         hdu.header["PATH"] = full_path
 
-        # Add testbed state metadata.
-        for entry in meta_data:
-            if len(entry.name_8chars) > 8:
-                log.warning("Fits Header Keyword: " + entry.name_8chars +
-                            " is greater than 8 characters and will be truncated.")
-            if len(entry.comment) > 47:
-                log.warning("Fits Header comment for " + entry.name_8chars +
-                            " is greater than 47 characters and will be truncated.")
-            hdu.header[entry.name_8chars[:8]] = (entry.value, entry.comment)
+        if meta_data:
+            # Add testbed state metadata.
+            for entry in meta_data:
+                if len(entry.name_8chars) > 8:
+                    log.warning("Fits Header Keyword: " + entry.name_8chars +
+                                " is greater than 8 characters and will be truncated.")
+                if len(entry.comment) > 47:
+                    log.warning("Fits Header comment for " + entry.name_8chars +
+                                " is greater than 47 characters and will be truncated.")
+                hdu.header[entry.name_8chars[:8]] = (entry.value, entry.comment)
 
         hdu.writeto(full_path, overwrite=True)
         log.info(f"'{full_path}' written to disk.")
