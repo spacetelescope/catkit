@@ -10,6 +10,7 @@ import glob
 from astropy.io import fits
 import hcipy
 
+from hicat.control.target_acq import TargetAcquisition
 from hicat.hardware import testbed
 import hicat.plotting.animation
 from hicat import util
@@ -268,18 +269,26 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         with testbed.laser_source() as laser, \
                 testbed.dm_controller() as dm, \
                 testbed.motor_controller() as motor_controller, \
+                testbed.imaging_apodizer_picomotor() as imaging_apodizer_picomotor, \
+                testbed.ta_apodizer_picomotor() as ta_apodizer_picomotor, \
+                testbed.ta_quadcell_picomotor() as ta_quadcell_picomotor, \
                 testbed.beam_dump() as beam_dump, \
                 testbed.imaging_camera() as cam, \
                 testbed.pupil_camera() as pupilcam, \
+                testbed.target_acquisition_camera() as ta_cam, \
                 testbed.color_wheel() as color_wheel, \
                 testbed.nd_wheel() as nd_wheel:
 
             devices = {'laser': laser,
                        'dm': dm,
                        'motor_controller': motor_controller,
+                       'imaging_pico': (1, 2, imaging_apodizer_picomotor),
+                       'apodizer_pico': (1, 2, ta_apodizer_picomotor),
+                       'quadcell_pico': (3, 4, ta_quadcell_picomotor),
                        'beam_dump': beam_dump,
                        'imaging_camera': cam,
                        'pupil_camera': pupilcam,
+                       'ta_camera': ta_cam,
                        'color_wheel': color_wheel,
                        'nd_wheel': nd_wheel}
 
@@ -345,6 +354,10 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             # Set up plot writing infrastructure
             self.init_strokemin_plots()
             self.mean_contrasts_image.append(np.mean(broadband_image_before[self.dark_zone]))
+            
+            # Instantiate TA Controller and run initial centering
+            ta_controller = TargetAcquisition(devices, self.output_path, use_closed_loop=False)
+            ta_controller.run_full_ta()
 
             # Main body of control loop
             for i in range(self.num_iterations):
@@ -356,6 +369,9 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 probe_examples = {}
 
                 self.log.info("Pairwise sensing and stroke minimization, iteration {}".format(i))
+                
+                # Check for any drifts and correct 
+                ta_controller.run_smart_ta_loop()
 
                 # Create a new output subfolder for each iteration
                 initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
