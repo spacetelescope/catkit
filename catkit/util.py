@@ -109,7 +109,7 @@ def save_images(images, meta_data, path, base_filename, resume=False, raw_skip=0
     log = logging.getLogger()
     filename = base_filename
     # Check for fits extension.
-    if not (base_filename.endswith(".fit") or base_filename.endswith(".fits")):
+    if not base_filename.endswith((".fit", ".fits")):
         filename += ".fits"
 
     # Split the filename once here, code below may append _frame=xxx to basename.
