@@ -96,6 +96,9 @@ def save_images(images, meta_data, path, base_filename, resume=False, raw_skip=0
     :return: None
     """
 
+    if not isinstance(images, (list, tuple)):
+        images = [images]
+
     if not images:
         return
 
