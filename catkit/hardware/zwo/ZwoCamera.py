@@ -121,7 +121,6 @@ class ZwoCamera(Camera):
     def take_exposures(self, exposure_time, num_exposures,
                        file_mode=False, raw_skip=0, path=None, filename=None,
                        extra_metadata=None,
-                       resume=False,
                        return_metadata=False,
                        subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
                        bins=None):
@@ -136,7 +135,7 @@ class ZwoCamera(Camera):
                                                 bins=bins)
 
         if file_mode:
-            catkit.util.save_images(images, meta, path=path, base_filename=filename, resume=resume, raw_skip=raw_skip)
+            catkit.util.save_images(images, meta, path=path, base_filename=filename, raw_skip=raw_skip)
 
         # TODO: Nuke this and always return both, eventually returning a HDUList (HICAT-794).
         if return_metadata:

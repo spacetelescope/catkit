@@ -72,22 +72,3 @@ class TestSaveImages:
 
         catkit.util.save_images(image_list, None, tmpdir, "dummy.fits", raw_skip=len(image_list)+1)
         assert(len(glob.glob(os.path.join(tmpdir, "*.fits"))) == 1)
-
-    def test_resume(self, tmpdir):
-        image = np.zeros((5, 5))
-        image_list = []
-        num_images = 10
-        for i in range(num_images):
-            image_list.append(image)
-
-        # Write out only the 1st 5.
-        catkit.util.save_images(image_list[:5], None, tmpdir, "dummy.fits", resume=False)
-        # Now write them all again with resume=True
-        catkit.util.save_images(image_list, None, tmpdir, "dummy.fits", resume=True)
-
-        for i in range(num_images):
-            frame = f"_frame{i + 1}" if num_images > 1 else ''
-            assert(os.path.isfile(os.path.join(tmpdir, f"dummy{frame}.fits")))
-
-        # Check that the above are the only files.
-        assert(len(glob.glob(os.path.join(tmpdir, "*.fits"))) == num_images)
