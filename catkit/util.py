@@ -87,12 +87,11 @@ def rotate_and_flip_image(data, theta, flip):
     return data_corr
 
 
-def save_images(images, meta_data, path, base_filename, resume=False, raw_skip=0):
+def save_images(images, meta_data, path, base_filename, raw_skip=0):
     """
     :param raw_skip: Skips x writes for every one taken.
     :param path: Path of the directory to save fits file to.
     :param base_filename: Name for file.
-    :param resume: If True, skips exposure if filename exists on disk already. Doesn't support data-only mode.
     :return: None
     """
 
@@ -128,11 +127,6 @@ def save_images(images, meta_data, path, base_filename, resume=False, raw_skip=0
         if num_exposures > 1:
             filename = file_root + "_frame" + str(i + 1) + file_ext
         full_path = os.path.join(path, filename)
-
-        # If Resume is enabled, continue if the file already exists on disk.
-        if resume and os.path.isfile(full_path):
-            log.info("File already exists: " + full_path)
-            continue
 
         # Take exposure.
         # img = self.capture_and_orient(exposure_time, self.theta, self.fliplr)
