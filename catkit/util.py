@@ -128,9 +128,6 @@ def save_images(images, meta_data, path, base_filename, raw_skip=0):
             filename = file_root + "_frame" + str(i + 1) + file_ext
         full_path = os.path.join(path, filename)
 
-        # Take exposure.
-        # img = self.capture_and_orient(exposure_time, self.theta, self.fliplr)
-
         # Skip writing the fits files per the raw_skip value, and keep img data in memory.
         if raw_skip != 0:
             if skip_counter == (raw_skip + 1):
