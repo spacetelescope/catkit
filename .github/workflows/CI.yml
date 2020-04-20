@@ -87,6 +87,7 @@ jobs:
         git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
         cd hicat-package
         git checkout develop
+        git describe --dirty --long
         sed -E 's/[ \t]*-[ \t]*python[=<>0-9.,]*/  - python=${{ matrix.python-version }}/' environment.yml > environment2.yml
         conda env update --name ci-env --file environment2.yml
         conda activate ci-env
@@ -128,6 +129,7 @@ jobs:
         git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
         cd hicat-package
         git checkout develop
+        git describe --dirty --long
         sed -E 's/[ \t]*-[ \t]*python[=<>0-9.,]*/  - python=${{ matrix.python-version }}/' environment.yml > environment2.yml
         conda env update --name ci-env --file environment2.yml
         conda activate ci-env
