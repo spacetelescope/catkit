@@ -58,16 +58,7 @@ def mtf_sampling(dirpath, im_path, threshold):
 	plt.title('Modulation transfer function (MTF) Masked')
 	plt.savefig(os.path.join(mtf_dir, 'mtf_masked.pdf'))
 
-	# Crop the MTF in case there are those weird side spots showing up
-
-	mtf_masked_cropped = mtf_masked[int(imsize/7):int(imsize/1.2), int(imsize/7):int(imsize/1.2)]
-
-	plt.clf()
-	plt.imshow(mtf_masked_cropped, norm=LogNorm())
-	plt.title('Modulation transfer function (MTF) Masked and cropped')
-	plt.savefig(os.path.join(dirpath, mtf_dir, 'mtf_masked_cropped.pdf'))
-
-	area = np.count_nonzero(mtf_masked_cropped)
+	area = np.count_nonzero(mtf_masked)
 	cutoff_eq = np.sqrt(area/np.pi)
 	sampling = float(imsize) / float(cutoff_eq)
 
