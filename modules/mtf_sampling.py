@@ -25,7 +25,7 @@ def mtf_sampling(dirpath, im_path, threshold):
 
 	psf = fits.getdata(im_path)
 	full_imsize = psf.shape[1]
-	psf_sub = psf[int(full_imsize/4):int(full_imsize/1.4), int(full_imsize/4):int(full_imsize/1.4)]
+	psf_sub = psf[int(full_imsize/4):int(3*full_imsize/4), int(full_imsize/4):int(3*full_imsize/4)]
 	imsize = psf_sub.shape[1]
 
 	# Save cropped image to diagnostics
