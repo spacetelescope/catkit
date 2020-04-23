@@ -6,6 +6,8 @@ import logging.handlers
 import numpy as np
 from astropy.io import fits
 
+from catkit.catkit_types import quantity
+
 
 def find_package_location(package='catkit'):
     return importlib.util.find_spec(package).submodule_search_locations[0]
@@ -157,7 +159,8 @@ def save_images(images, meta_data, path, base_filename, raw_skip=0):
                 if len(entry.comment) > 47:
                     log.warning("Fits Header comment for " + entry.name_8chars +
                                 " is greater than 47 characters and will be truncated.")
-                hdu.header[entry.name_8chars[:8]] = (entry.value, entry.comment)
+                value = entry.value.magnitude if isinstance(entry.value, quantity) else entry.value
+                hdu.header[entry.name_8chars[:8]] = (value, entry.comment)
 
         hdu.writeto(full_path, overwrite=True)
         log.info(f"'{full_path}' written to disk.")
