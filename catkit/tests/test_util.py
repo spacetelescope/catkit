@@ -79,3 +79,10 @@ class TestSaveImages:
         header = fits.getheader(os.path.join(tmpdir, "dummy.fits"))
         assert(header.get("PATH"))
         assert(os.path.isfile(header["PATH"]))
+
+    def test_meta_path_keyword(self, tmpdir):
+        meta_data = []
+        catkit.util.save_images([np.zeros((5, 5))], meta_data, tmpdir, "dummy.fits")
+        assert(meta_data)
+        assert(meta_data[0].name == "PATH")
+        assert(os.path.isfile(meta_data[0].value))
