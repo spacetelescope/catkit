@@ -2,6 +2,7 @@ import importlib
 import os
 import logging
 import logging.handlers
+from catkit.catkit_types import MetaDataEntry
 
 import numpy as np
 from astropy.io import fits
@@ -148,7 +149,14 @@ def save_images(images, meta_data, path, base_filename, raw_skip=0):
         # Add headers.
         hdu.header["FRAME"] = i + 1
         hdu.header["FILENAME"] = filename
+
+        # Add file Path to meta/header for introspection.
         hdu.header["PATH"] = full_path
+        # The meta data could be an astropy.io.fits.Header or a list of MetaDataEntrys.
+        if isinstance(meta_data, fits.Header):
+            meta_data["PATH"] = full_path
+        elif isinstance(meta_data, list):
+            meta_data.append((MetaDataEntry("PATH", "PATH", full_path, "File path on disk")))
 
         if meta_data:
             # Add testbed state metadata.
