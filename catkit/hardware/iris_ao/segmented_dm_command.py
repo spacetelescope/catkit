@@ -32,8 +32,7 @@ class SegmentedDmCommand(object):
     :attribute number_segments_in_pupil: int, the number of segments in the pupil.
 
     """
-    def __init__(self, data=None, convert_to_native_mapping=False, apply_flat_map=False,
-                 config_id='iris_ao'):
+    def __init__(self, apply_flat_map=False, config_id='iris_ao'):
         """
         Handle Iris AO specific commands in terms of piston, tip and tilt (PTT) per
         each segment. Creates a Iris AO-style command -{seg: (piston, tip, tilt)} -
@@ -41,9 +40,6 @@ class SegmentedDmCommand(object):
 
         Units are expect to be in um (for piston) and mrad (for tip and tilt)
 
-        :param data: dict, of the form {seg: (piston, tip, tilt)}. If None, will populate
-                     with dictionary of zeros for the segments used (This may be used if
-                     only adding the flat map)
         :param apply_flat_map: If true, add flat map correction to the data before creating command
         :param convert_to_native_mapping: bool, if True, convert the input command to the
                                           Iris native numbering. If False, the command is
@@ -55,7 +51,6 @@ class SegmentedDmCommand(object):
         # Grab things from CONFIG_INI
         self.filename_flat = CONFIG_INI.get(config_id, 'flat_file_ini') #format is .ini
 
-        # Define aperture - full aperture or subaperture
         try:
             self.segments_in_pupil = json.loads(CONFIG_INI.get(config_id, 'active_segment_list'))
             self.number_segments_in_pupil = CONFIG_INI.getint(config_id,
@@ -65,12 +60,8 @@ class SegmentedDmCommand(object):
         except NoOptionError:
             self.segments_in_pupil = iris_util.iris_pupil_naming()
 
-        if data is None:
-            # If no data given, return dictionary of zeros
-            data = iris_util.create_zero_array(self.number_segments_in_pupil)
-
         self.apply_flat_map = apply_flat_map
-        self.data = None
+        self.data = iris_util.create_zero_array(self.number_segments_in_pupil)
         self.command = None
 
 
@@ -120,7 +111,6 @@ class SegmentedDmCommand(object):
         # Apply Flat Map
         if self.apply_flat_map:
             self.add_map(self.filename_flat)
-        #TODO should this be saved as an attribute?
         command_dict = {seg: ptt for seg, ptt in zip(self.segments_in_pupil, self.data)}
 
         return command_dict
@@ -147,9 +137,11 @@ class SegmentedDmCommand(object):
         :param new_command: str or array (.PTT111 or .ini file, or array from POPPY)
         """
         original_data = self.get_data()
-        new_command = self.read_command(segment_values_to_add)
+        new_data = self.read_command(segment_values_to_add)
 
-        self.data = original_data + new_command
+        #TODO check for nans and handle them
+        self.data = [tuple(map(sum, zip(orig, new))) for orig,
+                                                         new in zip(original_data, new_data)]
 
 
 def load_command(segment_values, apply_flat_map=True, config_id='iris_ao'):
@@ -168,7 +160,7 @@ def load_command(segment_values, apply_flat_map=True, config_id='iris_ao'):
     """
     dm_command_obj = SegmentedDmCommand(apply_flat_map=apply_flat_map, config_id=config_id)
     dm_command_obj.read_new_command(segment_values)
-    
+
     return dm_command_obj
 
 
