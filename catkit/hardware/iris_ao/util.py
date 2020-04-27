@@ -381,6 +381,7 @@ def read_segment_values(segment_values):
     # Read in file
     if segment_values is None:
         ptt_arr = None
+        segment_names = None
     elif isinstance(segment_values, str):
         if segment_values.endswith("PTT111"):
             command_dict = read_segments(segment_values)
