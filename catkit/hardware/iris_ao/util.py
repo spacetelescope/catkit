@@ -33,7 +33,6 @@ def iris_pupil_naming():
 
 
 def create_dict_from_array(array, seglist=None):
-    # TODO: remove
     """
     Take an array of len number of segments, with a tuple of piston, tip, tilt
     and convert to a dictionary
@@ -60,12 +59,23 @@ def create_dict_from_array(array, seglist=None):
 
 def create_zero_array(number_of_segments):
     """
-    Create a dictionary of zeros for the Iris AO
+    Create an array of zeros for the Iris AO
 
     :param number_of_segments: int, the number of segments in your pupil
     :return: array of zeros the length of the number of total segments in the DM
     """
-    return np.zeros((number_of_segments), dtype=(float, 3))
+    return [(0., 0., 0.)] * number_of_segments
+
+
+def create_nan_list(number_of_segments):
+    """
+    Create a list of NaN for number of active segments-- this is the starting point
+    of your command
+
+    :param number_of_segments: int, the number of segments in your pupil
+    :return: array of zeros the length of the number of total segments in the DM
+    """
+    return [(np.nan, np.nan, np.nan)] * number_of_segments
 
 
 def create_custom_dictionary(segment_num, ptt_tuple, number_of_segments):
@@ -362,11 +372,11 @@ def read_segment_values(segment_values):
 
     See the README for the Iris AO for more details.
 
-    - .PTT111 file: File format of the segments values coming out of the IrisAO GUI
+    - .PTT111/.PTT489 file: File format of the segments values coming out of the IrisAO GUI
     - .ini file: File format of segments values that gets sent to the IrisAO controls
     - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
 
-    :param segment_values: str, array. Can be .PTT111, .ini files or array where the first
+    :param segment_values: str, array. Can be .PTT*, .ini files or array where the first
                            element of the array is the center of the pupil and subsequent
                            elements continue up and clockwise around the pupil (see README
                            for more information) of the form {seg: (piston, tip, tilt)}
@@ -376,14 +386,14 @@ def read_segment_values(segment_values):
                            and subsequent elements continue up and clockwise around the pupil,
                            and an optional list of segment names as they relate to the IrisAO.
                            The list of segments is ONLY returned in the case of segment_values
-                           being a .ini or .PTT111 file.
+                           being a .ini or .PTT* file.
     """
     # Read in file
     if segment_values is None:
-        ptt_arr = None
+        ptt_arr = create_nan_list(iris_num_segments())
         segment_names = None
     elif isinstance(segment_values, str):
-        if segment_values.endswith("PTT111"):
+        if segment_values.endswith("PTT111") or segment_values.endswith("PTT489"):
             command_dict = read_segments(segment_values)
         elif segment_values.endswith("ini"):
             command_dict = read_ini(segment_values)
