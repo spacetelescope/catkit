@@ -160,6 +160,7 @@ class StrokeMinimization(Experiment):
         print("LOGGING: "+self.output_path+"  "+self.suffix)
 
         # Before doing anything more interesting, save a copy of the probes to disk
+        # TODO: if self.file_mode: HICAT-817
         self.save_probes()
 
     def __del__(self):
@@ -271,6 +272,7 @@ class StrokeMinimization(Experiment):
                                                                                      current_contrast=self.mean_contrasts_image[-1] if i>0 else None,
                                                                                      probe_amplitude=self.probe_amp,
                                                                                      file_mode=self.file_mode)
+                # TODO: if self.file_mode: HICAT-817
                 hicat.util.save_complex("E_estimated_unscaled.fits", E_estimated, exposure_kwargs['initial_path'])
                 self.probe_example = probe_example  # Save for use in plots
 
@@ -293,6 +295,7 @@ class StrokeMinimization(Experiment):
                     direct_sim, _header = stroke_min.take_direct_exposure_simulator(self.dm1_actuators,
                                                                                     self.dm2_actuators)
                     E_sim_normalized = E_sim_actual / direct_sim.max()
+                    # TODO: if self.file_mode: HICAT-817
                     hicat.util.save_complex("E_actual.fits", E_sim_normalized, exposure_kwargs['initial_path'])
                     hicat.util.save_intensity("I_actual_from_sim_cal.fits", E_sim_normalized, exposure_kwargs['initial_path'])
                     E_sim_actual, _header = stroke_min.take_electric_field_simulator(self.dm1_actuators,
@@ -300,6 +303,7 @@ class StrokeMinimization(Experiment):
                                                                                      apply_pipeline_binning=True)  # E_actual is in sqrt(counts/sec)
 
                     E_sim_normalized = E_sim_actual / direct_sim.max()
+                    # TODO: if self.file_mode: HICAT-817
                     hicat.util.save_intensity("I_actual_from_sim_bin.fits", E_sim_normalized, exposure_kwargs['initial_path'])
 
                 # Save raw contrast from pairwise and probes, for use in plots

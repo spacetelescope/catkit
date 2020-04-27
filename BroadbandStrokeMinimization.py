@@ -185,6 +185,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         print("LOGGING: "+self.output_path+"  "+self.suffix)
 
         # Before doing anything more interesting, save a copy of the probes to disk
+        # TODO: if self.file_mode: HICAT-817
         #self.save_probes()
 
     def take_exposure(self, devices, exposure_type, wavelength, initial_path, flux_attenuation_factor=1., suffix=None,
@@ -399,6 +400,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                                 wavelength=wavelength,
                                 file_mode=self.file_mode)
 
+                            # TODO: if self.file_mode: HICAT-817
                             hicat.util.save_complex(f"E_estimated_unscaled_{wavelength}nm.fits", E_estimateds[wavelength], exposure_kwargs['initial_path'])
 
                             mean_contrast_probe[wavelength] = np.mean(probe_examples[wavelength][self.dark_zone])
@@ -502,6 +504,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                                                                            exposure_type='direct',
                                                                            output_path=initial_path)
             E_sim_normalized = E_sim_actual / np.sqrt(direct_sim.max())
+            # TODO: if self.file_mode: HICAT-817
             hicat.util.save_complex(f"E_actual_{suffix}_{wavelength}nm.fits", E_sim_normalized, exposure_kwargs['initial_path'])
             hicat.util.save_intensity(f"I_actual_from_sim_{suffix}_{wavelength}nm.fits", E_sim_normalized, exposure_kwargs['initial_path'])
 
