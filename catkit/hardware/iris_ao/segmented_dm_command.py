@@ -99,7 +99,7 @@ class SegmentedDmCommand(object):
         if segment_names is not None:
             command_array = []
             for seg_name in self.segments_in_pupil:
-                ind = np.where(segment_names == seg_name)[0][0]
+                ind = np.where(np.asarray(segment_names) == seg_name)[0][0]
                 command_array.append(ptt_arr[ind])
         else:
             command_array = ptt_arr
@@ -116,6 +116,7 @@ class SegmentedDmCommand(object):
     def to_command(self):
         """ Output command suitable for sending to the hardware driver
         """
+
         # Apply Flat Map
         if self.apply_flat_map:
             self.add_map(self.filename_flat)
@@ -167,7 +168,7 @@ def load_command(segment_values, apply_flat_map=True, config_id='iris_ao'):
     """
     dm_command_obj = SegmentedDmCommand(apply_flat_map=apply_flat_map, config_id=config_id)
     dm_command_obj.read_new_command(segment_values)
-
+    
     return dm_command_obj
 
 
