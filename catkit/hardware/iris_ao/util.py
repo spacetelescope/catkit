@@ -10,61 +10,30 @@ import numpy as np
 from catkit.config import CONFIG_INI
 
 
-
 def iris_num_segments():
     """Number of segments in your Iris AO"""
     return CONFIG_INI.getint('iris_ao', 'total_number_of_segments')
 
 
-def iris_pupil_numbering():
-    """Numbering of the Iris AO pupil """
-    return np.arange(iris_num_segments())+1
+def iris_pupil_naming():
+    """Naming of the Iris AO pupil starting at the center of the pupil and working
+    outward in a clockwise direction. This is dependent on your IRISAO and the number
+    of segments it has. This module has not yet been tested for the PTT489
+    IrisAO model though it supports up to 163 segments."""
+    num_segs = iris_num_segments()
+    seg_names = np.concatenate((np.array([1, 2]), np.flip(np.arange(3, 8)),
+                                np.array([8]), np.flip(np.arange(9, 20)),
+                                np.array([20]), np.flip(np.arange(21, 38)),
+                                np.array([38]), np.flip(np.arange(39, 62)),
+                                np.array([62]), np.flip(np.arange(63, 92)),
+                                np.array([92]), np.flip(np.arange(93, 128)),
+                                np.array([128]), np.flip(np.arange(129, 164))))
 
-
-def map_to_new_center(new_pupil, old_pupil):
-    """
-    Create a zipped dictionary of the pupil you are moving to and the one you are
-    moving from
-
-    :param new_pupil: list, the segment numbers of the pupil you are mapping to
-    :param old_pupil: list, the segment numbers of the pupil you are mapping from
-
-    :return: dictionary of the mapping between the two pupils
-    """
-    return dict(zip(new_pupil, old_pupil))
-
-
-def match_lengths(list_a, list_b):
-    """Match the lengths of two arrays
-    This assumes they are in the correct order.
-
-    :param list_a: list
-    :param list_b: list
-
-    :return: lists of equal length
-    """
-    if len(list_a) > len(list_b):
-        list_a = list_a[:len(list_b)]
-    elif len(list_a) < len(list_b):
-        list_b = list_b[:len(list_a)]
-
-    return list_a, list_b
-
-
-def remap_dictionary(ptt_dictionary, mapping_dict):
-    """
-    Update the PTT dictionary segment numbers based on the mapping dictionary created
-    by _map_to_new_center
-
-    :param ptt_dictionary: dict, the starting dictionary of PTT commands
-    :param mapping_dict: dict, contains mapping between old pupil and the desired pupil
-
-    :return: dict, a new PTT dictionary mapped to a specific pupil on the Iris AO
-    """
-    return {seg: ptt_dictionary.get(val, (0., 0., 0.)) for seg, val in list(mapping_dict.items())}
+    return seg_names[:num_segs]
 
 
 def create_dict_from_array(array, seglist=None):
+    # TODO: remove
     """
     Take an array of len number of segments, with a tuple of piston, tip, tilt
     and convert to a dictionary
@@ -89,20 +58,18 @@ def create_dict_from_array(array, seglist=None):
     return command_dict
 
 
-def create_zero_dictionary(number_of_segments, seglist=None):
+def create_zero_array(number_of_segments):
     """
     Create a dictionary of zeros for the Iris AO
 
     :param number_of_segments: int, the number of segments in your pupil
-    :return: dictionary of zeros the length of the number of total segments in the DM
+    :return: array of zeros the length of the number of total segments in the DM
     """
-    array = np.zeros((number_of_segments), dtype=(float, 3))
-    zeros = create_dict_from_array(array, seglist)
-
-    return zeros
+    return np.zeros((number_of_segments), dtype=(float, 3))
 
 
-def update_one_segment(segment_num, ptt_tuple, number_of_segments):
+def create_custom_dictionary(segment_num, ptt_tuple, number_of_segments):
+    #TODO: update with new formatting
     """
     Create a dictionary that will change only specific segments
 
@@ -145,22 +112,6 @@ def convert_dict_from_si(command_dict):
     return converted
 
 
-def check_dictionary(dictionary):
-    """Check that the dictionary is in the correct format
-
-    The dictionary can have segments starting at 0 or 1, to the total number of
-    segments in the pupil (see the README for additional information on numbering)
-    """
-    # Expecting a list starting at 0 or 1 to # of segs
-    allowed_keys = np.arange(iris_num_segments()+1)
-
-    for k, v in dictionary.items():
-        if k not in allowed_keys:
-            raise TypeError("Dictionary keys must start at 0 or 1 to the number of segments")
-        if len(v) != 3:
-            raise TypeError("Dictionary values must be tuples of length 3")
-
-
 def write_ini(data, path, mirror_serial=None, driver_serial=None):
     """
     Write a new ConfigPTT.ini file containing the command for the Iris AO.
@@ -184,7 +135,7 @@ def write_ini(data, path, mirror_serial=None, driver_serial=None):
     config.set('SerialNb', 'mirrorSerial', mirror_serial)
     config.set('SerialNb', 'driverSerial', driver_serial)
 
-    for i in iris_pupil_numbering():
+    for i in iris_pupil_naming():
         section = 'Segment{}'.format(i)
         config.add_section(section)
         # If the segment number is present in the dictionary
@@ -402,59 +353,45 @@ def read_ini(path):
     return command_dict
 
 
-def read_segment_values(segment_values, segment_mapping=None):
+def read_segment_values(segment_values):
     """
     Each of the following formats can be read in. This function takes in
     any of these three formats and converts it to a dictionary of the form:
             {seg:(piston, tip, tilt)}
     With units of : ([um], [mrad], [mrad])
 
-    There are only two allowed mappings for the input formats, Native and Centered Pupil.
     See the README for the Iris AO for more details.
 
-    - .PTT111 file: File format of the segments values coming out of the IrisAO GUI [Native]
-    - .ini file: File format of segments values that gets sent to the IrisAO controls [Native]
-    - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)} [Centered Pupil]
+    - .PTT111 file: File format of the segments values coming out of the IrisAO GUI
+    - .ini file: File format of segments values that gets sent to the IrisAO controls
+    - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
 
-    :param segment_values: str, dict. Can be .PTT111, .ini files or dictionary of the
-                            form {seg: (piston, tip, tilt)}
-    :param segment_mapping: str or None. If None, this will be determined by input type of
-                            segment_values (see list above). If you know that the default
-                            is incorrect, you can overwrite with "native" or "centered"
-                            depending on if the segment values are in the native (Iris)
-                            numbering system, or if the are centered in the middle of the
-                            pupil (start at 0).
+    :param segment_values: str, array. Can be .PTT111, .ini files or array where the first
+                           element of the array is the center of the pupil and subsequent
+                           elements continue up and clockwise around the pupil (see README
+                           for more information) of the form {seg: (piston, tip, tilt)}
 
-    :return: dict, bool, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
-             and a bool that if True, indicates Native numbering, and if False, indicates
-             Centered Pupil numbering
+    :return: array, array, PTT tuples in list/array of the form {seg: (piston, tip, tilt)}
+                           where the first element of the array is the center of the pupil
+                           and subsequent elements continue up and clockwise around the pupil,
+                           and an optional list of segment names as they relate to the IrisAO.
+                           The list of segments is ONLY returned in the case of segment_values
+                           being a .ini or .PTT111 file.
     """
-    mapping = None # Only needed to account for future possible exception handling.
     # Read in file
     if segment_values is None:
-        command_dict = None
+        ptt_arr = None
     elif isinstance(segment_values, str):
         if segment_values.endswith("PTT111"):
             command_dict = read_segments(segment_values)
         elif segment_values.endswith("ini"):
             command_dict = read_ini(segment_values)
-        mapping = "native"
-    elif isinstance(segment_values, dict):
-        check_dictionary(segment_values)
-        command_dict = segment_values
-        mapping = "centered"
+        ptt_arr = [*command_dict.values()]
+        segment_names = [*command_dict.keys()]
+    elif isinstance(segment_values, (np.ndarray, list)):
+        ptt_arr = segment_values
+        segment_names = None
     else:
         raise TypeError("The segment values input format is not supported")
 
-    # Allow user to override the above mapping, if, for ex. they build their own dict
-    if segment_mapping is not None:
-        mapping = segment_mapping
-
-    if mapping is None or mapping.lower() == "native":
-        convert_to_native_mapping = False
-    elif mapping.lower() == "centered":
-        convert_to_native_mapping = True
-    else:
-        raise ValueError("The mapping input format is not supported")
-
-    return command_dict, convert_to_native_mapping
+    return ptt_arr, segment_names

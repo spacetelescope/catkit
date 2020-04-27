@@ -83,6 +83,7 @@ Optional (if using POPPY, you will need these - they should be the same for all 
 
 * `flat_to_flat_mm`: The flat side to flat side diameter of each segment in units of mm
 * `gap_um`: The size of the gap between segments in units of um
+* `include_outer_ring_corners`: (Optional) This is a bool that will indicate if the corner segments of the outer ring of you aperture will be used. For example, for LUVIOR A- or B-like apertures, this parameter would be false, but for a JWST- or Keck-like aperture it is true.
 
 
 ---
