@@ -290,71 +290,6 @@ def poppy_numbering():
     return np.arange(163)
 
 
-def get_num_rings(number_segments_in_pupil, outer_ring_corners, max_rings=7):
-    """
-    Get the number of rings based on the number of specified segments using the
-    number_segments_in_pupil and include_outer_ring_corners parameters. This can
-    be used for a pupil of up to 7 rings (the max allowed in the PTT489 IrisAO model).
-    Note that for the PTT489 model the 7th ring does not include the corner segments
-    which you will need to make clear.
-
-    :param num_segs_in_pupil: int, the number of segments in the pupil.
-    :return: num_rings: int, the number of full rings of hexagonal segments in the pupil
-    """
-    # seg_nums: number of segments in a pupil of the corresponding # of rings
-    seg_nums = [1,] # account for center segment
-    for i in (np.arange(max_rings)+1):
-        seg_nums.append(seg_nums[i-1]+i*6)
-
-    if not outer_ring_corners:
-        seg_nums = [num-6 if num>6 else num for num in seg_nums]
-
-    if number_segments_in_pupil not in seg_nums:
-        raise Exception("Invalid number of segments give number_segments_in_pupil and include_outer_ring_corners parameters.")
-
-    # The number of rings
-    ring_nums = np.arange(max_rings+1)
-    num_rings = [rings for segs, rings in zip(seg_nums,
-                                              ring_nums) if number_segments_in_pupil == segs][0]
-    return num_rings
-
-
-def number_segments(num_rings, center_segment=True, outer_corners=False):
-    """
-    Determine number of segments in an aperture based on number of rings,
-    existence of a center segment, and if it includes the corners on the outer-most ring
-
-    :param rings: int, number of
-
-    """
-    num_segs = int(center_segment)
-    for ring in np.arange(num_rings)+1:
-        num_segs += 6*ring
-
-    if not outer_corners:
-        num_segs -= 6
-
-    return num_segs
-
-def get_segment_list(num_rings, center_segment=True, outer_corners=True):
-    """
-    regardless of if the aperture has a center segment, we still want to include it?
-    """
-    num_segs = number_segments(num_rings, center_segment=True, outer_corners=True)
-    seglist = np.arange(num_segs)
-
-    if not outer_corners:
-        inner_segs = seglist[:(num_segs-6*num_rings)]
-        outer_segs = seglist[(num_segs-6*num_rings):]
-        outer_segs = np.delete(outer_segs, np.arange(0, outer_segs.size, num_rings)) # delete corner segs
-
-        seglist = np.unique(np.concatenate((inner_segs, outer_segs)))
-
-    if not center_segment:
-        seglist = seglist[1:]
-    return seglist
-
-
 def get_wavefront_from_coeffs(basis, coeff_array):
     """
     Get the wavefront from the coefficients created by the basis given. This gives
@@ -388,6 +323,83 @@ def deploy_global_wf(mirror, command_dict):
             mirror.set_actuator(seg, vals[0]*(u.um).to(u.m), -1*vals[2]*(u.mrad).to(u.rad),
                                 vals[1]*(u.mrad).to(u.rad))
     return mirror
+
+
+def get_num_rings(number_segments_in_pupil, outer_ring_corners, max_rings=7):
+    """
+    Get the number of rings based on the number of specified segments using the
+    number_segments_in_pupil and include_outer_ring_corners parameters. This can
+    be used for a pupil of up to 7 rings (the max allowed in the PTT489 IrisAO model).
+    Note that for the PTT489 model the 7th ring does not include the corner segments
+    which you will need to make clear.
+
+    :param num_segs_in_pupil: int, the number of segments in the pupil.
+    :return: num_rings: int, the number of full rings of hexagonal segments in the pupil
+    """
+    # seg_nums: number of segments in a pupil of the corresponding # of rings
+    seg_nums = [1,] # account for center segment
+    for i in (np.arange(max_rings)+1):
+        seg_nums.append(seg_nums[i-1]+i*6)
+
+    if not outer_ring_corners:
+        seg_nums = [num-6 if num > 6 else num for num in seg_nums]
+
+    if number_segments_in_pupil not in seg_nums:
+        raise Exception("Invalid number of segments give number_segments_in_pupil and include_outer_ring_corners parameters.")
+
+    # The number of rings
+    ring_nums = np.arange(max_rings+1)
+    num_rings = [rings for segs, rings in zip(seg_nums,
+                                              ring_nums) if number_segments_in_pupil == segs][0]
+    return num_rings
+
+
+def number_segments(num_rings, center_segment=True, outer_corners=False):
+    """
+    Determine number of segments in an aperture based on number of rings,
+    existence of a center segment, and if it includes the corners on the outer-most ring
+
+    :param rings: int, number of
+
+    """
+    num_segs = int(center_segment)
+    for ring in np.arange(num_rings)+1:
+        num_segs += 6*ring
+
+    if not outer_corners:
+        num_segs -= 6
+
+    return num_segs
+
+
+def get_segment_list(num_rings, center_segment=True, outer_corners=True):
+    """
+    regardless of if the aperture has a center segment, we still want to include it?
+    """
+    num_segs = number_segments(num_rings, center_segment=True, outer_corners=True)
+    seglist = np.arange(num_segs)
+
+    if not outer_corners:
+        inner_segs = seglist[:(num_segs-6*num_rings)]
+        outer_segs = seglist[(num_segs-6*num_rings):]
+        outer_segs = np.delete(outer_segs, np.arange(0, outer_segs.size, num_rings)) # delete corner segs
+
+        seglist = np.unique(np.concatenate((inner_segs, outer_segs)))
+
+    if not center_segment:
+        seglist = seglist[1:]
+    return seglist
+
+
+def create_aperture():
+    num_rings = get_num_rings(CONFIG_INI.getint('iris_ao', 'active_number_of_segments'))
+    flat_to_flat = CONFIG_INI.getfloat('iris_ao', 'flat_to_flat_mm') * u.mm
+    gap = CONFIG_INI.getfloat('iris_ao', 'gap_um') * u.micron
+    iris = poppy.dms.HexSegmentedDeformableMirror(name='Iris DM',
+                                                  rings=num_rings,
+                                                  flattoflat=flat_to_flat,
+                                                  gap=gap,
+                                                  segmentlist=segment_list)
 
 
 def display(segment_values, instrument_fov, active_segment_list=None,
