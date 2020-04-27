@@ -396,7 +396,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                                 initial_path=exposure_kwargs['initial_path'],
                                 current_contrast=self.mean_contrasts_image[-1] if i>0 else None,
                                 probe_amplitude=self.probe_amp,
-                                wavelength=wavelength)
+                                wavelength=wavelength,
+                                file_mode=self.file_mode)
 
                             hicat.util.save_complex(f"E_estimated_unscaled_{wavelength}nm.fits", E_estimateds[wavelength], exposure_kwargs['initial_path'])
 
@@ -452,7 +453,10 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
                 self.log.info('Taking post-correction coronagraphic images and pupil image...')
 
-                self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices, num_exposures=1, initial_path=exposure_kwargs['initial_path'])[0]
+                self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
+                                                                         num_exposures=1,
+                                                                         initial_path=exposure_kwargs['initial_path'],
+                                                                         file_mode=self.file_mode)[0]
 
                 # Capture images after DM correction
                 if np.mod(i, self.direct_every) == 0:

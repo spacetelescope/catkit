@@ -269,7 +269,8 @@ class StrokeMinimization(Experiment):
                                                                                      direct,
                                                                                      initial_path=exposure_kwargs['initial_path'],
                                                                                      current_contrast=self.mean_contrasts_image[-1] if i>0 else None,
-                                                                                     probe_amplitude=self.probe_amp)
+                                                                                     probe_amplitude=self.probe_amp,
+                                                                                     file_mode=self.file_mode)
                 hicat.util.save_complex("E_estimated_unscaled.fits", E_estimated, exposure_kwargs['initial_path'])
                 self.probe_example = probe_example  # Save for use in plots
 
@@ -340,7 +341,10 @@ class StrokeMinimization(Experiment):
                 image_after, _header = self.take_coron_exposure(self.dm1_actuators, self.dm2_actuators, devices,
                                                            **exposure_kwargs)
                 try:
-                    self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices, num_exposures=1, initial_path=exposure_kwargs['initial_path'])[0]
+                    self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
+                                                                             num_exposures=1,
+                                                                             initial_path=exposure_kwargs['initial_path'],
+                                                                             file_mode=self.file_mode)[0]
                 except Exception:
                     # FIXME temporary workaround
                     self.log.warning("PUPIL CAM EXCEPTION ENCOUNTERED - IGNORING AND CONTINUING")
