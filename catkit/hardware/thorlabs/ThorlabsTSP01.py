@@ -1,13 +1,10 @@
 import ctypes
 import glob
 import os
-import re
 import sys
-import warnings
 import time
 
 from catkit.config import CONFIG_INI
-from catkit.hardware import testbed_state
 from catkit.interfaces.TemperatureHumiditySensor import TemperatureHumiditySensor
 
 # WARNING - this is neither functionally complete, nor robust against 32b vs 64b nor against model revision of TSP01.
@@ -56,10 +53,8 @@ class TSP01(TemperatureHumiditySensor):
     
     def _open(self):
 
-        connection = ctypes.c_void_p(None)
-        self.instrument = connection
-        self.connection = self.instrument
-        
+        self.instrument = ctypes.c_void_p(None)
+
         # Find the desired device resource name. This is not just the SN#.
         # NOTE: The revB call only finds revB devices.
         available_devices = self.find_all()
@@ -81,12 +76,12 @@ class TSP01(TemperatureHumiditySensor):
     def get_error_message(cls, status_code):
         """Convert error status to error message."""
         buffer_size = int(cls.macro_definitions["TLTSP_BUFFER_SIZE"])
-        status = ctypes.create_string_buffer(buffer_size)
+        error_message = ctypes.create_string_buffer(buffer_size)
         # int TLTSPB_errorMessage(void * connection, int status_code, char * error_message)
-        status = cls.instrument_lib.TLTSPB_errorMessage(None, status_code, status)
+        status = cls.instrument_lib.TLTSPB_errorMessage(None, status_code, error_message)
         if status:
             raise OSError("TSP01: Ironically failed to get error message - '{}'".format(cls.get_error_message(status)))
-        return status.value.decode()
+        return error_message.value.decode()
 
     @classmethod
     def create(cls, config_id):
