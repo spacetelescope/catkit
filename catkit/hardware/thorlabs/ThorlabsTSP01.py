@@ -8,7 +8,7 @@ import time
 
 from catkit.config import CONFIG_INI
 from catkit.hardware import testbed_state
-from catkit.interfaces.TemperaturePressureSensor import TemperaturePressureSensor
+from catkit.interfaces.TemperatureHumiditySensor import TemperatureHumiditySensor
 
 # WARNING - this is neither functionally complete, nor robust against 32b vs 64b nor against model revision of TSP01.
 # Some attempt has been made, however, I have been unable to load the Thorlabs TLTSP_<bit-length>.dll.
@@ -40,7 +40,7 @@ except Exception as error:
     raise ImportError("TSP01: Failed to import '{}' library @ '{}'".format(TSP01_REQUIRED_LIB, TSP01_LIB_PATH)) from error
 
 
-class TSP01(TemperaturePressureSensor):
+class TSP01(TemperatureHumiditySensor):
     # Don't use this class directly, instead use TSP01RevB.
     instrument_lib = TSP01_LIB
 
