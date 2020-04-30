@@ -71,7 +71,7 @@ class TSP01(TemperatureHumiditySensor):
         self.device_name = self.device_name[0]
 
         # int TLTSPB_init(char * device_name, bool id_query, bool reset_device, void ** connection)
-        status = instrument_lib.TLTSPB_init(self.device_name.encode(), True, True, ctypes.byref(self.instrument))
+        status = self.instrument_lib.TLTSPB_init(self.device_name.encode(), True, True, ctypes.byref(self.instrument))
         if status or self.instrument.value is None:
             raise OSError("TSP01: Failed to connect - '{}'".format(self.get_error_message(status)))
         
@@ -83,7 +83,7 @@ class TSP01(TemperatureHumiditySensor):
         buffer_size = int(cls.macro_definitions["TLTSP_BUFFER_SIZE"])
         status = ctypes.create_string_buffer(buffer_size)
         # int TLTSPB_errorMessage(void * connection, int status_code, char * error_message)
-        status = instrument_lib.TLTSPB_errorMessage(None, status_code, status)
+        status = cls.instrument_lib.TLTSPB_errorMessage(None, status_code, status)
         if status:
             raise OSError("TSP01: Ironically failed to get error message - '{}'".format(cls.get_error_message(status)))
         return status.value.decode()
@@ -100,7 +100,7 @@ class TSP01(TemperatureHumiditySensor):
         # First find the total number of connected TSP01 devices.
         device_count = ctypes.c_int(0)
         # int TLTSPB_findRsrc(void * connection, int * device_count)
-        status = instrument_lib.TLTSPB_findRsrc(None, ctypes.byref(device_count))
+        status = cls.instrument_lib.TLTSPB_findRsrc(None, ctypes.byref(device_count))
         if status:
             raise ImportError("TSP01: Failed when trying to find connected devices - '{}'".format(cls.get_error_message(status)))
 
@@ -111,7 +111,7 @@ class TSP01(TemperatureHumiditySensor):
             buffer_size = int(cls.macro_definitions["TLTSP_BUFFER_SIZE"])
             buffer = ctypes.create_string_buffer(buffer_size)
             # int TLTSPB_getRsrcName(void * connection, int device_index, char * buffer)
-            status = instrument.TLTSPB_getRsrcName(None, i, buffer)
+            status = cls.instrument.TLTSPB_getRsrcName(None, i, buffer)
             if status:
                 raise ImportError("TSP01: Failed when trying to find connected devices - '{}'".format(cls.get_error_message(status)))
             available_devices.append(buffer.value.decode())
@@ -121,7 +121,7 @@ class TSP01(TemperatureHumiditySensor):
     def _close(self):
         if self.instrument.value:
             # int TLTSPB_close(void * connection)
-            status = instrument_lib.TLTSPB_close(self.instrument)
+            status = self.instrument_lib.TLTSPB_close(self.instrument)
             if status:
                 pass  # Don't do anything with this.
             self.instrument = ctypes.c_void_p(None)
@@ -130,7 +130,7 @@ class TSP01(TemperatureHumiditySensor):
         time.sleep(self.sleep_time_read)
         temp = ctypes.c_double(0)
         # int TLTSPB_getTemperatureData(void * connection, int channel, double * temp)
-        status = instrument_lib.TLTSPB_measTemperature(self.instrument, int(channel), ctypes.byref(temp))
+        status = self.instrument_lib.TLTSPB_measTemperature(self.instrument, int(channel), ctypes.byref(temp))
         if status:
             raise RuntimeError("TSP01: Failed to get temperature - '{}'".format(self.get_error_message(status)))
         return temp.value
@@ -139,7 +139,7 @@ class TSP01(TemperatureHumiditySensor):
         time.sleep(self.sleep_time_read)
         humidity = ctypes.c_double(0)
         # int TLTSPB_getHumidityData(void * connection, ?, double * humidity)
-        status = instrument_lib.TLTSPB_measHumidity(self.instrument, ctypes.byref(humidity))
+        status = self.instrument_lib.TLTSPB_measHumidity(self.instrument, ctypes.byref(humidity))
         if status:
             raise RuntimeError("TSP01: Failed to get humidity - '{}'".format(self.get_error_message(status)))
         return humidity.value
