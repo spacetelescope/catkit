@@ -70,31 +70,25 @@ class ContrastStability(Experiment):
 
     def collect_metrics(self, devices):
         """
-        Totally hijacked from run_strokemin.py, but that one over there didn't have a docstring.
-
         Measure temperature and humidity and save those values with most recent image contrast.
         :param devices: dict of HiCAT devices
         :return:
         """
-        self.timestamp.append(datetime.datetime.now().isoformat().split('.')[0])
-        try:
-            temp, humidity = devices['temp_sensor'].get_temp_humidity()
-        except Exception:
-            temp = None
-            humidity = None
-            self.log.exception("Failed to get temp & humidity data")
-        finally:
-            self.temp.append(temp)
-            self.humidity.append(humidity)
 
         filename = os.path.join(self.output_path, "metrics.csv")
-        #write header
-        if not os.path.exists(filename):
-            with open(filename, mode='a') as metric_file:
-                metric_file.write("time stamp, temp (C), humidity (%), mean image contrast\n")
+        additional_columns = {"mean image contrast": self.mean_contrasts_image[-1]}
+        timestamp, temp, humidity = hicat.util.track_temp_humidity(device=devices['temp_sensor'],
+                                                                   filename=filename,
+                                                                   additional_columns=additional_columns,
+                                                                   ignore_errors=True)
 
-        with open(filename, mode='a') as metric_file:
-            metric_file.write(f"{self.timestamp[-1]}, {self.temp[-1]}, {self.humidity[-1]}, {self.mean_contrasts_image[-1]}\n")
+        self.timestamp.append(timestamp)
+        self.temp.append(temp)
+        self.humidity.append(humidity)
+
+        if temp is None or humidity is None:
+            self.log.exception("Failed to get temp & humidity data")
+
 
     def experiment(self):
 
