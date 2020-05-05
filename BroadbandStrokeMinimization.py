@@ -356,7 +356,13 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             self.mean_contrasts_image.append(np.mean(broadband_image_before[self.dark_zone]))
             
             # Instantiate TA Controller and run initial centering
-            ta_controller = TargetAcquisition(devices, self.output_path, use_closed_loop=False)
+            ta_devices = {'imaging_pico': (1, 2, imaging_apodizer_picomotor),
+                          'apodizer_pico': (1, 2, ta_apodizer_picomotor),
+                          'quadcell_pico': (3, 4, ta_quadcell_picomotor),
+                          'beam_dump': beam_dump,
+                          'imaging_camera': cam,
+                          'ta_camera': ta_cam}
+            ta_controller = TargetAcquisition(ta_devices, self.output_path, use_closed_loop=False)
             ta_controller.run_full_ta()
 
             # Main body of control loop
