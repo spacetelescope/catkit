@@ -105,13 +105,13 @@ class SegmentedDmCommand(object):
 
 
     def to_command(self):
-        """ Output command suitable for sending to the hardware driver
+        """ Output command suitable for sending to the hardware driver. The flat
+        map will be added only at this stage
         """
-
         # Apply Flat Map
         if self.apply_flat_map:
             self.add_map(self.filename_flat)
-        command_dict = {seg: ptt for seg, ptt in zip(self.segments_in_pupil, self.data)}
+        command_dict = dict(zip(self.segments_in_pupil, self.data))
 
         return command_dict
 
@@ -180,7 +180,7 @@ class PoppySegmentedCommand():
     :param global_coefficients: list of global zernike coefficients in the form
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
     """
-    def __init__(self, global_coefficients):
+    def __init__(self, global_coefficients, convert_array_to_iris_units=True):
         # Grab pupil-specific values from config
         self.flat_to_flat = CONFIG_INI.getfloat('iris_ao', 'flat_to_flat_mm')  # [mm]
         self.gap = CONFIG_INI.getint('iris_ao', 'gap_um')  # [um]
@@ -191,12 +191,14 @@ class PoppySegmentedCommand():
         self.radius = (self.flat_to_flat/2*u.mm).to(u.m)
         self.num_terms = (self.num_segs_in_pupil - 1) * 3
         self.num_rings = get_num_rings(self.num_segs_in_pupil, self.outer_ring_corners)
+        self.segment_list = get_segment_list(self.num_rings, center_segment=True,
+                                             outer_corners=True)
 
         self.global_coefficients = global_coefficients
+        self.convert_array_to_iris_units = convert_array_to_iris_units
 
         # Create the specific basis for this pupil
         self.basis = self.create_ptt_basis()
-        self.segment_list = get_segment_list(self.num_rings, center_segment=True, outer_corners=True)
 
         # Create array of coefficients
         self.array_of_coefficients = self.get_array_from_global()
@@ -260,14 +262,26 @@ class PoppySegmentedCommand():
         """
         wavefront = self.create_wavefront_from_global(self.global_coefficients)
         coeffs_array = self.get_coeffs_from_pttbasis(wavefront)
-        coeffs_array = round_array(coeffs_array)
 
         return coeffs_array
 
 
-def round_array(ptt_arr, decimals=3):
+    def to_dm_array(self):
+        """
+        Convert the array into an array that can be passed to the SegmentDmCommand
+        """
+        input_array = self.array_of_coefficients
+        if self.convert_array_to_iris_units:
+            input_array = iris_util.convert_dict_from_si(input_array)
+        coeffs_array = match_ptt_values(input_array)
+
+        return coeffs_array
+
+
+def match_ptt_values(ptt_arr, decimals=3):
     """
-    Make sure that the PTT coefficients in the array are rounded to decimals
+    Make sure that the PTT coefficients are in the correct order for what is expected
+    on the IrisAO and are rounded to a reasonable number of decimals
 
     :param ptt_arr: ndarray or list, of tuples existing of piston, tip, tilt,
                     values for each segment in a pupil
@@ -318,7 +332,7 @@ def deploy_global_wf(mirror, command_dict):
     return mirror
 
 
-def get_num_rings(number_segments_in_pupil, outer_ring_corners, max_rings=7):
+def get_num_rings(number_segments_in_pupil, outer_ring_corners=True, max_rings=7):
     """
     Get the number of rings based on the number of specified segments using the
     number_segments_in_pupil and include_outer_ring_corners parameters. This can
@@ -326,7 +340,11 @@ def get_num_rings(number_segments_in_pupil, outer_ring_corners, max_rings=7):
     Note that for the PTT489 model the 7th ring does not include the corner segments
     which you will need to make clear.
 
-    :param num_segs_in_pupil: int, the number of segments in the pupil.
+    :param number_segs_in_pupil: int, the number of segments in the pupil.
+    :param outer_ring_corners: bool, True: include the corner segments in the outer
+                               in the pupil - e.g. JWST pupil
+                               False: do not include corner segments in
+                               ring - e.g. LUVOIR A and LUVOIR B pupils
     :return: num_rings: int, the number of full rings of hexagonal segments in the pupil
     """
     # seg_nums: number of segments in a pupil of the corresponding # of rings
@@ -347,7 +365,7 @@ def get_num_rings(number_segments_in_pupil, outer_ring_corners, max_rings=7):
     return num_rings
 
 
-def number_segments(num_rings, center_segment=True, outer_corners=False):
+def number_segments_in_rings(num_rings):
     """
     Determine number of segments in an aperture based on number of rings,
     existence of a center segment, and if it includes the corners on the outer-most ring
@@ -355,39 +373,43 @@ def number_segments(num_rings, center_segment=True, outer_corners=False):
     :param rings: int, number of
 
     """
-    num_segs = int(center_segment)
+    num_segs = 1
     for ring in np.arange(num_rings)+1:
         num_segs += 6*ring
-
-    if not outer_corners:
-        num_segs -= 6
 
     return num_segs
 
 
 def get_segment_list(num_rings, center_segment=True, outer_corners=True):
     """
-    regardless of if the aperture has a center segment, we still want to include it?
+    Always include center segment?? ugh
     """
-    num_segs = number_segments(num_rings, center_segment=True, outer_corners=True)
+    num_segs = number_segments_in_rings(num_rings)
     seglist = np.arange(num_segs)
 
     if not outer_corners:
         inner_segs = seglist[:(num_segs-6*num_rings)]
         outer_segs = seglist[(num_segs-6*num_rings):]
         outer_segs = np.delete(outer_segs, np.arange(0, outer_segs.size, num_rings)) # delete corner segs
-
-        seglist = np.unique(np.concatenate((inner_segs, outer_segs)))
+        seglist = np.concatenate((inner_segs, outer_segs))
 
     if not center_segment:
         seglist = seglist[1:]
     return seglist
 
 
-def create_aperture():
+def create_aperture(segment_list=None, center_segment=True,
+                    outer_corners=True):
+    """
+    """
     num_rings = get_num_rings(CONFIG_INI.getint('iris_ao', 'active_number_of_segments'))
     flat_to_flat = CONFIG_INI.getfloat('iris_ao', 'flat_to_flat_mm') * u.mm
     gap = CONFIG_INI.getfloat('iris_ao', 'gap_um') * u.micron
+
+    if segment_list is None:
+        segment_list = get_segment_list(num_rings, center_segment=center_segment,
+                                        outer_corners=outer_corners)
+
     iris = poppy.dms.HexSegmentedDeformableMirror(name='Iris DM',
                                                   rings=num_rings,
                                                   flattoflat=flat_to_flat,
@@ -395,7 +417,7 @@ def create_aperture():
                                                   segmentlist=segment_list)
 
 
-def display(segment_values, instrument_fov, active_segment_list=None,
+def display(segment_values, instrument_fov,
             segment_mapping=None, wavefront=True, psf=True, out_dir=''):
     """
     Display the wavefront or expected psf generated by this wavefront

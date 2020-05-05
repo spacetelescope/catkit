@@ -122,6 +122,23 @@ def convert_dict_from_si(command_dict):
     return converted
 
 
+def convert_array(coefficients_array):
+    """
+    Take a wf dict and convert from SI (meters and radians) to microns and millirads
+
+    :param coefficients_array: array, list, command in the form of a list of tuples
+                         [(piston, tip, tilt)] for each segment in the aperture starting
+                         at the center and moving outward in clockwise circle.
+
+    :return: list, command in the form of a list of tuples [(piston, tip, tilt)]
+             per segment
+    """
+    converted = [(ptt[0]*(u.m).to(u.um), ptt[1]*(u.rad).to(u.mrad), ptt[2]*(u.rad).to(u.mrad)) for
+                 ptt in coefficients_array]
+
+    return converted
+
+
 def write_ini(data, path, mirror_serial=None, driver_serial=None):
     """
     Write a new ConfigPTT.ini file containing the command for the Iris AO.
