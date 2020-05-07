@@ -322,16 +322,13 @@ def create_flatmap_from_dm_command(dm_command_path, output_path, file_name=None,
 def create_constant_flat_map(output_path, file_name=None, dm_num=1):
     """
     Creates a uniform flat map and outputs a new flatmap fits file.
-    :param output_path: Path to output the new flatmap fits file. Default is hardware/boston/
+    :param output_path: Path to output the new flatmap fits file.
     :param file_name: Filename for new flatmap fits file. Default is
             flat_map_volts_dm_<1 or 2>_constant.fits
-    ;param dm_num: Which DM is this for?  Defaults to 1.
+    :param dm_num: Which DM is this for?  Defaults to 1.
     :return: None
     """
     if file_name is None:
-        # Create a string representation of the current timestamp.
-        # time_stamp = time.time()
-        # date_time_string = datetime.datetime.fromtimestamp(time_stamp).strftime("%Y-%m-%dT%H-%M-%S")
         file_name = "flat_map_volts_dm_" + str(dm_num) + "_constant.fits"
 
     bias_volts = CONFIG_INI.getint('boston_kilo952', f'bias_volts_dm{dm_num}')
@@ -343,13 +340,13 @@ def add_zernike_to_flat_map(output_path, file_name=None, dm_num=1, zernike_index
     """
     Creates a new flat map from the existing flat map for selected DM by adding a specified Zernike term with the
     specified coefficient magnitude.
-    :param output_path: Path to output the new flatmap fits file. Default is hardware/boston/
+    :param output_path: Path to output the new flatmap fits file.
     :param file_name: Filename for new flatmap fits file. Default is
             flat_map_volts_dm_<1 or 2>_zernike_<zernike index>_<coefficient value>V.fits
-    ;param dm_num: Which DM is this for?  Defaults to 1.
-    ;param zernike_index: What Zernike term are we applying, defaults to 4, which I think is focus, but should update if not
+    :param dm_num: Which DM is this for?  Defaults to 1.
+    :param zernike_index: What Zernike term are we applying, defaults to 4, which I think is focus, but should update if not
     ;param zernike_coeff_volts: Coefficient of the Zernike term that we're adding in volts.  Defaults to +10, which for
-    ;                           most Zernike terms should be a P2V of 20.
+    :                           most Zernike terms should be a P2V of 20.
     :return: None
     """
     flat_map_volts = get_flat_map_volts(dm_num)
