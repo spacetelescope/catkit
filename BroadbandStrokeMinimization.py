@@ -363,7 +363,6 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                           'imaging_camera': cam,
                           'ta_camera': ta_cam}
             ta_controller = TargetAcquisition(ta_devices, self.output_path, use_closed_loop=False)
-            ta_controller.run_full_ta()
 
             # Main body of control loop
             for i in range(self.num_iterations):
@@ -377,7 +376,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 self.log.info("Pairwise sensing and stroke minimization, iteration {}".format(i))
                 
                 # Check for any drifts and correct 
-                ta_controller.run_smart_ta_loop()
+                ta_controller.acquire_target()
 
                 # Create a new output subfolder for each iteration
                 initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
