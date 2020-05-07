@@ -376,7 +376,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 self.log.info("Pairwise sensing and stroke minimization, iteration {}".format(i))
                 
                 # Check for any drifts and correct 
-                ta_controller.acquire_target()
+                ta_controller.acquire_target(align_with_fpm=(i == 0))
 
                 # Create a new output subfolder for each iteration
                 initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
