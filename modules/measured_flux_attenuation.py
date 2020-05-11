@@ -76,6 +76,8 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
         cbar_ax = fig.add_axes([0.9, 0.125, 0.05, 0.755])
         fig.colorbar(im, cax=cbar_ax)
 
+        if output_path:
+            os.makedirs(output_path, exist_ok=True)
         fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_type)), dpi=100, bbox_inches='tight')
         plt.close(fig)
 
@@ -121,6 +123,8 @@ def rectangle_photometry(data, im_type, output_path='', save_fig=True):
         cbar_ax = fig.add_axes([0.9, 0.125, 0.05, 0.755])
         fig.colorbar(im, cax=cbar_ax)
 
+        if output_path:
+            os.makedirs(output_path, exist_ok=True)
         fig.savefig(os.path.join(output_path, f'photometry-{im_type}.pdf'), dpi=300, bbox_inches='tight')
         plt.close(fig)
 
