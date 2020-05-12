@@ -74,6 +74,15 @@ class TestSaveImages:
         catkit.util.save_images(image_list, None, tmpdir, "dummy.fits", raw_skip=len(image_list)+1)
         assert(len(glob.glob(os.path.join(tmpdir, "*.fits"))) == 1)
 
+    def test_skip_all(self, tmpdir):
+        image = np.zeros((5, 5))
+        image_list = []
+        for i in range(10):
+            image_list.append(image)
+
+        catkit.util.save_images(image_list, None, tmpdir, "dummy.fits", raw_skip=np.inf)
+        assert (len(glob.glob(os.path.join(tmpdir, "*.fits"))) == 0)
+
     def test_header_path_keyword(self, tmpdir):
         catkit.util.save_images([np.zeros((5, 5))], None, tmpdir, "dummy.fits")
         header = fits.getheader(os.path.join(tmpdir, "dummy.fits"))
