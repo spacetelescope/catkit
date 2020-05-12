@@ -92,7 +92,7 @@ def rotate_and_flip_image(data, theta, flip):
 
 def save_images(images, meta_data, path, base_filename, raw_skip=0):
     """
-    :param raw_skip: Skips x writes for every one taken. raw_skip=np.inf will skip all and save nothing.
+    :param raw_skip: Skips x writes for every one taken. np.isinf(raw_skip) will skip all and save nothing.
     :param path: Path of the directory to save fits file to.
     :param base_filename: Name for file.
     :return: None
@@ -104,6 +104,9 @@ def save_images(images, meta_data, path, base_filename, raw_skip=0):
     if not images:
         return
 
+    # Allow raw_skip="infinity" where float("infinity") -> math.inf
+    if isinstance(raw_skip, str):
+        raw_skip = float(raw_skip)
     if np.isinf(raw_skip):
         return
 
