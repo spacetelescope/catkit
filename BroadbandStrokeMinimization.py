@@ -45,6 +45,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
     :param perfect_knowledge_mode: Whether to use perfect-knowledge of the electric field as input to the controller, instead of the pairwise-probe estimate.  Only works in simulation.
     :param file_mode: If true files will be written to disk otherwise only final plots are saved.
     :param raw_skip: Skips x writes for every one taken. raw_skip=math.inf will skip all and save no raw image files.
+    :param run_ta: Whether to run with target acquisition.
     """
     def __init__(self, wavelengths, jacobian_filenames, probe_filenames, num_iterations,
                  num_exposures=10,
@@ -67,7 +68,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                  spectral_weights=None,
                  perfect_knowledge_mode=False,
                  file_mode=True,
-                 raw_skip=0):
+                 raw_skip=0,
+                 run_ta=False):
         super(StrokeMinimization, self).__init__(suffix=suffix)
 
         # TODOs:
@@ -356,13 +358,14 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             self.mean_contrasts_image.append(np.mean(broadband_image_before[self.dark_zone]))
             
             # Instantiate TA Controller and run initial centering
-            ta_devices = {'imaging_pico': (1, 2, imaging_apodizer_picomotor),
-                          'apodizer_pico': (1, 2, ta_apodizer_picomotor),
-                          'quadcell_pico': (3, 4, ta_quadcell_picomotor),
-                          'beam_dump': beam_dump,
-                          'imaging_camera': cam,
-                          'ta_camera': ta_cam}
-            ta_controller = TargetAcquisition(ta_devices, self.output_path, use_closed_loop=False)
+            if run_ta:
+                ta_devices = {'imaging_pico': (1, 2, imaging_apodizer_picomotor),
+                              'apodizer_pico': (1, 2, ta_apodizer_picomotor),
+                              'quadcell_pico': (3, 4, ta_quadcell_picomotor),
+                              'beam_dump': beam_dump,
+                              'imaging_camera': cam,
+                              'ta_camera': ta_cam}
+                ta_controller = TargetAcquisition(ta_devices, self.output_path, use_closed_loop=False)
 
             # Main body of control loop
             for i in range(self.num_iterations):
@@ -376,7 +379,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 self.log.info("Pairwise sensing and stroke minimization, iteration {}".format(i))
                 
                 # Check for any drifts and correct 
-                ta_controller.acquire_target(align_with_fpm=(i == 0))
+                if run_ta:
+                    ta_controller.acquire_target(align_with_fpm=(i == 0))
 
                 # Create a new output subfolder for each iteration
                 initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
