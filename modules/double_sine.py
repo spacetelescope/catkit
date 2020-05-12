@@ -83,7 +83,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     :param auto_exposure_mask_size: (int) Value in lambda / d units to use to create a circle mask for auto exposure.
     :param lyot_stop_position: (LyotStopPosition) Lyot Stop position.
     :param file_mode: (Boolean) True will save fits files to disk, False will keep everything in memory.
-    :param raw_skip: (int) Optimization for filemode=True that will skip writing x exposures for every 1 taken.
+    :param raw_skip: Skips x writes for every one taken. raw_skip=math.inf will skip all and save no raw image files.
     :param path: (string) Root path to save all files.
     :param simulator: (Boolean) True will run the simulator (file_mode=True is required).
     :param auto_exposure_time: (Boolean) True will alter exposure time to get the counts into a linear range.

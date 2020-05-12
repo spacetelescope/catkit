@@ -42,6 +42,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
     :param control_weights: How much to weight each wavelength in the control problem
     :param spectral_weights: Relative intensity of source at each wavelength
     :param perfect_knowledge_mode: Whether to use perfect-knowledge of the electric field as input to the controller, instead of the pairwise-probe estimate.  Only works in simulation.
+    :param file_mode: If true files will be written to disk otherwise only final plots are saved.
+    :param raw_skip: Skips x writes for every one taken. raw_skip=math.inf will skip all and save no raw image files.
     """
     def __init__(self, wavelengths, jacobian_filenames, probe_filenames, num_iterations,
                  num_exposures=10,
