@@ -165,6 +165,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         self.prior_correction = np.zeros(stroke_min.num_actuators*2, float)
         self.git_label = util.git_description()
         self.perfect_knowledge_mode = perfect_knowledge_mode
+        self.run_ta = True # FIXME : set for now for testing
 
         if self.resume and self.auto_adjust_gamma:
             self.log.warning("Auto adjust gamma is not reliable with resume=True. Disabling auto adjust gamma.")
@@ -358,14 +359,17 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             self.mean_contrasts_image.append(np.mean(broadband_image_before[self.dark_zone]))
             
             # Instantiate TA Controller and run initial centering
-            if run_ta:
-                ta_devices = {'imaging_pico': (1, 2, imaging_apodizer_picomotor),
-                              'apodizer_pico': (1, 2, ta_apodizer_picomotor),
-                              'quadcell_pico': (3, 4, ta_quadcell_picomotor),
+            if self.run_ta:
+                ta_devices = {'imaging_pico': imaging_apodizer_picomotor,
+                              'apodizer_pico': ta_apodizer_picomotor,
+                              'quadcell_pico': ta_quadcell_picomotor,
                               'beam_dump': beam_dump,
                               'imaging_camera': cam,
                               'ta_camera': ta_cam}
-                ta_controller = TargetAcquisition(ta_devices, self.output_path, use_closed_loop=False)
+                motor_axes = {'imaging_pico':  (1,2), 
+                              'apodizer_pico': (1,2),
+                              'quadcell_pico': (3,4)}
+                ta_controller = TargetAcquisition(ta_devices, motor_axes, self.output_path, use_closed_loop=False)
 
             # Main body of control loop
             for i in range(self.num_iterations):
@@ -379,7 +383,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 self.log.info("Pairwise sensing and stroke minimization, iteration {}".format(i))
                 
                 # Check for any drifts and correct 
-                if run_ta:
+                if self.run_ta:
                     ta_controller.acquire_target(align_with_fpm=(i == 0))
 
                 # Create a new output subfolder for each iteration
