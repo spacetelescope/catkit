@@ -65,7 +65,9 @@ class HumidityTemperatureTest(SafetyTest):
                 # We don't care whether zombie processes (never present Windows).
                 continue
 
-        temp, humidity = self.sensor.get_temp_humidity()
+        # Don't use a persistent connection.
+        with self.sensor as open_sensor:
+            temp, humidity = open_sensor.get_temp_humidity()
         temp_ok = self.min_temp <= temp <= self.max_temp
 
         if temp_ok:
