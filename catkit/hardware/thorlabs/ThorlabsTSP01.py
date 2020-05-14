@@ -89,8 +89,7 @@ class TSP01(TemperatureHumiditySensor):
 
     @classmethod
     def create(cls, config_id):
-        serial_number = CONFIG_INI.get(config_id, "serial_number")
-        return cls(serial_number)
+        return cls(config_id=config_id, serial_number=CONFIG_INI.get(config_id, "serial_number"))
 
     @classmethod
     def find_all(cls):
@@ -110,7 +109,7 @@ class TSP01(TemperatureHumiditySensor):
             buffer_size = int(cls.macro_definitions["TLTSP_BUFFER_SIZE"])
             buffer = ctypes.create_string_buffer(buffer_size)
             # int TLTSPB_getRsrcName(void * connection, int device_index, char * buffer)
-            status = cls.instrument.TLTSPB_getRsrcName(None, i, buffer)
+            status = cls.instrument_lib.TLTSPB_getRsrcName(None, i, buffer)
             if status:
                 raise ImportError("TSP01: Failed when trying to find connected devices - '{}'".format(cls.get_error_message(status)))
             available_devices.append(buffer.value.decode())
