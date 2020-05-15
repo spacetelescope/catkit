@@ -217,7 +217,7 @@ class StrokeMinimization(Experiment):
                 testbed.beam_dump() as beam_dump, \
                 testbed.imaging_camera() as cam, \
                 testbed.pupil_camera() as pupilcam, \
-                testbed.temp_sensor(ID=2) as temp_sensor, \
+                testbed.temp_sensor(config_id="aux_temperature_sensor") as temp_sensor, \
                 testbed.color_wheel() as color_wheel:
             devices = {'laser': laser,
                        'dm': dm,
