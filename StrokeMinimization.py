@@ -40,6 +40,8 @@ class StrokeMinimization(Experiment):
            not stable if you are already at fairly deep contrast.
     :param control_gain: optional gain for the control loop
     :param autoscale_e_field:  [Hack Mode] Brute force autoscaling of the E-field to match intensity at each iteration
+    :param auto_num_exposures: If SNR/pix drops below target_snr_per_pix, increase the number of exposures
+    :param target_snr_per_pix: Desired minimum SNR per pixel, averaged over the dark zone, in reduced, binned images.
     :param direct_every:  defines how often a direct image is taken for the contrast calibration
     :param resume: bool, try to find and reuse DM settings from prior dark zone.
     :param dm_command_dir_to_restore: string, path to the directory where the dm_commands are located for restoring dm
@@ -60,6 +62,8 @@ class StrokeMinimization(Experiment):
                  auto_adjust_gamma=False,
                  control_gain=1.0,
                  autoscale_e_field=False,
+                 auto_num_exposures=True,
+                 target_snr_per_pix=5,
                  direct_every=1,
                  resume=False,
                  dm_command_dir_to_restore=None,
@@ -115,6 +119,8 @@ class StrokeMinimization(Experiment):
         self.resume = resume
         self.dm_command_dir_to_restore = dm_command_dir_to_restore
         self.autoscale_e_field = autoscale_e_field
+        self.auto_num_exposures = auto_num_exposures
+        self.target_snr_per_pix = target_snr_per_pix
         self.dm_calibration_fudge = dm_calibration_fudge
         self.correction = np.zeros(stroke_min.num_actuators*2, float)
         self.prior_correction = np.zeros(stroke_min.num_actuators*2, float)
@@ -235,7 +241,8 @@ class StrokeMinimization(Experiment):
 
             # Take starting reference images, in direct and coron
             image_before, _header = self.take_coron_exposure(
-                self.dm1_actuators, self.dm2_actuators, devices, **exposure_kwargs)
+                self.dm1_actuators, self.m2_actuators, devices,
+                output_err=True, dark_zone_mask=self.dark_zone, **exposure_kwargs)
             direct, _header = self.take_direct_exposure(
                 self.dm1_actuators, self.dm2_actuators, devices, **exposure_kwargs)
             image_before /= direct.max()
@@ -247,6 +254,9 @@ class StrokeMinimization(Experiment):
             self.mean_contrasts_image.append(np.mean(image_before[self.dark_zone]))
 
             self.collect_metrics(devices)
+            est_snr = binned_header['SNR_DZ'] if binned_header['SNR_DZ'] > 0 else np.nan
+            self.estimated_darkzone_SNRs = [est_snr]
+            self.estimated_probe_SNRs = []
 
             for i in range(self.num_iterations):
                 self.log.info("Pairwise sensing and stroke minimization, iteration {}".format(i))
@@ -261,7 +271,7 @@ class StrokeMinimization(Experiment):
                 image_before = image_after
 
                 self.log.info('Estimating electric fields using pairwise probes...')
-                E_estimated, probe_example = stroke_min.take_electric_field_pairwise(self.dm1_actuators,
+                E_estimated, probe_example, probe_snr = stroke_min.take_electric_field_pairwise(self.dm1_actuators,
                                                                                      self.dm2_actuators,
                                                                                      take_exposure_func,
                                                                                      devices,
@@ -276,6 +286,7 @@ class StrokeMinimization(Experiment):
                 # TODO: if self.file_mode: HICAT-817
                 hicat.util.save_complex("E_estimated_unscaled.fits", E_estimated, exposure_kwargs['initial_path'])
                 self.probe_example = probe_example  # Save for use in plots
+                self.estimated_probe_SNRs.append(probe_snr)
 
                 if self.autoscale_e_field:
                     # automatically scale the estimated E field to match the prior image contrast
@@ -344,7 +355,7 @@ class StrokeMinimization(Experiment):
                 self.collect_metrics(devices)
                 self.log.info('Taking post-correction coronagraphic image and pupil image...')
                 image_after, _header = self.take_coron_exposure(self.dm1_actuators, self.dm2_actuators, devices,
-                                                           **exposure_kwargs)
+                                                                output_err=True, dark_zone_mask=self.dark_zone, **exposure_kwargs)
                 try:
                     self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
                                                                              num_exposures=1,
@@ -361,6 +372,11 @@ class StrokeMinimization(Experiment):
 
                 image_after /= direct.max()
 
+                # Check SNR in dark zone image.
+                # Note, a value of -1 for this keyword indicates it can't be measured (typically for sim run with only 1 image),
+                # in which case don't adjust num exposures. ( Recall FITS doesn't support NaNs in header keywords, alas. Hence this kludge.).
+                est_snr = binned_header['SNR_DZ'] if binned_header['SNR_DZ'] > 0 else np.nan
+                self.estimated_darkzone_SNRs.append(est_snr)
                 # Save raw contrast from image
                 self.mean_contrasts_image.append(np.mean(image_after[self.dark_zone]))
 
@@ -381,6 +397,19 @@ class StrokeMinimization(Experiment):
             self.jacobian, E_estimated, self.dark_zone, gamma, self.mu_start)
 
         return correction, mu_start, predicted_contrast, predicted_contrast_drop
+
+                # Before next iteration, check SNR in image. If it's too low, increase number of exposures.
+                # We should do this _after_ the plot, so the plot labels still reflect the values used
+                # in this iteration.
+                self.log.info("Estimated SNR in probe image is {:.2f} per pix, using {} exposures.".format(self.estimated_probe_SNRs[-1], self.num_exposures))
+                self.log.info("Estimated SNR in dark zone image is {:.2f} per pix, using {} exposures.".format(est_snr, self.num_exposures))
+                if self.auto_num_exposures and est_snr < self.target_snr_per_pix:
+                    self.num_exposures *= 2
+                    exposure_kwargs['num_exposures'] = self.num_exposures
+                    take_exposure_func = functools.partial(take_coron_exposure, **exposure_kwargs)
+                    self.log.warning(("SNR per pixel in dark zone has dropped below {}. Doubling number of exposures to compensate. "
+                                     "New num_exposures = {}").format(self.target_snr_per_pix, self.num_exposures))
+
 
     def adjust_gamma(self, iteration_number):
         """ Vary Gamma as a function of iteration number. Start aggressive, then become less so over time.
@@ -579,7 +608,10 @@ class StrokeMinimization(Experiment):
         # Plot additional quantities vs iteration
         ax = axes[0,3]
         ax.plot(self.e_field_scale_factors, label='$E$ field scale factor', marker='o', color='lightblue')
-        ax.set_ylim(0, 1.5*np.max(self.e_field_scale_factors))
+        ax.plot(np.asarray(self.estimated_darkzone_SNRs)/10, label='Avg. SNR/pix in dark zone, / 10', marker='^', color='blue')
+        ax.plot(np.asarray(self.estimated_probe_SNRs)/10, label='Avg. SNR/pix in probe, / 10', marker='^', color='orange')
+        ax.set_ylim(0, 2*np.max(self.e_field_scale_factors))
+        ax.legend(loc='upper left', fontsize='x-small', framealpha=1.0)
         ax.set_xlabel("Iteration")
         ax.set_title("Additional diagnostics")
 
