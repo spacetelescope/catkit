@@ -290,7 +290,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 # Get optimized exposure times for photometry based on whether apodizer is used or not
                 if CONFIG_INI.get('testbed', 'apodizer') == 'no_apodizer':
                     exp_time_direct_flux_norm = CONFIG_INI.getfloat('calibration', 'flux_norm_exp_time_direct_clc')
-                    exp_time_coron_flux_norm = exp_time_direct_flux_norm / 10    # the currenlty used ND filter for coron ("9_percent") attenuates by about a facor of 10
+                    exp_time_coron_flux_norm = exp_time_direct_flux_norm / 20    # the currenlty used ND filter for coron ("9_percent") attenuates by about a facor of 10
                 else:
                     exp_time_direct_flux_norm = CONFIG_INI.getfloat('calibration', 'flux_norm_exp_time_direct_aplc') #TODO: revisit this when in APLC mode on hardware (HiCAT-764)
                     exp_time_coron_flux_norm = exp_time_direct_flux_norm / 10
