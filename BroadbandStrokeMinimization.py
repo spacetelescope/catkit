@@ -14,6 +14,8 @@ import hicat.util
 import datetime
 import collections
 
+from catkit.catkit_types import FpmPosition
+
 from hicat.control.target_acq import MotorMount, TargetCamera, TargetAcquisition
 from hicat.hardware import testbed
 import hicat.plotting.animation
@@ -54,6 +56,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                  num_exposures=10,
                  exposure_time_coron=100000,
                  exposure_time_direct=100,
+                 auto_expose={FpmPosition.coron: True, FpmPosition.direct: True},
                  use_dm2=False,
                  gamma=0.8,
                  auto_adjust_gamma=False,
@@ -149,6 +152,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         self.num_exposures = num_exposures
         self.exposure_time_coron = exposure_time_coron
         self.exposure_time_direct = exposure_time_direct
+        self.auto_expose = auto_expose
         self.use_dm2 = use_dm2
 
         # Cut Jacobian in half if using only DM1
@@ -203,7 +207,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         #self.save_probes()
 
     def take_exposure(self, devices, exposure_type, wavelength, initial_path, flux_attenuation_factor=1., suffix=None,
-                      dm1_actuators=None, dm2_actuators=None, exposure_time=None):
+                      dm1_actuators=None, dm2_actuators=None, exposure_time=None, auto_expose=None):
 
         """
         Take an exposure on HiCAT.
@@ -217,6 +221,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         :param dm1_actuators: array, DM1 actuator vector, in nm, passed to take_exposure_hicat()
         :param dm2_actuators: array, DM2 actuator vector, in nm, passed to take_exposure_hicat()
         :param exposure_time: float, exposure time in microsec, passed to take_exposure_hicat()
+        :param auto_expose: Flag to enable auto exposure time correction.
         :return: numpy array and header
         """
         if dm1_actuators is None:
@@ -227,6 +232,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
         if exposure_time is None:
             exposure_time = self.exposure_time_direct if exposure_type == 'direct' else self.exposure_time_coron
+
+        auto_expose = self.auto_expose if auto_expose is None else auto_expose
 
         # Only move filter wheel if we are using a broadband source. The MCLS1 is monochromatic.
         # This is done here rather than inside take_exposure_hicat because not every script that uses
@@ -242,7 +249,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
         image, header = stroke_min.take_exposure_hicat(
             dm1_actuators, dm2_actuators, devices, wavelength=wavelength,
-            exposure_type=exposure_type, exposure_time=exposure_time,
+            exposure_type=exposure_type, exposure_time=exposure_time, auto_expose=auto_expose,
             initial_path=initial_path, num_exposures=self.num_exposures, suffix=suffix,
             file_mode=self.file_mode, raw_skip=self.raw_skip)
 

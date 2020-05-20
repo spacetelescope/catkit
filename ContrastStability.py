@@ -11,6 +11,7 @@ import numpy as np
 from astropy.io import fits
 import hcipy
 import matplotlib.pyplot as plt
+from catkit.catkit_types import FpmPosition
 
 from hicat.experiments.Experiment import Experiment
 from hicat.hardware import testbed
@@ -19,21 +20,14 @@ import hicat.plotting
 from hicat import util
 from hicat.wfc_algorithms import stroke_min
 
-# Redefine take image functions like in run_stroke_min
-exposure_time_coron = 100000
-exposure_time_direct = 100
-
-take_coron_exposure = functools.partial(stroke_min.take_exposure_hicat, exposure_time=exposure_time_coron,
-                                        exposure_type='coron')
-take_direct_exposure = functools.partial(stroke_min.take_exposure_hicat, exposure_time=exposure_time_direct,
-                                         exposure_type='direct')
-
 
 class ContrastStability(Experiment):
 
     name = "Contrast Stability Test"
 
-    def __init__(self, dm_command_path, dh_filename, iterations=50, num_exposures=10, sleep=1):
+    def __init__(self, dm_command_path, dh_filename, exposure_time_coron=100000, exposure_time_direct=100,
+                 auto_expose={FpmPosition.coron: True, FpmPosition.direct: True},
+                 iterations=50, num_exposures=10, sleep=1):
         """
         Load DM maps on DM1 and DM2, hold them, and measure contrast with a user-specified cadence.
 
@@ -48,6 +42,9 @@ class ContrastStability(Experiment):
         self.dh_filename = dh_filename
         self.iter = iterations
         self.num_exposures = num_exposures
+        self.exposure_time_coron = exposure_time_coron
+        self.exposure_time_direct = exposure_time_direct
+        self.auto_expose = auto_expose,
         self.mean_contrasts_image = []
         self.sleep = sleep
 
@@ -55,6 +52,11 @@ class ContrastStability(Experiment):
         self.timestamp = []
         self.temp = []
         self.humidity = []
+
+        self.take_coron_exposure = functools.partial(stroke_min.take_exposure_hicat, exposure_time=self.exposure_time_coron,
+                                                     exposure_type='coron', auto_expose=self.auto_expose)
+        self.take_direct_exposure = functools.partial(stroke_min.take_exposure_hicat, exposure_time=self.exposure_time_direct,
+                                                      exposure_type='direct', auto_expose=self.auto_expose)
 
         # Read dark zone
         with fits.open(dh_filename) as probe_info:
@@ -111,7 +113,7 @@ class ContrastStability(Experiment):
                        'temp_sensor': temp_sensor}
 
             # Take direct exposure for normalization
-            direct, _header = take_direct_exposure(np.zeros(stroke_min.num_actuators),
+            direct, _header = self.take_direct_exposure(np.zeros(stroke_min.num_actuators),
                                                    np.zeros(stroke_min.num_actuators),
                                                    devices,
                                                    initial_path=self.output_path,
@@ -119,9 +121,9 @@ class ContrastStability(Experiment):
 
             for i in range(self.iter):
 
-                coron, _header = take_coron_exposure(self.dm1_hold, self.dm2_hold,
-                                                     devices, num_exposures=self.num_exposures,
-                                                     initial_path=self.output_path)
+                coron, _header = self.take_coron_exposure(self.dm1_hold, self.dm2_hold,
+                                                          devices, num_exposures=self.num_exposures,
+                                                          initial_path=self.output_path)
                 coron /= direct.max()
                 self.mean_contrasts_image.append(np.mean(coron[self.dark_zone]))
 
