@@ -285,13 +285,9 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             devices = {'laser': laser,
                        'dm': dm,
                        'motor_controller': motor_controller,
-                       'imaging_pico': (1, 2, imaging_apodizer_picomotor),
-                       'apodizer_pico': (1, 2, ta_apodizer_picomotor),
-                       'quadcell_pico': (3, 4, ta_quadcell_picomotor),
                        'beam_dump': beam_dump,
                        'imaging_camera': cam,
                        'pupil_camera': pupilcam,
-                       'ta_camera': ta_cam,
                        'color_wheel': color_wheel,
                        'nd_wheel': nd_wheel}
 
@@ -366,9 +362,19 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                               'beam_dump': beam_dump,
                               'imaging_camera': cam,
                               'ta_camera': ta_cam}
-                motor_axes = {'imaging_pico':  (1,2), 
-                              'apodizer_pico': (1,2),
-                              'quadcell_pico': (3,4)}
+                
+                
+                motor_axes = {'imaging_pico':
+                              (CONFIG_INI.getint('picomotor_imaging_apodizer', 'motor_x'),
+                               CONFIG_INI.getint('picomotor_imaging_apodizer', 'motor_y')),
+                              'apodizer_pico': 
+                              (CONFIG_INI.getint('picomotor_target_acquisition_apodizer', 'motor_x'),
+                               CONFIG_INI.getint('picomotor_target_acquisition_apodizer', 'motor_y')),
+                              'quadcell_pico': 
+                              (CONFIG_INI.getint('picomotor_target_acquisition_quadcell', 'motor_x'),
+                               CONFIG_INI.getint('picomotor_target_acquisition_quadcell', 'motor_y')),
+                             }   
+
                 ta_controller = TargetAcquisition(ta_devices, motor_axes, self.output_path, use_closed_loop=False)
 
             # Main body of control loop
