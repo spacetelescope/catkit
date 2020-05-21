@@ -26,7 +26,7 @@ class ContrastStability(Experiment):
     name = "Contrast Stability Test"
 
     def __init__(self, dm_command_path, dh_filename, exposure_time_coron=100000, exposure_time_direct=100,
-                 auto_expose={FpmPosition.coron: True, FpmPosition.direct: True},
+                 auto_expose={FpmPosition.coron: False, FpmPosition.direct: True},
                  iterations=50, num_exposures=10, sleep=1):
         """
         Load DM maps on DM1 and DM2, hold them, and measure contrast with a user-specified cadence.

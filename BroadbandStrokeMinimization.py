@@ -56,7 +56,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                  num_exposures=10,
                  exposure_time_coron=100000,
                  exposure_time_direct=100,
-                 auto_expose={FpmPosition.coron: True, FpmPosition.direct: True},
+                 auto_expose={FpmPosition.coron: False, FpmPosition.direct: True},
                  use_dm2=False,
                  gamma=0.8,
                  auto_adjust_gamma=False,
