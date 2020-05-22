@@ -398,28 +398,28 @@ def read_segment_values(segment_values):
                            elements continue up and clockwise around the pupil (see README
                            for more information) of the form {seg: (piston, tip, tilt)}
 
-    :return: array, array, PTT tuples in list/array of the form {seg: (piston, tip, tilt)}
-                           where the first element of the array is the center of the pupil
-                           and subsequent elements continue up and clockwise around the pupil,
-                           and an optional list of segment names as they relate to the IrisAO.
-                           The list of segments is ONLY returned in the case of segment_values
-                           being a .ini or .PTT* file.
+    :return: list, list, PTT tuples in list/array of the form {seg: (piston, tip, tilt)}
+                         where the first element of the array is the center of the pupil
+                         and subsequent elements continue up and clockwise around the pupil,
+                         and an optional list of segment names as they relate to the IrisAO.
+                         The list segment_names is only returned in the case of segment_values
+                         being a .ini or .PTT* file, otherwise segment_names is None.
     """
     # Read in file
     if segment_values is None:
-        ptt_arr = create_nan_list(iris_num_segments())
+        ptt_list = create_nan_list(iris_num_segments())
         segment_names = None
     elif isinstance(segment_values, str):
         if segment_values.endswith("PTT111") or segment_values.endswith("PTT489"):
             command_dict = read_segments(segment_values)
         elif segment_values.endswith("ini"):
             command_dict = read_ini(segment_values)
-        ptt_arr = [*command_dict.values()]
+        ptt_list = [*command_dict.values()]
         segment_names = [*command_dict.keys()]
     elif isinstance(segment_values, (np.ndarray, list)):
-        ptt_arr = segment_values
+        ptt_list = segment_values
         segment_names = None
     else:
         raise TypeError("The segment values input format is not supported")
 
-    return ptt_arr, segment_names
+    return ptt_list, segment_names
