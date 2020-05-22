@@ -184,14 +184,16 @@ class PoppySegmentedCommand():
         self.flat_to_flat = CONFIG_INI.getfloat('iris_ao', 'flat_to_flat_mm')  # [mm]
         self.gap = CONFIG_INI.getint('iris_ao', 'gap_um')  # [um]
         self.num_segs_in_pupil = CONFIG_INI.getint('iris_ao', 'active_number_of_segments')
+        self.center_segment = CONFIG_INI.getboolean('iris_ao', 'include_center_segment')
         self.outer_ring_corners = CONFIG_INI.getboolean('iris_ao', 'include_outer_ring_corners')
         self.wavelength = (CONFIG_INI.getint('thorlabs_source_mcls1', 'lambda_nm')*u.nm).to(u.m)
 
         self.radius = (self.flat_to_flat/2*u.mm).to(u.m)
         self.num_terms = (self.num_segs_in_pupil - 1) * 3
-        self.num_rings = get_number_of_rings(self.num_segs_in_pupil, self.outer_ring_corners)
-        self.segment_list = get_segment_list(self.num_rings, center_segment=True,
-                                             outer_corners=self.outer_ring_corners)
+        self.num_rings = get_number_of_rings(self.num_segs_in_pupil, self.center_segment,
+                                             self.outer_ring_corners)
+        self.segment_list = get_segment_list(self.num_rings, self.center_segment,
+                                             self.outer_ring_corners)
 
 
         self.global_coefficients = global_coefficients
@@ -247,9 +249,6 @@ class PoppySegmentedCommand():
         coeff_array = poppy.zernike.opd_expand_segments(wavefront, nterms=self.num_terms,
                                                         basis=self.basis)
         coeff_array = np.reshape(coeff_array, (self.num_segs_in_pupil - 1, 3))
-        center_segment = np.array([0.0, 0.0, 0.0]) # Add zeros for center segment
-        coeff_array = np.vstack((center_segment, coeff_array))
-
         return coeff_array
 
 
@@ -310,30 +309,34 @@ def get_wavefront_from_coeffs(basis, coeff_array):
     :return wavefront, POPPY wavefront
     """
     wavefront = poppy.zernike.opd_from_zernikes(coeff_array, basis=basis)
-
     return wavefront
 
 
-def deploy_global_wf(mirror, ptt_list):
+def number_segments_in_aperture(number_of_rings=7, return_list=False):
     """
-    Put a global wavefront on the Iris AO, from an Iris AO dict input wavefront map.
+    For a segmented aperture of rings = number_of_rings, give the total number of
+    segments in the aperture given an aperture of 1, 2, 3, etc. rings. Will return
+    a list of the total number of segments in the *aperture* per ring where the ring
+    is indicated by the index in the list.
 
-    :param mirror: a Poppy HexSegmentedDeformableMirror object
-    :param wfmap: dict; wavefront map in Iris AO format {seg: (piston, tip, tilt)}
-    :return:
+    param: number_of_rings, int, the number of rings in the aperture
+
+    returns: a list of segments where the index of the value corresponds to the
+             number of rings. For example: index 0 corresponds with the center
+             where there is one segment.
     """
-    matched_ptt_list = match_ptt_values(ptt_list) # take care of the tip/tilt swap in poppy
+    segs_per_ring = [1,] # number of segments per ring
+    for i in np.arange(number_of_rings)+1:
+        segs_per_ring.append(segs_per_ring[i-1]+i*6)
 
-    for seg, values in zip(mirror.segmentlist, matched_ptt_list):
-        # conversion from um and mrad to m and rad
-        mirror.set_actuator(seg, values[0]*(u.um).to(u.m),
-                            values[1]*(u.mrad).to(u.rad),
-                            values[2]*(u.mrad).to(u.rad))
-
-    return mirror
+    if return_list:
+        return segs_per_ring
+    else:
+        return segs_per_ring[number_of_rings]
 
 
-def get_number_of_rings(number_segments_in_pupil, outer_ring_corners=True, max_rings=7):
+def get_number_of_rings(number_segments_in_pupil, center_segment=False,
+                        outer_ring_corners=True, max_rings=7):
     """
     Get the number of rings based on the number of specified segments using the
     number_segments_in_pupil and include_outer_ring_corners parameters. This can
@@ -341,60 +344,51 @@ def get_number_of_rings(number_segments_in_pupil, outer_ring_corners=True, max_r
     Note that for the PTT489 model the 7th ring does not include the corner segments
     which you will need to make clear.
 
-    :param number_segs_in_pupil: int, the number of segments in the pupil.
+    :param number_segs_in_pupil: int, the number of segments in the aperture
+    :param center_segment: bool, if true, the center segment is included in the aperture,
+                           if false, the center segment is not included
     :param outer_ring_corners: bool, True: include the corner segments in the outer
-                               in the pupil - e.g. JWST pupil
+                               in the aperture - e.g. JWST aperture
                                False: do not include corner segments in
-                               ring - e.g. LUVOIR A and LUVOIR B pupils
-    :return: num_rings: int, the number of full rings of hexagonal segments in the pupil
+                               ring - e.g. LUVOIR A and LUVOIR B apertures
+    :returns: num_rings: int, the number of full rings of hexagonal segments in the aperture
     """
-    seg_nums = [1,] # account for center segment
-    for i in np.arange(max_rings)+1:
-        seg_nums.append(seg_nums[i-1]+i*6)
+    segs_per_ring = number_segments_in_aperture(max_rings, return_list=True)
 
+    # If no outer corners, you will have 6 fewer segments in that outer ring
     if not outer_ring_corners:
-        seg_nums = [num-6 if num > 6 else num for num in seg_nums]
+        segs_per_ring = [num-6 if num > 6 else num for num in segs_per_ring]
+    # If no center segment, you will have 1 fewer segment overall
+    if not center_segment:
+        segs_per_ring = [num-1 for num in segs_per_ring]
 
-    if number_segments_in_pupil not in seg_nums:
-        raise Exception("Invalid number of segments give number_segments_in_pupil and include_outer_ring_corners parameters.")
+    try:
+        num_rings = segs_per_ring.index(number_segments_in_pupil)
+    except ValueError:
+        raise ValueError("Invalid number of segments. Please check your config.ini file.")
 
-    # The number of rings
-    ring_nums = np.arange(max_rings+1)
-    num_rings = [rings for segs, rings in zip(seg_nums,
-                                              ring_nums) if number_segments_in_pupil == segs][0]
     return num_rings
 
 
-def number_segments_in_complete_rings(number_of_rings):
-    """
-    Determine number of segments in an aperture based on number of rings,
-    existence of a center segment, and if it includes the corners on the outer-most ring
-
-    :param number_of_rings: int, number of rings of hexagonal mirror segments in the aperture
-    """
-    number_of_segments = 1
-    for ring in np.arange(number_of_rings)+1:
-        number_of_segments += 6*ring
-
-    return number_of_segments
-
-
-def get_segment_list(num_rings, center_segment=True, outer_corners=True):
+def get_segment_list(num_rings, center_segment=False, outer_ring_corners=True):
     """
     Grab the list of segments to be used in your pupil taking into account if your
     aperture has a center segment and/or the segments in the corners of the outer ring.
     This list is passed to Poppy to help create the aperture.
 
     :param num_rings: int, The number of rings in your pupil
-    :param center_segment: bool,
-    :param outer_coners: bool,
-
-    :return: list, the list of segments
+    :param center_segment: bool, if true, the center segment is included in the aperture,
+                           if false, the center segment is not included
+    :param outer_ring_corners: bool, True: include the corner segments in the outer
+                               in the aperture - e.g. JWST aperture
+                               False: do not include corner segments in
+                               ring - e.g. LUVOIR A and LUVOIR B apertures
+    :returns: list, the list of segments
     """
-    num_segs = number_segments_in_complete_rings(num_rings)
+    num_segs = number_segments_in_aperture(num_rings)
     seglist = np.arange(num_segs)
 
-    if not outer_corners:
+    if not outer_ring_corners:
         inner_segs = seglist[:(num_segs-6*num_rings)]
         outer_segs = seglist[(num_segs-6*num_rings):]
         outer_segs = np.delete(outer_segs, np.arange(0, outer_segs.size,
@@ -406,77 +400,131 @@ def get_segment_list(num_rings, center_segment=True, outer_corners=True):
     return seglist
 
 
-def create_aperture(center_segment=True, outer_corners=True):
+class SegmentedAperture():
     """
-    Based on values in config file, create the aperture to be simulated
-
-    :param center_segment: bool, True if the center segment is included in
-                           the aperture (i.e. LUVOIR B), False if the center segment is not
-                           included in the aperture (i.e. JWST)
-    :param outer_corners: bool, True if the corners of the outside ring are included
-                          in the aperture (i.e. JWST), False if the corners of the outside ring
-                          are not included in the aperture (i.e. LUVOIR A)
-    :returns: A Poppy HexSegmentedDeformableMirror object for this aperture
+    Create a segmented aperture with Poppy that can be used to display a command
+    created by SegemntedDmCommand or a list of PTT values. This class expects the
+    following information about the testbed to be in the loaded config.ini
     """
-    num_rings = get_number_of_rings(CONFIG_INI.getint('iris_ao', 'active_number_of_segments'))
-    flat_to_flat = CONFIG_INI.getfloat('iris_ao', 'flat_to_flat_mm') * u.mm
-    gap = CONFIG_INI.getfloat('iris_ao', 'gap_um') * u.micron
+    def __init__(self, ptt_list, dm_config_id='iris_ao',
+                 laser_config_id='thorlabs_source_mcls1', out_dir=''):
+        if ptt_list is None:
+            raise ValueError('Your list of Piston, Tip, Tilt values cannot be None')
 
-    segment_list = get_segment_list(num_rings, center_segment=center_segment,
-                                    outer_corners=outer_corners)
+        self.out_dir = out_dir
+        self.ptt_list = ptt_list
 
-    iris = poppy.dms.HexSegmentedDeformableMirror(name='Iris DM',
-                                                  rings=num_rings,
-                                                  flattoflat=flat_to_flat,
-                                                  gap=gap,
-                                                  segmentlist=segment_list)
-    return iris
+        # Parameters specific to testbed setup being used
+        self.wavelength = (CONFIG_INI.getint(laser_config_id, 'lambda_nm')*u.nm)
+        self.instrument_fov = (CONFIG_INI.getint(dm_config_id, 'fov'))
+
+        # Parameters specifc to the aperture and segmented DM being used
+        self.outer_ring_corners = CONFIG_INI.getboolean(dm_config_id, 'include_outer_ring_corners')
+        self.center_segment = CONFIG_INI.getboolean(dm_config_id, 'include_center_segment')
+        self.num_rings = get_number_of_rings(CONFIG_INI.getint(dm_config_id,
+                                                               'active_number_of_segments'),
+                                             self.center_segment,
+                                             self.outer_ring_corners)
+        self.flat_to_flat = CONFIG_INI.getfloat(dm_config_id, 'flat_to_flat_mm') * u.mm
+        self.gap = CONFIG_INI.getfloat(dm_config_id, 'gap_um') * u.micron  
+
+        # Create the aperture and apply the shape
+        self.aperture = self.create_aperture()
+        self.deploy_global_wf()
 
 
-def display(ptt_list, instrument_fov, include_center_segment=True,
-            wavefront=True, psf=True, out_dir=''):
-    """
-    Display the wavefront or expected psf generated by this wavefront
+    def create_aperture(self):
+        """
+        Based on values in config file, create the aperture to be simulated
 
-    :param ptt_list: list of tuples of the form [(piston, tip, tilt)], the input is expected
-                     to be the .data attribute of a SegmentedDmCommand object. Or a list of
-                     the same form that is in order of the segments starting at the center
-                     and then continuing clockwise around the aperture.
-    :param instrument_fov: int, instrument field of view in arsecs
-    :param center_segment: bool, True if the center segment is included (i.e. LUVIOR B),
-                           False if it is not (i.e. JWST)
-    :param outer_corners: bool, True if the corners of the outside ring are included (i.e. JWST),
-                          False if they are not (i.e. LUVOIR A)
-    :param wavefront: bool, whether or not to display the wavefront
-    :param psf: bool, whether or not to display the expected PSF from the wavefront commanded
-    :param out_dir: str, location where the figures should be saved.
-    """
-    if ptt_list is None:
-        raise ValueError('Your list of Piston, Tip, Tilt values cannot be None')
+        :returns: A Poppy HexSegmentedDeformableMirror object for this aperture
+        """
+        segment_list = get_segment_list(self.num_rings, self.center_segment,
+                                        self.outer_ring_corners)
+        aperture = poppy.dms.HexSegmentedDeformableMirror(name='Iris DM',
+                                                          rings=self.num_rings,
+                                                          flattoflat=self.flat_to_flat,
+                                                          gap=self.gap,
+                                                          segmentlist=segment_list)
+        return aperture
 
-    if not include_center_segment:
-        ptt_list = ptt_list[1:]
 
-    wavelength = (CONFIG_INI.getint('thorlabs_source_mcls1', 'lambda_nm')*u.nm) # TODO: should these be dependent on the config file?
-    outer_ring_corners = CONFIG_INI.getboolean('iris_ao', 'include_outer_ring_corners') # TODO: should these be dependent on the config file?
+    def get_segment_list(self, num_rings):
+        """
+        Grab the list of segments to be used in your pupil taking into account if your
+        aperture has a center segment and/or the segments in the corners of the outer ring.
+        This list is passed to Poppy to help create the aperture.
 
-    iris = create_aperture(center_segment=include_center_segment, outer_corners=outer_ring_corners)
-    commanded_iris = deploy_global_wf(iris, ptt_list) # takes pupil and commanded values
+        :param num_rings: int, The number of rings in your pupil
+        :return: list, the list of segments
+        """
+        num_segs = number_segments_in_aperture(num_rings)
+        seglist = np.arange(num_segs)
 
-    if wavefront:
+        if not self.outer_ring_corners:
+            inner_segs = seglist[:(num_segs-6*num_rings)]
+            outer_segs = seglist[(num_segs-6*num_rings):]
+            outer_segs = np.delete(outer_segs, np.arange(0, outer_segs.size,
+                                                         num_rings)) # delete corner segs
+            seglist = np.concatenate((inner_segs, outer_segs))
+
+        if not self.center_segment:
+            seglist = seglist[1:]
+        return seglist
+
+
+    def deploy_global_wf(self):
+        """
+        Put a global wavefront on the Iris AO, from an Iris AO dict input wavefront map.
+
+        :param mirror: a Poppy HexSegmentedDeformableMirror object
+        :param wfmap: dict; wavefront map in Iris AO format {seg: (piston, tip, tilt)}
+        :return:
+        """
+        matched_ptt_list = match_ptt_values(self.ptt_list) # take care of the tip/tilt swap in poppy
+
+        for seg, values in zip(self.aperture.segmentlist, matched_ptt_list):
+            # conversion from um and mrad to m and rad
+            self.aperture.set_actuator(seg, values[0]*(u.um).to(u.m),
+                                       values[1]*(u.mrad).to(u.rad),
+                                       values[2]*(u.mrad).to(u.rad))
+
+
+    def display(self, display_wavefront=True, display_psf=True):
+        """
+        Display either the deployed mirror state ("wavefront") or the PSF created
+        by this mirror state.
+
+        :params display_wavefront: bool, If true, display the deployed mirror state
+        :params display_psf: bool, If true, display the simulated PSF created by the
+                             mirror state
+        """
+        if display_wavefront:
+            self.plot_wavefront()
+        if display_psf:
+            self.plot_psf()
+
+
+    def plot_wavefront(self):
+        """
+        Plot the deployed mirror state ("wavefront")
+        """
         plt.figure()
-        commanded_iris.display(what='opd', title='Shape put on the active segments')
-        plt.savefig(os.path.join(out_dir, 'shape_on_dm.png'))
+        self.aperture.display(what='opd', title='Shape put on the active segments')
+        plt.savefig(os.path.join(self.out_dir, 'shape_on_dm.png'))
 
-    if psf:
-        pixelscale = instrument_fov/512. # arcsec/px, 512 is size of image
 
+    def plot_psf(self):
+        """
+        Plot the simulated PSF based on the mirror state
+        """
+        pixelscale = self.instrument_fov/512. # arcsec/px, 512 is size of image
         plt.figure()
         osys = poppy.OpticalSystem()
-        osys.add_pupil(commanded_iris)
-        osys.add_detector(pixelscale=pixelscale, fov_arcsec=instrument_fov)
+        osys.add_pupil(self.aperture)
+        osys.add_detector(pixelscale=pixelscale, fov_arcsec=self.instrument_fov)
 
-        psf = osys.calc_psf(wavelength=wavelength)
+        psf = osys.calc_psf(wavelength=self.wavelength)
         poppy.display_psf(psf, vmin=10e-8, vmax=10e-2,
                           title='PSF created by the shape put on the active segments')
-        plt.savefig(os.path.join(out_dir, 'simulated_psf.png'))
+        plt.savefig(os.path.join(self.out_dir, 'simulated_psf.png'))
