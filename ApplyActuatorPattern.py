@@ -17,17 +17,19 @@ class ApplyActuatorPattern(Experiment):
     dm_num: int, 1 or 2, which DM to apply the poke pattern to; will be ignored if apply_to_both=True
     actuators: list of actuators that build the poke pattern. Note how you need to subtract 1 from actuator numbers when
                identifying actuators on the actuator map provided by the manufacturer.
+    timeout : int. Maximum time in seconds to hold the pattern on the DMs.
     """
     name = "Apply Actuator Pattern"
     actuators = None
 
-    def __init__(self, apply_to_both=False, dm_num=1, actuators=[], output_path=None):
+    def __init__(self, apply_to_both=False, dm_num=1, actuators=[], output_path=None, timeout=600):
         super().__init__(output_path=output_path, suffix=None)
         self.apply_to_both = apply_to_both
         if self.actuators is None:
             self.actuators = actuators
         if not apply_to_both:
             self.dm_num = dm_num
+        self.timeout = timeout
 
     def experiment(self):
 
@@ -57,13 +59,16 @@ class ApplyActuatorPattern(Experiment):
             dm.apply_shape(poke_pattern, dm_num=dm_to_poke)
             dm.apply_shape(flat_pattern, dm_num=dm_to_flat)
             self.log.info("{} applied.".format(self.name))
-            self.log.info(
-                " ** This will loop forever, maintaining the {}. You must cancel the script to terminate it. ** ".format(self.name))
+            self.log.info(" ** This will loop for up to {} seconds, maintaining the {}. **".format( self.timeout, self.name))
+            self.log.info(" ** You must cancel the script to terminate it sooner. ** ")
             self.log.info(
                 " ** I.e. use square 'stop' button in PyCharm. Caution - be careful to single click, not double click it! ** ")
 
-            while True:
+            for time_counter in range(self.timeout):
                 time.sleep(1)
+
+            self.log.info(
+                "Reached DM pattern hold timeout ({} seconds);  therefore ending script.".format(self.timeout))
 
 
 class ApplyXPoke(ApplyActuatorPattern):
