@@ -617,7 +617,7 @@ class StrokeMinimization(Experiment):
             ax.tick_params(axis='both', which='minor', labelsize='xx-small')
 
         labely = 0.04
-        plt.text(0.03, labely, "Contrast image: {:.3e} pairwise: {:.3e}\nDark zone from {} - {} $\lambda/D_{LS}$\nProbes: {}, amplitude {} nm".format(
+        plt.text(0.03, labely, "Contrast image: {:.3e} pairwise: {:.3e}\nDark zone from {} - {} $\lambda/D_{{LS}}$\nProbes: {}, amplitude {} nm".format(
             float(self.mean_contrasts_image[-1]), float(self.mean_contrasts_pairwise[-1]), self.dz_rin, self.dz_rout, len(self.probes), self.probe_amp),
                  transform=fig.transFigure,
                  color='gray', horizontalalignment='left', verticalalignment='center')
