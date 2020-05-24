@@ -547,7 +547,7 @@ class StrokeMinimization(Experiment):
             ax.axvline(self.dz_rout, color='C2', ls='--', alpha=0.3)
         except Exception:
             pass # gracefully ignore older probe files that don't have these headers
-        ax.set_xlabel("Separation ($\lambda/D_{apod}$)")
+        ax.set_xlabel("Separation ($\lambda/D_{LS}$)")
         ax.set_title('Contrast vs radius')
 
         # Plot additional quantities vs iteration
@@ -617,7 +617,7 @@ class StrokeMinimization(Experiment):
             ax.tick_params(axis='both', which='minor', labelsize='xx-small')
 
         labely = 0.04
-        plt.text(0.03, labely, "Contrast image: {:.3e} pairwise: {:.3e}\nDark zone from {} - {} $\lambda/D$\nProbes: {}, amplitude {} nm".format(
+        plt.text(0.03, labely, "Contrast image: {:.3e} pairwise: {:.3e}\nDark zone from {} - {} $\lambda/D_{LS}$\nProbes: {}, amplitude {} nm".format(
             float(self.mean_contrasts_image[-1]), float(self.mean_contrasts_pairwise[-1]), self.dz_rin, self.dz_rout, len(self.probes), self.probe_amp),
                  transform=fig.transFigure,
                  color='gray', horizontalalignment='left', verticalalignment='center')
