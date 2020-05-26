@@ -356,20 +356,20 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             
             # Instantiate TA Controller and run initial centering
             if self.run_ta:
-                ta_devices = {'imaging_pico': imaging_apodizer_picomotor,
-                              'apodizer_pico': ta_apodizer_picomotor,
-                              'quadcell_pico': ta_quadcell_picomotor,
+                ta_devices = {'apodizer_pico': ta_apodizer_picomotor,
                               'beam_dump': beam_dump,
                               'imaging_camera': cam,
+                              'imaging_pico': imaging_apodizer_picomotor,
+                              'quadcell_pico': ta_quadcell_picomotor,
                               'ta_camera': ta_cam}
                 
                 
-                motor_axes = {'imaging_pico':
-                              (CONFIG_INI.getint('picomotor_imaging_apodizer', 'motor_x'),
-                               CONFIG_INI.getint('picomotor_imaging_apodizer', 'motor_y')),
-                              'apodizer_pico': 
+                motor_axes = {'apodizer_pico':
                               (CONFIG_INI.getint('picomotor_target_acquisition_apodizer', 'motor_x'),
                                CONFIG_INI.getint('picomotor_target_acquisition_apodizer', 'motor_y')),
+                              'imaging_pico': 
+                              (CONFIG_INI.getint('picomotor_imaging_apodizer', 'motor_x'),
+                               CONFIG_INI.getint('picomotor_imaging_apodizer', 'motor_y')),
                               'quadcell_pico': 
                               (CONFIG_INI.getint('picomotor_target_acquisition_quadcell', 'motor_x'),
                                CONFIG_INI.getint('picomotor_target_acquisition_quadcell', 'motor_y')),
@@ -390,7 +390,10 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 
                 # Check for any drifts and correct 
                 if self.run_ta:
-                    ta_controller.acquire_target(align_with_fpm=(i == 0))
+                    # Only attempt to perform a coarse alignment if we're at
+                    # the 0th iteration
+                    perform_coarse_align = (i == 0)
+                    ta_controller.acquire_target(coarse_align=perform_coarse_align)
 
                 # Create a new output subfolder for each iteration
                 initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
