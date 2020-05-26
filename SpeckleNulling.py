@@ -113,7 +113,7 @@ class SpeckleNulling(Experiment):
                         testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                                   lyot_stop_position=self.lyot_stop_position,
                                                   centering=centering,
-                                                  path=ref_path, auto_exposure_time=False,
+                                                  path=ref_path, auto_expose=False,
                                                   exposure_set_name=exp_set_name,
                                                   filename="itr" + str(i) + "_" + file_name,
                                                   **self.kwargs)
@@ -132,7 +132,7 @@ class SpeckleNulling(Experiment):
                     testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                               lyot_stop_position=self.lyot_stop_position,
                                               centering=self.centering,
-                                              path=iteration_path, auto_exposure_time=False,
+                                              path=iteration_path, auto_expose=False,
                                               exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + file_name,
                                               **self.kwargs)
 
@@ -154,7 +154,7 @@ class SpeckleNulling(Experiment):
 
                         testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                                   lyot_stop_position=self.lyot_stop_position,
-                                                  path=phase_path, auto_exposure_time=False,
+                                                  path=phase_path, auto_expose=False,
                                                   centering=self.centering,
                                                   exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + name,
                                                   **self.kwargs)
@@ -180,7 +180,7 @@ class SpeckleNulling(Experiment):
                         testbed.run_hicat_imaging(auto_exposure_time, self.num_exposures, self.fpm_position,
                                                   lyot_stop_position=self.lyot_stop_position,
                                                   centering=self.centering,
-                                                  path=amplitude_path, auto_exposure_time=False,
+                                                  path=amplitude_path, auto_expose=False,
                                                   exposure_set_name=exp_set_name, filename="itr" + str(i) + "_" + name,
                                                   **self.kwargs)
 

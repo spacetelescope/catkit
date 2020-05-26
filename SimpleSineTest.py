@@ -79,7 +79,7 @@ class SimpleSineTest(Experiment):
                                           path=saveto_path,
                                           exposure_set_name='coron',
                                           filename=sin_file_name_dm1,
-                                          auto_exposure_time=True,
+                                          auto_expose=True,
                                           centering=ImageCentering.custom_apodizer_spots,
                                           auto_exposure_mask_size=5.5,
                                           resume=False,
