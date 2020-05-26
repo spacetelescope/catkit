@@ -1,3 +1,5 @@
+import socket
+
 import catkit.hardware.omega.iTHX_W3_2
 from catkit.interfaces.Instrument import SimInstrument
 
@@ -7,6 +9,9 @@ class ITHXW32Emulator:
     NOMINAL_TEMPERATURE_C = 25.0
     NOMINAL_HUMIDITY = 20.0
     RETURN_FORMAT = "0{}\r"  # Concat delimiter := ","
+
+    AF_INET = socket.AF_INET
+    SOCK_STREAM = socket.SOCK_STREAM
 
     def __init__(self):
         self.command_cache = None
