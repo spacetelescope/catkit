@@ -65,7 +65,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                 auto_exposure_mask_size,
                                 lyot_stop_position=LyotStopPosition.in_beam,
                                 file_mode=True, raw_skip=0, path=None, simulator=True,
-                                auto_exposure_time=True,
+                                auto_expose=True,
                                 resume=False, centering=ImageCentering.auto,
                                 dm=1, opposite=False,
                                 **kwargs):
@@ -86,7 +86,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     :param raw_skip: Skips x writes for every one taken. raw_skip=math.inf will skip all and save no raw image files.
     :param path: (string) Root path to save all files.
     :param simulator: (Boolean) True will run the simulator (file_mode=True is required).
-    :param auto_exposure_time: (Boolean) True will alter exposure time to get the counts into a linear range.
+    :param auto_expose: (Boolean) True will alter exposure time to get the counts into a linear range.
     :param resume: (Boolean) Primitive way to resume an experiment that was incomplete, file_mode=True only.
     :param centering: (ImageCentering) Mode pipeline will use to find the center of images and recenter them.
     :param kwargs: Specific keyword arguments passed to the Camera interface.
@@ -142,7 +142,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                             lyot_stop_position=lyot_stop_position,
                                                             file_mode=file_mode, raw_skip=raw_skip, path=path,
                                                             exposure_set_name=positive_sin_dirname,
-                                                            filename=sin_file_name, auto_expose=auto_exposure_time,
+                                                            filename=sin_file_name, auto_expose=auto_expose,
                                                             centering=centering,
                                                             auto_exposure_mask_size=auto_exposure_mask_size,
                                                             resume=resume,
@@ -157,7 +157,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                            lyot_stop_position=lyot_stop_position,
                                                            file_mode=file_mode, raw_skip=raw_skip, path=path,
                                                            exposure_set_name=negative_sin_dirname,
-                                                           filename=sin_file_name, auto_expose=auto_exposure_time,
+                                                           filename=sin_file_name, auto_expose=auto_expose,
                                                            centering=centering,
                                                            auto_exposure_mask_size=auto_exposure_mask_size,
                                                            resume=resume,
@@ -172,7 +172,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
                                                         lyot_stop_position=lyot_stop_position,
                                                         file_mode=file_mode, raw_skip=raw_skip, path=path,
                                                         exposure_set_name=flat_dirname,
-                                                        filename=sin_file_name, auto_expose=auto_exposure_time,
+                                                        filename=sin_file_name, auto_expose=auto_expose,
                                                         centering=centering,
                                                         auto_exposure_mask_size=auto_exposure_mask_size,
                                                         resume=resume,
