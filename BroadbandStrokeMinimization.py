@@ -165,7 +165,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         self.prior_correction = np.zeros(stroke_min.num_actuators*2, float)
         self.git_label = util.git_description()
         self.perfect_knowledge_mode = perfect_knowledge_mode
-        self.run_ta = True # FIXME : set for now for testing
+        self.run_ta = run_ta 
 
         if self.resume and self.auto_adjust_gamma:
             self.log.warning("Auto adjust gamma is not reliable with resume=True. Disabling auto adjust gamma.")
