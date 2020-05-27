@@ -4,7 +4,6 @@ from catkit.config import CONFIG_INI
 from pyvisa import constants
 import time
 
-from catkit.hardware import testbed_state
 from catkit.interfaces.FilterWheel import FilterWheel
 
 
@@ -58,9 +57,7 @@ class ThorlabsFW102C(FilterWheel):
 
         if out[1] == constants.StatusCode.success:
             self.instrument.read()
-
-            # Update testbed state.
-            testbed_state.filter_wheels[self.config_id] = new_position
+            # Wait for wheel to move. Fairly arbitrary 3 s delay...
             time.sleep(3)
         else:
             raise Exception("Filter wheel " + self.config_id + " returned an unexpected response: " + out[1])
