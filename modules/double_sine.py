@@ -86,7 +86,7 @@ def double_sin_remove_crossterm(sin_specification, alignment_speckle, bias, flat
     :param raw_skip: Skips x writes for every one taken. raw_skip=math.inf will skip all and save no raw image files.
     :param path: (string) Root path to save all files.
     :param simulator: (Boolean) True will run the simulator (file_mode=True is required).
-    :param auto_expose: (Boolean) True will alter exposure time to get the counts into a linear range.
+    :param auto_expose: bool or {catkit.catkit_types.FpmPosition: bool}, flag to enable auto exposure time correction.
     :param resume: (Boolean) Primitive way to resume an experiment that was incomplete, file_mode=True only.
     :param centering: (ImageCentering) Mode pipeline will use to find the center of images and recenter them.
     :param kwargs: Specific keyword arguments passed to the Camera interface.

@@ -221,7 +221,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         :param dm1_actuators: array, DM1 actuator vector, in nm, passed to take_exposure_hicat()
         :param dm2_actuators: array, DM2 actuator vector, in nm, passed to take_exposure_hicat()
         :param exposure_time: float, exposure time in microsec, passed to take_exposure_hicat()
-        :param auto_expose: Flag to enable auto exposure time correction.
+        :param auto_expose: bool or {catkit.catkit_types.FpmPosition: bool}, flag to enable auto exposure time correction.
         :return: numpy array and header
         """
         if dm1_actuators is None:
