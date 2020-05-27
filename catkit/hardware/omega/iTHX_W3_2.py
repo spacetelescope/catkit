@@ -30,6 +30,10 @@ class TemperatureHumiditySensor(catkit.interfaces.TemperatureHumiditySensor.Temp
     BLOCK = True
     BUFFER_SIZE = 1024
 
+    GET_TEMPERATURE_C = b"*SRTC\r"
+    GET_HUMIDITY = b"*SRH\r"
+    GET_TEMPERATURE_AND_HUMIDITY = b"*SRB\r"
+
     def initialize(self, host, port=2000, timeout=60):
         self.host = host
         self.port = port
@@ -71,16 +75,16 @@ class TemperatureHumiditySensor(catkit.interfaces.TemperatureHumiditySensor.Temp
         if channel:
             raise NotImplementedError(f"{self.config_id}: Only single channel supported.")
 
-        self.instrument.sendall("*SRTC\r".encode())
+        self.instrument.sendall(self.GET_TEMPERATURE_C)
         return self._get_response()
 
     def get_humidity(self):
         """ Measures and returns the relative humidity (%). """
-        self.instrument.sendall("*SRH\r".encode())
+        self.instrument.sendall(self.GET_HUMIDITY)
         return self._get_response()
 
     def get_temp_humidity(self):
         """ Measures and returns both the temperature (Celsius) and relative humidity (%). """
-        self.instrument.sendall("*SRB\r".encode())
+        self.instrument.sendall(self.GET_TEMPERATURE_AND_HUMIDITY)
         temp, humidity = self._get_response()
         return temp, humidity
