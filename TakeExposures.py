@@ -22,6 +22,7 @@ class TakeExposures(Experiment):
                  exposure_set_name=None,
                  filename=None,
                  suffix='take_exposures',
+                 auto_expose=True,
                  **kwargs):
         """
         Takes a set of data with any camera, any DM command, any exposure time, etc.
@@ -44,6 +45,7 @@ class TakeExposures(Experiment):
         self.pipeline = pipeline
         self.exposure_set_name = exposure_set_name
         self.filename = filename
+        self.auto_expose = auto_expose
         self.kwargs = kwargs
 
     def experiment(self):
@@ -58,4 +60,5 @@ class TakeExposures(Experiment):
                        self.filename,
                        self.exposure_set_name,
                        self.suffix,
+                       auto_expose=self.auto_expose,
                        **self.kwargs)

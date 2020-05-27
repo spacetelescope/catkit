@@ -131,6 +131,7 @@ def take_exposures(dm1_command_object,
                    filename,
                    exposure_set_name,
                    suffix,
+                   auto_expose,
                    **kwargs):
     # Wait to set the path until the experiment starts (rather than the constructor)
     if path is None:
@@ -163,4 +164,5 @@ def take_exposures(dm1_command_object,
                                              exposure_set_name=exposure_set_name,
                                              camera_type=camera_type,
                                              pipeline=pipeline,
+                                             auto_expose=auto_expose,
                                              **kwargs)

@@ -30,6 +30,7 @@ class UpdateSubarray(Experiment):
                  exposure_set_name=None,
                  filename=None,
                  suffix=None,
+                 auto_expose=True,
                  **kwargs):
         """
         Takes a set of data with any camera, any DM command, any exposure time, etc.
@@ -51,6 +52,7 @@ class UpdateSubarray(Experiment):
         self.camera_type = camera_type
         self.exposure_set_name = exposure_set_name
         self.filename = filename
+        self.auto_expose = auto_expose
         self.kwargs = kwargs
 
     def experiment(self):
@@ -65,6 +67,7 @@ class UpdateSubarray(Experiment):
                                                    filename=self.filename,
                                                    exposure_set_name=self.exposure_set_name,
                                                    suffix=self.suffix,
+                                                   auto_expose=self.auto_expose,
                                                    **self.kwargs)
 
         # Use the PSF to find the center.
