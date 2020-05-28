@@ -447,7 +447,6 @@ class DisplayCommand(SegmentedAperture):
             raise ValueError('Your list of Piston, Tip, Tilt values cannot be None')
 
         # Check for and replace Nans
-        bad = np.where(~np.isnan(ptt_list))[0]
         self.ptt_list = ptt_list
         self.out_dir = out_dir
 
