@@ -75,7 +75,7 @@ def create_nan_list(number_of_segments):
     :param number_of_segments: int, the number of segments in your pupil
     :return: array of zeros the length of the number of total segments in the DM
     """
-    return [(np.nan, np.nan, np.nan)] * number_of_segments
+    return [np.nan] * number_of_segments
 
 
 def create_custom_dictionary(segment_num, ptt_tuple, number_of_segments):
@@ -139,7 +139,7 @@ def convert_array(coefficients_array):
     return converted
 
 
-def write_ini(data, path, mirror_serial=None, driver_serial=None):
+def write_ini(data, path, dm_config_id='iris_ao', mirror_serial=None, driver_serial=None):
     """
     Write a new ConfigPTT.ini file containing the command for the Iris AO.
 
@@ -149,8 +149,8 @@ def write_ini(data, path, mirror_serial=None, driver_serial=None):
     :param driver_serial: serial number of the driver used for the Iris AO
     """
     if not mirror_serial and not driver_serial:
-        mirror_serial = CONFIG_INI.get("iris_ao", "mirror_serial")
-        driver_serial = CONFIG_INI.get("iris_ao", "driver_serial")
+        mirror_serial = CONFIG_INI.get(dm_config_id, "mirror_serial")
+        driver_serial = CONFIG_INI.get(dm_config_id, "driver_serial")
 
     config = ConfigParser()
     config.optionxform = str   # keep capital letters
