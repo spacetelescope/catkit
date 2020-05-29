@@ -1,6 +1,6 @@
 """
 Holds the class SegmentedDmCommand that is used to create a dict that will be sent to the
-IrisAO hardware as a command.
+segmented DM hardware as a command.
 """
 from configparser import NoOptionError
 import json
@@ -12,14 +12,22 @@ import numpy as np
 import poppy
 
 from catkit.config import CONFIG_INI
-from catkit.hardware.iris_ao import util as iris_util
+from catkit.hardware.iris_ao import util as segmented_dm_util
 
 
 class SegmentedDmCommand():
     """
-    Handles converting inputs into expected dictionary format to be sent to the Iris AO.
-    Does NOT interact with hardware directly.
+    Handle segmented DM specific commands in terms of piston, tip and tilt (PTT) for
+    each segment. Creates a dictionary of the form {seg: (piston, tip, tilt)} that can
+    be loaded onto the hardware.
 
+    Units of the loaded command are expected to be in um (for piston) and mrad (for tip and tilt)
+
+    This class does NOT interact with hardware directly.
+
+    :param apply_flat_map: If true, add flat map correction to the data before creating command
+    :param dm_config_id: str, name of the section in the config_ini file where information
+                         regarding the segmented DM can be found. Default: 'iris_ao'
     :attribute data: dict, Input data, shifted if custom pupil exists in config file
     :attribute apply_flat_map: bool, whether or not to apply the flat map
     :attribute source_pupil_numbering: list, numbering native to data
@@ -32,36 +40,21 @@ class SegmentedDmCommand():
     :attribute number_segments_in_pupil: int, the number of segments in the pupil.
 
     """
-    def __init__(self, apply_flat_map=False, config_id='iris_ao'):
-        """
-        Handle Iris AO specific commands in terms of piston, tip and tilt (PTT) per
-        each segment. Creates a Iris AO-style command -{seg: (piston, tip, tilt)} -
-        that can be loaded onto the hardware.
-
-        Units are expect to be in um (for piston) and mrad (for tip and tilt)
-
-        :param apply_flat_map: If true, add flat map correction to the data before creating command
-        :param convert_to_native_mapping: bool, if True, convert the input command to the
-                                          Iris native numbering. If False, the command is
-                                          assumed to be in the Iris frame already.
-        """
-        # Establish variables for pupil shifting
-        self._shift_center = False
-
+    def __init__(self, apply_flat_map=False, dm_config_id='iris_ao'):
         # Grab things from CONFIG_INI
-        self.filename_flat = CONFIG_INI.get(config_id, 'flat_file_ini') #format is .ini
+        self.filename_flat = CONFIG_INI.get(dm_config_id, 'flat_file_ini')
 
         try:
-            self.segments_in_pupil = json.loads(CONFIG_INI.get(config_id, 'active_segment_list'))
-            self.number_segments_in_pupil = CONFIG_INI.getint(config_id,
+            self.segments_in_pupil = json.loads(CONFIG_INI.get(dm_config_id, 'active_segment_list'))
+            self.number_segments_in_pupil = CONFIG_INI.getint(dm_config_id,
                                                               'active_number_of_segments')
             if len(self.segments_in_pupil) != self.number_segments_in_pupil:
                 raise ValueError("The array length active_segment_list does not match the active_number_of_segments in the config.ini. Please update your config.ini.")
         except NoOptionError:
-            self.segments_in_pupil = iris_util.iris_pupil_naming()
+            self.segments_in_pupil = segmented_dm_util.iris_pupil_naming(dm_config_id)
 
         self.apply_flat_map = apply_flat_map
-        self.data = iris_util.create_zero_array(self.number_segments_in_pupil) #TODO: change this to Nans?
+        self.data = segmented_dm_util.create_zero_array(self.number_segments_in_pupil) #TODO: change this to Nans?
         self.command = None
 
 
@@ -69,10 +62,9 @@ class SegmentedDmCommand():
         """
         Read a new command and assign to the attribute 'data'
 
-        :param segment_values: str, array. Can be .PTT111, .ini files or array where the first
-                               element of the array is the center of the pupil and subsequent
-                               elements continue up and clockwise around the pupil (see README
-                               for more information) of the form {seg: (piston, tip, tilt)}
+        :param segment_values: str, list. Can be .PTT111, .ini files or a list with piston, tip,
+                               tilt values in a tuple for each segment. See the load_command doc
+                               string for more information.
         """
         self.data = self.read_command(segment_values)
 
@@ -81,12 +73,11 @@ class SegmentedDmCommand():
         """
         Read a command from one of the allowed formats
 
-        :param segment_values: str, array. Can be .PTT111, .ini files or array where the first
-                               element of the array is the center of the pupil and subsequent
-                               elements continue up and clockwise around the pupil (see README
-                               for more information) of the form {seg: (piston, tip, tilt)}
+        :param segment_values: str, list. Can be .PTT111, .ini files or a list with piston, tip,
+                               tilt values in a tuple for each segment.See the load_command doc
+                               string for more information.
         """
-        ptt_arr, segment_names = iris_util.read_segment_values(segment_values)
+        ptt_arr, segment_names = segmented_dm_util.read_segment_values(segment_values)
         if segment_names is not None:
             command_array = []
             for seg_name in self.segments_in_pupil:  # Pull out only segments in the pupil
@@ -94,7 +85,6 @@ class SegmentedDmCommand():
                 command_array.append(ptt_arr[ind])
         else:
             command_array = ptt_arr
-
         return command_array
 
 
@@ -123,7 +113,7 @@ class SegmentedDmCommand():
         :param ptt_tuple: tuple with three values for piston, tip, and tilt
 
         """
-        command_array = iris_util.create_zero_array(self.number_segments_in_pupil)
+        command_array = segmented_dm_util.create_zero_array(self.number_segments_in_pupil)
         command_array[segment_ind] = ptt_tuple
 
         self.add_map(command_array)
@@ -143,7 +133,7 @@ class SegmentedDmCommand():
                      new in zip(original_data, new_data)]
 
 
-def load_command(segment_values, apply_flat_map=True, config_id='iris_ao'):
+def load_command(segment_values, apply_flat_map=True, dm_config_id='iris_ao'):
     """
     Loads the segment_values from a file, array, or dictionary and returns a
     SegmentedDmCommand object.
@@ -151,36 +141,57 @@ def load_command(segment_values, apply_flat_map=True, config_id='iris_ao'):
     There are only two allowed segment mappings for the input formats, Native and Centered Pupil.
     See the README for the Iris AO for more details.
 
-    :param segment_values: str or dict. Can be .PTT111, .ini files,
-                           array from POPPY, or dictionary of the same form as the output
+    :param segment_values: str, list. Can be .PTT111, .ini files or a list with piston, tip,
+                           tilt values in a tuple for each segment. For the list, the first
+                           element is the center or top of the innermost ring of the pupil,
+                           and subsequent elements continue up and/or clockwise around the
+                           pupil (see README for more information)
     :param apply_flat_map: Apply a flat map in addition to the data.
 
     :return: SegmentedDmCommand object representing the command dictionary.
     """
-    dm_command_obj = SegmentedDmCommand(apply_flat_map=apply_flat_map, config_id=config_id)
+    dm_command_obj = SegmentedDmCommand(apply_flat_map=apply_flat_map, dm_config_id=dm_config_id)
     dm_command_obj.read_new_command(segment_values)
 
     return dm_command_obj
 
 
 ## POPPY
-def poppy_numbering():
+def round_ptt_list(ptt_list, decimals=3):
     """
-    Numbering of the pupil in POPPY. Specifically for a 37 segment Iris AO
+    Make sure that the PTT coefficients are rounded to a reasonable number of decimals
+
+    :param ptt_arr: list, of tuples existing of piston, tip, tilt, values for each
+                    segment in a pupil
     """
-    return np.arange(163)
+    return [(np.round(ptt[0], decimals), np.round(ptt[1], decimals),
+             np.round(ptt[2], decimals)) for ptt in ptt_list]
 
 
-def match_ptt_values(ptt_arr, decimals=3):
+def convert_ptt_list(ptt_list, tip_factor, tilt_factor, starting_units, ending_units):
     """
-    Make sure that the PTT coefficients are in the correct order for what is expected
-    on the IrisAO and are rounded to a reasonable number of decimals
+    Convert the PTT list to or from Poppy and the segmented DM.
 
-    :param ptt_arr: ndarray or list, of tuples existing of piston, tip, tilt,
-                    values for each segment in a pupil
+    Note that this has been created for the IrisAO segmented DMs, therefore
+    the tip and tilt values are swapped with what Poppy desginates.
+
+    Poppy to segmented DM:
+    - tip_factor = -1
+    - tilt_facotr = 1
+    - starting_units = (u.m, u.rad, u.rad)
+    - ending_units = dm_ptt_units from the config.ini file
+
+    Segmented DM to Poppy
+    - tip_factor = 1
+    - tilt_facotr = -1
+    - starting_units = dm_ptt_units from the config.ini file
+    - ending_units = (u.m, u.rad, u.rad)
+
     """
-    return [(np.round(ptt[0], decimals), -1*np.round(ptt[2], decimals),
-             np.round(ptt[1], decimals)) for ptt in ptt_arr]
+    converted = [(ptt[0]*(starting_units[0]).to(ending_units[0]),
+                  tip_factor*ptt[2]*(starting_units[2]).to(ending_units[2]),
+                  tilt_factor*ptt[1]*(starting_units[1]).to(ending_units[1])) for ptt in ptt_list]
+    return converted
 
 
 def get_wavefront_from_coeffs(basis, coeff_array):
@@ -189,8 +200,7 @@ def get_wavefront_from_coeffs(basis, coeff_array):
     the per-segment wavefront based on the global coefficients given and the basis
     created.
 
-    :params basis: POPPY Segment_PTT_Basis object, basis created that represents
-                   pupil
+    :params basis: POPPY Segment_PTT_Basis object, basis created that represents pupil
     :params coeff_array: array, per-segment array of piston, tip, tilt values for
                          the pupil described by basis
 
@@ -205,27 +215,41 @@ class SegmentedAperture():
     Create a segmented aperture with Poppy using the parameters for the testbed
     and segmented DM from the config.ini file.
 
-    :param dm_config_id: str, name of the section in the config_id where information
+    To create an aperture, with the config.ini file loaded, run:
+        segmented_aperture_obj = SegmentedAperture()
+        my_aperture = segmented_aperture_obj.create_aperture()
+
+    :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found. Default: 'iris_ao'
-    :param laser_config_id: str, name of the section in the config_id where information
+    :param laser_config_id: str, name of the section in the config_ini file where information
                          regarding the laser can be found. Default: 'thorlabs_source_mcls1'
+
+    :attribute wavelength: int, wavelength of the laser being used
+    :attribute outer_ring_corners: bool, whether or not the segmented aperture includes
+                                   the corner segments on the outer-most ring. If True,
+                                   corner segments are included. If False, they are not
+    :attribute center_segment: bool, whether of not the segmented aperture includes the
+                               center segment. If True, the center segment is included.
+                               If False, it is not.
+    :attribute flat_to_flat: float, physical distance from flat to flat side of DM segment
+    :attribute gap: int, physical distance between DM segments
+    :attribute num_segs_in_pupil: int, number of segments included in the aperture
     """
     def __init__(self, dm_config_id='iris_ao',
                  laser_config_id='thorlabs_source_mcls1'):
-
         # Parameters specific to testbed setup being used
-        self.wavelength = (CONFIG_INI.getint(laser_config_id, 'lambda_nm')*u.nm)
+        self.wavelength = CONFIG_INI.getint(laser_config_id, 'lambda_nm')*u.nm
 
         # Parameters specifc to the aperture and segmented DM being used
         self.outer_ring_corners = CONFIG_INI.getboolean(dm_config_id, 'include_outer_ring_corners')
         self.center_segment = CONFIG_INI.getboolean(dm_config_id, 'include_center_segment')
         self.flat_to_flat = CONFIG_INI.getfloat(dm_config_id, 'flat_to_flat_mm') * u.mm
         self.gap = CONFIG_INI.getfloat(dm_config_id, 'gap_um') * u.micron
-        self.num_segs_in_pupil = CONFIG_INI.getint('iris_ao', 'active_number_of_segments')
+        self.num_segs_in_pupil = CONFIG_INI.getint(dm_config_id, 'active_number_of_segments')
 
         # Get the specific segments
-        self.num_rings = self.get_number_of_rings()
-        self.segment_list = self.get_segment_list()
+        self._num_rings = self.get_number_of_rings()
+        self._segment_list = self.get_segment_list()
 
 
     def create_aperture(self):
@@ -234,11 +258,11 @@ class SegmentedAperture():
 
         :returns: A Poppy HexSegmentedDeformableMirror object for this aperture
         """
-        aperture = poppy.dms.HexSegmentedDeformableMirror(name='Iris DM',
-                                                          rings=self.num_rings,
+        aperture = poppy.dms.HexSegmentedDeformableMirror(name='Segmented DM',
+                                                          rings=self._num_rings,
                                                           flattoflat=self.flat_to_flat,
                                                           gap=self.gap,
-                                                          segmentlist=self.segment_list)
+                                                          segmentlist=self._segment_list)
         return aperture
 
 
@@ -251,14 +275,14 @@ class SegmentedAperture():
         :param num_rings: int, The number of rings in your pupil
         :return: list, the list of segments
         """
-        num_segs = self.number_segments_in_aperture(self.num_rings)
+        num_segs = self.number_segments_in_aperture(self._num_rings)
         seglist = np.arange(num_segs)
 
         if not self.outer_ring_corners:
-            inner_segs = seglist[:(num_segs-6*self.num_rings)]
-            outer_segs = seglist[(num_segs-6*self.num_rings):]
+            inner_segs = seglist[:(num_segs-6*self._num_rings)]
+            outer_segs = seglist[(num_segs-6*self._num_rings):]
             outer_segs = np.delete(outer_segs, np.arange(0, outer_segs.size,
-                                                         self.num_rings)) # delete corner segs
+                                                         self._num_rings)) # delete corner segs
             seglist = np.concatenate((inner_segs, outer_segs))
 
         if not self.center_segment:
@@ -320,34 +344,52 @@ class SegmentedAperture():
 class PoppySegmentedCommand(SegmentedAperture):
     """
     Create a segement values array (and dictionary) (in POPPY: wavefront error) using
-    POPPY for your pupil. This is currently limited to global shapes. The out put is
-    either a dictionary of piston, tip, tilt for each segment.
+    POPPY for your pupil. This is currently limited to global shapes. The output is
+    a list of piston, tip, tilt  values with units of (um, mrad, mrad), respectively,
+    for each segment.
 
     This class inherits the SegmentedAperture class.
 
-    To use to get command for the Iris AO:
+    To use to get command for the segmented DM:
       poppy_obj = PoppySegmentedCommand(global_coefficients)
-      command_dict = poppy_obj.to_dm_array()
-      iris_command_obj = segmented_dm_command.load_command(command_dict)
+      command = poppy_obj.to_dm_list()
+
+    The method .to_dm_list() will place the command in the correct units and can then
+    be used as input to load_command or be used with the DisplayCommand class.
 
     :param global_coefficients: list of global zernike coefficients in the form
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
+
+    :attribute radius: float, half of the flat-to-flat distance of each segment
+    :attribute num_terms: int, number of zernike terms to be included (3 x number of segments)
+    :attribute dm_command_units: list, the units the piston, tip, tilt (respecitvely)
+                                 values when coming from the DM or DM command
+    :attribute global_coefficents: list of global zernike coefficients in the form
+                                [piston, tip, tilt, defocus, ...] (Noll convention)
+    :attribute basis: poppy.zernike.Segment_PTT_Basis object, basis based on the characteristics
+                      of the segmented DM being used
+    :attribute list of coefficients: list of piston, tip, tilt coefficients in units of u, rad, rad
     """
-    def __init__(self, global_coefficients, convert_array_to_iris_units=True,
+    def __init__(self, global_coefficients,
                  dm_config_id='iris_ao', laser_config_id='thorlabs_source_mcls1'):
+        # Initilize parent class
         SegmentedAperture.__init__(self, dm_config_id=dm_config_id, laser_config_id=laser_config_id)
 
         self.radius = (self.flat_to_flat/2).to(u.m)
-        self.num_terms = (self.num_segs_in_pupil - 1) * 3
+        self.num_terms = (self.num_segs_in_pupil) * 3
+
+        # Grab the units of the DM for the piston, tip, tilt values to convert to
+        dm_command_units = CONFIG_INI.get(dm_config_id, 'dm_ptt_units').split(',')
+        self.dm_command_units = [u.Unit(dm_command_units[0]), u.Unit(dm_command_units[1]),
+                                 u.Unit(dm_command_units[2])]
 
         self.global_coefficients = global_coefficients
-        self.convert_array_to_iris_units = convert_array_to_iris_units
 
         # Create the specific basis for this pupil
         self.basis = self.create_ptt_basis()
 
         # Create array of coefficients
-        self.array_of_coefficients = self.get_array_from_global()
+        self.list_of_coefficients = self.get_array_from_global()
 
 
     def create_ptt_basis(self):
@@ -356,10 +398,10 @@ class PoppySegmentedCommand(SegmentedAperture):
 
         :return: Poppy Segment_PTT_Basis object for the specified pupil
         """
-        pttbasis = poppy.zernike.Segment_PTT_Basis(rings=self.num_rings,
+        pttbasis = poppy.zernike.Segment_PTT_Basis(rings=self._num_rings,
                                                    flattoflat=self.flat_to_flat,
                                                    gap=self.gap,
-                                                   segmentlist=self.segment_list)
+                                                   segmentlist=self._segment_list)
         return pttbasis
 
 
@@ -392,7 +434,7 @@ class PoppySegmentedCommand(SegmentedAperture):
         """
         coeff_array = poppy.zernike.opd_expand_segments(wavefront, nterms=self.num_terms,
                                                         basis=self.basis)
-        coeff_array = np.reshape(coeff_array, (self.num_segs_in_pupil - 1, 3))
+        coeff_array = np.reshape(coeff_array, (self.num_segs_in_pupil, 3))
         return coeff_array
 
 
@@ -408,14 +450,16 @@ class PoppySegmentedCommand(SegmentedAperture):
         return coeffs_array
 
 
-    def to_dm_array(self):
+    def to_dm_list(self):
         """
         Convert the array into an array that can be passed to the SegmentDmCommand
         """
-        input_array = self.array_of_coefficients
-        if self.convert_array_to_iris_units:
-            input_array = iris_util.convert_array(input_array)
-        coeffs_array = match_ptt_values(input_array) # Only okay if it goes through SegmentedDmCommand first
+        input_array = self.list_of_coefficients
+        # Convert from Poppy's m, rad, rad to the DM units
+        input_array = convert_ptt_list(input_array, tip_factor=-1, tilt_factor=1,
+                                       starting_units=(u.m, u.rad, u.rad),
+                                       ending_units=self.dm_command_units)
+        coeffs_array =  round_ptt_list(input_array)
 
         return coeffs_array
 
@@ -434,14 +478,18 @@ class DisplayCommand(SegmentedAperture):
     :param laser_config_id: str, name of the section in the config_id where information
                          regarding the laser can be found. Default: 'thorlabs_source_mcls1'
 
-    :attr ptt_list:list, list of piston, tip, tilt values for each segment in aperture
-    :attr out_dir: str, where to save figures
-    :attr instrument_fov: int, The field of view of the camera being used
-    :attr aperture: poppy.dms.HexSegmentedDeformableMirror object
+    :attribute ptt_list: list, list of piston, tip, tilt values for each segment in aperture.
+                    This list has units of (um, mrad, mrad)
+    :attribute out_dir: str, where to save figures
+    :attribute dm_command_units: list, the units the piston, tip, tilt (respecitvely)
+                                 values when coming from the DM or DM command
+    :attribute instrument_fov: int, The field of view of the camera being used
+    :attribute aperture: poppy.dms.HexSegmentedDeformableMirror object
 
     """
     def __init__(self, ptt_list, out_dir='', dm_config_id='iris_ao',
                  laser_config_id='thorlabs_source_mcls1', testbed_config_id='testbed'):
+        # Initilize parent class
         SegmentedAperture.__init__(self, dm_config_id=dm_config_id, laser_config_id=laser_config_id)
         if ptt_list is None:
             raise ValueError('Your list of Piston, Tip, Tilt values cannot be None')
@@ -450,8 +498,13 @@ class DisplayCommand(SegmentedAperture):
         self.ptt_list = ptt_list
         self.out_dir = out_dir
 
+        # Grab the units of the DM for the piston, tip, tilt values to convert to
+        dm_command_units = CONFIG_INI.get(dm_config_id, 'dm_ptt_units').split(',')
+        self.dm_command_units = [u.Unit(dm_command_units[0]), u.Unit(dm_command_units[1]),
+                                 u.Unit(dm_command_units[2])]
+
         # Grab the FOV of the instrument from the config file
-        self.instrument_fov = (CONFIG_INI.getint(testbed_config_id, 'fov'))
+        self.instrument_fov = CONFIG_INI.getint(testbed_config_id, 'fov')
 
         # Create the aperture and apply the shape
         self.aperture = self.create_aperture()
@@ -462,13 +515,14 @@ class DisplayCommand(SegmentedAperture):
         """
         Put a global wavefront on the Iris AO, from an Iris AO dict input wavefront map.
         """
-        matched_ptt_list = match_ptt_values(self.ptt_list) # take care of the tip/tilt swap in poppy
+        # Convert the PTT list from DM to Poppy
+        converted_list = convert_ptt_list(self.ptt_list, tip_factor=1, tilt_factor=-1,
+                                          starting_units=self.dm_command_units,
+                                          ending_units=(u.m, u.rad, u.rad))
 
-        for seg, values in zip(self.aperture.segmentlist, matched_ptt_list):
+        for seg, values in zip(self.aperture.segmentlist, converted_list):
             # conversion from um and mrad to m and rad
-            self.aperture.set_actuator(seg, values[0]*(u.um).to(u.m),
-                                       values[1]*(u.mrad).to(u.rad),
-                                       values[2]*(u.mrad).to(u.rad))
+            self.aperture.set_actuator(seg, values[0], values[1], values[2])
 
 
     def display(self, display_wavefront=True, display_psf=True):
