@@ -10,17 +10,17 @@ import numpy as np
 from catkit.config import CONFIG_INI
 
 
-def iris_num_segments():
+def iris_num_segments(dm_config_id='iris_ao'):
     """Number of segments in your Iris AO"""
-    return CONFIG_INI.getint('iris_ao', 'total_number_of_segments')
+    return CONFIG_INI.getint(dm_config_id, 'total_number_of_segments')
 
 
-def iris_pupil_naming():
+def iris_pupil_naming(dm_config_id='iris_ao'):
     """Naming of the Iris AO pupil starting at the center of the pupil and working
     outward in a clockwise direction. This is dependent on your IRISAO and the number
     of segments it has. This module has not yet been tested for the PTT489
     IrisAO model though it supports up to 163 segments."""
-    num_segs = iris_num_segments()
+    num_segs = iris_num_segments(dm_config_id)
     seg_names = np.concatenate((np.array([1, 2]), np.flip(np.arange(3, 8)),
                                 np.array([8]), np.flip(np.arange(9, 20)),
                                 np.array([20]), np.flip(np.arange(21, 38)),
@@ -156,13 +156,13 @@ def write_ini(data, path, dm_config_id='iris_ao', mirror_serial=None, driver_ser
     config.optionxform = str   # keep capital letters
 
     config.add_section('Param')
-    config.set('Param', 'nbSegment', str(iris_num_segments()))
+    config.set('Param', 'nbSegment', str(iris_num_segments(dm_config_id)))
 
     config.add_section('SerialNb')
     config.set('SerialNb', 'mirrorSerial', mirror_serial)
     config.set('SerialNb', 'driverSerial', driver_serial)
 
-    for i in iris_pupil_naming():
+    for i in iris_pupil_naming(dm_config_id):
         section = 'Segment{}'.format(i)
         config.add_section(section)
         # If the segment number is present in the dictionary
@@ -387,23 +387,22 @@ def read_segment_values(segment_values):
             {seg:(piston, tip, tilt)}
     With units of : ([um], [mrad], [mrad])
 
-    See the README for the Iris AO for more details.
+    See the README for the semented dm for more details.
 
     - .PTT111/.PTT489 file: File format of the segments values coming out of the IrisAO GUI
     - .ini file: File format of segments values that gets sent to the IrisAO controls
     - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
 
-    :param segment_values: str, array. Can be .PTT*, .ini files or array where the first
-                           element of the array is the center of the pupil and subsequent
-                           elements continue up and clockwise around the pupil (see README
-                           for more information) of the form {seg: (piston, tip, tilt)}
+    :param segment_values: str, list. Can be .PTT111, .ini files or a list with piston, tip,
+                           tilt values in a tuple for each segment. For the list, the first
+                           element is the center or top of the innermost ring of the pupil,
+                           and subsequent elements continue up and/or clockwise around the
+                           pupil (see README for more information)
 
-    :return: list, list, PTT tuples in list/array of the form {seg: (piston, tip, tilt)}
-                         where the first element of the array is the center of the pupil
-                         and subsequent elements continue up and clockwise around the pupil,
-                         and an optional list of segment names as they relate to the IrisAO.
-                         The list segment_names is only returned in the case of segment_values
-                         being a .ini or .PTT* file, otherwise segment_names is None.
+    :return: list, list, PTT tuples in list/array of the form (piston, tip, tilt)
+                         the first element is the center or top of the innermost ring of
+                         the pupil, and subsequent elements continue up and/or clockwise
+                         around the pupil (see README for more information)
     """
     # Read in file
     if segment_values is None:
