@@ -64,6 +64,10 @@ class Experiment(ABC):
                     self.log.critical(errmessage)
                     raise SafetyException(errmessage)
             self.log.info("Safety tests passed!")
+
+            # Initialize experiment output path. Do this here so the output path is available in the parent process
+            self.init_experiment_path()
+
             self.log.info("Creating separate process to run experiment...")
             # Spin off and start the process to run the experiment.
             experiment_process = Process(target=self.run_experiment)
@@ -118,7 +122,7 @@ class Experiment(ABC):
         Do not override.
         """
         try:
-            self.init_experiment_path_and_log()
+            self.init_experiment_log()
             self.experiment()
         except KeyboardInterrupt:
             self.log.warn("Child process: caught ctrl-c, raising exception.")
@@ -144,8 +148,8 @@ class Experiment(ABC):
                 return True
         return False
 
-    def init_experiment_path_and_log(self):
-        """Set up experiment output path and initialize log writing to there.
+    def init_experiment_path(self):
+        """Set up experiment output.
         Called from start() prior to experiment()
 
         Do not override.
@@ -156,5 +160,12 @@ class Experiment(ABC):
 
         if self.output_path is None:
             self.output_path = hicat.util.create_data_path(suffix=self.suffix)
+
+    def init_experiment_log(self):
+        """ Initialize log writing.
+        Called from run_experiment() prior to experiment()
+
+        Do not override.
+        """
 
         hicat.util.setup_hicat_logging(self.output_path, self.suffix)
