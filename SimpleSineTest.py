@@ -5,6 +5,7 @@ import os
 from catkit.catkit_types import quantity, units, SinSpecification, FpmPosition, LyotStopPosition, \
     ImageCentering  # noqa: E402
 from catkit.hardware.boston.sin_command import sin_command  # noqa: E402
+from catkit.hardware.boston.commands import flat_command
 from hicat.config import CONFIG_INI  # noqa: E402
 from hicat.experiments.Experiment import Experiment  # noqa: E402
 from hicat.hardware import testbed  # noqa: E402
@@ -37,11 +38,36 @@ class SimpleSineTest(Experiment):
         # Get DM translation settings from config file
         dm_translation_x_microns = int(1e6 * CONFIG_INI.getfloat('boston_kilo952', 'dm2_translation_x'))
         dm_translation_y_microns = int(1e6 * CONFIG_INI.getfloat('boston_kilo952', 'dm2_translation_y'))
+
+        # if we are running in simulation mode, create subdirectory with DM misalignment information
         subdirectory = f'x={dm_translation_x_microns}_y={dm_translation_y_microns}'
 
-        # Loop over everything
-        for ncyc, angle, phase_shift in params:
-            with testbed.dm_controller() as dm:
+        with testbed.dm_controller() as dm:
+            # First take an image with DMs flat as the baseline, for background subtraction of the rest of the PSF
+            # to measure the spots better
+            suffix_in = "both_dms_flat"
+            dm.apply_shape_to_both(flat_command(bias=False, flat_map=True), flat_command(bias=False, flat_map=True) )
+
+            saveto_path = hicat.util.create_data_path(initial_path=os.path.join(self.output_path, subdirectory),
+                                                      suffix=suffix_in)
+            testbed.run_hicat_imaging(exposure_time=quantity(50, units.millisecond),
+                                      num_exposures=1,
+                                      fpm_position=FpmPosition.coron,
+                                      lyot_stop_position=LyotStopPosition.in_beam,
+                                      file_mode=True,
+                                      raw_skip=False,
+                                      path=saveto_path,
+                                      exposure_set_name='coron',
+                                      filename='dms_flat',
+                                      auto_exposure_time=True,
+                                      centering=ImageCentering.custom_apodizer_spots,
+                                      auto_exposure_mask_size=5.5,
+                                      resume=False,
+                                      pipeline=True)
+
+
+            # Loop over everything
+            for ncyc, angle, phase_shift in params:
                 # Create sine waves with
                 # SinSpecification = namedtuple("SinSpecification", "angle, ncycles, peak_to_valley, phase")
                 ampl = 50  # amplitude in nm
