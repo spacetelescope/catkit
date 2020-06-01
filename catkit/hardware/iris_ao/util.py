@@ -78,35 +78,6 @@ def create_nan_list(number_of_segments):
     return [np.nan] * number_of_segments
 
 
-def create_custom_dictionary(segment_num, ptt_tuple, number_of_segments):
-    #TODO: update with new formatting
-    """
-    Create a dictionary that will change only specific segments
-
-    :param segment_num: int, or list of ints, segments to be commanded
-    :param ptt_tuple: tuple, or list of tuples, the piston-tip-tilt tuple to be applied
-                      to the corresponding segment_num.
-    :param number_of_segments: int, number of active segments
-
-    :return command_dict: the dictionary that will be the command on the DM:
-                          {seg:(piston, tip, tilt)}
-    """
-    if not isinstance(segment_num, (list, np.ndarray)):
-        segment_num = [segment_num]
-
-    if not isinstance(ptt_tuple, (list, np.ndarray)):
-        ptt_tuple = [ptt_tuple]
-
-    if len(segment_num) != len(ptt_tuple):
-        raise ValueError("segment_num and ptt_tuple must be the same length")
-
-    command_dict = create_zero_dictionary(number_of_segments)
-    for seg, ptt in zip(segment_num, ptt_tuple):
-        command_dict[seg] = ptt
-
-    return command_dict
-
-
 def convert_dict_from_si(command_dict):
     """
     Take a wf dict and convert from SI (meters and radians) to microns and millirads
