@@ -23,13 +23,16 @@ class SimpleSineTest(Experiment):
     :param orientation_angles: list, rotation angles for the sine wave in degrees
     :param phase_shifts: list, phase between DM patterns in degrees - affects relative brightness of resulting speckles
     """
-    def __init__(self, cycles, orientation_angles, phase_shifts):
+    def __init__(self, cycles, orientation_angles, phase_shifts, exposure_time=None, num_exposures=20):
         super().__init__()
         self.name = 'Sine wave tests for DM alignment'
         self.suffix = 'sine_wave_dm_alignment_tests'
         self.cycles = cycles
         self.orientation_angles = orientation_angles
         self.phase_shifts = phase_shifts
+        self.exposure_time = exposure_time
+        self.auto_expose = exposure_time is None
+        self.num_exposures = num_exposures
 
     def experiment(self):
         # Get combinations of parameters
@@ -50,8 +53,8 @@ class SimpleSineTest(Experiment):
 
             saveto_path = hicat.util.create_data_path(initial_path=os.path.join(self.output_path, subdirectory),
                                                       suffix=suffix_in)
-            testbed.run_hicat_imaging(exposure_time=quantity(50, units.millisecond),
-                                      num_exposures=1,
+            testbed.run_hicat_imaging(exposure_time=self.exposure_time,
+                                      num_exposures=self.num_exposures,
                                       fpm_position=FpmPosition.coron,
                                       lyot_stop_position=LyotStopPosition.in_beam,
                                       file_mode=True,
@@ -59,7 +62,7 @@ class SimpleSineTest(Experiment):
                                       path=saveto_path,
                                       exposure_set_name='coron',
                                       filename='dms_flat',
-                                      auto_exposure_time=True,
+                                      auto_exposure_time=self.auto_expose,
                                       centering=ImageCentering.custom_apodizer_spots,
                                       auto_exposure_mask_size=5.5,
                                       resume=False,
@@ -96,8 +99,8 @@ class SimpleSineTest(Experiment):
                 dm.apply_shape(sin_command_object_dm2, dm_num=2)
 
                 # Take images
-                testbed.run_hicat_imaging(exposure_time=quantity(50, units.millisecond),
-                                          num_exposures=1,
+                testbed.run_hicat_imaging(exposure_time=self.exposure_time,
+                                          num_exposures=self.num_exposures,
                                           fpm_position=FpmPosition.coron,
                                           lyot_stop_position=LyotStopPosition.in_beam,
                                           file_mode=True,
@@ -105,7 +108,7 @@ class SimpleSineTest(Experiment):
                                           path=saveto_path,
                                           exposure_set_name='coron',
                                           filename=sin_file_name_dm1,
-                                          auto_expose=True,
+                                          auto_expose=True=self.auto_expose,
                                           centering=ImageCentering.custom_apodizer_spots,
                                           auto_exposure_mask_size=5.5,
                                           resume=False,
