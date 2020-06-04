@@ -482,7 +482,7 @@ class StrokeMinimization(Experiment):
         # define some other quantities for use in labeling plots
         iteration = len(self.mean_contrasts_pairwise)
         gamma = self.adjust_gamma(iteration) if self.auto_adjust_gamma else self.gamma
-        contrast_yaxis_min = min(10**(np.floor(np.log10(np.min(self.mean_contrasts_image)))-1), 1e-8)
+        contrast_yaxis_min = min(10**(np.floor(np.log10(np.nanmin(self.mean_contrasts_image)))-1), 1e-8)
         control_zone = np.abs(E_estimated) != 0
 
         fig, axes = plt.subplots(figsize=(20, 13), nrows=3, ncols=5,
