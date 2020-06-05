@@ -3,6 +3,8 @@ module for pixel sampling determination
 """
 import os
 
+import sys
+import subprocess
 from astropy.io import fits
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -37,33 +39,50 @@ def mtf_sampling(dirpath, im_path, threshold):
 	mtfmax = np.max(mtf)
 	mtf = mtf / mtfmax
 
-	plt.clf()
-	plt.imshow(mtf)
-	plt.title('Modulation transfer function (MTF)')
-	plt.savefig(os.path.join(mtf_dir, 'MTF.pdf'))
+	vmax = mtf.max()
+	vmin = vmax/1e6
+	norm = LogNorm(vmin=vmin, vmax=vmax)
+
+	fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(12,5))
+	axes[0].imshow(mtf, norm=norm)
+	axes[0].set_title('Modulation transfer function (MTF)')
 
 	bg_zone = mtf[1:int(imsize/8), 1:int(imsize/8)]
 	med = np.median(bg_zone)
 	noise = np.std(bg_zone)	
 	mask = np.ones_like(mtf)
 	bkgr = np.where(mtf < (med + threshold*noise))
+
+	axes[0].set_xlabel(f"Estimated background noise std dev: {noise:.4g}" )
 	mask[bkgr] = 0
 
-	plt.clf()
-	plt.imshow(mask)
-	plt.savefig(os.path.join(mtf_dir, 'mtf_support.pdf'))
+	# draw contour in alternating colors to ensure reasonable contrast
+	axes[0].contour(mask, alpha=0.5, colors=['orange'], linestyles='dotted', linewidths=[0.75])
+
+	axes[1].imshow(mask)
+	axes[1].set_title("MTF support")
+	axes[1].set_xlabel(f"with threshold = {threshold}")
+	#axes[1].savefig(os.path.join(mtf_dir, 'mtf_support.pdf'))
 	mtf_masked = mtf * mask
-	plt.clf()
-	plt.imshow(mtf_masked, norm=LogNorm())
-	plt.title('Modulation transfer function (MTF) Masked')
-	plt.savefig(os.path.join(mtf_dir, 'mtf_masked.pdf'))
+
+	axes[2].imshow(mtf_masked, norm=norm)
+	axes[2].set_title('Modulation transfer function (MTF) Masked')
 
 	area = np.count_nonzero(mtf_masked)
 	cutoff_eq = np.sqrt(area/np.pi)
 	sampling = float(imsize) / float(cutoff_eq)
 
+	fig.suptitle(f"MTF Measurement: {dirpath}\n\nSampling = {sampling:.4f}")
+
+	output_pdf = os.path.join(mtf_dir, 'mtf_results.pdf')
+	plt.savefig(output_pdf)
+
 	with open(os.path.join(mtf_dir, 'sampling_params.txt'), 'w') as f:
 		f.write('sampling: {}\n'.format(sampling))
 		f.write('threshold: {}'.format(threshold))
+
+	if sys.platform=='darwin':
+		# for convenience, open the PDF in a viewer
+		subprocess.call(['open', output_pdf])
 
 	return sampling
