@@ -142,3 +142,14 @@ class ApplyApodizerStrutsPoke(ApplyActuatorPattern):
                  559, 626, 692, 754, 812,  # top right
                  392, 325, 259, 197, 139,  # bottom left
                  389, 320, 252, 188, 128]  # bottom right
+
+class ApplyAsymmetricTestPattern(ApplyActuatorPattern):
+    """ Poke actuators in an asymmetric pattern that shows handedness and orientation of a DM in an unambiguous fashion
+
+    apply_to_both: bool, if True, dm_num will be ignored and the actuator pattern will be applied to both DMs simultaneously
+    dm_num: int, 1 or 2, which DM to apply the poke pattern to; will be ignored if apply_to_both=True
+    """
+    name = "Apply Asymmetric Test Pattern"
+    actuators = [493, 492, 459, 458, 789, 788, 759, 758, 193, 192, 163, 162, 502, 501, 468, 467, 728,
+                 727, 696, 695, 663, 662, 818, 817, 770, 769, 768, 767, 766, 737, 736, 735, 738, 739]
+

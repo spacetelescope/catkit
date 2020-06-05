@@ -57,7 +57,7 @@ class CalculateSampling(Experiment):
                 cal_image, header = testbed.run_hicat_imaging(direct_exp_time_estimate, num_exposures, FpmPosition.direct,
                                                       path=self.output_path, exposure_set_name="direct",
                                                       filename=flat_file_name, camera_type=self.camera_type,
-                                                      pipeline=True, return_pipeline_metadata=True
+                                                      pipeline=True,
                                                       **self.kwargs)
 
         cal_file_path = header["PATH"]
