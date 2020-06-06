@@ -291,36 +291,17 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                        'color_wheel': color_wheel,
                        'nd_wheel': nd_wheel}
 
-            # Calculate flux attenuation factor (involves taking images)
-            # For coronagraphic images, this factor is 1 by definition
-            if not sim and CONFIG_INI.get('testbed', 'laser_source') == 'light_source_assembly':
-
-                # Get optimized exposure times for photometry based on whether apodizer is used or not
-                if CONFIG_INI.get('testbed', 'apodizer') == 'no_apodizer':
-                    exp_time_direct_flux_norm = CONFIG_INI.getfloat('calibration', 'flux_norm_exp_time_direct_clc')
-                    exp_time_coron_flux_norm = exp_time_direct_flux_norm / 20    # the currenlty used ND filter for coron ("9_percent") attenuates by about a facor of 10
-                else:
-                    exp_time_direct_flux_norm = CONFIG_INI.getfloat('calibration', 'flux_norm_exp_time_direct_aplc') #TODO: revisit this when in APLC mode on hardware (HiCAT-764)
-                    exp_time_coron_flux_norm = exp_time_direct_flux_norm / 10
-
-                # TODO: Add file_mode and raw_skip params to this func. Might we always want to save these?
-                flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=self.wavelengths,
-                                                                         exp_dir=exp_time_direct_flux_norm,
-                                                                         exp_coron=exp_time_coron_flux_norm,
-                                                                         out_path=self.output_path,
-                                                                         nd_direct=self.nd_direct,
-                                                                         nd_coron=self.nd_coron,
-                                                                         devices=devices,
-                                                                         dm1_act=self.dm1_actuators,
-                                                                         dm2_act=self.dm2_actuators,
-                                                                         num_exp=self.num_exposures,
-                                                                         file_mode=self.file_mode,
-                                                                         raw_skip=self.raw_skip)
-            else:
-                flux_norm_dir = {}
-                for wavelength in self.wavelengths:
-                    flux_norm_dir[wavelength] = 1
-            self.log.info("Flux normalization factors are: {}".format(flux_norm_dir))
+            # Calculate flux attenuation factor between direct+ND and coronagraphic images
+            flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=self.wavelengths,
+                                                                     out_path=self.output_path,
+                                                                     nd_direct=self.nd_direct,
+                                                                     nd_coron=self.nd_coron,
+                                                                     devices=devices,
+                                                                     dm1_act=self.dm1_actuators,
+                                                                     dm2_act=self.dm2_actuators,
+                                                                     num_exp=self.num_exposures,
+                                                                     file_mode=self.file_mode,
+                                                                     raw_skip=self.raw_skip)
 
             # Take "before" images
             initial_path = os.path.join(self.output_path, 'before')
