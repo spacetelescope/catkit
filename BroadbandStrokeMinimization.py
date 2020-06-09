@@ -197,30 +197,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         print("LOGGING: "+self.output_path+"  "+self.suffix)
 
         # Before doing anything more interesting, save a copy of the probes to disk
-    # TODO: if self.file_mode: HICAT-817
+        # TODO: if self.file_mode: HICAT-817
         #self.save_probes()
-
-    def collect_metrics(self, devices):
-        """
-        Measure temperature and humidity and save those values with most recent image contrast.
-        :param devices: dict of HiCAT devices
-        :return:
-         """
-
-        filename = os.path.join(self.output_path, "metrics.csv")
-        additional_columns = {"mean image contrast": self.mean_contrasts_image[-1]}
-        timestamp, temp, humidity = hicat.util.track_temp_humidity(device=devices['temp_sensor'],
-                                                                       filename=filename,
-                                                                       additional_columns=additional_columns,
-                                                                       ignore_errors=True)
-
-        self.timestamp.append(timestamp)
-        self.temp.append(temp)
-        self.humidity.append(humidity)
-
-        if temp is None or humidity is None:
-            self.log.exception("Failed to get temp & humidity data")
-
 
     def take_exposure(self, devices, exposure_type, wavelength, initial_path, flux_attenuation_factor=1., suffix=None,
                       dm1_actuators=None, dm2_actuators=None, exposure_time=None):
