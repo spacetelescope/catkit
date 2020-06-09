@@ -338,6 +338,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             exposure_kwargs = {'initial_path': initial_path,
                                'num_exposures': self.num_exposures}
 
+
+
             # In the broadband code, many quantities need to be either lists per wavelength or dicts per wavelength
             # In this implementation we choose dicts.
             direct_maxes = {}
@@ -529,6 +531,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
                 # Save more data for plotting
                 self.mean_contrasts_image.append(np.mean(broadband_image_after[self.dark_zone]))  # Mean dark-zone contrast after correction
+                self.collect_metrics(devices)
                 self.measured_contrast_deltas.append(self.mean_contrasts_image[-1] - self.mean_contrasts_image[-2])  # Change in measured contrast
                 self.log.info("===> Measured contrast drop this iteration: {}".format(self.measured_contrast_deltas[-1]))
 
