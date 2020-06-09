@@ -9,6 +9,7 @@ import os
 import glob
 from astropy.io import fits
 import hcipy
+import hicat.util
 
 from hicat.control.target_acq import TargetAcquisition
 from hicat.hardware import testbed
@@ -165,7 +166,12 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         self.prior_correction = np.zeros(stroke_min.num_actuators*2, float)
         self.git_label = util.git_description()
         self.perfect_knowledge_mode = perfect_knowledge_mode
-        self.run_ta = run_ta 
+        self.run_ta = run_ta
+
+        # Metrics
+        self.timestamp = []
+        self.temp = []
+        self.humidity = []
 
         if self.resume and self.auto_adjust_gamma:
             self.log.warning("Auto adjust gamma is not reliable with resume=True. Disabling auto adjust gamma.")
@@ -191,8 +197,30 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         print("LOGGING: "+self.output_path+"  "+self.suffix)
 
         # Before doing anything more interesting, save a copy of the probes to disk
-        # TODO: if self.file_mode: HICAT-817
+    # TODO: if self.file_mode: HICAT-817
         #self.save_probes()
+
+    def collect_metrics(self, devices):
+        """
+        Measure temperature and humidity and save those values with most recent image contrast.
+        :param devices: dict of HiCAT devices
+        :return:
+         """
+
+        filename = os.path.join(self.output_path, "metrics.csv")
+        additional_columns = {"mean image contrast": self.mean_contrasts_image[-1]}
+        timestamp, temp, humidity = hicat.util.track_temp_humidity(device=devices['temp_sensor'],
+                                                                       filename=filename,
+                                                                       additional_columns=additional_columns,
+                                                                       ignore_errors=True)
+
+        self.timestamp.append(timestamp)
+        self.temp.append(temp)
+        self.humidity.append(humidity)
+
+        if temp is None or humidity is None:
+            self.log.exception("Failed to get temp & humidity data")
+
 
     def take_exposure(self, devices, exposure_type, wavelength, initial_path, flux_attenuation_factor=1., suffix=None,
                       dm1_actuators=None, dm2_actuators=None, exposure_time=None):
@@ -278,6 +306,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 testbed.beam_dump() as beam_dump, \
                 testbed.imaging_camera() as cam, \
                 testbed.pupil_camera() as pupilcam, \
+                testbed.temp_sensor(ID=2) as temp_sensor, \
                 testbed.target_acquisition_camera() as ta_cam, \
                 testbed.color_wheel() as color_wheel, \
                 testbed.nd_wheel() as nd_wheel:
@@ -288,6 +317,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                        'beam_dump': beam_dump,
                        'imaging_camera': cam,
                        'pupil_camera': pupilcam,
+                       'temp_sensor': temp_sensor,
                        'color_wheel': color_wheel,
                        'nd_wheel': nd_wheel}
 
@@ -334,6 +364,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             # Set up plot writing infrastructure
             self.init_strokemin_plots()
             self.mean_contrasts_image.append(np.mean(broadband_image_before[self.dark_zone]))
+            self.collect_metrics(devices)
             
             # Instantiate TA Controller and run initial centering
             if self.run_ta:
