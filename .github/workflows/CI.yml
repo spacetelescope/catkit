@@ -2,6 +2,7 @@ name: catkit CI
 
 on:
   pull_request:
+    types: [ready_for_review]
     branches:
     - master
     - develop
