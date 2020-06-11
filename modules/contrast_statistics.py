@@ -16,6 +16,10 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     if type(filepath) == str:
         metrics_data = pandas.read_csv(filepath)
 
+    if 'iteration' not in metrics_data.columns:
+        metrics_data.sort_values(by='time stamp')
+        metrics_data['iteration'] = np.arange(0,len(metrics_data),1)
+
     contrast_fit = np.polyfit(metrics_data['iteration'], np.log(metrics_data[' mean image contrast']), 5)
     fit_1d = np.poly1d(contrast_fit)
     derivative_1d = np.polyder(fit_1d)
@@ -56,6 +60,10 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
 
     if type(filepath) == str:
         metrics_data = pandas.read_csv(filepath)
+
+    if 'iteration' not in metrics_data.columns:
+        metrics_data.sort_values(by='time stamp')
+        metrics_data['iteration'] = np.arange(0,len(metrics_data),1)
 
     if iteration_of_convergence is None:
         iteration_of_convergence, warning_flag = calculate_iteration_of_convergence(filepath)
