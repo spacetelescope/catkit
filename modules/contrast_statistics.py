@@ -89,14 +89,15 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax1.grid(True, which='both')
         ax1.legend()
 
-        ax2.set_yscale('log')
+        plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
         ax2.plot(converged_metrics['iteration'], converged_metrics[' mean image contrast'], c='g', marker='o',
                  alpha=0.6)
         ax2.axhline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.')
         ax2.axhline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
         ax2.set_xlabel('Iteration')
         ax2.set_ylabel('Contrast')
-        ax2.set_title('Post-Convergence Contrast')
+        ax2.set_title('Convergent Contrast')
         ax2.grid(True, which='both')
         ax2.legend()
 
@@ -122,7 +123,5 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
         ax4.legend()
 
-        plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.4, hspace=None)
         fig.savefig(os.path.join(os.path.split(filepath)[-2],'contrast_metrics.pdf'), dpi=300, bbox_inches='tight')
-        # print(os.path.join(os.path.split(filepath)[-2],'contrast_metrics.pdf'))
     return confidence_interval
