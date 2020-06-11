@@ -5,13 +5,13 @@ import os
 
 
 def calculate_iteration_of_convergence(metrics_data, slope_threshold=0.0008):
-    '''
+    """
     Calculate the iteration at which the contrast converges. Uses a slope estimate first. If this fails to converge,
     it simply returns n/2 (iteration at the halfway point) and throws a warning.
     :param metrics_data: The csv or df of data including iteration number and mean contrast (may inc. humidity & temp)
     :param slope_threshold: Threshold that slope must be below to be considered 'converged'
     :return: number of the iteration at which the slope *first* crosses the slope_threshold.
-    '''
+    """
     if type(metrics_data) == str:
         metrics_data = pandas.read_csv(metrics_data)
 
@@ -37,18 +37,18 @@ def ecdf(data):
     x = np.sort(data)
     n = x.size
     y = np.arange(1, n + 1) / n
-    return (x, y)
+    return x, y
 
 
 def calculate_confidence_interval(metrics_data, filepath='', iteration_of_convergence=None, generate_plots=True):
-    '''
+    """
     Calculates the conrtrast, c, where with 90% confidence, actual measured contrast will be below (better) than c.
     Using analytical assumption that mean contrast, µ + 1.28(sigma) is 90% confidence level.
     :type filepath: str
     :param metrics_data: The csv or df of data including iteration number and mean contrast (may inc. humidity & temp)
     :param iteration_of_convergence: Default=None, calculated in calculate_iteration_of_convergence
     :return: contrast value, c, that the actual measured contrast will be below (better) than c 90% of the time.
-    '''
+    """
     if type(metrics_data) == str:
         metrics_data = pandas.read_csv(metrics_data)
 
@@ -61,10 +61,9 @@ def calculate_confidence_interval(metrics_data, filepath='', iteration_of_conver
     mean = np.mean(converged_metrics[' mean image contrast'])
     std = np.std(converged_metrics[' mean image contrast'])
     n_samples = len(converged_metrics)
-
     confidence_interval = mean + 1.28 * std
 
-    if generate_plots == True:
+    if generate_plots:
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 4))
         fig.suptitle(os.path.split(filepath)[-1])
         ax1.axvline(iteration_of_convergence, label='Point of Convergence', c='g')
