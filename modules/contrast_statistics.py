@@ -57,7 +57,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     if type(filepath) == str:
         metrics_data = pandas.read_csv(filepath)
 
-    if iteration_of_convergence == None:
+    if iteration_of_convergence is None:
         iteration_of_convergence, warning_flag = calculate_iteration_of_convergence(filepath)
     elif type(iteration_of_convergence) == int:
         print(f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
