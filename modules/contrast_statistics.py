@@ -48,6 +48,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     """
     Calculates the contrast, c, where with 90% confidence, actual measured contrast will be below (better) than c.
     Using analytical assumption that mean contrast, µ + 1.28(sigma) is 90% confidence level.
+    Displays and saves four plots, with varying analysis, including statistical confidence interval plots.
     :param filepath: str path to The csv or df of data including iteration number and mean contrast
     :param iteration_of_convergence: Default=None, calculated in calculate_iteration_of_convergence
     :return: contrast value, c, that the actual measured contrast will be below (better) than c 90% of the time.
