@@ -19,6 +19,7 @@ from hicat.experiments.Experiment import Experiment
 from hicat.hardware import testbed
 import hicat.util
 from hicat.wfc_algorithms import stroke_min
+from hicat.experiments.modules import contrast_statistics
 
 
 class StrokeMinimization(Experiment):
@@ -369,8 +370,8 @@ class StrokeMinimization(Experiment):
                 est_incoherent = np.abs(image_before-np.abs(E_estimated)**2)
                 self.estimated_incoherent_backgrounds.append(np.mean(est_incoherent[self.dark_zone]))
 
-                # make diagnostic plot
-                self.show_strokemin_plot(image_before, image_after, self.dm1_actuators, self.dm2_actuators, E_estimated)
+                # make diagnostic plots
+                self.show_status_plots(image_before, image_after, self.dm1_actuators, self.dm2_actuators, E_estimated)
 
     def compute_correction(self, E_estimated, gamma, devices, exposure_kwargs, direct_image):
         """
@@ -457,6 +458,18 @@ class StrokeMinimization(Experiment):
         self.log.info("Diagnostic images will be saved to " + output_path)
         #  The hcipy.GifWriter() makes the correct dirs for us.
         self.movie_writer = hicat.plotting.animation.GifWriter(output_path, framerate=2, cleanup=False)
+
+    def show_status_plots(self, image_before, image_after, dm1_actuators, dm2_actuators, E_estimated):
+        """ Show one or more status plots after the completion of each iteration """
+
+        # Show multi-panel stroke min status plot
+        self.show_strokemin_plot(image_before, image_after, dm1_actuators, dm2_actuators, E_estimated)
+
+        # Show contrast convergence plot every 5th iteration, starting at iteraton 10.
+        # We don't have an iteration variable here but can easily infer it from the data arrays
+        iteration = len(self.mean_contrasts_pairwise)
+        if iteration > 10 and np.mod(iteration, 5)==0:
+            self.show_convergence_plot()
 
     def show_strokemin_plot(self, image_before, image_after, dm1_actuators, dm2_actuators, E_estimated):
         """ Make a nice diagnostic plot after each iteration of stroke minimization
@@ -650,6 +663,14 @@ class StrokeMinimization(Experiment):
         self.movie_writer.add_frame()
 
         plt.close()
+
+    def show_convergence_plot(self):
+        """ Show contrast convergence plot, based on saved contrast metrics
+
+        """
+        metrics_filename = os.path.join(self.output_path, "metrics.csv")
+
+        contrast_statistics.calculate_confidence_interval(metrics_filename, generate_plots=True)
 
     def restore_last_strokemin_dm_shapes(self, dm_command_dir_to_restore=None):
         """ Find most recent prior DM shapes and re-use them, if possible.

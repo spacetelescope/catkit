@@ -518,7 +518,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 self.estimated_incoherent_backgrounds.append(np.mean(est_incoherent[self.dark_zone]))  # Estimated incoherent background
 
                 # Make diagnostic plots
-                self.show_strokemin_plot(broadband_image_before, broadband_image_after, self.dm1_actuators, self.dm2_actuators, E_estimateds)
+                self.show_status_plots(broadband_image_before, broadband_image_after, self.dm1_actuators, self.dm2_actuators, E_estimateds)
 
     def compute_true_e_fields(self, E_estimateds, exposure_kwargs, initial_path, wavelength):
         """ Compute and save the true E-fields.  Only usable in simulation. """
