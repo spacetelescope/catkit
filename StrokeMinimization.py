@@ -468,7 +468,7 @@ class StrokeMinimization(Experiment):
         # Show contrast convergence plot every 5th iteration, starting at iteraton 10.
         # We don't have an iteration variable here but can easily infer it from the data arrays
         iteration = len(self.mean_contrasts_pairwise)
-        if iteration > 10 and np.mod(iteration, 5)==0:
+        if iteration >= 10 and np.mod(iteration, 5)==0:
             self.show_convergence_plot()
 
     def show_strokemin_plot(self, image_before, image_after, dm1_actuators, dm2_actuators, E_estimated):
