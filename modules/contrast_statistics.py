@@ -13,7 +13,7 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     :param slope_threshold: Threshold that slope must be below to be considered 'converged'
     :return: number of the iteration at which the slope *first* crosses the slope_threshold.
     """
-    if type(filepath) == str:
+    if isinstance(filepath, str):
         metrics_data = pandas.read_csv(filepath)
 
     if 'iteration' not in metrics_data.columns:
@@ -58,7 +58,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     :return: contrast value, c, that the actual measured contrast will be below (better) than c 90% of the time.
     """
 
-    if type(filepath) == str:
+    if isinstance(filepath,str):
         metrics_data = pandas.read_csv(filepath)
 
     if 'iteration' not in metrics_data.columns:
@@ -67,7 +67,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
 
     if iteration_of_convergence is None:
         iteration_of_convergence, warning_flag = calculate_iteration_of_convergence(filepath)
-    elif type(iteration_of_convergence) == int:
+    elif isinstance(iteration_of_convergence, int):
         logging.log(f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
 
     converged_metrics = metrics_data[metrics_data['iteration'] >= iteration_of_convergence]
