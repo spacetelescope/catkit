@@ -35,7 +35,7 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     elif len(convergence_metrics) >= 1:
         iteration_of_convergence = convergence_metrics['iteration'].iloc[0]
         warning_flag = False
-        logging.log(f"Slope threshold reached at iteration {iteration_of_convergence}")
+        logging.log('INFO',f"Slope threshold reached at iteration {iteration_of_convergence}")
 
     return iteration_of_convergence, warning_flag
 
@@ -68,7 +68,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     if iteration_of_convergence is None:
         iteration_of_convergence, warning_flag = calculate_iteration_of_convergence(filepath)
     elif isinstance(iteration_of_convergence, int):
-        logging.log(f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
+        logging.log('INFO',f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
 
     converged_metrics = metrics_data[metrics_data['iteration'] >= iteration_of_convergence]
     mean = np.mean(converged_metrics[' mean image contrast'])
