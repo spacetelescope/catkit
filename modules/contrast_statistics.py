@@ -3,6 +3,7 @@ import numpy as np
 import pandas
 import os
 import logging
+log = logging.getLogger(__name__)
 
 def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     """
@@ -29,13 +30,13 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     # Warning fix this: selects last half of data if no convergence
     if len(convergence_metrics) == 0:
         iteration_of_convergence = int(metrics_data['iteration'].iloc[-1] / 2)
-        logging.warning("Iterations do not converge to required slope threshold. Selecting last half of data, iteration"
+        log.warning("Iterations do not converge to required slope threshold. Selecting last half of data, iteration"
                         f" {iteration_of_convergence}.")
         warning_flag = True
     elif len(convergence_metrics) >= 1:
         iteration_of_convergence = convergence_metrics['iteration'].iloc[0]
         warning_flag = False
-        logging.log(1,f"Slope threshold reached at iteration {iteration_of_convergence}")
+        log.info(f"Slope threshold reached at iteration {iteration_of_convergence}")
 
     return iteration_of_convergence, warning_flag
 
@@ -68,7 +69,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     if iteration_of_convergence is None:
         iteration_of_convergence, warning_flag = calculate_iteration_of_convergence(filepath)
     elif isinstance(iteration_of_convergence, int):
-        logging.log(1,f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
+        log.info(f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
 
     converged_metrics = metrics_data[metrics_data['iteration'] >= iteration_of_convergence]
     mean = np.mean(converged_metrics[' mean image contrast'])
