@@ -35,7 +35,7 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     elif len(convergence_metrics) >= 1:
         iteration_of_convergence = convergence_metrics['iteration'].iloc[0]
         warning_flag = False
-        print(f"Slope threshold reached at iteration {iteration_of_convergence}")
+        logging.log(f"Slope threshold reached at iteration {iteration_of_convergence}")
 
     return iteration_of_convergence, warning_flag
 
@@ -68,7 +68,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     if iteration_of_convergence is None:
         iteration_of_convergence, warning_flag = calculate_iteration_of_convergence(filepath)
     elif type(iteration_of_convergence) == int:
-        print(f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
+        logging.log(f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
 
     converged_metrics = metrics_data[metrics_data['iteration'] >= iteration_of_convergence]
     mean = np.mean(converged_metrics[' mean image contrast'])
@@ -118,7 +118,6 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax3.set_title(f'Distribution of Contrast: {n_samples} iterations')
         plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
         ax3.legend()
-
 
         ecdf_x, ecdf_y = ecdf(converged_metrics[' mean image contrast'])
         ax4.plot(ecdf_x,ecdf_y,alpha=0.8)
