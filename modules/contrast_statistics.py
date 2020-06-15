@@ -14,8 +14,8 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     :param slope_threshold: Threshold that slope must be below to be considered 'converged'
     :return: number of the iteration at which the slope *first* crosses the slope_threshold.
     """
-    if isinstance(filepath, str):
-        metrics_data = pandas.read_csv(filepath)
+
+    metrics_data = load_metrics_data(filepath)
 
     if 'iteration' not in metrics_data.columns:
         metrics_data.sort_values(by='time stamp')
@@ -41,6 +41,19 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     return iteration_of_convergence, warning_flag
 
 
+def load_metrics_data(filepath):
+    """
+    Returns pandas dataframe given filepath or dataframe
+    :param filepath:
+    :return:
+    """
+    if isinstance(filepath,str):
+        metrics_data = pandas.read_csv(filepath)
+    elif isinstance(filepath,pandas.DataFrame):
+        metrics_data = filepath
+    return metrics_data
+
+
 def ecdf(data):
     """
     Compute Empirical Cumulative Distribution Function
@@ -63,8 +76,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     :return: contrast value, c, that the actual measured contrast will be below (better) than c 90% of the time.
     """
 
-    if isinstance(filepath,str):
-        metrics_data = pandas.read_csv(filepath)
+    metrics_data = load_metrics_data(filepath)
 
     if 'iteration' not in metrics_data.columns:
         metrics_data.sort_values(by='time stamp')
