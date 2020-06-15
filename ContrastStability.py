@@ -102,7 +102,7 @@ class ContrastStability(Experiment):
                 testbed.motor_controller() as motor_controller, \
                 testbed.beam_dump() as beam_dump, \
                 testbed.imaging_camera() as cam, \
-                testbed.temp_sensor(ID=2) as temp_sensor:
+                testbed.temp_sensor(config_id="aux_temperature_sensor") as temp_sensor:
             devices = {'laser': laser,
                        'dm': dm,
                        'motor_controller': motor_controller,

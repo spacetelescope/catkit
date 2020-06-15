@@ -51,7 +51,7 @@ class HumidityTemperatureTest(SafetyTest):
 
     def __init__(self):
         self.sensor = None
-        self.sensor = testbed.temp_sensor()
+        self.sensor = testbed.temp_sensor(config_id="safety_temperature_sensor")
 
     def check(self):
         for p in psutil.process_iter():

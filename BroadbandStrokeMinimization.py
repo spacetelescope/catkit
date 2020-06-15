@@ -284,7 +284,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 testbed.beam_dump() as beam_dump, \
                 testbed.imaging_camera() as cam, \
                 testbed.pupil_camera() as pupilcam, \
-                testbed.temp_sensor(ID=2) as temp_sensor, \
+                testbed.temp_sensor(config_id="aux_temperature_sensor") as temp_sensor, \
                 testbed.target_acquisition_camera() as ta_cam, \
                 testbed.color_wheel() as color_wheel, \
                 testbed.nd_wheel() as nd_wheel:
