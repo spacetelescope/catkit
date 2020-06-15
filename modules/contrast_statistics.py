@@ -76,6 +76,9 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     std = np.std(converged_metrics[' mean image contrast'])
     n_samples = len(converged_metrics)
     confidence_interval = mean + 1.28 * std
+    line_of_90 = int(.9 * n_samples - 1)
+    sorted_contrast = (converged_metrics[' mean image contrast'].sort_values(ascending=True, ignore_index=True)).copy()
+    empirical_confidence_interval = sorted_contrast[line_of_90]
 
     if generate_plots:
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 4))
@@ -90,7 +93,6 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax1.plot(converged_metrics['iteration'], converged_metrics[' mean image contrast'], c='g', marker='o',
                  alpha=0.6)
         ax1.axhline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
-        ax1.axhline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.')
         ax1.set_xlabel('Iteration')
         ax1.set_ylabel('Contrast')
         ax1.set_title('Contrast by Iteration')
@@ -99,10 +101,12 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax1.legend()
 
         plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
         ax2.plot(converged_metrics['iteration'], converged_metrics[' mean image contrast'], c='g', marker='o',
                  alpha=0.6)
-        ax2.axhline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.')
+        ax2.axhline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.',
+                    linewidth=1.0)
+        ax2.axhline(empirical_confidence_interval, label=f'90% Emp: {empirical_confidence_interval:.3}', c='orange',
+                    alpha=0.7, linestyle=(0, (5, 1)), linewidth=1.0)
         ax2.axhline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
         ax2.set_xlabel('Iteration')
         ax2.set_ylabel('Contrast')
@@ -111,7 +115,10 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax2.legend()
 
         ax3.hist(converged_metrics[' mean image contrast'], bins=30, ec='black', alpha=0.8)
-        ax3.axvline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.')
+        ax3.axvline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.',
+                    linewidth=1.2)
+        ax3.axvline(empirical_confidence_interval, label=f'90% Emp: {empirical_confidence_interval:.3}', c='orange',
+                    alpha=0.7, linestyle=(0, (5, 1)), linewidth=1.0)
         ax3.axvline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
         ax3.grid(True, which='both')
         ax3.set_xlabel('Contrast')
@@ -122,7 +129,10 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
 
         ecdf_x, ecdf_y = ecdf(converged_metrics[' mean image contrast'])
         ax4.plot(ecdf_x,ecdf_y,alpha=0.8)
-        ax4.axvline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.')
+        ax4.axvline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.',
+                    linewidth=1.0)
+        ax4.axvline(empirical_confidence_interval, label=f'90% Emp: {empirical_confidence_interval:.3}', c='orange',
+                    alpha=0.7, linestyle=(0, (5, 1)), linewidth=1.0)
         ax4.axvline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
         ax4.grid(True, which='both')
         ax4.set_xlabel('Contrast')
