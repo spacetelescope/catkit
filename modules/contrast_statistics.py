@@ -42,7 +42,11 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
 
 
 def ecdf(data):
-    """ Compute Empirical Cumulative Distribution Function """
+    """
+    Compute Empirical Cumulative Distribution Function
+    :param data: Distribution values
+    :return: Returns (x, y) in order to plot a distribution function, where x is sorted data, and y is probability.
+    """
     x = np.sort(data)
     n = x.size
     y = np.arange(1, n + 1) / n
