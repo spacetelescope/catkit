@@ -29,15 +29,23 @@ class SafetyTest(ABC):
 
 
 class UpsSafetyTest(SafetyTest):
+    """Queryable from the terminal with:
+        snmpwalk -v1 -c palapa 10.128.242.6 .1.3.6.1.4.1.534.1.3.5.0
+        snmpwalk -v1 -c public 192.168.192.20 .1.3.6.1.4.1.318.1.1.1.4.1.1.0
+        """
 
     name = "UPS Safety Test"
 
     # Create a SnmpUPS object to monitor the UPS.
-    ups = testbed.backup_power()
+    ups_list = testbed.backup_power()
 
     def check(self):
         safety_log.debug("Checking UPS power up")
-        return self.ups.is_power_ok(return_status_msg=True)
+        for ups in self.ups_list:
+            is_ok, message = ups.is_power_ok(return_status_msg=True)
+            if not is_ok:
+                return False, message
+        return True, "All UPS devices OK"
 
 
 class HumidityTemperatureTest(SafetyTest):
