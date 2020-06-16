@@ -2,7 +2,6 @@ import logging
 
 from pysnmp import hlapi
 from catkit.interfaces.BackupPower import BackupPower
-from catkit.config import CONFIG_INI
 
 """Implementation of the UPS using the BackupPower interface."""
 
@@ -11,13 +10,13 @@ class SnmpUps(BackupPower):
 
     log = logging.getLogger(__name__)
 
-    def __init__(self, config_id):
+    def __init__(self, config_id, ip, snmp_oid, pass_status, port=161, community="public"):
         self.config_id = config_id
-        self.ip = CONFIG_INI.get(self.config_id, "ip")
-        self.port = CONFIG_INI.getint(self.config_id, "port")
-        self.snmp_oid = CONFIG_INI.get(self.config_id, "snmp_oid")
-        self.community = CONFIG_INI.get(self.config_id, "community")
-        self.pass_status = CONFIG_INI.getint(self.config_id, "pass_status")
+        self.ip = ip
+        self.snmp_oid = snmp_oid
+        self.pass_status = pass_status
+        self.port = port
+        self.community = community
 
     def get_status(self):
         """Queries backup power and reports status. Returns whatever format the device uses."""
