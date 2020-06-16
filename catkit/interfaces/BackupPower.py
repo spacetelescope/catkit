@@ -4,9 +4,6 @@ from abc import ABC, abstractmethod
 
 
 class BackupPower(ABC):
-    def __init__(self, config_id, *args, **kwargs):
-        self.config_id = config_id
-
     # Abstract Methods.
     @abstractmethod
     def get_status(self):
