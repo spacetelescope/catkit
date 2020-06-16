@@ -2,32 +2,32 @@ import logging
 
 from pysnmp import hlapi
 from catkit.interfaces.BackupPower import BackupPower
-from catkit.config import CONFIG_INI
 
 """Implementation of the UPS using the BackupPower interface."""
 
 
 class SnmpUps(BackupPower):
-    """Queryable from the terminal with:
-    snmpwalk -v1 -c palapa 10.128.242.6 .1.3.6.1.4.1.534.1.3.5.0"""
 
     log = logging.getLogger(__name__)
 
-    def get_status(self):
-        ip = CONFIG_INI.get(self.config_id, "ip")
-        port = CONFIG_INI.getint(self.config_id, "port")
-        snmp_oid = CONFIG_INI.get(self.config_id, "snmp_oid")
-        community = CONFIG_INI.get(self.config_id, "community")
+    def __init__(self, config_id, ip, snmp_oid, pass_status, port=161, community="public"):
+        self.config_id = config_id
+        self.ip = ip
+        self.snmp_oid = snmp_oid
+        self.pass_status = pass_status
+        self.port = port
+        self.community = community
 
+    def get_status(self):
         """Queries backup power and reports status. Returns whatever format the device uses."""
         for (error_indication,
              error_status,
              error_index,
              var_binds) in hlapi.getCmd(hlapi.SnmpEngine(),
-                                        hlapi.CommunityData(community, mpModel=0),
-                                        hlapi.UdpTransportTarget((ip, port)),
+                                        hlapi.CommunityData(self.community, mpModel=0),
+                                        hlapi.UdpTransportTarget((self.ip, self.port)),
                                         hlapi.ContextData(),
-                                        hlapi.ObjectType(hlapi.ObjectIdentity(snmp_oid))):
+                                        hlapi.ObjectType(hlapi.ObjectIdentity(self.snmp_oid))):
             if error_indication or error_status:
                 raise Exception(f"Error communicating with the UPS: '{self.config_id}'.\n" +
                                 "Error Indication: " + str(error_indication) + "\n" +
@@ -41,23 +41,23 @@ class SnmpUps(BackupPower):
         self.log.info("checking SNMP power status")
         try:
             status = self.get_status()
-            result = False if status != 3 else True
+            result = status == self.pass_status
             if return_status_msg:
-                return result, self.__generate_status_message(status)
+                return result, self._generate_status_message(status)
             else:
                 return result
 
         except Exception as err:
             self.log.exception(err.message)
             if return_status_msg:
-                self.log.error("UPS failed safety test: SNMP interface request failed.")
-                return False, "UPS failed safety test: SNMP interface request failed."
+                error_message = f"{self.config_id} failed safety test: SNMP interface request failed."
+                self.log.error(error_message)
+                return False, error_message
             else:
                 return False
 
-    @staticmethod
-    def __generate_status_message(status):
-        if status == 3:
-            return "UPS passed safety test: A value of 3 was returned over the SNMP interface."
+    def _generate_status_message(self, status):
+        if status == self.pass_status:
+            return f"{self.config_id} passed safety test: A value of {status} was returned over the SNMP interface."
         else:
-            return "UPS failed safety test: A value of " + str(status) + " where only 3 is acceptable."
+            return f"{self.config_id} failed safety test: A value of {status} where only {self.pass_status} is acceptable."
