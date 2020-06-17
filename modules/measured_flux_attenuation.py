@@ -47,6 +47,8 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
     mask[int(np.round(im_shape[0] * 0.82)):, int(np.round(im_shape[1] * 0.68)):] = True    #TODO: HICAT-770
     # Detect sources
     sources = daofind(data, mask=mask)
+    if not sources:
+        raise ValueError("Failed to find sources")
 
     # Transpose to have xy-pairs (x,y), especially if there are multiple sources.
     positions = np.transpose((sources['xcentroid'], sources['ycentroid']))

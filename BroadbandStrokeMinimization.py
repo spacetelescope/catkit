@@ -14,7 +14,7 @@ import hicat.util
 import datetime
 import collections
 
-from hicat.control.target_acq import TargetAcquisition
+from hicat.control.target_acq import MotorMount, TargetCamera, TargetAcquisition
 from hicat.hardware import testbed
 import hicat.plotting.animation
 from hicat import util
@@ -280,9 +280,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         with testbed.laser_source() as laser, \
                 testbed.dm_controller() as dm, \
                 testbed.motor_controller() as motor_controller, \
-                testbed.imaging_apodizer_picomotor() as imaging_apodizer_picomotor, \
-                testbed.ta_apodizer_picomotor() as ta_apodizer_picomotor, \
-                testbed.ta_quadcell_picomotor() as ta_quadcell_picomotor, \
+                testbed.apodizer_picomotor_mount() as apodizer_picomotor_mount, \
+                testbed.quadcell_picomotor_mount() as quadcell_picomotor_mount, \
                 testbed.beam_dump() as beam_dump, \
                 testbed.imaging_camera() as cam, \
                 testbed.pupil_camera() as pupilcam, \
@@ -301,6 +300,32 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                        'color_wheel': color_wheel,
                        'nd_wheel': nd_wheel}
 
+            # Instantiate TA Controller and run initial centering
+            if self.run_ta:
+                ta_devices = {'picomotors': {MotorMount.APODIZER: apodizer_picomotor_mount,
+                                             MotorMount.QUAD_CELL: quadcell_picomotor_mount},
+                               'beam_dump': beam_dump,
+                               "cameras": {TargetCamera.SCI: cam,
+                                           TargetCamera.TA: ta_cam}}
+
+                ta_controller = TargetAcquisition(ta_devices,
+                                                  self.output_path,
+                                                  use_closed_loop=False,
+                                                  n_exposures=20,
+                                                  exposure_period=5,
+                                                  target_pixel_tolerance={TargetCamera.TA: 2, TargetCamera.SCI: 25})
+
+                # Flatten DMs before attempting initial target acquisition.
+                from catkit.hardware.boston.commands import flat_command
+                import copy
+                ta_dm_flat = flat_command(bias=False, flat_map=True)
+                devices["dm"].apply_shape_to_both(ta_dm_flat, copy.deepcopy(ta_dm_flat))
+                # Now setup filter wheels.
+                move_filter(wavelength=640,
+                            nd="clear_1",
+                            devices={"color_wheel": devices["color_wheel"], "nd_wheel": devices["nd_wheel"]})
+                ta_controller.acquire_target(coarse_align=True)
+
             # Calculate flux attenuation factor between direct+ND and coronagraphic images
             flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=self.wavelengths,
                                                                      out_path=self.output_path,
@@ -317,8 +342,6 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             initial_path = os.path.join(self.output_path, 'before')
             exposure_kwargs = {'initial_path': initial_path,
                                'num_exposures': self.num_exposures}
-
-
 
             # In the broadband code, many quantities need to be either lists per wavelength or dicts per wavelength
             # In this implementation we choose dicts.
@@ -347,29 +370,6 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             self.init_strokemin_plots()
             self.mean_contrasts_image.append(np.mean(self.broadband_images[-1][self.dark_zone]))
             self.collect_metrics(devices)
-            
-            # Instantiate TA Controller and run initial centering
-            if self.run_ta:
-                ta_devices = {'apodizer_pico': ta_apodizer_picomotor,
-                              'beam_dump': beam_dump,
-                              'imaging_camera': cam,
-                              'imaging_pico': imaging_apodizer_picomotor,
-                              'quadcell_pico': ta_quadcell_picomotor,
-                              'ta_camera': ta_cam}
-                
-                
-                motor_axes = {'apodizer_pico':
-                              (CONFIG_INI.getint('picomotor_target_acquisition_apodizer', 'motor_x'),
-                               CONFIG_INI.getint('picomotor_target_acquisition_apodizer', 'motor_y')),
-                              'imaging_pico': 
-                              (CONFIG_INI.getint('picomotor_imaging_apodizer', 'motor_x'),
-                               CONFIG_INI.getint('picomotor_imaging_apodizer', 'motor_y')),
-                              'quadcell_pico': 
-                              (CONFIG_INI.getint('picomotor_target_acquisition_quadcell', 'motor_x'),
-                               CONFIG_INI.getint('picomotor_target_acquisition_quadcell', 'motor_y')),
-                             }   
-
-                ta_controller = TargetAcquisition(ta_devices, motor_axes, self.output_path, use_closed_loop=False)
 
             # Main body of control loop
             for i in range(self.num_iterations):
@@ -387,6 +387,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     # Only attempt to perform a coarse alignment if we're at
                     # the 0th iteration
                     perform_coarse_align = (i == 0)
+                    # TODO: Are the filters in their optimal positions for TA?
                     ta_controller.acquire_target(coarse_align=perform_coarse_align)
 
                 # Create a new output subfolder for each iteration
