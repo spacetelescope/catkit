@@ -45,7 +45,7 @@ class UpsSafetyTest(SafetyTest):
             is_ok, message = ups.is_power_ok(return_status_msg=True)
             if not is_ok:
                 return False, message
-        return True, "All UPS devices OK"
+        return True, f"All ({[ups.config_id for ups in self.ups_list]}) UPS devices OK"
 
 
 class HumidityTemperatureTest(SafetyTest):
