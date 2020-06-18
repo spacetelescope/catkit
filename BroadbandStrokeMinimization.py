@@ -326,6 +326,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             images_direct = {}
             self.images_before = {}
             self.images_after = {}
+            self.broadband_images = []  # broadband images are however just a list
 
             # Take starting reference images, in direct and coron, per each wavelength
             # Note, switching direct<->coron is much slower than filter wheel changes, so
@@ -340,12 +341,11 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 self.images_after[wavelength] = self.images_before[wavelength]
 
             # Compute broadband image as the average over wavelength, weighted by the spectral flux at each wavelength
-            self.broadband_image_before = self.compute_broadband_weighted_mean(self.images_before, self.spectral_weights)
-            self.broadband_image_after = self.broadband_image_before
+            self.broadband_images.append(self.compute_broadband_weighted_mean(self.images_before, self.spectral_weights))
 
             # Set up plot writing infrastructure
             self.init_strokemin_plots()
-            self.mean_contrasts_image.append(np.mean(self.broadband_image_before[self.dark_zone]))
+            self.mean_contrasts_image.append(np.mean(self.broadband_images[-1][self.dark_zone]))
             self.collect_metrics(devices)
             
             # Instantiate TA Controller and run initial centering
@@ -506,21 +506,20 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     self.images_after[wavelength], _ = self.take_exposure(devices, 'coron', wavelength, initial_path)
                     self.images_after[wavelength] /= direct_maxes[wavelength]
 
-                self.broadband_image_before = self.broadband_image_after
-                self.broadband_image_after = self.compute_broadband_weighted_mean(self.images_after, self.spectral_weights)
+                self.broadband_images.append(self.compute_broadband_weighted_mean(self.images_after, self.spectral_weights))
 
                 # Save more data for plotting
-                self.mean_contrasts_image.append(np.mean(self.broadband_image_after[self.dark_zone]))  # Mean dark-zone contrast after correction
+                self.mean_contrasts_image.append(np.mean(self.broadband_images[-1][self.dark_zone]))  # Mean dark-zone contrast after correction
                 self.collect_metrics(devices)
                 self.measured_contrast_deltas.append(self.mean_contrasts_image[-1] - self.mean_contrasts_image[-2])  # Change in measured contrast
                 self.log.info("===> Measured contrast drop this iteration: {}".format(self.measured_contrast_deltas[-1]))
 
                 I_estimateds = {wavelength: np.abs(E_estimated) ** 2 for wavelength, E_estimated in E_estimateds.items()}
-                est_incoherent = np.abs(self.broadband_image_before - self.compute_broadband_weighted_mean(I_estimateds, self.control_weights))
+                est_incoherent = np.abs(self.broadband_images[-2] - self.compute_broadband_weighted_mean(I_estimateds, self.control_weights))
                 self.estimated_incoherent_backgrounds.append(np.mean(est_incoherent[self.dark_zone]))  # Estimated incoherent background
 
                 # Make diagnostic plots
-                self.show_status_plots(self.broadband_image_before, self.broadband_image_after, self.dm1_actuators, self.dm2_actuators, E_estimateds)
+                self.show_status_plots(self.broadband_images[-2], self.broadband_images[-1], self.dm1_actuators, self.dm2_actuators, E_estimateds)
 
     def compute_true_e_fields(self, E_estimateds, exposure_kwargs, initial_path, wavelength):
         """ Compute and save the true E-fields.  Only usable in simulation. """
@@ -721,17 +720,20 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
         # Contrast plot: radial contrast profiles
         ax = axes[0,2]
-        r_bb, p_bb, std_bb, n_bb = hcipy.metrics.radial_profile(self.broadband_image_before, bin_size=0.25)
-        r_ba, p_ba, std_ba, n_ba = hcipy.metrics.radial_profile(self.broadband_image_after, bin_size=0.25)
+        r_bb, p_bb, std_bb, n_bb = hcipy.metrics.radial_profile(self.broadband_images[-2], bin_size=0.25)
+        r_ba, p_ba, std_ba, n_ba = hcipy.metrics.radial_profile(self.broadband_images[-1], bin_size=0.25)
         r_probe, p_probe, std_probe, n_probe = hcipy.metrics.radial_profile(self.probe_example, bin_size=0.25)
         ax.semilogy(r_bb, p_bb, color='black', alpha=0.5, label='Broadband, before', zorder=10)
-        ax.semilogy(r_ba, p_bb, color='black', alpha=1, label='Broadband, after', zorder=10)
+        ax.semilogy(r_ba, p_ba, color='black', alpha=1, label='Broadband, after', zorder=10)
         ax.semilogy(r_probe, p_probe,  label='probe', color='orange', ls='--', zorder=3)
 
+        colors_vs_nwavelengths = {1: ['darkmagenta'],
+                                  3: ['royalblue', 'darkmagenta', 'firebrick'],
+                                  5: ['royalblue', 'indigo', 'darkmagenta', 'mediumvioletred', 'firebrick']}
+        colors = colors_vs_nwavelengths[len(wavelengths)]
         for iwl, wl in enumerate(wavelengths):
-            color = plt.cm.jet(iwl/(len(wavelengths)-1))
             r2, p2, std2, n2 = hcipy.metrics.radial_profile(self.images_after[wl], bin_size=0.25)
-            ax.semilogy(r2, p2, color=color, label=f'{wl} nm, after', zorder=9)
+            ax.semilogy(r2, p2, color=colors[iwl], alpha=0.8, label=f'{int(wl)} nm, after', zorder=9)
         ax.set_xlim(0, 20)
         ax.set_ylim(contrast_yaxis_min, 1e-3)
         ax.legend(loc='upper right', fontsize='x-small', framealpha=1.0)
@@ -759,7 +761,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         ax2.set_ylim(contrast_yaxis_min, 1e-3)
         ax2.legend(loc='lower right', fontsize='x-small', framealpha=0.5)
 
-        _show_one_contrast_image(self.broadband_image_after, mask=False, title=f"$I$ after iteration {iteration}, broadband",
+        _show_one_contrast_image(self.broadband_images[-1], mask=False, title=f"$I$ after iteration {iteration}, broadband",
                                  ax=axes[0, 4], image_crop=None)
 
         # Aesthetic tweaks and labeling
