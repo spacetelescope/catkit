@@ -525,7 +525,7 @@ class DisplayCommand(SegmentedAperture):
             self.aperture.set_actuator(seg, values[0], values[1], values[2])
 
 
-    def display(self, display_wavefront=True, display_psf=True):
+    def display(self, display_wavefront=True, display_psf=True, root=''):
         """
         Display either the deployed mirror state ("wavefront") or the PSF created
         by this mirror state.
@@ -534,22 +534,25 @@ class DisplayCommand(SegmentedAperture):
         :params display_psf: bool, If true, display the simulated PSF created by the
                              mirror state
         """
+        if root:
+            root = f'{root}_'
         if display_wavefront:
-            self.plot_wavefront()
+            self.plot_wavefront(root)
         if display_psf:
-            self.plot_psf()
+            self.plot_psf(root)
 
 
-    def plot_wavefront(self):
+    def plot_wavefront(self, root):
         """
         Plot the deployed mirror state ("wavefront")
         """
         plt.figure()
         self.aperture.display(what='opd', title='Shape put on the active segments')
-        plt.savefig(os.path.join(self.out_dir, 'shape_on_dm.png'))
+        plt.savefig(os.path.join(self.out_dir, f'{root}shape_on_dm.png'))
+        plt.close()
 
 
-    def plot_psf(self):
+    def plot_psf(self, root):
         """
         Plot the simulated PSF based on the mirror state
         """
@@ -562,4 +565,5 @@ class DisplayCommand(SegmentedAperture):
         psf = osys.calc_psf(wavelength=self.wavelength)
         poppy.display_psf(psf, vmin=10e-8, vmax=10e-2,
                           title='PSF created by the shape put on the active segments')
-        plt.savefig(os.path.join(self.out_dir, 'simulated_psf.png'))
+        plt.savefig(os.path.join(self.out_dir, f'{root}simulated_psf.png'))
+        plt.close()
