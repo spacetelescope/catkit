@@ -728,6 +728,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         ax.semilogy(r_probe, p_probe,  label='probe', color='orange', ls='--', zorder=3)
 
         colors_vs_nwavelengths = {1: ['darkmagenta'],
+                                  2: ['royalblue', 'darkmagenta'],
                                   3: ['royalblue', 'darkmagenta', 'firebrick'],
                                   5: ['royalblue', 'indigo', 'darkmagenta', 'mediumvioletred', 'firebrick']}
         colors = colors_vs_nwavelengths[len(wavelengths)]
