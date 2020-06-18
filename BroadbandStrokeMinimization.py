@@ -340,12 +340,12 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 self.images_after[wavelength] = self.images_before[wavelength]
 
             # Compute broadband image as the average over wavelength, weighted by the spectral flux at each wavelength
-            broadband_image_before = self.compute_broadband_weighted_mean(self.images_before, self.spectral_weights)
-            broadband_image_after = broadband_image_before
+            self.broadband_image_before = self.compute_broadband_weighted_mean(self.images_before, self.spectral_weights)
+            self.broadband_image_after = self.broadband_image_before
 
             # Set up plot writing infrastructure
             self.init_strokemin_plots()
-            self.mean_contrasts_image.append(np.mean(broadband_image_before[self.dark_zone]))
+            self.mean_contrasts_image.append(np.mean(self.broadband_image_before[self.dark_zone]))
             self.collect_metrics(devices)
             
             # Instantiate TA Controller and run initial centering
@@ -506,21 +506,21 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     self.images_after[wavelength], _ = self.take_exposure(devices, 'coron', wavelength, initial_path)
                     self.images_after[wavelength] /= direct_maxes[wavelength]
 
-                broadband_image_before = broadband_image_after
-                broadband_image_after = self.compute_broadband_weighted_mean(self.images_after, self.spectral_weights)
+                self.broadband_image_before = self.broadband_image_after
+                self.broadband_image_after = self.compute_broadband_weighted_mean(self.images_after, self.spectral_weights)
 
                 # Save more data for plotting
-                self.mean_contrasts_image.append(np.mean(broadband_image_after[self.dark_zone]))  # Mean dark-zone contrast after correction
+                self.mean_contrasts_image.append(np.mean(self.broadband_image_after[self.dark_zone]))  # Mean dark-zone contrast after correction
                 self.collect_metrics(devices)
                 self.measured_contrast_deltas.append(self.mean_contrasts_image[-1] - self.mean_contrasts_image[-2])  # Change in measured contrast
                 self.log.info("===> Measured contrast drop this iteration: {}".format(self.measured_contrast_deltas[-1]))
 
                 I_estimateds = {wavelength: np.abs(E_estimated) ** 2 for wavelength, E_estimated in E_estimateds.items()}
-                est_incoherent = np.abs(broadband_image_before - self.compute_broadband_weighted_mean(I_estimateds, self.control_weights))
+                est_incoherent = np.abs(self.broadband_image_before - self.compute_broadband_weighted_mean(I_estimateds, self.control_weights))
                 self.estimated_incoherent_backgrounds.append(np.mean(est_incoherent[self.dark_zone]))  # Estimated incoherent background
 
                 # Make diagnostic plots
-                self.show_status_plots(broadband_image_before, broadband_image_after, self.dm1_actuators, self.dm2_actuators, E_estimateds)
+                self.show_status_plots(self.broadband_image_before, self.broadband_image_after, self.dm1_actuators, self.dm2_actuators, E_estimateds)
 
     def compute_true_e_fields(self, E_estimateds, exposure_kwargs, initial_path, wavelength):
         """ Compute and save the true E-fields.  Only usable in simulation. """
@@ -610,7 +610,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         self.log.info("Broadband diagnostic images will be saved to " + output_path_broadband)
         self.movie_writer_broadband = hicat.plotting.animation.GifWriter(output_path_broadband, framerate=2, cleanup=False)
         # setup a store for some extra data to be used in the broadband plot
-        self._bb_plot_history = collections.deque(maxlen=5)
+        self._bb_plot_history = collections.deque(maxlen=10)
 
     def show_broadband_strokemin_plot(self, E_estimateds):
         """ Diagnostic status plot for all wavelengths being sensed.
@@ -619,6 +619,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         """
 
         wl0 = self.wavelengths[0]
+        wavelengths = sorted(self.wavelengths)  # because self.wavelengths has center wavelength first
+        wl_sort = np.argsort(self.wavelengths)
 
         # define some quantities for use in labeling plots
         iteration = len(self.mean_contrasts_pairwise)
@@ -634,7 +636,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
         fig.suptitle("Broadband Multiwavelength Diagnostics", fontsize=18, weight='bold')
 
-        def _show_one_contrast_image(field, ax, mask=False, title=None):
+        def _show_one_contrast_image(field, ax, mask=False, title=None, image_crop=17):
             """ Convenience function for image display"""
 
             # Log plots; avoid floating underflow or divide by zero
@@ -645,11 +647,12 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             else:
                 tmp = log_image
             im = hcipy.imshow_field(tmp, vmin=-8, vmax=-4, cmap='inferno', ax=ax)
-            hicat.plotting.image_axis_setup(ax, im, title=title)
+            hicat.plotting.image_axis_setup(ax, im, title=title, image_crop=image_crop)
             return im
 
         # Iterate over wavelength and plot: Estimated E field, Estimated I field, observed I field before, observed I field after, estimated incoherent
-        for iwl, wl in enumerate(self.wavelengths):
+
+        for iwl, wl in enumerate(wavelengths):
 
             # Compute quantities to be used in plots
             i_estimated = np.abs(E_estimateds[wl])**2
@@ -670,28 +673,31 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             # 3. Plot observed I field before
             #    mask the before image to just show the dark zone
             _show_one_contrast_image(self.images_before[wl], mask=True, title=f"$I$ before iteration {iteration} (masked)", ax=axes[iwl+1,2])
-            # 4. Plot observed I field after
-            _show_one_contrast_image(est_incoherent, mask=False, title=f"$I$ after iteration {iteration}", ax=axes[iwl+1,3])
+
             # 4. Plot estimated incoherent background (unmodulated light)
             # Estimated electric field, and residual
-            im = _show_one_contrast_image(self.images_after[wl]-est_incoherent, mask=False, ax=axes[iwl+1,3])
+            im = _show_one_contrast_image(est_incoherent, mask=False, ax=axes[iwl+1,3])
             hicat.plotting.image_axis_setup(axes[iwl+1,3], im, title="Estimated Incoherent Background", control_zone=control_zone)
-            axes[iwl+1,3].text(-15, -15, "Contrast/(backgrd estimate): {:.3f}".format(contrast_to_inc_bg_ratio), color='k',
+            axes[iwl+1,3].text(-15, -15, "Contrast/(backgrd estimate): {:.3f}".format(contrast_to_inc_bg_ratio), color='white',
                     fontsize='x-small', fontweight='black')
+
+            # 4. Plot observed I field after, full frame
+            _show_one_contrast_image(self.images_after[wl], mask=False, title=f"$I$ after iteration {iteration} (full frame)", ax=axes[iwl+1,4], image_crop=None)
 
 
         # Contrast plot: Contrast vs wavelength
         ax = axes[0,0]
 
-        monochromatic_contrasts = [self.images_after[wl][self.dark_zone].mean() for wl in self.wavelengths]
-        ax.plot(self.wavelengths, monochromatic_contrasts, marker='o')
+        monochromatic_contrasts = np.asarray([self.images_after[wl][self.dark_zone].mean() for wl in self.wavelengths])
+        ax.semilogy(wavelengths, monochromatic_contrasts[wl_sort], marker='o', color='C0')
         ax.plot(np.mean(self.wavelengths), self.mean_contrasts_image[-1], marker='s', color='black')
         ax.set_xlim(600, 680)
         ax.set_xlabel("Wavelength [nm]")
         ax.set_ylabel("Contrast")
-        for i, prev_contrasts in enumerate(self._bb_plot_history):
-            ax.plot(self.wavelengths, prev_contrasts, alpha=0.8**(i+1))
+        for i, prev_contrasts in enumerate(reversed(self._bb_plot_history)):
+            ax.plot(wavelengths, prev_contrasts[wl_sort], alpha=0.8**(i+1), marker='+', color='C0')
         self._bb_plot_history.append(monochromatic_contrasts)
+        ax.set_title("Contrast vs Wavelength")
 
 
         # Contrast plot: contrast vs iteration
@@ -701,7 +707,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         ax.plot(self.mean_contrasts_probe, 'o:', c='orange', label='In probe image')
 
         if gamma is not None:
-            ax.plot(iteration, self.mean_contrasts_image[-2]*gamma, '*', markersize=10, c='red', label='Control target contrast')
+            ax.plot(iteration, self.mean_contrasts_image[-2]*gamma, '*', markersize=10, c='red', label='Control target contrast (from $\gamma$)')
 
         ax.plot(np.arange(iteration)+1, self.predicted_contrasts, '*--', linewidth=1,  c='purple', label='Predicted new contrast')
         ax.set_yscale('log')
@@ -710,17 +716,25 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         ax.grid(True, alpha=0.1)
         ax.legend(loc='upper right', fontsize='x-small')
 
+        # first two plots should have identical y axis scales
+        axes[0,0].set_ylim(axes[0,1].get_ylim())
+
         # Contrast plot: radial contrast profiles
         ax = axes[0,2]
-        r, p, std, n = hcipy.metrics.radial_profile(self.images_after[wl0], bin_size=0.25)
-        r2, p2, std2, n2 = hcipy.metrics.radial_profile(self.images_before[wl0], bin_size=0.25)
+        r_bb, p_bb, std_bb, n_bb = hcipy.metrics.radial_profile(self.broadband_image_before, bin_size=0.25)
+        r_ba, p_ba, std_ba, n_ba = hcipy.metrics.radial_profile(self.broadband_image_after, bin_size=0.25)
         r_probe, p_probe, std_probe, n_probe = hcipy.metrics.radial_profile(self.probe_example, bin_size=0.25)
-        ax.semilogy(r2, p2, color='C0', alpha=0.4, label='before', zorder=10)
-        ax.semilogy(r, p, color='C0', label='after', zorder=9)
+        ax.semilogy(r_bb, p_bb, color='black', alpha=0.5, label='Broadband, before', zorder=10)
+        ax.semilogy(r_ba, p_bb, color='black', alpha=1, label='Broadband, after', zorder=10)
         ax.semilogy(r_probe, p_probe,  label='probe', color='orange', ls='--', zorder=3)
+
+        for iwl, wl in enumerate(wavelengths):
+            color = plt.cm.jet(iwl/(len(wavelengths)-1))
+            r2, p2, std2, n2 = hcipy.metrics.radial_profile(self.images_after[wl], bin_size=0.25)
+            ax.semilogy(r2, p2, color=color, label=f'{wl} nm, after', zorder=9)
         ax.set_xlim(0, 20)
         ax.set_ylim(contrast_yaxis_min, 1e-3)
-        ax.legend(loc='upper left', fontsize='x-small', framealpha=1.0)
+        ax.legend(loc='upper right', fontsize='x-small', framealpha=1.0)
         ax.grid(True, alpha=0.1)
         try:
             ax.axvline(self.dz_rin, color='C2', ls='--', alpha=0.3)
@@ -745,6 +759,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         ax2.set_ylim(contrast_yaxis_min, 1e-3)
         ax2.legend(loc='lower right', fontsize='x-small', framealpha=0.5)
 
+        _show_one_contrast_image(self.broadband_image_after, mask=False, title=f"$I$ after iteration {iteration}, broadband",
+                                 ax=axes[0, 4], image_crop=None)
 
         # Aesthetic tweaks and labeling
         for ax in axes.ravel():
