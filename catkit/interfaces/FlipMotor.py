@@ -7,9 +7,11 @@ import logging
 class FlipMotor(ABC):
     log = logging.getLogger(__name__)
 
-    def __init__(self, config_id, *args, **kwargs):
-        """Opens connection with the motor controller and sets class attributes for 'config_id' and 'motor'."""
+    def __init__(self, config_id, flip_mount_id, *args, **kwargs):
+        """Opens connection with the motor controller and sets class attributes
+        for 'config_id', 'flip_mount_id',  and 'motor'."""
         self.config_id = config_id
+        self.flip_mount_id = flip_mount_id
         self.serial = None
         self.motor = self.initialize(*args, **kwargs)
         self.log.info("Opened connection to flip motor " + config_id)

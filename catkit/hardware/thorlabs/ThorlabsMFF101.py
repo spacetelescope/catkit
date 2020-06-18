@@ -16,10 +16,13 @@ class ThorlabsMFF101(FlipMotor):
 
     def initialize(self, *args, **kwargs):
         """Creates an instance of the controller library and opens a connection."""
-
-        serial = CONFIG_INI.get(self.config_id, "serial")
+        
+        # Write a serial_id key of the form "serial_default" or "serial_pr_mirror"
+        serial_id = f"serial_{self.flip_mount_id}"
+        serial = CONFIG_INI.get(self.config_id, serial_id)
         self.serial = serial
-
+        self.log.info(f'Connecting to flip mount {self.flip_mount_id}, serial # {serial}.')
+        
         # noinspection PyArgumentList
         motor = ftd2xx.openEx(bytes(serial, 'utf-8'))
         motor.setBaudRate(115200)
