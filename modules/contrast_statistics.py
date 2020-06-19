@@ -111,7 +111,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax1.set_ylabel('Contrast')
         ax1.set_title('Contrast by Iteration')
 
-        ax1.grid(True, which='both')
+        ax1.grid(True, which='both', alpha=0.3)
         ax1.legend()
 
         plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
@@ -125,16 +125,16 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax2.set_xlabel('Iteration')
         ax2.set_ylabel('Contrast')
         ax2.set_title('Convergent Contrast')
-        ax2.grid(True, which='both')
+        ax2.grid(True, which='both', alpha=0.3)
         ax2.legend()
 
-        ax3.hist(converged_metrics[' mean image contrast'], ec='black', alpha=0.8)
+        ax3.hist(converged_metrics[' mean image contrast'], ec='black', zorder=3)
         ax3.axvline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.',
-                    linewidth=1.2)
+                    linewidth=1.2, zorder=4)
         ax3.axvline(empirical_confidence_interval, label=f'90% Emp: {empirical_confidence_interval:.3}', c='orange',
-                    alpha=0.7, linestyle=(0, (5, 1)), linewidth=1.0)
-        ax3.axvline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
-        ax3.grid(True, which='both', alpha=0.4)
+                    alpha=0.7, linestyle=(0, (5, 1)), linewidth=1.0, zorder=5)
+        ax3.axvline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-', zorder=4)
+        ax3.grid(True, which='both', alpha=0.3, zorder=0)
         ax3.set_xlabel('Contrast')
         ax3.set_ylabel('Counts')
         ax3.set_title(f'Distribution of Contrast: {n_samples} iterations')
@@ -148,7 +148,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax4.axvline(empirical_confidence_interval, label=f'90% Emp: {empirical_confidence_interval:.3}', c='orange',
                     alpha=0.7, linestyle=(0, (5, 1)), linewidth=1.0)
         ax4.axvline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
-        ax4.grid(True, which='both')
+        ax4.grid(True, which='both', alpha=0.3)
         ax4.set_xlabel('Contrast')
         ax4.set_ylabel('Liklihood of occurance ')
         ax4.set_title('Cumulative Distribution: Contrast')
