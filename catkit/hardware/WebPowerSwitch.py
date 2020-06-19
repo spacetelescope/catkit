@@ -1,5 +1,7 @@
 import logging
 import requests
+from collections.abc import Iterable
+
 from catkit.config import CONFIG_INI
 from catkit.interfaces.RemotePowerSwitch import RemotePowerSwitch
 
@@ -12,44 +14,65 @@ switch.turn_on("motor_controller_outlet")
 
 
 class WebPowerSwitch(RemotePowerSwitch):
-    log=logging.getLogger(__name__)
+
+    instrument_lib = requests
+
+    def initialize(self, user=None, password=None, ip=None, outlet_list={}):
+        self.log = logging.getLogger(__name__)
+
+        # Given the specificity of the script numbering I'm not sure that it really makes sense
+        # to pass in these values, but hey.
+        self.user = CONFIG_INI.get(self.config_id, "user") if user is None else user
+        self.password = CONFIG_INI.get(self.config_id, "password") if password is None else password
+        self.ip = CONFIG_INI.get(self.config_id, "ip") if ip is None else ip
+
+        self.outlet_list = outlet_list
+
+        # Obtain only from config for simplicity.
+        self.all_off_id = CONFIG_INI.getint(self.config_id, "all_off")
+        self.all_on_id = CONFIG_INI.getint(self.config_id, "all_on")
+
+    def _open(self):
+        pass
+
+    def _close(self):
+        pass
+
+    def switch(self, outlet_id, on, all=False):
+        """ Turn on/off all/individual outlet(s). """
+        if all:
+            self.all_on() if on else self.all_off()
+        else:
+            outlet_ids = outlet_id if isinstance(outlet_id, Iterable) and not isinstance(outlet_id, str) else [outlet_id]
+            for id in outlet_ids:
+                self.turn_on(id) if on else self.turn_off(id)
 
     def turn_on(self, outlet_id):
-        """
-        Turn on an individual outlet.
-        """
-        outlet_num = CONFIG_INI.getint(self.config_id, outlet_id)
-        script_line = self.__find_script_line(outlet_num, True)
-        self.__http_script_call(script_line)
+        """ Turn on an individual outlet. """
+        outlet_num = self.outlet_list[outlet_id] if outlet_id in self.outlet_list else CONFIG_INI.getint(self.config_id, outlet_id)
+        script_line = self._find_script_line(outlet_num, on=True)
+        self._http_script_call(script_line)
         self.log.info("Turning on outlet " + outlet_id + " number " + str(outlet_num))
 
     def turn_off(self, outlet_id):
-        """
-        Turn off an individual outlet.
-        """
-        outlet_num = CONFIG_INI.getint(self.config_id, outlet_id)
-        script_line = self.__find_script_line(outlet_num, False)
-        self.__http_script_call(script_line)
+        """ Turn off an individual outlet. """
+        outlet_num = self.outlet_list[outlet_id] if outlet_id in self.outlet_list else CONFIG_INI.getint(self.config_id, outlet_id)
+        script_line = self._find_script_line(outlet_num, on=False)
+        self._http_script_call(script_line)
         self.log.info("Turning off outlet " + outlet_id + " number " + str(outlet_num))
 
     def all_on(self):
-        """
-        Turn on all outlets.
-        """
-        script_line = CONFIG_INI.get(self.config_id, "all_on")
-        self.__http_script_call(script_line)
+        """ Turn on all outlets. """
+        self._http_script_call(self.all_on_id)
         self.log.info("Turning on all outlets")
 
     def all_off(self):
-        """
-        Turn off all outlets.
-        """
-        script_line = CONFIG_INI.get(self.config_id, "all_off")
-        self.__http_script_call(script_line)
+        """ Turn off all outlets. """
+        self._http_script_call(self.all_off_id)
         self.log.info("Turning off all outlets")
 
     @staticmethod
-    def __find_script_line(outlet_num, on):
+    def _find_script_line(outlet_num, on):
         """
         Returns the script line to execute based on the outlet and the desired state. I added ON and OFF commands for
         each outlet into the script on the power switch.  The logic is as follows:
@@ -66,27 +89,17 @@ class WebPowerSwitch(RemotePowerSwitch):
         :param on: True for on, False for off.
         :return: Script line number as an integer.
         """
-        value = outlet_num * (outlet_num + 1)
-        return value + 2 if on else value
+        value = outlet_num * 4
+        return value if on else value - 2
 
-    def __http_script_call(self, script_line):
+    def _http_script_call(self, script_line):
         """
         The power switch interface is actually one long script, and you can tell it to start at any line. I added an
         ON and OFF command for every outlet, followed by an END statement.  The line numbers needed to turn and outlet
         on or off are saved in the ini file.
         :param script_line: integer value for the line of code to start running.
         """
-        user, password, ip = self.__get_config_values()
-        formatted_script_line = '{num:03d}'.format(num=script_line)
-        ip_string = "http://" + ip + "/script?run" + formatted_script_line + "=run"
+        formatted_script_line = f'{script_line:03d}'
+        ip_string = f"http://{self.ip}/script?run{formatted_script_line}=run"
 
-        try:
-            requests.get(ip_string, auth=(user, password))
-        except requests.exceptions.RequestException as e:  # This is the correct syntax
-            self.log.exception(e.message)
-
-    def __get_config_values(self):
-        user = CONFIG_INI.get(self.config_id, "user")
-        password = CONFIG_INI.get(self.config_id, "password")
-        ip = CONFIG_INI.get(self.config_id, "ip")
-        return user, password, ip
+        self.instrument_lib.get(ip_string, auth=(self.user, self.password))

@@ -1,18 +1,18 @@
 from abc import ABC, abstractmethod
 
-"""Interface for remote controlled power switch."""
+from catkit.interfaces.Instrument import Instrument
 
 
-class RemotePowerSwitch(ABC):
-    def __init__(self, config_id, *args, **kwargs):
-        self.config_id = config_id
+class RemotePowerSwitch(Instrument, ABC):
+    """ Interface for remote controlled power switch. """
 
-    # Abstract Methods.
+    @abstractmethod
+    def switch(self, outlet_id, on, all=False):
+        """ Turn on/off all/individual outlet(s). """
+
     @abstractmethod
     def turn_on(self, outlet_id):
-        """
-        Turn on an individual outlet.
-        """
+        """ Turn on an individual outlet. """
 
     @abstractmethod
     def turn_off(self, outlet_id):
