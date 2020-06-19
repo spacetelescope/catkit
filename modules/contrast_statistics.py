@@ -10,7 +10,7 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     Calculate the iteration at which the contrast converges. Fits a 5th order polynomial and uses the first derivative
     to infer a slope estimate first. The absolute value of the slope must be below a set parameter, slope_threshold.
     If this fails to converge, it simply returns n/2 (iteration at the halfway point) and throws a warning.
-    :param metrics_data: The csv or df of data including iteration number and mean contrast (may inc. humidity & temp)
+    :param filepath: The path to the csv or df of data including iteration number and mean contrast
     :param slope_threshold: Threshold that slope must be below to be considered 'converged'
     :return: number of the iteration at which the slope *first* crosses the slope_threshold.
     """
@@ -74,6 +74,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     Displays and saves four plots, with varying analysis, including statistical confidence interval plots.
     :param filepath: str path to The csv or df of data including iteration number and mean contrast
     :param iteration_of_convergence: Default=None, calculated in calculate_iteration_of_convergence
+    :param generate_plots: Default=True, only plots and writes pdf if true.
     :return: contrast value, c, that the actual measured contrast will be below (better) than c 90% of the time.
     """
 
