@@ -90,7 +90,8 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     n_samples = len(converged_metrics)
     confidence_interval = mean + 1.28 * std
     line_of_90 = int(.9 * n_samples - 1)
-    sorted_contrast = (converged_metrics[' mean image contrast'].sort_values(ascending=True, ignore_index=True)).copy()
+    sorted_contrast = converged_metrics[' mean image contrast'].tolist()
+    sorted_contrast.sort()
     empirical_confidence_interval = sorted_contrast[line_of_90]
 
     if generate_plots:
@@ -127,7 +128,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax2.grid(True, which='both')
         ax2.legend()
 
-        ax3.hist(converged_metrics[' mean image contrast'], bins=30, ec='black', alpha=0.8)
+        ax3.hist(converged_metrics[' mean image contrast'], ec='black', alpha=0.8)
         ax3.axvline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.',
                     linewidth=1.2)
         ax3.axvline(empirical_confidence_interval, label=f'90% Emp: {empirical_confidence_interval:.3}', c='orange',
