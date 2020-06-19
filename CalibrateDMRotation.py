@@ -19,7 +19,7 @@ class CalibrateDMRotation(Experiment):
     :param phase_shifts: list, phase between DM patterns in degrees - affects relative brightness of resulting speckles
     """
     name = 'Calibrate DM Rotation'
-    def __init__(self, cycles=16, amplitude=50):
+    def __init__(self, cycles=16, amplitude=None):
         super().__init__()
         self.cycles = cycles
         self.amplitude=amplitude
@@ -49,15 +49,21 @@ class CalibrateDMRotation(Experiment):
 
             # Take baseline image with DMs flat
             dm.apply_shape_to_both(flat_command(bias=False, flat_map=True), flat_command(bias=False, flat_map=True))
-            baseline_im = self.take_image("both_dms_flat")
+            baseline_image = self.take_image("both_dms_flat")
 
-            # Apply sines
+            # Apply sines to one DM at a time
             for dm_sin in [1, 2]:
+
+                if self.amplitude is not None:
+                    amplitude = self.amplitude
+                else:
+                    amplitude = CONFIG_INI.getfloat('boston_kilo952', f'dm{dm_sin}_ideal_poke')
+
                 dm_flat = 2 if dm_sin == 1 else 1
                 for angle in [0,90]:
                     self.log.info(f"Taking sine wave on DM{dm_sin} at angle {angle} with {self.cycles} cycles/DM.")
                     sin_specification = SinSpecification(angle, self.cycles,
-                                                               quantity(self.amplitude, units.nanometer), 0)
+                                                               quantity(amplitude, units.nanometer), 0)
                     sin_command_object = sin_command(sin_specification, flat_map=True, dm_num=dm_sin)
                     flat_command_object = flat_command(bias=False, flat_map=True, dm_num=dm_flat)
 
@@ -66,6 +72,8 @@ class CalibrateDMRotation(Experiment):
 
                     label = f"dm{dm_sin}_cycle_{self.cycles}_ang_{angle}"
 
-                    self.take_image(label)
+                    sine_image = self.take_image(label)
 
-                # Subtract off the baseline images and save the output differece image
+                # Now do the subtraction of the reference (flat DMs) image from that image
+                # fits.writeto(os.path.join(self.output_path, f'subtracted_{label}.fits'),
+                #             sine_image - baseline_image)
