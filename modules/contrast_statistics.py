@@ -134,7 +134,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax3.axvline(empirical_confidence_interval, label=f'90% Emp: {empirical_confidence_interval:.3}', c='orange',
                     alpha=0.7, linestyle=(0, (5, 1)), linewidth=1.0)
         ax3.axvline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
-        ax3.grid(True, which='both')
+        ax3.grid(True, which='both', alpha=0.4)
         ax3.set_xlabel('Contrast')
         ax3.set_ylabel('Counts')
         ax3.set_title(f'Distribution of Contrast: {n_samples} iterations')
