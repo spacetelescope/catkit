@@ -465,11 +465,12 @@ class StrokeMinimization(Experiment):
         # Show multi-panel stroke min status plot
         self.show_strokemin_plot(image_before, image_after, dm1_actuators, dm2_actuators, E_estimated)
 
-        # Show contrast convergence plot every 5th iteration, starting at iteraton 10.
+        # Show contrast convergence and environment plots every 5th iteration, starting at iteration 10.
         # We don't have an iteration variable here but can easily infer it from the data arrays
         iteration = len(self.mean_contrasts_pairwise)
         if iteration >= 10 and np.mod(iteration, 5)==0:
             self.show_convergence_plot()
+            self.show_environment_plot()
 
     def show_strokemin_plot(self, image_before, image_after, dm1_actuators, dm2_actuators, E_estimated):
         """ Make a nice diagnostic plot after each iteration of stroke minimization
@@ -671,6 +672,14 @@ class StrokeMinimization(Experiment):
         metrics_filename = os.path.join(self.output_path, "metrics.csv")
 
         contrast_statistics.calculate_confidence_interval(metrics_filename, generate_plots=True)
+
+    def show_environment_plot(self):
+        """ Show contrast and environmentl parameters plot, based on saved contrast metrics
+
+        """
+        metrics_filename = os.path.join(self.output_path, "metrics.csv")
+
+        contrast_statistics.plot_environment_and_contrast(metrics_filename)
 
     def restore_last_strokemin_dm_shapes(self, dm_command_dir_to_restore=None):
         """ Find most recent prior DM shapes and re-use them, if possible.

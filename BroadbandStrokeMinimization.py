@@ -569,6 +569,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         return dm1_actuators, dm2_actuators
 
     def show_status_plots(self,  image_before, image_after, dm1_actuators, dm2_actuators, E_estimateds):
+        self.log.info(f"Producing status plots.")
         super().show_status_plots( image_before, image_after, dm1_actuators, dm2_actuators, E_estimateds)
         self.show_broadband_strokemin_plot(E_estimateds)
 
