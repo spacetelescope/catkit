@@ -97,10 +97,10 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
 
     if generate_plots:
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 4))
-        fig.suptitle(filepath.split('/')[-2])
+        fig.suptitle(os.path.split(os.path.dirname(filepath))[-1])
         if warning_flag:
-            fig.suptitle("WARNING: CONVERGENCE CRITERIA QUESTIONABLE    " + filepath.split('/')[-2] +
-                         "    WARNING: CONVERGENCE CRITERIA QUESTIONABLE", c='r')
+            fig.suptitle("WARNING: CONVERGENCE CRITERIA QUESTIONABLE    " + os.path.split(os.path.dirname(filepath))[-1]
+                         + "    WARNING: CONVERGENCE CRITERIA QUESTIONABLE", c='r')
         ax1.axvline(iteration_of_convergence, label='Point of Convergence', c='g')
 
         ax1.set_yscale('log')
