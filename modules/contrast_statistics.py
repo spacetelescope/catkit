@@ -74,7 +74,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     Displays and saves four plots, with varying analysis, including statistical confidence interval plots.
     :param filepath: str path to The csv or df of data including iteration number and mean contrast
     :param iteration_of_convergence: Default=None, calculated in calculate_iteration_of_convergence
-    :param generate_plots: Default=True, only plots and writes pdf if true.
+    :param generate_plots: Default=True, plots and saves pdf if true.
     :return: contrast value, c, that the actual measured contrast will be below (better) than c 90% of the time.
     """
 
