@@ -23,7 +23,7 @@ class TargetAcquisitionExperiment(Experiment):
         output_path = hicat.util.create_data_path(suffix=suffix)
         super().__init__(output_path=output_path, suffix=suffix)
         hicat.util.setup_hicat_logging(self.output_path, self.suffix)
-        print("LOGGING: " + self.output_path + "  " + self.suffix)
+        self.log.info(f"LOGGING: {self.output_path}  {self.suffix}")
 
     def experiment(self):
         with testbed.laser_source() as laser, \
