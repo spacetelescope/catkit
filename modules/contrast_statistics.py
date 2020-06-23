@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import pandas
 import os
@@ -158,3 +159,40 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
 
         fig.savefig(os.path.join(os.path.split(filepath)[-2],'contrast_metrics.pdf'), dpi=300, bbox_inches='tight')
     return confidence_interval
+
+def plot_environment_and_contrast(filepath):
+    """ Plot lab environmental metrology and contrast.
+    Intended to help track impacts of lab environment on dark zone experiments.
+
+    """
+
+    metrics_data = load_metrics_data(filepath)
+    datetimes = np.asarray(metrics_data['time stamp'], np.datetime64)
+
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 8), gridspec_kw={'hspace': 0.3, 'top': 0.9})
+    fig.suptitle("Lab Environment Metrology during:\n" + filepath.split('/')[-2], fontweight='bold')
+
+    axes[0].plot(datetimes, metrics_data[' temp (C)'], c='red', marker='+',
+                 label='Aux Temp Sensor')
+    axes[0].set_ylabel('Temperature (C)')
+    axes[0].set_ylim(20, 30)
+
+    axes[1].plot(datetimes, metrics_data[' humidity (%)'], c='blue', marker='+',
+                 label='Aux Humidity Sensor')
+    axes[1].set_ylabel('Humidity (%)')
+    axes[1].set_ylim(0, 30)
+
+    axes[2].semilogy(datetimes, metrics_data[' mean image contrast'], c='purple', marker='o',
+                     label='Broadband contrast')
+    axes[2].set_ylabel('Contrast')
+
+    for ax in axes:
+        ax.grid(True, which='both', alpha=0.3)
+        ax.legend()
+
+        locator = matplotlib.dates.AutoDateLocator(minticks=3, maxticks=7)
+        formatter = matplotlib.dates.ConciseDateFormatter(locator)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(formatter)
+
+    fig.savefig(os.path.join(os.path.split(filepath)[-2], 'environment.pdf'), dpi=300, bbox_inches='tight')
