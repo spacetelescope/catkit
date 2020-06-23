@@ -4,6 +4,7 @@ sim = hicat.simulators.auto_enable_sim()
 
 from hicat.config import CONFIG_INI
 
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -13,6 +14,7 @@ import hcipy
 import hicat.util
 import datetime
 import collections
+from catkit.hardware.boston.commands import flat_command
 
 from catkit.catkit_types import FpmPosition
 
@@ -322,8 +324,6 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                                    target_pixel_tolerance={TargetCamera.TA: 2, TargetCamera.SCI: 25}) as ta_controller:
 
                 # Flatten DMs before attempting initial target acquisition.
-                from catkit.hardware.boston.commands import flat_command
-                import copy
                 ta_dm_flat = flat_command(bias=False, flat_map=True)
                 devices["dm"].apply_shape_to_both(ta_dm_flat, copy.deepcopy(ta_dm_flat))
                 # Now setup filter wheels.
@@ -395,11 +395,10 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     # Check for any drifts and correct
                     if self.run_ta:
                         # TODO: Are the filters in their optimal positions for TA?
-                        #ta_controller.acquire_target(coarse_align=False)  # TODO: HICAT-713 This requires testing at low contrast levels.
-                        pass
-                    # else: # TODO: HICAT-713 Add this back when the above is added back.
-                    # Plot position of PSF centroid on TA camera.
-                    ta_controller.distance_to_target(TargetCamera.TA)
+                        ta_controller.acquire_target(coarse_align=False)
+                    else:
+                        # Plot position of PSF centroid on TA camera.
+                        ta_controller.distance_to_target(TargetCamera.TA)
 
                     # Create a new output subfolder for each iteration
                     initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))

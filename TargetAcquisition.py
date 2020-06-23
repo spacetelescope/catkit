@@ -14,16 +14,19 @@ from hicat.hardware.testbed import move_filter
 
 class TargetAcquisitionExperiment(Experiment):
 
-    name = "Independent Target Acquisition Experiment"
+    name = "independent_target_acquisition_experiment"
 
-    def __init__(self):
+    def __init__(self, *args, extensions=[], num_iterations=1, **kwargs):
         # Initialize output path and logging
-        self.extensions = []
+        self.extensions = extensions
+        self.num_iterations = num_iterations
         suffix = self.name
         output_path = hicat.util.create_data_path(suffix=suffix)
         super().__init__(output_path=output_path, suffix=suffix)
         hicat.util.setup_hicat_logging(self.output_path, self.suffix)
         self.log.info(f"LOGGING: {self.output_path}  {self.suffix}")
+        self.args = args
+        self.kwargs = kwargs
 
     def experiment(self):
         with testbed.laser_source() as laser, \
@@ -54,13 +57,8 @@ class TargetAcquisitionExperiment(Experiment):
 
             with TargetAcquisition(self.ta_devices,
                                    self.output_path,
-                                   n_tries=7,
-                                   use_closed_loop=False,
-                                   n_exposures=20,
-                                   exposure_period=5,
-                                   target_pixel_tolerance={TargetCamera.TA: 2, TargetCamera.SCI: 25},
-                                   apply_test_drifts=False,
-                                   test_drift_max=50  # drift = self.target_pixel_tolerance[<target>] + rand()
+                                   *self.args,
+                                   **self.kwargs
                                    ) as self.ta_controller:
 
                 # Flatten DMs before attempting initial target acquisition.
@@ -72,15 +70,13 @@ class TargetAcquisitionExperiment(Experiment):
                             nd="clear_1",
                             devices={"color_wheel": self.devices["color_wheel"], "nd_wheel": self.devices["nd_wheel"]})
 
-                start_time = time.time()
-                self.ta_controller.acquire_target()
-                self.log.info(f"TA runtime: {(time.time() - start_time)/60:.3}mins")
-                #self.ta_controller.move((1000, 1000), MotorMount.APODIZER, units="steps")
+                for i in range(self.num_iterations):
+                    start_time = time.time()
+                    self.ta_controller.acquire_target()
+                    #self.ta_controller.misalign(motor_mount=MotorMount.APODIZER, target_camera=TargetCamera.SCI)
+                    self.log.info(f"TA runtime: {(time.time() - start_time)/60:.3}mins")
+                    #self.ta_controller.move((1000, 1000), MotorMount.APODIZER, units="steps")
 
                 # self.extensions allows for this experiment to be extended.
                 for extension in self.extensions:
                     extension()
-
-
-if __name__ == "__main__":
-    TargetAcquisitionExperiment().start()

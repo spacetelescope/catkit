@@ -1,13 +1,15 @@
+import os
 import time
 
 import numpy as np
-from photutils import centroid_1dg
-import skimage.feature
+from photutils import centroid_1dg, centroid_2dg
 from catkit.catkit_types import FlipMountPosition
+import matplotlib.pyplot as plt
 
+from hicat.plotting.plot_utils import careful_savefig
 from hicat.experiments.TargetAcquisition import TargetAcquisitionExperiment
-from hicat.control.target_acq import MotorMount, TargetCamera
-
+from hicat.control.target_acq import Alignment, MotorMount, TargetCamera
+import hicat.hardware.testbed as testbed
 
 class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
 
@@ -16,7 +18,122 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
     def __init__(self, motor_camera_pairs):
         super().__init__()
         self.motor_camera_pairs = motor_camera_pairs
-        self.extensions.extend([self.calibrate_motors, self.find_hole])#, self.calibrate_fpm_center])
+        self.extensions.extend([self.compare_centroiding_methods])#self.calibrate_alignment_thresholds])#self.calibrate_motors, self.find_hole])#, self.calibrate_fpm_center])
+
+    def compare_centroiding_methods(self, motor_mount=MotorMount.APODIZER, target_camera=TargetCamera.SCI):
+        start_time = time.time()
+
+        # Start with PSF on target.
+        self.ta_controller.acquire_target()
+
+        # Force the use of only default centroid methods.
+        cached_non_default_centroid_method = self.ta_controller.centroid_methods[target_camera]["non_default"]
+        try:
+            self.ta_controller.centroid_methods[target_camera]["non_default"] = self.ta_controller.centroid_methods[target_camera]["default"]
+
+            # Missalign such that PSF is away from the FPM.
+            self.ta_controller.misalign(motor_mount, target_camera)
+
+            n_moves = 20
+            _centered, *delta_from_center = self.ta_controller.is_centered(target_camera)
+            move_pixel_step = [(delta / n_moves) for delta in delta_from_center]
+            self.log.info(
+                f"PSF missaligned by {self.ta_controller.misalignment_step_size}. Incrementally moving back towards center by {move_pixel_step} pixels over a total of {n_moves} moves.")
+
+            target_pixel = self.ta_controller.get_target_pixel(target_camera)
+            centroid_deltas = {"1d": [], "2d": []}
+            for i in range(n_moves):
+                # Move.
+                self.ta_controller.move(move_pixel_step,
+                                        motor_mount=motor_mount,
+                                        target_camera=target_camera)
+
+                image = self.ta_controller.capture_n_exposures(target_camera,
+                                                               exposure_time=self.ta_controller.exposure_time[target_camera])
+
+                x, y = centroid_1dg(image)
+                centroid_deltas["1d"].append((x - target_pixel[0], y - target_pixel[1]))
+                x, y = centroid_2dg(image)
+                centroid_deltas["2d"].append((x - target_pixel[0], y - target_pixel[1]))
+        finally:
+            self.ta_controller.centroid_methods[target_camera]["non_default"] = cached_non_default_centroid_method
+
+        self.log.info(f"Centroid testing complete. ({(time.time() - start_time)/60}min)")
+
+        # Check whether PSF ended up through the FPM hole and onto the TA camera.
+        if self.ta_controller._update_alignment_state() is not Alignment.COARSE_ALIGNED:
+            self.log.warning(f"Centroid testing failed to make it through the FPM hole and onto the TA camera. Motors need recalibrating.")
+
+        # Plot
+        plt.clf()
+        fig = plt.figure(figsize=(12, 8))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot([x[0] for x in centroid_deltas["1d"]], [x[1] for x in centroid_deltas["1d"]], "b*-", label="1d")
+        ax.plot([x[0] for x in centroid_deltas["2d"]], [x[1] for x in centroid_deltas["2d"]], "r.-", label="2d")
+        ax.set_xlabel("x pixel distance from target")
+        ax.set_ylabel("y pixel distance from target")
+        ax.set_title(f"Centroid comparison for {motor_mount} relative to {target_camera}.")
+        ax.legend()
+        ax.grid(True)
+
+        # Save
+        careful_savefig(fig, os.path.join(self.ta_controller.ta_output_path, "centroid_test.pdf"))
+        plt.close(fig)
+
+    def calibrate_alignment_thresholds(self):
+        """ Move PSF by small-ish steps and measure total image counts as we do.
+            The idea is to observe adequate thresholding ratios as the PSF moves through the FPM.
+        """
+        self.ta_controller.misalign_pixel_step = 100
+
+        # Start with PSF on target.
+        self.ta_controller.acquire_target()
+
+        # Missalign such that PSF is away from the FPM.
+        self.ta_controller.misalign(MotorMount.APODIZER, TargetCamera.SCI)
+
+        n_moves = 20
+        _centered, *delta_from_center = self.ta_controller.is_centered(TargetCamera.SCI)
+        move_pixel_step = [delta / n_moves for delta in delta_from_center]
+        self.log.info(
+            f"PSF missaligned by {self.ta_controller.misalignment_step_size}. Incrementally moving back towards center by {move_pixel_step} pixels over a total of {n_moves} moves.")
+
+        for i in range(n_moves):
+            # Move.
+            self.move(move_pixel_step,
+                      motor_mount=MotorMount.APODIZER,
+                      target_camera=TargetCamera.SCI)
+            # Utilize this func to take images, log counts, and centroid deltas to later plot.
+            self.ta_controller.distance_to_target(TargetCamera.SCI)
+
+        self.log.info("Alignment thresholding calibration complete")
+
+        # Check whether PSF ended up through the FPM hole and onto the TA camera.
+        if self.ta_controller.alignment is not Alignment.COARSE_ALIGNED:
+            self.log.warning(f"Alignment thresholding failed to make it through the FPM hole and onto the TA camera. Motors need recalibrating.")
+
+        # Plot
+        plt.clf()
+        fig = plt.figure(figsize=(12, 8))
+        ax = [fig.add_subplot(1, 2, 1),
+              fig.add_subplot(1, 2, 2)]
+        current_ax_cursor = 0
+        for target_camera in TargetCamera:
+            raidal_distance_from_center = np.sqrt(np.asarray(self.ta_controller.centroid_log[target_camera]["x from target"])**2 + \
+                                                  np.asarray(self.ta_controller.centroid_log[target_camera]["y from target"])**2)
+            ax[current_ax_cursor].plot(raidal_distance_from_center[-n_moves:],
+                                       self.ta_controller.counts_log[target_camera]["ratio"][-n_moves:], "b.-")
+            ax[current_ax_cursor].axhline(self.ta_controller.thresholds[target_camera]["minimal background ratio"], color='r')
+            ax[current_ax_cursor].axhline(self.ta_controller.thresholds[target_camera]["sufficient background ratio"], color='g')
+            ax[current_ax_cursor].set_xlabel("Radial pixel distance from target")
+            ax[current_ax_cursor].set_ylabel("sum(image)/sum(background)")
+            ax[current_ax_cursor].set_title(
+                f"{target_camera.value} camera (exposure_time: {self.ta_controller.exposure_time[target_camera]})")
+            current_ax_cursor += 1
+
+        # Save
+        careful_savefig(fig, os.path.join(self.ta_controller.ta_output_path, "alignment_threshold_calibration.pdf"))
+        plt.close(fig)
 
     def calibrate_motors(self, n_samples=5):
         t0 = time.time()
@@ -36,80 +153,11 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
         for combo in self.motor_camera_pairs:
             mean_calibration_value = np.mean(pixels_per_step[combo], axis=0)
             mean_runtime = np.mean(runtimes[combo], axis=0)/60
-            self.log.info(f"Mean calibrated pixels/step values for {combo}: {mean_calibration_value}. (runtime ~{mean_runtime}mins)")
+            self.log.info(f"Mean calibrated pixels/step values for {combo}: {mean_calibration_value}. (mean runtime ~{mean_runtime}mins)")
 
-    def calibrate_fpm_center(self, n_samples=20):
-        t0 = time.time()
-
-        fpm_pixel_coords = []
-        runtimes = []
-
-        target_camera = TargetCamera.TA
-        for i in range(n_samples):
-            start_time = time.time()
-            self.ta_controller.acquire_target()
-
-            background_image = self.ta_controller.capture_n_exposures(target_camera,
-                                                                      exposure_time=100,
-                                                                      n_exposures=10,
-                                                                      exposure_period=1,
-                                                                      beam_dump_position=FlipMountPosition.IN_BEAM)
-
-            image = self.ta_controller.capture_n_exposures(target_camera,
-                                                           exposure_time=100,
-                                                           n_exposures=10,
-                                                           exposure_period=1)
-
-            image = image - background_image
-
-            clipped_image = np.where(image > 1, 1, 0)
-
-            fpm_pixel_coords.append(centroid_1dg(clipped_image))
-            runtimes.append(time.time() - start_time)
-
-        self.log.info(f"Target center calibrated . All {n_samples} taken. (runtime: ~{(time.time() - t0)/60}mins)")
-        mean_calibration_value = np.mean(fpm_pixel_coords, axis=0)
-        mean_runtime = np.mean(runtimes, axis=0)/60
-        self.log.info(f"Mean target pixel coords for {target_camera}: {mean_calibration_value}. (runtime ~{mean_runtime}mins)")
-
-    def find_hole(self,
-                  image_crop={TargetCamera.TA: 10, TargetCamera.SCI: 10},
-                  ta_canny_threshold={TargetCamera.TA: 10, TargetCamera.SCI: 40}):
-        """ Finds the hole for each camera. Note, due to the complexity of
-        certain modes this neccesitates some call and response.
-
-        Returns
-        -------
-        ta_hole : tupel of floats
-            The (x,y) position of the FPM hole center for the TA Camera.
-        sci_hole : tupel of floats
-            The (x,y) position for the FPM hole center for the Imaging Camera.
-        """
-
-        calibrated_fpm_center = {target_camera: None for target_camera in TargetCamera}
-        for target_camera in TargetCamera:
-            # power_switch("light")
-
-            self.ta_controller.acquire_target()
-
-            if target_camera is TargetCamera.SCI:
-                self.ta_controller.misalign()
-
-            img = self.ta_controller.capture_n_exposures(target_camera)
-
-            # Artificially crop image in case of edge effects
-            img[:image_crop[target_camera], :image_crop[target_camera]] = 0
-            img[-1 * image_crop[target_camera]:, -1 * image_crop[target_camera]:] = 0
-
-            # Find edges with skimage
-            edges = skimage.feature.canny(img / (ta_canny_threshold[target_camera] * np.median(img)))
-            x_circle, y_circle = np.where(edges)
-            calibrated_fpm_center[target_camera] = np.median(x_circle), np.median(y_circle)
-
-        for target_camera in TargetCamera:
-            self.log.info(f'FPM hole center found for {target_camera}: {calibrated_fpm_center[target_camera]}.')
+    def calibrate_fpm_center(self, target_camera=TargetCamera.TA, clip_threshold=0.25, exposure_time=500000):
+        self.ta_controller.calibrate_target_pixel(target_camera=target_camera, clip_threshold=clip_threshold, exposure_time=exposure_time)
 
 
 if __name__ == "__main__":
-    CalibrateTargetAcquisition(motor_camera_pairs=[(MotorMount.APODIZER, TargetCamera.TA),
-                                                    (MotorMount.APODIZER, TargetCamera.SCI)]).start()
+    CalibrateTargetAcquisition(motor_camera_pairs=[(MotorMount.APODIZER, TargetCamera.SCI)]).start()
