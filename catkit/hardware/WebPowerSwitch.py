@@ -39,7 +39,11 @@ class WebPowerSwitch(RemotePowerSwitch):
         pass
 
     def switch(self, outlet_id, on, all=False):
-        """ Turn on/off all/individual outlet(s). """
+        """ Turn on/off all/individual outlet(s).
+        :param outlet_id: str or iterable of str, representing the config id name(s) of the outlet(s).
+        :param on: bool, switch action.
+        :param all: bool, switch all outlets
+        """
         if all:
             self.all_on() if on else self.all_off()
         else:
@@ -102,4 +106,9 @@ class WebPowerSwitch(RemotePowerSwitch):
         formatted_script_line = f'{script_line:03d}'
         ip_string = f"http://{self.ip}/script?run{formatted_script_line}=run"
 
-        self.instrument_lib.get(ip_string, auth=(self.user, self.password))
+        resp = self.instrument_lib.get(ip_string, auth=(self.user, self.password))
+        # Raise an error if one occurred.
+        resp.raise_for_status()
+        # Now be explicit to catch some non HTTP errors status that we also don't want to deal with.
+        if resp.status_code != 200:
+            raise RuntimeError(f"{self.config_id} error: GET returned {resp.status_code} when 200 was expected.")
