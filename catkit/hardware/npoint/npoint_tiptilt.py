@@ -18,6 +18,7 @@ import warnings
 
 from numpy import double
 
+from usb.backend import libusb0, libusb1
 import usb.core
 import usb.util
 
@@ -49,7 +50,7 @@ class nPointTipTilt():
     should close the connection when the time is right.
     """
 
-    def __init__(self, vendor_id=None, product_id=None):
+    def __init__(self, vendor_id=None, product_id=None, library_path=None, library=None):
 
         """Initial function to configure logging and find the device. Anything 
         set to None will attempt to pull from the config file.
@@ -60,6 +61,10 @@ class nPointTipTilt():
             The vendor ID for the device, defaults to None.
         product_id : int 
             The produce ID for the device, defautls to None.
+        library_path : str
+            The path to the libusb library. Defaults to None.
+        library : str
+            Which libusb library to use. Defaults to None.
         """
         
         # Pull device specifics from config file
@@ -70,10 +75,19 @@ class nPointTipTilt():
         
             config = configparser.ConfigParser()
             config.read(config_path)
-
+        
         self.vendor_id = config.get('npoint_tiptilt_lc_400', 'vendor_id') if vendor_id is None else vendor_id
         self.product_id = config.get('npoint_tiptilt_lc_400', 'product_id') if product_id is None else product_id
         
+        self.library_path = os.environ.get('npoint_tiptilt_lc_400_libusb_path') if library_path is None else library_path
+        library = config.get('npoint_tiptilt_lc_400', 'libusb_library') if library is None else library
+        library_mapping = {'libusb0': libusb0, 'libusb1': libusb1}
+        if library in library_mapping.keys() and os.path.exists(library_path):
+            self.library = library_mapping[library]
+        else:
+            raise NotImplementedError("The backend library or library path you specified for the controller is not available at this time.")
+        self.backend = self.library.get_backend(find_library=lambda x: self.library_path)
+
         # Set up the logging.
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
         self.logger = logging.getLogger('nPoint-{}-{}'.format(self.vendor_id, self.product_id, str_date))
@@ -92,7 +106,7 @@ class nPointTipTilt():
         self.logger.addHandler(ch)
         
         # Instantiate the device
-        self.dev = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id)
+        self.dev = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id, backend=self.backend)
         if self.dev is None:
             self.close_logger()
             raise NameError("Go get the device sorted you knucklehead.")
