@@ -43,6 +43,9 @@ class SegmentedDmCommand():
     def __init__(self, apply_flat_map=False, dm_config_id='iris_ao'):
         # Grab things from CONFIG_INI
         self.filename_flat = CONFIG_INI.get(dm_config_id, 'flat_file_ini')
+        # Check that the file exists (specifically, are you on the testbed or not)
+        if not os.path.exists(self.filename_flat):
+            raise ValueError(f"{self.filename_flat} either does not exists or is not currently accessible")
 
         try:
             self.segments_in_pupil = json.loads(CONFIG_INI.get(dm_config_id, 'active_segment_list'))
