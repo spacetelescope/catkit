@@ -6,14 +6,14 @@ If you have an Iris AO segmented DM, congratulations! You are one of only a few.
 ## Segment numbering and input formats
 IrisAO segmented DMs have a numbering system that puts segment 1 in the center and continues up. and counterclockwise around the DM. See figures for examples of the PTT11 and PTT489 from IrisAO with their IrisAO numbering.
 
-![Figure 1: IrisAO PTT111/PTT111L](figures/iris_ao_ptt111.png)
-![Figure 2: IrisAO PTT489](figures/iris_ao_ptt489.png)
+![Figure 1: IrisAO PTT111/PTT111L](figures/iris_ao_ptt111.jpg)
+![Figure 2: IrisAO PTT489](figures/iris_ao_ptt489.jpg)
 
 In creating a command for your aperture on a IrisAO segmented DM, you will need to specify the aperture and segments to be commanded in the config.ini file (see more on that below). That aperture, is what you will be commanding. When loading a custom command, the list of PTT values to be loaded will only be for the segments that you wish to move, however, in native Python numbering such that the first element in your list will be the first segment to be moved, either the center segment or the first segment (at the "top") in the innermost ring. In Python the segment numbering is clockwise. The only time the IrisAO numbering is used is in the native .PTT### files or .ini files.
 
 For example, if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L, you will only be using a subset of segments to build your aperture, when passing in a custom command, your command will be given in the order as seen in Figure 3.
 
-![Figure 3: JWST aperture on a PTT111/PTT111L](figures/jwst_on_iris_ao_ptt111.png)
+![Figure 3: JWST aperture on a PTT111/PTT111L](figures/jwst_on_iris_ao_ptt111.jpg)
 
 ## Input formats
 
