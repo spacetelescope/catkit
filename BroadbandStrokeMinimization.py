@@ -301,19 +301,18 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                        'nd_wheel': nd_wheel}
 
             # Instantiate TA Controller and run initial centering
-            if self.run_ta:
-                ta_devices = {'picomotors': {MotorMount.APODIZER: apodizer_picomotor_mount,
-                                             MotorMount.QUAD_CELL: quadcell_picomotor_mount},
-                               'beam_dump': beam_dump,
-                               "cameras": {TargetCamera.SCI: cam,
-                                           TargetCamera.TA: ta_cam}}
+            ta_devices = {'picomotors': {MotorMount.APODIZER: apodizer_picomotor_mount,
+                                         MotorMount.QUAD_CELL: quadcell_picomotor_mount},
+                           'beam_dump': beam_dump,
+                           "cameras": {TargetCamera.SCI: cam,
+                                       TargetCamera.TA: ta_cam}}
 
-                ta_controller = TargetAcquisition(ta_devices,
-                                                  self.output_path,
-                                                  use_closed_loop=False,
-                                                  n_exposures=20,
-                                                  exposure_period=5,
-                                                  target_pixel_tolerance={TargetCamera.TA: 2, TargetCamera.SCI: 25})
+            with TargetAcquisition(ta_devices,
+                                   self.output_path,
+                                   use_closed_loop=False,
+                                   n_exposures=20,
+                                   exposure_period=5,
+                                   target_pixel_tolerance={TargetCamera.TA: 2, TargetCamera.SCI: 25}) as ta_controller:
 
                 # Flatten DMs before attempting initial target acquisition.
                 from catkit.hardware.boston.commands import flat_command
@@ -324,201 +323,202 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 move_filter(wavelength=640,
                             nd="clear_1",
                             devices={"color_wheel": devices["color_wheel"], "nd_wheel": devices["nd_wheel"]})
-                ta_controller.acquire_target(coarse_align=True)
-
-            # Calculate flux attenuation factor between direct+ND and coronagraphic images
-            flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=self.wavelengths,
-                                                                     out_path=self.output_path,
-                                                                     nd_direct=self.nd_direct,
-                                                                     nd_coron=self.nd_coron,
-                                                                     devices=devices,
-                                                                     dm1_act=self.dm1_actuators,
-                                                                     dm2_act=self.dm2_actuators,
-                                                                     num_exp=self.num_exposures,
-                                                                     file_mode=self.file_mode,
-                                                                     raw_skip=self.raw_skip)
-
-            # Take "before" images
-            initial_path = os.path.join(self.output_path, 'before')
-            exposure_kwargs = {'initial_path': initial_path,
-                               'num_exposures': self.num_exposures}
-
-            # In the broadband code, many quantities need to be either lists per wavelength or dicts per wavelength
-            # In this implementation we choose dicts.
-            direct_maxes = {}
-            images_direct = {}
-            self.images_before = {}
-            self.images_after = {}
-            self.broadband_images = []  # broadband images are however just a list
-
-            # Take starting reference images, in direct and coron, per each wavelength
-            # Note, switching direct<->coron is much slower than filter wheel changes, so
-            # for efficiency we should change the FPM position the minimum number of times
-            for wavelength in self.wavelengths:
-                images_direct[wavelength], _ = self.take_exposure(devices, 'direct', wavelength, initial_path, flux_norm_dir[wavelength])
-                direct_maxes[wavelength] = images_direct[wavelength].max()
-
-            for wavelength in self.wavelengths:
-                self.images_before[wavelength], _ = self.take_exposure(devices, 'coron', wavelength, initial_path)
-                self.images_before[wavelength] /= direct_maxes[wavelength]
-                self.images_after[wavelength] = self.images_before[wavelength]
-
-            # Compute broadband image as the average over wavelength, weighted by the spectral flux at each wavelength
-            self.broadband_images.append(self.compute_broadband_weighted_mean(self.images_before, self.spectral_weights))
-
-            # Set up plot writing infrastructure
-            self.init_strokemin_plots()
-            self.mean_contrasts_image.append(np.mean(self.broadband_images[-1][self.dark_zone]))
-            self.collect_metrics(devices)
-
-            # Main body of control loop
-            for i in range(self.num_iterations):
-                # Initialize empty dictionary.  This contains E-field estimates indexed by wavelength, and is
-                # overwritten in each control iteration
-                E_estimateds = {}
-                mean_contrast_pairwise = {}
-                mean_contrast_probe = {}
-                probe_examples = {}
-
-                self.log.info("Pairwise sensing and stroke minimization, iteration {}".format(i))
-                
-                # Check for any drifts and correct 
                 if self.run_ta:
-                    # TODO: Are the filters in their optimal positions for TA?
-                    #ta_controller.acquire_target(coarse_align=False)  # TODO: HICAT-713 This requires testing at low contrast levels.
-                    pass
+                    ta_controller.acquire_target(coarse_align=True)
 
-                # Create a new output subfolder for each iteration
-                initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
+                # Calculate flux attenuation factor between direct+ND and coronagraphic images
+                flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=self.wavelengths,
+                                                                         out_path=self.output_path,
+                                                                         nd_direct=self.nd_direct,
+                                                                         nd_coron=self.nd_coron,
+                                                                         devices=devices,
+                                                                         dm1_act=self.dm1_actuators,
+                                                                         dm2_act=self.dm2_actuators,
+                                                                         num_exp=self.num_exposures,
+                                                                         file_mode=self.file_mode,
+                                                                         raw_skip=self.raw_skip)
 
-                # Make another exposure function with the bound/unbound arguments needed in the pairwise estimator
-                def take_exposure_pairwise(dm1_actuators, dm2_actuators, suffix, wavelength):
-                    return self.take_exposure(devices,
-                                              exposure_type='coron',
-                                              wavelength=wavelength,
-                                              initial_path=initial_path,
-                                              suffix=suffix,
-                                              dm1_actuators=dm1_actuators,
-                                              dm2_actuators=dm2_actuators)
+                # Take "before" images
+                initial_path = os.path.join(self.output_path, 'before')
+                exposure_kwargs = {'initial_path': initial_path,
+                                   'num_exposures': self.num_exposures}
 
-                # Electric field estimation.  This covers several cases:
-                #   - If we are in "perfect knowledge" mode, which only works in simulation, compute the true electric fields
-                #   - If not, but the control weight for the wavelength is zero, then we just return zero to avoid taking pairwise data that is not used
-                #     in control anyways.
-                #   - In all other situations, take a pairwise estimate.
+                # In the broadband code, many quantities need to be either lists per wavelength or dicts per wavelength
+                # In this implementation we choose dicts.
+                direct_maxes = {}
+                images_direct = {}
+                self.images_before = {}
+                self.images_after = {}
+                self.broadband_images = []  # broadband images are however just a list
+
+                # Take starting reference images, in direct and coron, per each wavelength
+                # Note, switching direct<->coron is much slower than filter wheel changes, so
+                # for efficiency we should change the FPM position the minimum number of times
                 for wavelength in self.wavelengths:
-                    self.images_before[wavelength] = self.images_after[wavelength]
+                    images_direct[wavelength], _ = self.take_exposure(devices, 'direct', wavelength, initial_path, flux_norm_dir[wavelength])
+                    direct_maxes[wavelength] = images_direct[wavelength].max()
 
-                    if self.perfect_knowledge_mode and sim:
-                        self.compute_true_e_fields(E_estimateds, exposure_kwargs, initial_path, wavelength)
-                    else:
-                        if self.control_weights[wavelength] == 0:
-                            E_estimateds[wavelength] = hcipy.Field(np.zeros(stroke_min.focal_grid.size, dtype='complex'), stroke_min.focal_grid)
-                            mean_contrast_probe[wavelength] = np.mean(np.abs(E_estimateds[wavelength][self.dark_zone]) ** 2)
-                            probe_examples[wavelength] = self.images_before[wavelength]
+                for wavelength in self.wavelengths:
+                    self.images_before[wavelength], _ = self.take_exposure(devices, 'coron', wavelength, initial_path)
+                    self.images_before[wavelength] /= direct_maxes[wavelength]
+                    self.images_after[wavelength] = self.images_before[wavelength]
+
+                # Compute broadband image as the average over wavelength, weighted by the spectral flux at each wavelength
+                self.broadband_images.append(self.compute_broadband_weighted_mean(self.images_before, self.spectral_weights))
+
+                # Set up plot writing infrastructure
+                self.init_strokemin_plots()
+                self.mean_contrasts_image.append(np.mean(self.broadband_images[-1][self.dark_zone]))
+                self.collect_metrics(devices)
+
+                # Main body of control loop
+                for i in range(self.num_iterations):
+                    # Initialize empty dictionary.  This contains E-field estimates indexed by wavelength, and is
+                    # overwritten in each control iteration
+                    E_estimateds = {}
+                    mean_contrast_pairwise = {}
+                    mean_contrast_probe = {}
+                    probe_examples = {}
+
+                    self.log.info("Pairwise sensing and stroke minimization, iteration {}".format(i))
+
+                    # Check for any drifts and correct
+                    if self.run_ta:
+                        # TODO: Are the filters in their optimal positions for TA?
+                        #ta_controller.acquire_target(coarse_align=False)  # TODO: HICAT-713 This requires testing at low contrast levels.
+                        pass
+
+                    # Create a new output subfolder for each iteration
+                    initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
+
+                    # Make another exposure function with the bound/unbound arguments needed in the pairwise estimator
+                    def take_exposure_pairwise(dm1_actuators, dm2_actuators, suffix, wavelength):
+                        return self.take_exposure(devices,
+                                                  exposure_type='coron',
+                                                  wavelength=wavelength,
+                                                  initial_path=initial_path,
+                                                  suffix=suffix,
+                                                  dm1_actuators=dm1_actuators,
+                                                  dm2_actuators=dm2_actuators)
+
+                    # Electric field estimation.  This covers several cases:
+                    #   - If we are in "perfect knowledge" mode, which only works in simulation, compute the true electric fields
+                    #   - If not, but the control weight for the wavelength is zero, then we just return zero to avoid taking pairwise data that is not used
+                    #     in control anyways.
+                    #   - In all other situations, take a pairwise estimate.
+                    for wavelength in self.wavelengths:
+                        self.images_before[wavelength] = self.images_after[wavelength]
+
+                        if self.perfect_knowledge_mode and sim:
+                            self.compute_true_e_fields(E_estimateds, exposure_kwargs, initial_path, wavelength)
                         else:
-                            self.log.info(f'Estimating electric fields using pairwise probes at {wavelength} nm...')
-                            E_estimateds[wavelength], probe_examples[wavelength] = stroke_min.take_electric_field_pairwise(
-                                self.dm1_actuators,
-                                self.dm2_actuators,
-                                take_exposure_pairwise,
-                                devices,
-                                self.H_invs[wavelength],
-                                self.probes[wavelength],
-                                self.dark_zone,
-                                images_direct[wavelength],
-                                initial_path=exposure_kwargs['initial_path'],
-                                current_contrast=self.mean_contrasts_image[-1] if i>0 else None,
-                                probe_amplitude=self.probe_amp,
-                                wavelength=wavelength,
-                                file_mode=self.file_mode)
-
-                            # TODO: if self.file_mode: HICAT-817
-                            hicat.util.save_complex(f"E_estimated_unscaled_{wavelength}nm.fits", E_estimateds[wavelength], initial_path)
-
-                            mean_contrast_probe[wavelength] = np.mean(probe_examples[wavelength][self.dark_zone])
-
-                            if self.autoscale_e_field:
-                                # automatically scale the estimated E field to match the prior image contrast
-                                expected_contrast = self.mean_contrasts_image[-1]
-                                estimated_contrast = np.mean(np.abs(E_estimateds[wavelength][self.dark_zone]) ** 2)
-                                contrast_ratio = expected_contrast/estimated_contrast
-                                self.log.info("Scaling estimated e field by {} to match image contrast ".format(np.sqrt(contrast_ratio)))
-                                self.e_field_scale_factors[wavelength].append(np.sqrt(contrast_ratio))
+                            if self.control_weights[wavelength] == 0:
+                                E_estimateds[wavelength] = hcipy.Field(np.zeros(stroke_min.focal_grid.size, dtype='complex'), stroke_min.focal_grid)
+                                mean_contrast_probe[wavelength] = np.mean(np.abs(E_estimateds[wavelength][self.dark_zone]) ** 2)
+                                probe_examples[wavelength] = self.images_before[wavelength]
                             else:
-                                self.e_field_scale_factors[wavelength].append(1.)
+                                self.log.info(f'Estimating electric fields using pairwise probes at {wavelength} nm...')
+                                E_estimateds[wavelength], probe_examples[wavelength] = stroke_min.take_electric_field_pairwise(
+                                    self.dm1_actuators,
+                                    self.dm2_actuators,
+                                    take_exposure_pairwise,
+                                    devices,
+                                    self.H_invs[wavelength],
+                                    self.probes[wavelength],
+                                    self.dark_zone,
+                                    images_direct[wavelength],
+                                    initial_path=exposure_kwargs['initial_path'],
+                                    current_contrast=self.mean_contrasts_image[-1] if i>0 else None,
+                                    probe_amplitude=self.probe_amp,
+                                    wavelength=wavelength,
+                                    file_mode=self.file_mode)
 
-                            E_estimateds[wavelength] *= self.e_field_scale_factors[wavelength][-1]
+                                # TODO: if self.file_mode: HICAT-817
+                                hicat.util.save_complex(f"E_estimated_unscaled_{wavelength}nm.fits", E_estimateds[wavelength], initial_path)
 
-                    # Save raw contrast from pairwise image
-                    mean_contrast_pairwise[wavelength] = np.mean(np.abs(E_estimateds[wavelength][self.dark_zone]) ** 2)
+                                mean_contrast_probe[wavelength] = np.mean(probe_examples[wavelength][self.dark_zone])
 
-                self.mean_contrasts_pairwise.append(self.compute_broadband_weighted_mean(mean_contrast_pairwise, self.control_weights))
-                self.mean_contrasts_probe.append(self.compute_broadband_weighted_mean(mean_contrast_probe, self.control_weights))
-                self.probe_example = self.compute_broadband_weighted_mean(probe_examples, self.control_weights)
+                                if self.autoscale_e_field:
+                                    # automatically scale the estimated E field to match the prior image contrast
+                                    expected_contrast = self.mean_contrasts_image[-1]
+                                    estimated_contrast = np.mean(np.abs(E_estimateds[wavelength][self.dark_zone]) ** 2)
+                                    contrast_ratio = expected_contrast/estimated_contrast
+                                    self.log.info("Scaling estimated e field by {} to match image contrast ".format(np.sqrt(contrast_ratio)))
+                                    self.e_field_scale_factors[wavelength].append(np.sqrt(contrast_ratio))
+                                else:
+                                    self.e_field_scale_factors[wavelength].append(1.)
 
-                self.log.info('Calculating stroke min correction, iteration {}...'.format(i))
+                                E_estimateds[wavelength] *= self.e_field_scale_factors[wavelength][-1]
 
-                gamma = self.adjust_gamma(i) if self.auto_adjust_gamma else self.gamma
+                        # Save raw contrast from pairwise image
+                        mean_contrast_pairwise[wavelength] = np.mean(np.abs(E_estimateds[wavelength][self.dark_zone]) ** 2)
 
-                # Find the required DM update here
-                correction, self.mu_start, predicted_contrast, predicted_contrast_drop = self.compute_correction(
-                    E_estimateds, gamma, devices, exposure_kwargs)
+                    self.mean_contrasts_pairwise.append(self.compute_broadband_weighted_mean(mean_contrast_pairwise, self.control_weights))
+                    self.mean_contrasts_probe.append(self.compute_broadband_weighted_mean(mean_contrast_probe, self.control_weights))
+                    self.probe_example = self.compute_broadband_weighted_mean(probe_examples, self.control_weights)
 
-                # Adjust correction and predicted results for the control gain:
-                correction *= self.control_gain
-                predicted_contrast += (1 - self.control_gain) * np.abs(predicted_contrast_drop)
-                predicted_contrast_drop *= self.control_gain
+                    self.log.info('Calculating stroke min correction, iteration {}...'.format(i))
 
-                self.prior_correction = self.correction     # save for use in plots
-                self.correction = correction                # save for use in plots
-                self.predicted_contrasts.append(predicted_contrast) # save for use in plots
-                self.predicted_contrast_deltas.append(predicted_contrast_drop) # save for use in plots
+                    gamma = self.adjust_gamma(i) if self.auto_adjust_gamma else self.gamma
 
-                self.log.info("Starting contrast from pairwise for iteration {}: {}".format(i, self.mean_contrasts_pairwise[-1]))
-                self.log.info("Iteration {} used mu = {}".format(i, self.mu_start))
-                self.log.info("Predicted contrast after this iteration: {}".format(self.predicted_contrasts[-1]))
-                self.log.info("Predicted contrast change this iteration: {}".format(self.predicted_contrast_deltas[-1]))
+                    # Find the required DM update here
+                    correction, self.mu_start, predicted_contrast, predicted_contrast_drop = self.compute_correction(
+                        E_estimateds, gamma, devices, exposure_kwargs)
 
-                # Update DM actuators
-                self.sanity_check(correction)
-                dm1_correction, dm2_correction = stroke_min.split_command_vector(correction, self.use_dm2)
-                self.dm1_actuators -= dm1_correction
-                self.dm2_actuators -= dm2_correction
+                    # Adjust correction and predicted results for the control gain:
+                    correction *= self.control_gain
+                    predicted_contrast += (1 - self.control_gain) * np.abs(predicted_contrast_drop)
+                    predicted_contrast_drop *= self.control_gain
 
-                self.log.info('Taking post-correction coronagraphic images and pupil image...')
+                    self.prior_correction = self.correction     # save for use in plots
+                    self.correction = correction                # save for use in plots
+                    self.predicted_contrasts.append(predicted_contrast) # save for use in plots
+                    self.predicted_contrast_deltas.append(predicted_contrast_drop) # save for use in plots
 
-                self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
-                                                                         num_exposures=1,
-                                                                         initial_path=exposure_kwargs['initial_path'],
-                                                                         file_mode=self.file_mode)[0]
+                    self.log.info("Starting contrast from pairwise for iteration {}: {}".format(i, self.mean_contrasts_pairwise[-1]))
+                    self.log.info("Iteration {} used mu = {}".format(i, self.mu_start))
+                    self.log.info("Predicted contrast after this iteration: {}".format(self.predicted_contrasts[-1]))
+                    self.log.info("Predicted contrast change this iteration: {}".format(self.predicted_contrast_deltas[-1]))
 
-                # Capture images after DM correction
-                if np.mod(i, self.direct_every) == 0:
-                    self.log.info('Taking direct images for comparison...')
+                    # Update DM actuators
+                    self.sanity_check(correction)
+                    dm1_correction, dm2_correction = stroke_min.split_command_vector(correction, self.use_dm2)
+                    self.dm1_actuators -= dm1_correction
+                    self.dm2_actuators -= dm2_correction
+
+                    self.log.info('Taking post-correction coronagraphic images and pupil image...')
+
+                    self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
+                                                                             num_exposures=1,
+                                                                             initial_path=exposure_kwargs['initial_path'],
+                                                                             file_mode=self.file_mode)[0]
+
+                    # Capture images after DM correction
+                    if np.mod(i, self.direct_every) == 0:
+                        self.log.info('Taking direct images for comparison...')
+
+                        for wavelength in self.wavelengths:
+                            images_direct[wavelength], _ = self.take_exposure(devices, 'direct', wavelength, initial_path, flux_norm_dir[wavelength])
+                            direct_maxes[wavelength] = images_direct[wavelength].max()
 
                     for wavelength in self.wavelengths:
-                        images_direct[wavelength], _ = self.take_exposure(devices, 'direct', wavelength, initial_path, flux_norm_dir[wavelength])
-                        direct_maxes[wavelength] = images_direct[wavelength].max()
+                        self.images_after[wavelength], _ = self.take_exposure(devices, 'coron', wavelength, initial_path)
+                        self.images_after[wavelength] /= direct_maxes[wavelength]
 
-                for wavelength in self.wavelengths:
-                    self.images_after[wavelength], _ = self.take_exposure(devices, 'coron', wavelength, initial_path)
-                    self.images_after[wavelength] /= direct_maxes[wavelength]
+                    self.broadband_images.append(self.compute_broadband_weighted_mean(self.images_after, self.spectral_weights))
 
-                self.broadband_images.append(self.compute_broadband_weighted_mean(self.images_after, self.spectral_weights))
+                    # Save more data for plotting
+                    self.mean_contrasts_image.append(np.mean(self.broadband_images[-1][self.dark_zone]))  # Mean dark-zone contrast after correction
+                    self.collect_metrics(devices)
+                    self.measured_contrast_deltas.append(self.mean_contrasts_image[-1] - self.mean_contrasts_image[-2])  # Change in measured contrast
+                    self.log.info("===> Measured contrast drop this iteration: {}".format(self.measured_contrast_deltas[-1]))
 
-                # Save more data for plotting
-                self.mean_contrasts_image.append(np.mean(self.broadband_images[-1][self.dark_zone]))  # Mean dark-zone contrast after correction
-                self.collect_metrics(devices)
-                self.measured_contrast_deltas.append(self.mean_contrasts_image[-1] - self.mean_contrasts_image[-2])  # Change in measured contrast
-                self.log.info("===> Measured contrast drop this iteration: {}".format(self.measured_contrast_deltas[-1]))
+                    I_estimateds = {wavelength: np.abs(E_estimated) ** 2 for wavelength, E_estimated in E_estimateds.items()}
+                    est_incoherent = np.abs(self.broadband_images[-2] - self.compute_broadband_weighted_mean(I_estimateds, self.control_weights))
+                    self.estimated_incoherent_backgrounds.append(np.mean(est_incoherent[self.dark_zone]))  # Estimated incoherent background
 
-                I_estimateds = {wavelength: np.abs(E_estimated) ** 2 for wavelength, E_estimated in E_estimateds.items()}
-                est_incoherent = np.abs(self.broadband_images[-2] - self.compute_broadband_weighted_mean(I_estimateds, self.control_weights))
-                self.estimated_incoherent_backgrounds.append(np.mean(est_incoherent[self.dark_zone]))  # Estimated incoherent background
-
-                # Make diagnostic plots
-                self.show_status_plots(self.broadband_images[-2], self.broadband_images[-1], self.dm1_actuators, self.dm2_actuators, E_estimateds)
+                    # Make diagnostic plots
+                    self.show_status_plots(self.broadband_images[-2], self.broadband_images[-1], self.dm1_actuators, self.dm2_actuators, E_estimateds)
 
     def compute_true_e_fields(self, E_estimateds, exposure_kwargs, initial_path, wavelength):
         """ Compute and save the true E-fields.  Only usable in simulation. """

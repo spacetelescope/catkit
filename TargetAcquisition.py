@@ -52,34 +52,34 @@ class TargetAcquisitionExperiment(Experiment):
                                "cameras": {TargetCamera.SCI: sci_cam,
                                            TargetCamera.TA: ta_cam}}
 
-            self.ta_controller = TargetAcquisition(self.ta_devices,
-                                                   self.output_path,
-                                                   n_tries=7,
-                                                   use_closed_loop=False,
-                                                   n_exposures=20,
-                                                   exposure_period=5,
-                                                   target_pixel_tolerance={TargetCamera.TA: 2, TargetCamera.SCI: 25},
-                                                   apply_test_drifts=False,
-                                                   test_drift_max=50  # drift = self.target_pixel_tolerance[<target>] + rand()
-                                                   )
+            with TargetAcquisition(self.ta_devices,
+                                   self.output_path,
+                                   n_tries=7,
+                                   use_closed_loop=False,
+                                   n_exposures=20,
+                                   exposure_period=5,
+                                   target_pixel_tolerance={TargetCamera.TA: 2, TargetCamera.SCI: 25},
+                                   apply_test_drifts=False,
+                                   test_drift_max=50  # drift = self.target_pixel_tolerance[<target>] + rand()
+                                   ) as self.ta_controller:
 
-            # Flatten DMs before attempting initial target acquisition.
-            ta_dm_flat = flat_command(bias=False, flat_map=True)
-            self.devices["dm"].apply_shape_to_both(ta_dm_flat, copy.deepcopy(ta_dm_flat))
+                # Flatten DMs before attempting initial target acquisition.
+                ta_dm_flat = flat_command(bias=False, flat_map=True)
+                self.devices["dm"].apply_shape_to_both(ta_dm_flat, copy.deepcopy(ta_dm_flat))
 
-            # Now setup filter wheels.
-            move_filter(wavelength=640,
-                        nd="clear_1",
-                        devices={"color_wheel": self.devices["color_wheel"], "nd_wheel": self.devices["nd_wheel"]})
+                # Now setup filter wheels.
+                move_filter(wavelength=640,
+                            nd="clear_1",
+                            devices={"color_wheel": self.devices["color_wheel"], "nd_wheel": self.devices["nd_wheel"]})
 
-            start_time = time.time()
-            self.ta_controller.acquire_target()
-            self.log.info(f"TA runtime: {(time.time() - start_time)/60:.3}mins")
-            #self.ta_controller.move((1000, 1000), MotorMount.APODIZER, units="steps")
+                start_time = time.time()
+                self.ta_controller.acquire_target()
+                self.log.info(f"TA runtime: {(time.time() - start_time)/60:.3}mins")
+                #self.ta_controller.move((1000, 1000), MotorMount.APODIZER, units="steps")
 
-            # self.extensions allows for this experiment to be extended.
-            for extension in self.extensions:
-                extension()
+                # self.extensions allows for this experiment to be extended.
+                for extension in self.extensions:
+                    extension()
 
 
 if __name__ == "__main__":
