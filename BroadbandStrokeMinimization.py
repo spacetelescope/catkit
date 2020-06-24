@@ -384,11 +384,9 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 
                 # Check for any drifts and correct 
                 if self.run_ta:
-                    # Only attempt to perform a coarse alignment if we're at
-                    # the 0th iteration
-                    perform_coarse_align = (i == 0)
                     # TODO: Are the filters in their optimal positions for TA?
-                    ta_controller.acquire_target(coarse_align=perform_coarse_align)
+                    #ta_controller.acquire_target(coarse_align=False)  # TODO: HICAT-713 This requires testing at low contrast levels.
+                    pass
 
                 # Create a new output subfolder for each iteration
                 initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
