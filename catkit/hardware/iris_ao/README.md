@@ -103,8 +103,8 @@ Each segmented DM from Iris AO was calibrated with a specific driver(s). This ca
     mirror_serial = 'PWA##-##-##-####'
     driver_serial = '########'
     total_number_of_segments = 37
-    active_number_of_segments = 19
-    active_segment_list = [3, 9, 10, 11, 4, 1, 2, 21, 22, 23, 24, 25, 12, 13, 5, 6, 7, 19, 8]
+    active_number_of_segments = 18
+    active_segment_list = [9, 2, 1, 4, 11, 10, 21, 8, 19, 7, 6, 5, 13, 12, 25, 24, 23, 22]
     flat_file_ini = ${optics_lab:local_repo_path}/DM/MirrorControlFiles/CustomFLAT.ini
     config_ptt_file = ${optics_lab:local_repo_path}/DM/MirrorControlFiles/ConfigPTT.ini
     path_to_dm_exe = ${optics_lab:local_repo_path}Control DM/Code/release
