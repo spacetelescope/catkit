@@ -4,9 +4,10 @@ import numpy as np
 import pandas
 import os
 import logging
-log = logging.getLogger(__name__)
 
 from hicat.plotting.plot_utils import careful_savefig
+
+log = logging.getLogger(__name__)
 
 def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     """
