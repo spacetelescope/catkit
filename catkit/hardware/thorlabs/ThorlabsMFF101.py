@@ -36,6 +36,16 @@ class ThorlabsMFF101(FlipMotor):
         """Close dm connection safely."""
         self.motor.close()
 
+    def move_to_position(self, position_number):
+        """ Calls move_to_position<position_number>. """
+        #return self.__getattribute__(f"move_to_position{position_number}")
+        if position_number == 1:
+            return self.move_to_position1()
+        elif position_number == 2:
+            return self.move_to_position2()
+        else:
+            raise NotImplementedError
+
     def move_to_position1(self):
         """Implements a move to the "up" position."""
         self.log.info("Moving to 'up' position")

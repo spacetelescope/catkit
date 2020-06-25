@@ -3,12 +3,12 @@ from enum import Enum
 from pint import UnitRegistry
 
 
-class BeamDumpPosition(Enum):
+class FlipMountPosition(Enum):
     """
     Enum for the possible states of the Beam Dump.
     """
-    in_beam = 1
-    out_of_beam = 2
+    IN_BEAM = "in_beam_position"
+    OUT_OF_BEAM = "out_of_beam_position"
 
 
 class FpmPosition(Enum):
