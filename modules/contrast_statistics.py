@@ -157,12 +157,8 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
         ax4.legend()
 
-        try:
-            output_fn = os.path.join(os.path.split(filepath)[-2],'contrast_metrics.pdf')
-            fig.savefig(output_fn, dpi=300, bbox_inches='tight')
-        except:
-            log.warning(f"Could not save contrast statistics plot to {output_fn}; PDF may already be open.")
-
+        output_fn = os.path.join(os.path.split(filepath)[-2],'contrast_metrics.pdf')
+        careful_savefig(fig, output_fn)
     return confidence_interval
 
 def plot_environment_and_contrast(filepath):
@@ -200,8 +196,13 @@ def plot_environment_and_contrast(filepath):
         ax.xaxis.set_major_locator(locator)
         ax.xaxis.set_major_formatter(formatter)
 
+    output_fn = os.path.join(os.path.dirname(filepath), 'environment.pdf')
+    careful_savefig(fig, output_fn)
+
+
+def careful_savefig(fig, output_filename):
+    """Save figure, allowing for the possibility the PDF is open so Windows won't let you re-save"""
     try:
-        output_fn =  os.path.join(os.path.dirname(filepath), 'environment.pdf')
-        fig.savefig(output_fn, dpi=300, bbox_inches='tight')
-    except:
-        log.warning(f"Could not save environment plot to {output_fn}; PDF may already be open.")
+        fig.savefig(output_filename, dpi=300, bbox_inches='tight')
+    except OSError:
+        log.warning(f"Could not save environment plot to {output_filename}; PDF may already be open.")
