@@ -4,6 +4,9 @@ import numpy as np
 import pandas
 import os
 import logging
+
+from hicat.plotting.plot_utils import careful_savefig
+
 log = logging.getLogger(__name__)
 
 def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
@@ -157,7 +160,8 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
         ax4.legend()
 
-        fig.savefig(os.path.join(os.path.split(filepath)[-2],'contrast_metrics.pdf'), dpi=300, bbox_inches='tight')
+        output_fn = os.path.join(os.path.split(filepath)[-2],'contrast_metrics.pdf')
+        careful_savefig(fig, output_fn)
     return confidence_interval
 
 def plot_environment_and_contrast(filepath):
@@ -170,7 +174,7 @@ def plot_environment_and_contrast(filepath):
     datetimes = np.asarray(metrics_data['time stamp'], np.datetime64)
 
     fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 8), gridspec_kw={'hspace': 0.3, 'top': 0.9})
-    fig.suptitle("Lab Environment Metrology during:\n" + filepath.split('/')[-2], fontweight='bold')
+    fig.suptitle("Lab Environment Metrology during:\n" + os.path.split(os.path.dirname(filepath))[-1], fontweight='bold')
 
     axes[0].plot(datetimes, metrics_data[' temp (C)'], c='red', marker='+',
                  label='Aux Temp Sensor')
@@ -195,4 +199,6 @@ def plot_environment_and_contrast(filepath):
         ax.xaxis.set_major_locator(locator)
         ax.xaxis.set_major_formatter(formatter)
 
-    fig.savefig(os.path.join(os.path.split(filepath)[-2], 'environment.pdf'), dpi=300, bbox_inches='tight')
+    output_fn = os.path.join(os.path.dirname(filepath), 'environment.pdf')
+    careful_savefig(fig, output_fn)
+
