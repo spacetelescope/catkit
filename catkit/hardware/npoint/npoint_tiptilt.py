@@ -3,7 +3,13 @@ Interface for the nPoint Tip/Tilt close loop controller.
 Connects to the controller via usb, and then sends and recieves hex
 messages to send commands, check the status, and put error handling over
 top. 
+
+In order to connect to the physical box, you'll need libusb appropriately
+installed and have the driver for you machine set : Ex 
+CATKIT_LIBUSB_PATH = 'C:\\Users\\HICAT\\Desktop\\libusb-win32-bin-1.2.6.0\\bin\\amd64\\libusb0.dll'
 """
+
+
 
 ## -- IMPORTS
 
@@ -18,6 +24,7 @@ import warnings
 
 from numpy import double
 
+from usb.backend import libusb0, libusb1
 import usb.core
 import usb.util
 
@@ -49,7 +56,10 @@ class nPointTipTilt():
     should close the connection when the time is right.
     """
 
-    def __init__(self, vendor_id=None, product_id=None):
+    # Define this library mapping as a static attribute.
+    library_mapping = {'libusb0': libusb0, 'libusb1': libusb1}
+    
+    def __init__(self, vendor_id=None, product_id=None, library_path=None, library=None):
 
         """Initial function to configure logging and find the device. Anything 
         set to None will attempt to pull from the config file.
@@ -60,6 +70,10 @@ class nPointTipTilt():
             The vendor ID for the device, defaults to None.
         product_id : int 
             The produce ID for the device, defautls to None.
+        library_path : str
+            The path to the libusb library. Defaults to None.
+        library : str
+            Which libusb library, right now supports libusb0 and libusb1. Defaults to None.
         """
         
         # Pull device specifics from config file
@@ -70,9 +84,22 @@ class nPointTipTilt():
         
             config = configparser.ConfigParser()
             config.read(config_path)
-
+        
         self.vendor_id = config.get('npoint_tiptilt_lc_400', 'vendor_id') if vendor_id is None else vendor_id
         self.product_id = config.get('npoint_tiptilt_lc_400', 'product_id') if product_id is None else product_id
+        
+        self.library_path = os.environ.get('CATKIT_LIBUSB_PATH') if library_path is None else library_path
+        if not self.library_path:
+            raise OSError("No library path was passed to the npoint and CATKIT_LIBUSB_PATH is not set on your machine")
+
+        library = config.get('npoint_tiptilt_lc_400', 'libusb_library') if library is None else library
+        if library not in self.library_mapping:
+            raise NotImplementedError(f"The backend you specified ({library}) is not available at this time.")
+        elif not os.path.exists(self.library_path):
+            raise FileNotFoundError(f"The library path you specified ({self.library_path}) does not exist.")
+        else:
+            self.library = self.library_mapping[library]
+            self.backend = self.library.get_backend(find_library=lambda x: self.library_path)
         
         # Set up the logging.
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
@@ -92,7 +119,7 @@ class nPointTipTilt():
         self.logger.addHandler(ch)
         
         # Instantiate the device
-        self.dev = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id)
+        self.dev = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id, backend=self.backend)
         if self.dev is None:
             self.close_logger()
             raise NameError("Go get the device sorted you knucklehead.")
