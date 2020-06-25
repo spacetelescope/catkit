@@ -6,6 +6,8 @@ import os
 import logging
 log = logging.getLogger(__name__)
 
+from hicat.plotting.plot_utils import careful_savefig
+
 def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
     """
     Calculate the iteration at which the contrast converges. Fits a 5th order polynomial and uses the first derivative
@@ -199,10 +201,3 @@ def plot_environment_and_contrast(filepath):
     output_fn = os.path.join(os.path.dirname(filepath), 'environment.pdf')
     careful_savefig(fig, output_fn)
 
-
-def careful_savefig(fig, output_filename):
-    """Save figure, allowing for the possibility the PDF is open so Windows won't let you re-save"""
-    try:
-        fig.savefig(output_filename, dpi=300, bbox_inches='tight')
-    except OSError:
-        log.warning(f"Could not save environment plot to {output_filename}; PDF may already be open.")
