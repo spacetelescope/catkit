@@ -3,7 +3,7 @@ import time
 import numpy as np
 from photutils import centroid_1dg
 import skimage.feature
-from catkit.catkit_types import BeamDumpPosition
+from catkit.catkit_types import FlipMountPosition
 
 from hicat.experiments.TargetAcquisition import TargetAcquisitionExperiment
 from hicat.control.target_acq import MotorMount, TargetCamera
@@ -53,7 +53,7 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
                                                                       exposure_time=100,
                                                                       n_exposures=10,
                                                                       exposure_period=1,
-                                                                      beam_dump_position=BeamDumpPosition.in_beam)
+                                                                      beam_dump_position=FlipMountPosition.in_beam)
 
             image = self.ta_controller.capture_n_exposures(target_camera,
                                                            exposure_time=100,
