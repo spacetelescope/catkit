@@ -33,6 +33,10 @@ class FlipMotor(ABC):
         """Close motor controller connection safely."""
 
     @abstractmethod
+    def move_to_position(self, position_number):
+        """ Calls move_to_position<position_number>. """
+
+    @abstractmethod
     def move_to_position1(self):
         """Implements a move to position 1."""
 
