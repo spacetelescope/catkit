@@ -41,12 +41,14 @@ class SegmentedDmCommand():
 
     """
     def __init__(self, apply_flat_map=False, dm_config_id='iris_ao'):
-        # Grab things from CONFIG_INI
-        self.filename_flat = CONFIG_INI.get(dm_config_id, 'flat_file_ini')
-        # Check that the file exists (specifically, are you on the testbed or not)
-        if not os.path.exists(self.filename_flat):
-            raise ValueError(f"{self.filename_flat} either does not exists or is not currently accessible")
+        self.apply_flat_map = apply_flat_map
+        if self.apply_flat_map:
+            self.filename_flat = CONFIG_INI.get(dm_config_id, 'flat_file_ini')
+            # Check that the file exists (specifically, are you on the testbed or not)
+            if not os.path.exists(self.filename_flat):
+                raise ValueError(f"{self.filename_flat} either does not exists or is not currently accessible")
 
+        # Grab things from CONFIG_INI
         try:
             self.segments_in_pupil = json.loads(CONFIG_INI.get(dm_config_id, 'active_segment_list'))
             self.number_segments_in_pupil = CONFIG_INI.getint(dm_config_id,
@@ -56,7 +58,7 @@ class SegmentedDmCommand():
         except NoOptionError:
             self.segments_in_pupil = segmented_dm_util.iris_pupil_naming(dm_config_id)
 
-        self.apply_flat_map = apply_flat_map
+
         self.data = segmented_dm_util.create_zero_array(self.number_segments_in_pupil) #TODO: change this to Nans?
         self.command = None
 
@@ -186,7 +188,7 @@ def convert_ptt_list(ptt_list, tip_factor, tilt_factor, starting_units, ending_u
 
     Segmented DM to Poppy
     - tip_factor = 1
-    - tilt_facotr = -1
+    - tilt_factor = -1
     - starting_units = dm_ptt_units from the config.ini file
     - ending_units = (u.m, u.rad, u.rad)
 
@@ -195,6 +197,18 @@ def convert_ptt_list(ptt_list, tip_factor, tilt_factor, starting_units, ending_u
                   tip_factor*ptt[2]*(starting_units[2]).to(ending_units[2]),
                   tilt_factor*ptt[1]*(starting_units[1]).to(ending_units[1])) for ptt in ptt_list]
     return converted
+
+
+def check_limits(ptt_list, limit=5.):
+    """
+    Check that the values for piston, tip, and tilt are not exceeding the hardware
+    limit. These limits are the same as what the IrisAO GUI has set.
+
+    :param limit: float, in DM units. Default = 5.
+    """
+    updated = [tuple(min(i, limit) for i in ptt) for ptt in ptt_list]
+
+    return updated
 
 
 def get_wavefront_from_coeffs(basis, coeff_array):
@@ -265,7 +279,9 @@ class SegmentedAperture():
                                                           rings=self._num_rings,
                                                           flattoflat=self.flat_to_flat,
                                                           gap=self.gap,
-                                                          segmentlist=self._segment_list)
+                                                          segmentlist=self._segment_list)#,
+                                                          #rotation=-90) # add rotation #TODO: Figure out how to do this and retain shape on segments
+
         return aperture
 
 
@@ -462,7 +478,7 @@ class PoppySegmentedCommand(SegmentedAperture):
         input_array = convert_ptt_list(input_array, tip_factor=-1, tilt_factor=1,
                                        starting_units=(u.m, u.rad, u.rad),
                                        ending_units=self.dm_command_units)
-        coeffs_array =  round_ptt_list(input_array)
+        coeffs_array = round_ptt_list(input_array)
 
         return coeffs_array
 
@@ -498,7 +514,7 @@ class DisplayCommand(SegmentedAperture):
             raise ValueError('Your list of Piston, Tip, Tilt values cannot be None')
 
         # Check for and replace Nans
-        self.ptt_list = ptt_list
+        self.ptt_list = check_limits(ptt_list)
         self.out_dir = out_dir
 
         # Grab the units of the DM for the piston, tip, tilt values to convert to
@@ -522,8 +538,8 @@ class DisplayCommand(SegmentedAperture):
         converted_list = convert_ptt_list(self.ptt_list, tip_factor=1, tilt_factor=-1,
                                           starting_units=self.dm_command_units,
                                           ending_units=(u.m, u.rad, u.rad))
-
-        for seg, values in zip(self.aperture.segmentlist, converted_list):
+        rounded_list = round_ptt_list(converted_list, decimals=4)
+        for seg, values in zip(self.aperture.segmentlist, rounded_list):
             # conversion from um and mrad to m and rad
             self.aperture.set_actuator(seg, values[0], values[1], values[2])
 
@@ -533,8 +549,8 @@ class DisplayCommand(SegmentedAperture):
         Display either the deployed mirror state ("wavefront") or the PSF created
         by this mirror state.
 
-        :params display_wavefront: bool, If true, display the deployed mirror state
-        :params display_psf: bool, If true, display the simulated PSF created by the
+        :param display_wavefront: bool, If true, display the deployed mirror state
+        :param display_psf: bool, If true, display the simulated PSF created by the
                              mirror state
         """
         if root:
@@ -564,6 +580,7 @@ class DisplayCommand(SegmentedAperture):
         osys = poppy.OpticalSystem()
         osys.add_pupil(self.aperture)
         osys.add_detector(pixelscale=pixelscale, fov_arcsec=self.instrument_fov)
+        osys.add_rotation(angle=90) # Note: The best rotation depends on each testbed #TODO: Generalize this?
 
         psf = osys.calc_psf(wavelength=self.wavelength)
         poppy.display_psf(psf, vmin=10e-8, vmax=10e-2,
