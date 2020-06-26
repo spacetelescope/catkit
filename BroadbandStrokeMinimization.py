@@ -447,7 +447,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                                     file_mode=self.file_mode)
 
                                 # TODO: if self.file_mode: HICAT-817
-                                hicat.util.save_complex(f"E_estimated_unscaled_{wavelength}nm.fits", E_estimateds[wavelength], initial_path)
+                                hicat.util.save_complex(f"E_estimated_unscaled_{int(wavelength)}nm.fits", E_estimateds[wavelength], initial_path)
 
                                 mean_contrast_probe[wavelength] = np.mean(probe_examples[wavelength][self.dark_zone])
 
