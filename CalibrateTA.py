@@ -53,7 +53,7 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
                                                                       exposure_time=100,
                                                                       n_exposures=10,
                                                                       exposure_period=1,
-                                                                      beam_dump_position=FlipMountPosition.in_beam)
+                                                                      beam_dump_position=FlipMountPosition.IN_BEAM)
 
             image = self.ta_controller.capture_n_exposures(target_camera,
                                                            exposure_time=100,
