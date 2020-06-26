@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import poppy
 
+from catkit.catkit_types import MetaDataEntry
 from catkit.config import CONFIG_INI
 from catkit.hardware.iris_ao import util as segmented_dm_util
 
@@ -356,6 +357,20 @@ class SegmentedDmCommand(SegmentedAperture):
         plt.close()
 
 
+    def get_extra_meta_data(self):
+        """
+        Create meta data to be saved with fits files that gives the ptt values/segment
+        and if the flat map was applied.
+
+        Currently set up to NOT include flat map PTT values.
+        """
+        metadata = []
+        metadata.append(MetaDataEntry("FlatMap", "FLATMAP", self.apply_flat_map,
+                                      "Is the flat map applied?"))
+        for seg, ptt in zip(self.segments_in_pupil, self.data):
+            metadata.append(MetaDataEntry(f"Segment{seg}", f"SEG{seg}", ptt,
+                                          f"Piston/Tip/Tilt applied for segment {seg}"))
+        return metadata
 
 def load_command(segment_values, apply_flat_map=True, dm_config_id='iris_ao'):
     """
