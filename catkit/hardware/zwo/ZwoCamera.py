@@ -67,13 +67,15 @@ class ZwoCamera(Camera):
         camera.set_image_type(zwoasi.ASI_IMG_RAW16)
         return camera
 
-    def capture(self, exposure_time):
+    def __capture(self, initial_sleep):
         """ Takes an image.
+
+        WARNING: This func does NOT set the exposure time!
 
         Parameters
         ----------
-        exposure_time : float
-            How long the exposure should be, in seconds.
+        initial_sleep : int, float, Pint quantity
+            How long to sleep until exposure is complete. I.e., initial_sleep >= exposure_time.
 
         Returns
         -------
@@ -84,20 +86,22 @@ class ZwoCamera(Camera):
         # Passing the initial_sleep and poll values prevent crashes. DO NOT REMOVE!!!
         poll = quantity(0.1, units.second)
         try:
-            image = self.camera.capture(initial_sleep=exposure_time.to(units.second).magnitude, poll=poll.magnitude)
+            image = self.camera.capture(initial_sleep=initial_sleep.to(units.second).magnitude, poll=poll.magnitude)
         except zwoasi.ZWO_CaptureError as error:
             # Maps to:
             # https://github.com/stevemarple/python-zwoasi/blob/1aadf7924dd1cb3b8587d97689d82cd5f1a0b5f6/zwoasi/__init__.py#L889-L893
             raise RuntimeError(f"Exposure status: {error.exposure_status}") from error
         return image.astype(np.dtype(np.float32))
 
-    def capture_and_orient(self, exposure_time, theta, fliplr):
+    def __capture_and_orient(self, initial_sleep, theta, fliplr):
         """ Takes and image and flips according to theta and l/r input.
+
+        WARNING: This func does NOT set the exposure time!
 
         Parameters
         ----------
-        exposure_time : float
-            How long the exposure should be, in seconds. 
+        initial_sleep : int, float, Pint quantity
+            How long to sleep until exposure is complete. I.e., initial_sleep >= exposure_time.
         theta : float
             How many degrees to rotate the image.
         fliplr : bool
@@ -109,10 +113,9 @@ class ZwoCamera(Camera):
             Array of integers making up the image.
         """
 
-        unflipped_image = self.capture(exposure_time)
+        unflipped_image = self.__capture(initial_sleep=initial_sleep)
         image = catkit.util.rotate_and_flip_image(unflipped_image, theta, fliplr)
-        
-        return image 
+        return image
     
     def close(self):
         """Close camera connection"""
@@ -168,6 +171,7 @@ class ZwoCamera(Camera):
             exposure_time = quantity(exposure_time, units.microsecond)
 
         # Set control values on the ZWO camera.
+        # WARNING! This is the only time that the exposure time is set.
         self.__setup_control_values(exposure_time, subarray_x=subarray_x, subarray_y=subarray_y, width=width,
                                     height=height, gain=gain, full_image=full_image, bins=bins)
 
@@ -182,12 +186,12 @@ class ZwoCamera(Camera):
                 meta_data.extend(extra_metadata)
             else:
                 meta_data.append(extra_metadata)
-        
+
         # DATA MODE: Takes images and returns data and metadata (does not write anything to disk).
         img_list = []
         # Take exposures and add to list.
         for i in range(num_exposures):
-            img = self.capture_and_orient(exposure_time, self.theta, self.fliplr)
+            img = self.__capture_and_orient(initial_sleep=exposure_time, theta=self.theta, fliplr=self.fliplr)
             img_list.append(img)
 
         return img_list, meta_data
