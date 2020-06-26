@@ -67,49 +67,6 @@ def create_zero_array(number_of_segments):
     return [(0., 0., 0.)] * number_of_segments
 
 
-def create_nan_list(number_of_segments):
-    """
-    Create a list of NaN for number of active segments-- this is the starting point
-    of your command
-
-    :param number_of_segments: int, the number of segments in your pupil
-    :return: array of zeros the length of the number of total segments in the DM
-    """
-    return [np.nan] * number_of_segments
-
-
-def convert_dict_from_si(command_dict):
-    """
-    Take a wf dict and convert from SI (meters and radians) to microns and millirads
-
-    :param command_dict: dict, command in the form of a dictionary of the form
-                         {seg: (piston, tip, tilt)}
-
-    :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
-    """
-    converted = {seg: (ptt[0]*(u.m).to(u.um), ptt[1]*(u.rad).to(u.mrad), ptt[2]*(u.rad).to(u.mrad)) for
-                 seg, ptt in list(command_dict.items())}
-
-    return converted
-
-
-def convert_array(coefficients_array):
-    """
-    Take a wf dict and convert from SI (meters and radians) to microns and millirads
-
-    :param coefficients_array: array, list, command in the form of a list of tuples
-                         [(piston, tip, tilt)] for each segment in the aperture starting
-                         at the center and moving outward in clockwise circle.
-
-    :return: list, command in the form of a list of tuples [(piston, tip, tilt)]
-             per segment
-    """
-    converted = [(ptt[0]*(u.m).to(u.um), ptt[1]*(u.rad).to(u.mrad), ptt[2]*(u.rad).to(u.mrad)) for
-                 ptt in coefficients_array]
-
-    return converted
-
-
 def write_ini(data, path, dm_config_id='iris_ao', mirror_serial=None, driver_serial=None):
     """
     Write a new ConfigPTT.ini file containing the command for the Iris AO.
