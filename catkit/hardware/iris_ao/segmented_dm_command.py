@@ -279,9 +279,8 @@ class SegmentedAperture():
                                                           rings=self._num_rings,
                                                           flattoflat=self.flat_to_flat,
                                                           gap=self.gap,
-                                                          segmentlist=self._segment_list)#,
-                                                          #rotation=-90) # add rotation #TODO: Figure out how to do this and retain shape on segments
-
+                                                          segmentlist=self._segment_list,
+                                                          rotation=-90) # add rotation to match GUI
         return aperture
 
 
@@ -524,6 +523,7 @@ class DisplayCommand(SegmentedAperture):
 
         # Grab the FOV of the instrument from the config file
         self.instrument_fov = CONFIG_INI.getint(testbed_config_id, 'fov')
+        self.pixelscale = CONFIG_INI.getfloat(testbed_config_id, 'pixelscale')
 
         # Create the aperture and apply the shape
         self.aperture = self.create_aperture()
@@ -544,21 +544,25 @@ class DisplayCommand(SegmentedAperture):
             self.aperture.set_actuator(seg, values[0], values[1], values[2])
 
 
-    def display(self, display_wavefront=True, display_psf=True, root=''):
+    def display(self, display_wavefront=True, display_psf=True, psf_rotation_angle=90,
+                root=''):
         """
         Display either the deployed mirror state ("wavefront") or the PSF created
         by this mirror state.
 
         :param display_wavefront: bool, If true, display the deployed mirror state
         :param display_psf: bool, If true, display the simulated PSF created by the
-                             mirror state
+            mirror state
+        :param psf_rotation_angle: int, Degree value by which to rotate the simulated
+            PSF in order to match your output
+        :param root: str, String to be added to filenames of output figures
         """
         if root:
             root = f'{root}_'
         if display_wavefront:
             self.plot_wavefront(root)
         if display_psf:
-            self.plot_psf(root)
+            self.plot_psf(psf_rotation_angle, root)
 
 
     def plot_wavefront(self, root):
@@ -571,16 +575,15 @@ class DisplayCommand(SegmentedAperture):
         plt.close()
 
 
-    def plot_psf(self, root):
+    def plot_psf(self, rotation_angle, root):
         """
         Plot the simulated PSF based on the mirror state
         """
-        pixelscale = self.instrument_fov/512. # arcsec/px, 512 is size of image
         plt.figure()
         osys = poppy.OpticalSystem()
         osys.add_pupil(self.aperture)
-        osys.add_detector(pixelscale=pixelscale, fov_arcsec=self.instrument_fov)
-        osys.add_rotation(angle=90) # Note: The best rotation depends on each testbed #TODO: Generalize this?
+        osys.add_detector(pixelscale=self.pixelscale, fov_arcsec=self.instrument_fov)
+        osys.add_rotation(angle=rotation_angle) # Note: The best rotation depends on each testbed
 
         psf = osys.calc_psf(wavelength=self.wavelength)
         poppy.display_psf(psf, vmin=10e-8, vmax=10e-2,
