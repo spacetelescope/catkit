@@ -72,12 +72,13 @@ class IrisAoDmController(DeformableMirrorController):
 
 
     def zero(self, return_zeros=False):
-        """Put zeros on the DM
+        """Put zeros on the DM.
 
         :return: If return_zeros=True, return a dictionary of zeros
         """
-        zero_arr = segmented_dm_util.create_zero_array(segmented_dm_util.iris_num_segments())
-        zeros = segmented_dm_util.create_dict_from_array(zero_arr, segmented_dm_util.iris_pupil_naming())
+        zero_list = segmented_dm_util.create_zero_list(segmented_dm_util.iris_num_segments())
+        zeros = segmented_dm_util.create_dict_from_list(zero_list,
+                                                        segmented_dm_util.iris_pupil_naming())
         self.send_data(zeros)
 
         # Update the testbed state
