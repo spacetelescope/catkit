@@ -32,37 +32,37 @@ def iris_pupil_naming(dm_config_id='iris_ao'):
     return seg_names[:num_segs]
 
 
-def create_dict_from_array(array, seglist=None):
+def create_dict_from_list(ptt_list, seglist=None):
     """
-    Take an array of len number of segments, with a tuple of piston, tip, tilt
+    Take an list of len number of segments, with a tuple of piston, tip, tilt
     and convert to a dictionary
 
     Seglist is a list of equal length with a single value equal to the segment number
-    for the index in the array. If seglist is None, will asssume Iris AO numbering
+    for the index in the list. If seglist is None, will asssume Iris AO numbering
 
-    :param array: np.ndarry, array with length equal to number of segments in the pupil
+    :param ptt_list: list, list with length equal to number of segments in the pupil
                   with each entry a tuple of piston, tip, tilt values.
-    :param seglist: list, list of segment numbers to grab from the array where the segment
-                    number in the array is given by the index of the tuple
+    :param seglist: list, list of segment numbers to grab from the list where the segment
+                    number in the list is given by the index of the tuple
 
     :return: dict, command in the form of a dictionary of the form
              {seg: (piston, tip, tilt)}
     """
     if seglist is None:
-        seglist = np.arange(len(array))+1
+        seglist = np.arange(len(ptt_list))+1
 
     # Put surface information in dict
-    command_dict = {seg: tuple(ptt) for seg, ptt in zip(seglist, array)}
+    command_dict = {seg: tuple(ptt) for seg, ptt in zip(seglist, ptt_list)}
 
     return command_dict
 
 
-def create_zero_array(number_of_segments):
+def create_zero_list(number_of_segments):
     """
-    Create an array of zeros for the Iris AO
+    Create an list of zeros for the Iris AO
 
     :param number_of_segments: int, the number of segments in your pupil
-    :return: array of zeros the length of the number of total segments in the DM
+    :return: list of zeros the length of the number of total segments in the DM
     """
     return [(0., 0., 0.)] * number_of_segments
 
@@ -327,14 +327,13 @@ def read_segment_values(segment_values):
                            and subsequent elements continue up and/or clockwise around the
                            pupil (see README for more information)
 
-    :return: list, list, PTT tuples in list/array of the form (piston, tip, tilt)
-                         the first element is the center or top of the innermost ring of
-                         the pupil, and subsequent elements continue up and/or clockwise
-                         around the pupil (see README for more information)
+    :return: list, PTT tuples in list of the form (piston, tip, tilt) the first element is
+             the center or top of the innermost ring of the pupil, and subsequent elements
+             continue up and/or clockwise around the pupil (see README for more information)
     """
     # Read in file
     if segment_values is None:
-        ptt_list = create_nan_list(iris_num_segments())
+        ptt_list = create_zero_list(iris_num_segments())
         segment_names = None
     elif isinstance(segment_values, str):
         if segment_values.endswith("PTT111") or segment_values.endswith("PTT489"):

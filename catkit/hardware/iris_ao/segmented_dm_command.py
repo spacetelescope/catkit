@@ -82,7 +82,7 @@ class SegmentedAperture():
                                                           flattoflat=self.flat_to_flat,
                                                           gap=self.gap,
                                                           segmentlist=self._segment_list,
-                                                          rotation=-90) # add rotation to match GUI
+                                                          rotation=-90)
         return aperture
 
 
@@ -113,10 +113,7 @@ class SegmentedAperture():
     def get_number_of_rings(self, max_rings=7):
         """
         Get the number of rings based on the number of active segments specified in the
-        config.ini file. This function can be used for a pupil of up to 7 rings (the max
-        allowed in the PTT489 IrisAO model).
-        Note that for the PTT489 model the 7th ring does not include the corner segments
-        which you will need to make clear.
+        config.ini file. Note: The maximum number of rings for the PTT489 from IrisAO, is 7
 
         :returns: num_rings: int, the number of full rings of hexagonal segments in the aperture
         """
@@ -174,19 +171,21 @@ class SegmentedDmCommand(SegmentedAperture):
     :param apply_flat_map: If true, add flat map correction to the data before creating command
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found. Default: 'iris_ao'
-    :attribute data: dict, Input data, shifted if custom pupil exists in config file
+    :attribute data: dict, input data, shifted if custom pupil exists in config file
     :attribute apply_flat_map: bool, whether or not to apply the flat map
     :attribute source_pupil_numbering: list, numbering native to data
-    :attribute command: dict, Final command with flat if apply_flat_map = True
+    :attribute command: dict, final command with flat if apply_flat_map = True
     :attribute filename_flat: str, path to flat
     :attribute total_number_segments: int, total number of segments in DM
     :attribute active_segment_list: int, number of active segments in the DM
-    instrument_fov
-    pixelscale
-    dm_command_units
-    aperture
+    :attribute instrument_fov: int, field of view of the instrument
+    :attribute pixelscale: float, pixelscale of the instrument
+    :attribute dm_command_units: tuple of floats, the units of the piston, tip, tilt
+                                 values on the hardware
+    :attribute aperture: poppy.dms.HexSegmentedDeformableMirror object, the aperture
+                         that you are defining
 
-    Optional if not using full DM:
+    Optional if not using every segment on the DM:
     :attribute number_segments_in_pupil: int, the number of segments in the pupil.
 
     """
@@ -194,6 +193,7 @@ class SegmentedDmCommand(SegmentedAperture):
                  laser_config_id='thorlabs_source_mcls1', testbed_config_id='testbed'):
         # Initilize parent class used to create the aperture
         SegmentedAperture.__init__(self, dm_config_id=dm_config_id, laser_config_id=laser_config_id)
+        self.dm_config_id = dm_config_id
 
         # Determine if the flat map will be applied
         self.apply_flat_map = apply_flat_map
@@ -209,7 +209,7 @@ class SegmentedDmCommand(SegmentedAperture):
             self.number_segments_in_pupil = CONFIG_INI.getint(dm_config_id,
                                                               'active_number_of_segments')
             if len(self.segments_in_pupil) != self.number_segments_in_pupil:
-                raise ValueError("The array length active_segment_list does not match the active_number_of_segments in the config.ini. Please update your config.ini.")
+                raise ValueError("The length of active_segment_list does not match the active_number_of_segments in the config.ini. Please update your config.ini.")
         except NoOptionError:
             self.segments_in_pupil = segmented_dm_util.iris_pupil_naming(dm_config_id)
 
@@ -223,7 +223,7 @@ class SegmentedDmCommand(SegmentedAperture):
         self.aperture = self.create_aperture()
 
         # Initalize command
-        self.data = segmented_dm_util.create_zero_array(self.number_segments_in_pupil)
+        self.data = segmented_dm_util.create_zero_list(self.number_segments_in_pupil)
         self.command = None
 
 
@@ -246,15 +246,15 @@ class SegmentedDmCommand(SegmentedAperture):
                                tilt values in a tuple for each segment.See the load_command doc
                                string for more information.
         """
-        ptt_arr, segment_names = segmented_dm_util.read_segment_values(segment_values)
+        ptt_list, segment_names = segmented_dm_util.read_segment_values(segment_values)
         if segment_names is not None:
-            command_array = []
+            command_list = []
             for seg_name in self.segments_in_pupil:  # Pull out only segments in the pupil
                 ind = np.where(np.asarray(segment_names) == seg_name)[0][0]
-                command_array.append(ptt_arr[ind])
+                command_list.append(ptt_list[ind])
         else:
-            command_array = ptt_arr
-        return command_array
+            command_list = ptt_list
+        return command_list
 
 
     def get_data(self):
@@ -280,19 +280,18 @@ class SegmentedDmCommand(SegmentedAperture):
         :param segment_ind: int, the index of the segment in the pupil to be updated
                             (see README for relationship between index and segment)
         :param ptt_tuple: tuple with three values for piston, tip, and tilt
-
         """
-        command_array = segmented_dm_util.create_zero_array(self.number_segments_in_pupil)
-        command_array[segment_ind] = ptt_tuple
+        command_list = segmented_dm_util.create_zero_list(self.number_segments_in_pupil)
+        command_list[segment_ind] = ptt_tuple
 
-        self.add_map(command_array)
+        self.add_map(command_list)
 
 
     def add_map(self, segment_values_to_add):
         """
         Add a command to the one already loaded.
 
-        :param new_command: str or array (.PTT111 or .ini file, or array from POPPY)
+        :param new_command: str or list (.PTT111 or .ini file, or list from POPPY)
         """
         original_data = self.get_data()
         new_data = self.read_command(segment_values_to_add)
@@ -300,8 +299,36 @@ class SegmentedDmCommand(SegmentedAperture):
         self.data = [tuple(map(sum, zip(orig, new))) for orig,
                      new in zip(original_data, new_data)]
 
+    def to_ini(self, filename, out_dir=''):
+        """
+        Write the command to a .ini file
+        :param filename: str, name of ini file to be written out
+        :param out_dir: str, name of directory where ini file will be saved
+        """
+        command = self.to_command()
+        path = os.path.join(out_dir, filename)
+        segmented_dm_util.write_ini(command, path, dm_config_id=self.dm_config_id)
 
-    def display(self, psf_rotation_angle=90, root='', out_dir=''):
+
+    def get_extra_meta_data(self):
+        """
+        Create meta data to be saved with fits files that gives the ptt values/segment
+        and if the flat map was applied.The values saved will NOT include flat map PTT values.
+        """
+        metadata = []
+        metadata.append(MetaDataEntry("FlatMap", "FLATMAP", self.apply_flat_map,
+                                      "Is the flat map applied?"))
+        if self.apply_flat_map:
+            metadata.append(MetaDataEntry("FlatName", "FLATFILE", self.filename_flat,
+                                          "Flat map applied"))
+        for seg, ptt in zip(self.segments_in_pupil, self.data):
+            metadata.append(MetaDataEntry(f"Segment{seg}", f"SEG{seg}", ptt,
+                                          f"Piston/Tip/Tilt applied for segment {seg}"))
+        return metadata
+
+
+    def display(self, display_wavefront=True, display_psf=True, psf_rotation_angle=90,
+                root='', out_dir=''):
         """
         Display either the deployed mirror state ("wavefront") or the PSF created
         by this mirror state.
@@ -326,8 +353,10 @@ class SegmentedDmCommand(SegmentedAperture):
 
         if root:
             root = f'{root}_'
-        self.plot_wavefront(root, out_dir)
-        self.plot_psf(psf_rotation_angle, root, out_dir)
+        if display_wavefront:
+            self.plot_wavefront(root, out_dir)
+        if display_psf:
+            self.plot_psf(psf_rotation_angle, root, out_dir)
 
 
     def plot_wavefront(self, root, out_dir):
@@ -357,24 +386,10 @@ class SegmentedDmCommand(SegmentedAperture):
         plt.close()
 
 
-    def get_extra_meta_data(self):
-        """
-        Create meta data to be saved with fits files that gives the ptt values/segment
-        and if the flat map was applied.
-
-        Currently set up to NOT include flat map PTT values.
-        """
-        metadata = []
-        metadata.append(MetaDataEntry("FlatMap", "FLATMAP", self.apply_flat_map,
-                                      "Is the flat map applied?"))
-        for seg, ptt in zip(self.segments_in_pupil, self.data):
-            metadata.append(MetaDataEntry(f"Segment{seg}", f"SEG{seg}", ptt,
-                                          f"Piston/Tip/Tilt applied for segment {seg}"))
-        return metadata
 
 def load_command(segment_values, apply_flat_map=True, dm_config_id='iris_ao'):
     """
-    Loads the segment_values from a file, array, or dictionary and returns a
+    Loads the segment_values from a file, list, or dictionary and returns a
     SegmentedDmCommand object.
 
     There are only two allowed segment mappings for the input formats, Native and Centered Pupil.
@@ -445,25 +460,25 @@ def check_limits(ptt_list, limit=5.):
     return updated
 
 
-def get_wavefront_from_coeffs(basis, coeff_array):
+def get_wavefront_from_coeffs(basis, coeff_list):
     """
     Get the wavefront from the coefficients created by the basis given. This gives
     the per-segment wavefront based on the global coefficients given and the basis
     created.
 
     :params basis: POPPY Segment_PTT_Basis object, basis created that represents pupil
-    :params coeff_array: array, per-segment array of piston, tip, tilt values for
+    :params coeff_list: list, per-segment list of piston, tip, tilt values for
                          the pupil described by basis
 
     :return wavefront, POPPY wavefront
     """
-    wavefront = poppy.zernike.opd_from_zernikes(coeff_array, basis=basis)
+    wavefront = poppy.zernike.opd_from_zernikes(coeff_list, basis=basis)
     return wavefront
 
 
 class PoppySegmentedCommand(SegmentedAperture):
     """
-    Create a segement values array (and dictionary) (in POPPY: wavefront error) using
+    Create a segement values list (and dictionary) (in POPPY: wavefront error) using
     POPPY for your pupil. This is currently limited to global shapes. The output is
     a list of piston, tip, tilt  values with units of (um, mrad, mrad), respectively,
     for each segment.
@@ -508,8 +523,8 @@ class PoppySegmentedCommand(SegmentedAperture):
         # Create the specific basis for this pupil
         self.basis = self.create_ptt_basis()
 
-        # Create array of coefficients
-        self.list_of_coefficients = self.get_array_from_global()
+        # Create list of coefficients
+        self.list_of_coefficients = self.get_list_from_global()
 
 
     def create_ptt_basis(self):
@@ -527,7 +542,7 @@ class PoppySegmentedCommand(SegmentedAperture):
 
     def create_wavefront_from_global(self, global_coefficients):
         """
-        Given an array of global coefficients, create wavefront
+        Given an list of global coefficients, create wavefront
 
         :param global_coefficients: list of global zernike coefficients in the form
                                     [piston, tip, tilt, defocus, ...] (Noll convention)
@@ -543,42 +558,42 @@ class PoppySegmentedCommand(SegmentedAperture):
 
     def get_coeffs_from_pttbasis(self, wavefront):
         """
-        From a the speficic pttbasis, get back the coeff_array that will be sent as
+        From a the speficic pttbasis, get back the coeff_list that will be sent as
         a command to the Iris AO
 
         :param wavefront: Poppy ZernikeWFE object, the global wavefront over the
                           pupil
 
-        :return: np.ndarray, (piston, tip, tilt) values for each segment in the pupil
+        :return: list, (piston, tip, tilt) values for each segment in the pupil
                  in units of [m] for piston, and [rad] for tip and tilt
         """
-        coeff_array = poppy.zernike.opd_expand_segments(wavefront, nterms=self.num_terms,
+        coeff_list = poppy.zernike.opd_expand_segments(wavefront, nterms=self.num_terms,
                                                         basis=self.basis)
-        coeff_array = np.reshape(coeff_array, (self.num_segs_in_pupil, 3))
-        return coeff_array
+        coeff_list = np.reshape(coeff_list, (self.num_segs_in_pupil, 3))
+        return coeff_list
 
 
-    def get_array_from_global(self):
+    def get_list_from_global(self):
         """
-        From a global coeff array, get back the per-segment coefficient array
+        From a global coeff list, get back the per-segment coefficient list
 
-        :return: np.ndarray of coefficients for piston, tip, and tilt, for your pupil
+        :return: list of coefficients for piston, tip, and tilt, for your pupil
         """
         wavefront = self.create_wavefront_from_global(self.global_coefficients)
-        coeffs_array = self.get_coeffs_from_pttbasis(wavefront)
+        coeffs_list = self.get_coeffs_from_pttbasis(wavefront)
 
-        return coeffs_array
+        return coeffs_list
 
 
     def to_dm_list(self):
         """
-        Convert the array into an array that can be passed to the SegmentDmCommand
+        Convert the list into an list that can be passed to the SegmentDmCommand
         """
-        input_array = self.list_of_coefficients
+        input_list = self.list_of_coefficients
         # Convert from Poppy's m, rad, rad to the DM units
-        input_array = convert_ptt_list(input_array, tip_factor=-1, tilt_factor=1,
+        input_list = convert_ptt_list(input_list, tip_factor=-1, tilt_factor=1,
                                        starting_units=(u.m, u.rad, u.rad),
                                        ending_units=self.dm_command_units)
-        coeffs_array = round_ptt_list(input_array)
+        coeffs_list = round_ptt_list(input_list)
 
-        return coeffs_array
+        return coeffs_list
