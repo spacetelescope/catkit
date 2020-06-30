@@ -323,7 +323,8 @@ class SegmentedDmCommand(SegmentedAperture):
         if self.apply_flat_map:
             metadata.append(MetaDataEntry("Flat Name", "FLATFILE", self.filename_flat,
                                           "Flat map applied"))
-        for seg, ptt in zip(self.segments_in_pupil, self.data):
+        rounded_ptt_list = round_ptt_list(self.data, decimals=4)
+        for seg, ptt in zip(self.segments_in_pupil, rounded_ptt_list):
             metadata.append(MetaDataEntry(f"Segment {seg}", f"SEG{seg}", str(ptt),
                                           f"Piston/GradX/GradY applied for segment {seg}"))
         return metadata
