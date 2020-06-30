@@ -316,14 +316,14 @@ class SegmentedDmCommand(SegmentedAperture):
         and if the flat map was applied.The values saved will NOT include flat map PTT values.
         """
         metadata = []
-        metadata.append(MetaDataEntry("FlatMap", "FLATMAP", self.apply_flat_map,
+        metadata.append(MetaDataEntry("Flat Map Applied", "FLATMAP", self.apply_flat_map,
                                       "Is the flat map applied?"))
         if self.apply_flat_map:
-            metadata.append(MetaDataEntry("FlatName", "FLATFILE", self.filename_flat,
+            metadata.append(MetaDataEntry("Flat Name", "FLATFILE", self.filename_flat,
                                           "Flat map applied"))
         for seg, ptt in zip(self.segments_in_pupil, self.data):
-            metadata.append(MetaDataEntry(f"Segment{seg}", f"SEG{seg}", ptt,
-                                          f"Piston/Tip/Tilt applied for segment {seg}"))
+            metadata.append(MetaDataEntry(f"Segment {seg}", f"SEG{seg}", str(ptt),
+                                          f"Piston/GradX/GradY applied for segment {seg}"))
         return metadata
 
 
