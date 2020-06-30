@@ -38,7 +38,7 @@ class SnmpUps(BackupPower):
 
     def is_power_ok(self, return_status_msg=False):
         """Boolean function to determine whether the system should initiate a shutdown."""
-        self.log.info("checking SNMP power status")
+        self.log.info(f"checking {self.config_id} SNMP power status")
         try:
             status = self.get_status()
             result = status == self.pass_status
