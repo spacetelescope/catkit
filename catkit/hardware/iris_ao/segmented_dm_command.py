@@ -301,11 +301,13 @@ class SegmentedDmCommand(SegmentedAperture):
 
     def to_ini(self, filename, out_dir=''):
         """
-        Write the command to a .ini file
+        Write the command to a .ini file. Note: This will NOT include the applied flat
+        map values
         :param filename: str, name of ini file to be written out
         :param out_dir: str, name of directory where ini file will be saved
         """
-        command = self.to_command()
+        data = self.get_data()
+        command = dict(zip(self.segments_in_pupil, data))
         path = os.path.join(out_dir, filename)
         segmented_dm_util.write_ini(command, path, dm_config_id=self.dm_config_id)
 
