@@ -8,10 +8,10 @@ class ClosedLoopController(Instrument, ABC):
 
 
     @abstractmethod
-    def command(self, cmd_key, channel, value):
-        """Sends a command to the close loop. """
+    def command(self, var, channel, value):
+        """Sends a command to the closed-loop controller. """
 
     @abstractmethod
     def get_status(self, channel):
-        """Gets the status of the controller."""
+        """Gets the status of the closed-loop controller."""
 
