@@ -4,13 +4,10 @@ messages to send commands, check the status, and put error handling over
 top.
 """
 
-from collections import deque
 import logging
 import struct
 
-import numpy as np
-
-from catkit.hardware.npoint.nPointTipTiltController import Commands, Variables, nPointTipTiltController
+from catkit.hardware.npoint.nPointTipTiltController import Commands, Parameters, NPointTipTiltController
 from catkit.interfaces.Instrument import SimInstrument
 
 
@@ -32,10 +29,6 @@ class PyusbNpointEmulator:
     """
 
     config_params = ('< SIMULATED CONFIGUARTION 1: 0 mA>',)
-    # Create a reverse version of the command dictionary
-    message_prefix = (50, 96, 164)
-    message_suffix = (85,)
-    channels = (1, 2)
 
     def __init__(self):
         """ Since we'll need to respond as if commands are being sent and we
@@ -44,12 +37,12 @@ class PyusbNpointEmulator:
 
         self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
 
-        self.value_store = {f'{n}': {var: 0 for var in Variables} for n in self.channels}
-        self.response_message = None
-        self.message_stack = deque([])
-        self.float_message_store = []
+        self.value_store = {n: {var: 0 for var in Parameters} for n in NPointTipTiltController.channels}
+        self.response_message = []
+        self.address_cursor = None
+        self.message = None  # Used only for introspection, debugging, & testing.
 
-    def find(self, idVendor, idProduct):
+    def find(self, find_all=False, backend=None, custom_match=None, **args):
         """ On hardware, locates device. In simulation, returns itself so we can keep going."""
         self.log.info('SIMULATED nPointTipTilt instantiated and logging online.')
         return self
@@ -66,75 +59,53 @@ class PyusbNpointEmulator:
 
     def read(self, endpoint, message_length, timeout):
         """ On hardware, reads single message from device. In simulation, pulls most recent message that expected a response. """
-        return self.response_message
+        return self.response_message.pop()
 
     def write(self, endpoint, message, timeout):
         """ On hardware, writes a single message from device. In simulation,
         updates logical stored values. """
+        endian = NPointTipTiltController.endian
 
-        self.message_stack.append(message)
-        
-        if Commands(message[0]) is Commands.SECOND_MSG:
-            
-            # This is the second half of a set message for float values.
-            # This means there won't be an address to parse
-            self.float_message_store[1] = message[1:-1]
-            float_message = ''.join(self.float_message_store)
-            val = struct.unpack('<d', float_message)[0]
+        self.message = message
 
-            addr = self.message_stack.popleft()[1:3]
-            # Pull a channel and key of the style ['0xnm_1', '0xm_2m_3']
-            # Where n is the channel 
-            # And m_1m_2m_3 make up a key
-            key = hex(addr[1])[3] + hex(addr[0])[2:]
-            channel = hex(addr[1])[2]
-            self.value_store[channel][Variables(key)] = val
-            self.log.info(f'Setting channel {channel} key {Variables(key)} to {val}')
-        
-        elif Commands(message[0]) is Commands.SET:
+        #if not message.endswith(endpoint):
+        #    raise ValueError(f"Corrupt data: message has incorrect endpoint.")
 
-            # This is an int set or the first half of a float set
-            addr = message[1:3]
+        # Parse message.
+        command, parameter, address, channel, value = NPointTipTiltController.parse_message(message)
 
-            key = hex(addr[1])[3] + hex(addr[0])[2:]
-            channel = hex(addr[1])[2]
+        if command in (Commands.GET, Commands.SET):
+            self.address_cursor = (channel, parameter)
 
-            if Variables(key) is Variables.LOOP:
-                # int set for open/close loop
-                val = message[-5:-1]
-                val = struct.unpack('<I', val)[0]
-                
-                self.value_store[channel][Variables.LOOP] = val
-                self.log.info(f'Setting channel {channel} key {Variables(key)} to {val}')
-                
+        if command is Commands.SET:
+            self.value_store[channel][parameter] = value
+        elif command is Commands.SECOND_MSG:
+            # If we wanted to emulator the hardware correctly, this would increment the address cursor and write the
+            # value to that. However, it's easier and completely within the bounds of our current usage to just...
+            # Concat previously stored value with new.
+            channel, parameter = self.address_cursor
+            stored_value = self.value_store[channel][parameter]
+            if not isinstance(stored_value, int):
+                raise ValueError(f"Expected to append to int value and not '{type(stored_value)}'")
+            first_32b = struct.pack(endian + 'I', self.value_store[channel][parameter])
+            second_32b = struct.pack(endian + 'I', value)
+            self.value_store[channel][parameter] = struct.unpack(endian + 'd', first_32b + second_32b)[0]
+        elif command is Commands.GET:
+            # Construct response message ready for it to be returned upon read.
+            n_reads = value
+            if n_reads == 1:
+                data_type_fmt = 'I'
+            elif n_reads == 2:
+                data_type_fmt = 'd'
             else:
-                # float set for gain
-                self.float_message_store[0] = message[-5:-1]
-
-        elif Commands(message[0]) is Commands.GET:
-            # This is get message and we want a response
-            addr = message[1:3]
-            cmd_key = Variables((addr[1])[3] + hex(addr[0])[2:])
-            channel = hex(addr[1])[2]
-            val = self.value_store[channel][cmd_key]
-            if cmd_key is Variables.LOOP:
-                # pack as an int and pad with zeros
-                hex_val = struct.pack('<I', val)
-                full_val = [hex_val[n] for n in range(len(hex_val))] + [0, 0, 0, 0]
-            else:
-                # pack as a double
-                hex_val = struct.pack('<d', float(val))
-                full_val = [hex_val[n] for n in range(len(hex_val))]
-            
-            full_address = [message[n] for n in range(1,5)]
-            full_message = self.message_prefix + full_address + full_val + self.message_suffix
-            self.response_message = np.array(full_message, dtype='B')
-            
+                raise NotImplementedError(f"Supports only 32b ints and 64b floats. Received {n_reads * 32}b data block.")
+            return_value = struct.pack(endian + data_type_fmt, self.value_store[channel][parameter])
+            self.response_message.append(b''.join([Commands.GET.value, address, return_value, NPointTipTiltController.endpoint]))
         else:
-            raise NotImplementedError('Non implemented command message sent to nPoint simulator.')
+            raise NotImplementedError(f'Non implemented command ({command}) found in message.')
 
 
-class SimnPointTipTiltController(SimInstrument, nPointTipTiltController):
+class SimNPointTipTiltController(SimInstrument, NPointTipTiltController):
     """ Emulated version of the nPoint tip tilt controller. 
     Directly follows the npoint, except points to simlated USB connection
     library. """
