@@ -13,15 +13,12 @@ CATKIT_LIBUSB_PATH = 'C:\\Users\\HICAT\\Desktop\\libusb-win32-bin-1.2.6.0\\bin\\
 
 ## -- IMPORTS
 
-import datetime
 import functools
-import logging
 import os
 import struct
 import time
 import warnings
 
-import numpy
 from numpy import double
 
 from usb.backend import libusb0, libusb1
@@ -63,7 +60,7 @@ class nPointTipTiltController(ClosedLoopController):
     # Define this library mapping as a static attribute.
     library_mapping = {'libusb0': libusb0, 'libusb1': libusb1}
 
-    def initialize(self, vendor_id, product_id, library_path=None, library=None):
+    def initialize(self, vendor_id, product_id, library_path=None, library='libusb0'):
         """Initial function to set vendor and product ide parameters.         
         Parameters
         ----------
@@ -81,7 +78,19 @@ class nPointTipTiltController(ClosedLoopController):
         self.vendor_id = vendor_id
         self.product_id = product_id
         self.dev = None
-    
+
+        self.library_path = os.environ.get('CATKIT_LIBUSB_PATH') if library_path is None else library_path
+        if not self.library_path:
+            raise OSError("No library path was passed to the npoint and CATKIT_LIBUSB_PATH is not set on your machine")
+
+        if library not in self.library_mapping:
+            raise NotImplementedError(f"The backend you specified ({library}) is not available at this time.")
+        elif not os.path.exists(self.library_path):
+            raise FileNotFoundError(f"The library path you specified ({self.library_path}) does not exist.")
+        else:
+            self.library = self.library_mapping[library]
+            self.backend = self.library.get_backend(find_library=lambda x: self.library_path)
+
     def _build_message(self, cmd_key, cmd_type, channel, value=None):
         """Builds the message to send to the controller. The messages
         must be 10 or 6 bytes, in significance increasing order (little 
@@ -178,7 +187,7 @@ class nPointTipTiltController(ClosedLoopController):
         """ Open function to connect to device. """
 
         # Instantiate the device
-        self.instrument = self.instrument_lib.find(idVendor=self.vendor_id, idProduct=self.product_id)
+        self.instrument = self.instrument_lib.find(idVendor=self.vendor_id, idProduct=self.product_id, backend=self.backend)
         if self.instrument is None:
             raise NameError(f"Go get the device sorted you knucklehead.\nVendor id {self.vendor_id} and product id {self.product_id} could not be found and connected.")
              
