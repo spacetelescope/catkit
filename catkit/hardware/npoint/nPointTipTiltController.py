@@ -13,6 +13,7 @@ CATKIT_LIBUSB_PATH = 'C:\\Users\\HICAT\\Desktop\\libusb-win32-bin-1.2.6.0\\bin\\
 
 ## -- IMPORTS
 
+import enum
 import functools
 import os
 import struct
@@ -27,6 +28,18 @@ import usb.util
 
 from catkit.interfaces.ClosedLoopController import ClosedLoopController
 
+
+class Variables(enum.Enum):
+    LOOP = '084'
+    P_GAIN = '720'
+    I_GAIN = '728'
+    D_GAIN = '730'
+
+
+class Commands(enum.Enum):
+    SET = 162
+    SECOND_MSG = 163
+    GET = 164
 
 ## -- FUNCTIONS and FIDDLING 
 
@@ -61,7 +74,7 @@ class nPointTipTiltController(ClosedLoopController):
     library_mapping = {'libusb0': libusb0, 'libusb1': libusb1}
 
     def initialize(self, vendor_id, product_id, library_path=None, library='libusb0'):
-        """Initial function to set vendor and product ide parameters.         
+        """Initial function to set vendor and product id parameters.
         Parameters
         ----------
         vendor_id : int
@@ -91,7 +104,7 @@ class nPointTipTiltController(ClosedLoopController):
             self.library = self.library_mapping[library]
             self.backend = self.library.get_backend(find_library=lambda x: self.library_path)
 
-    def _build_message(self, cmd_key, cmd_type, channel, value=None):
+    def _build_message(self, var, command, channel, value=None):
         """Builds the message to send to the controller. The messages
         must be 10 or 6 bytes, in significance increasing order (little 
         endian.) 
@@ -109,10 +122,10 @@ class nPointTipTiltController(ClosedLoopController):
         
         Parameters
         ----------
-        cmd_key : str
+        var : Variables enum
             The key to point toward the p/i/d_gain or loop.
-        cmd_type : str  
-            Either "get" to return a message or "set" to write a command.
+        command : Commands enum
+            Either Commands.GET to return a message or Commands.SET to write a command.
         channel : int
             1 or 2 for which channel.
         value : int/float, optional
@@ -126,37 +139,35 @@ class nPointTipTiltController(ClosedLoopController):
             or a simple int message, or two if it needs to write a float 
             and use two messages.
         """
-        
-        cmd_dict = {'loop': 84, 'p_gain': 720, 'i_gain': 728, 'd_gain': 730}
 
-        addr = 11830000 + 1000*channel + cmd_dict[cmd_key]
+        addr = 11830000 + 1000 * channel + var.value
         addr = f'0x{addr}'
         
-        # Note that the < specifies the little endian/signifigance increasing order here
+        # Note that the < specifies the little endian/significance increasing order here
         addr = struct.pack('<Q', int(addr, 16))
 
         # Now build message or messages 
         message = []
 
-        if cmd_type == 'get':
+        if command is Commands.GET:
             if value is not None:
                 warnings.warn('You specified a value but nothing will happen to it.')
             
             message.append(b'\xa4' + addr[:4] + b'\x02\x00\x00\x00\x55')
 
-        elif cmd_type == 'set':
+        elif command is Commands.SET:
             if value is None:
                 raise ValueError("Value is required.")
 
-            if cmd_key == 'loop':
-                if value not in [1,0]:
+            if var is Variables.LOOP:
+                if value not in (1, 0):
                     raise ValueError("1 or 0 value is required for loop.")
 
                 # Convert to hex
                 val = struct.pack('<I', value)
                 message.append(b'\xa2' + addr[:4] + val + b'\x55')
 
-            elif cmd_key in ['p_gain', 'i_gain', 'd_gain']:
+            elif var in Variables:
                 if type(value) == int:
                     value = float(value)
 
@@ -180,9 +191,9 @@ class nPointTipTiltController(ClosedLoopController):
         """Function for the close controller behavior."""
 
         for channel in [1, 2]:
-            for key in ["loop", "p_gain", "i_gain", "d_gain"]:
-                self.command(key, channel, 0)
-    
+            for var in Variables:
+                self.command(var, channel, 0)
+
     def _open(self):
         """ Open function to connect to device. """
 
@@ -250,7 +261,6 @@ class nPointTipTiltController(ClosedLoopController):
             # Value will be a 1D tuple and we want the value
             value = value[0]
 
-
             if return_timer:
                 return value, time_elapsed, tries
             else:
@@ -271,13 +281,13 @@ class nPointTipTiltController(ClosedLoopController):
             self.instrument.write(endpoint, message, timeout)
     
     @usb_except
-    def command(self, cmd_key, channel, value):
+    def command(self, var, channel, value):
         """Function to send a command to the controller and read back 
         to make sure it matches. 
 
         Parameters
         ----------
-        cmd_key : str
+        var : Commands enum
             Whether to set the "loop" or "p/i/d_gain".
         channel : int
             What channel to set.
@@ -285,18 +295,18 @@ class nPointTipTiltController(ClosedLoopController):
             What value to set.
         """
 
-        set_message = self._build_message(cmd_key, "set", channel, value)
-        get_message = self._build_message(cmd_key, "get", channel)
+        set_message = self._build_message(var, Commands.SET, channel, value)
+        get_message = self._build_message(var, Commands.GET, channel)
 
         self._send_message(set_message)
         self._send_message(get_message)
-        if cmd_key == 'loop':
+        if var is Variables.LOOP:
             response_type = '<I'
         else:
             response_type = '<d'
         set_value, time_elapsed, tries = self._read_response(response_type, return_timer=True)
         
-        self.log.info('It took {time_elapsed} seconds and {tries} tries for the message to return.')
+        self.log.info(f'It took {time_elapsed} seconds and {tries} tries for the message to return.')
         if value == set_value:
             self.log.info(f'Command successful: {value} == {set_value}.')
         else:
@@ -325,23 +335,18 @@ class nPointTipTiltController(ClosedLoopController):
         value_dict : dict
             A dictionary with a setting for each parameter.
         """
-
-        read_msg = {'p_gain': self._build_message('p_gain', 'get', channel),
-                    'i_gain': self._build_message('i_gain', 'get', channel),
-                    'd_gain': self._build_message('d_gain', 'get', channel),
-                    'loop': self._build_message('loop', 'get', channel)}
         
         value_dict = {}
         self.log.info(f"For channel {channel}.")
-        for key in read_msg:
-            self._send_message(read_msg[key])
-            if key == 'loop':
+        for var in Variables:
+            self._send_message(self._build_message(var, Commands.GET, channel))
+            if var is Variables.LOOP:
                 response_type = '<I'
             else:
                 response_type = '<d'
             value = self._read_response(response_type)
-            self.log.info(f"For parameter : {key} the value is {value}")
-            value_dict[key] = value
+            self.log.info(f"For parameter : {var} the value is {value}")
+            value_dict[var] = value
 
         return value_dict 
 
