@@ -14,6 +14,12 @@ from catkit.hardware.npoint.nPointTipTiltController import Commands, Variables, 
 from catkit.interfaces.Instrument import SimInstrument
 
 
+class EmulatedLibUSB:
+    @staticmethod
+    def get_backend(find_library=None):
+        pass
+
+
 class PyusbNpointEmulator:
     """nPointTipTilt connection class. 
 
@@ -134,3 +140,4 @@ class SimnPointTipTiltController(SimInstrument, nPointTipTiltController):
     library. """
 
     instrument_lib = PyusbNpointEmulator
+    library_mapping = {'libusb0': EmulatedLibUSB, 'libusb1': EmulatedLibUSB}
