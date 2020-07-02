@@ -101,7 +101,7 @@ class BostonDmController(DeformableMirrorController):
 
         # Use DmCommand class to format the commands correctly (with zeros for other DM).
         dm1_command = dm1_command_object.to_dm_command(voltage_offset=dm1_voltage_offset)
-        dm2_command = dm2_command_object.to_dm_command(voltage_offset=dm2_voltage_offset
+        dm2_command = dm2_command_object.to_dm_command(voltage_offset=dm2_voltage_offset)
 
         # Add both arrays together (first half and second half) and send to DM.
         full_command = dm1_command + dm2_command
