@@ -4,12 +4,10 @@ import datetime
 
 from astropy.io import fits
 import numpy as np
-from poppy import zernike
 
 from catkit.config import CONFIG_INI
 import catkit.util
-from hicat.experiments.modules import zernike as hicat_zernike_module
-
+import hicat.experiments.modules.zernike
 
 m_per_volt_map1 = None  # for caching the conversion factor, to avoid reading from disk each time
 m_per_volt_map2 = None  # for caching the conversion factor, to avoid reading from disk each time
@@ -85,7 +83,7 @@ class DmCommand(object):
     def get_data(self):
         return self.data
 
-    def to_dm_command(self):
+    def to_dm_command(self, voltage_offset=0):
         """ Output DM command suitable for sending to the hardware driver
 
         returns: 1D array, typically 2048 length for HiCAT, in units of percent of max voltage
@@ -112,13 +110,11 @@ class DmCommand(object):
                 if self.dm_num == 1:
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
                     flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
-                    dm_command += flat_map_volts[0].data
-                    #dm_command -= 15
+                    dm_command += flat_map_volts[0].data + voltage_offset
                 else:
                     flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
                     flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
-                    dm_command += flat_map_volts[0].data
-                    #dm_command -= 60
+                    dm_command += flat_map_volts[0].data + voltage_offset
 
             # Convert between 0-1.
             dm_command /= self.max_volts
@@ -292,74 +288,93 @@ def convert_dm_image_to_command(dm_image, path_to_save=None):
         catkit.util.write_fits(dm_command, path_to_save)
     return dm_command
 
-def create_flatmap_from_dm_command(dm_command_path, output_path, file_name=None, dm_num=1):
+
+def create_flatmap_from_dm_command(dm_command_path, output_path=None, file_name=None, dm_num=1):
     """
-    Converts a dm_command_2d.fits to the format used for the flatmap, and outputs a new flatmap fits file.
+    Converts a dm_command_2d.fits to the format used for the flatmap, returns the flatmap and, optionally,
+    outputs a new flatmap fits file.
     :param dm_command_path: Full path to the dm_command_2d.fits file.
-    :param output_path: Path to output the new flatmap fits file. Default is hardware/boston/
+    :param output_path: Path to output the new flatmap fits file. If not specified map is not written to file.
     :param file_name: Filename for new flatmap fits file. Default is flatmap_<timestamp>.fits
-    :return: None
+    :param dm_num: Which DM is this for, defaults to 1.
+    :return: dm_command_data: The flat map data in volts.
     """
     dm_command_data = fits.getdata(dm_command_path)
 
     dm_string = "dm1" if dm_num == 1 else "dm2"
 
-    if file_name is None:
-        # Create a string representation of the current timestamp.
-        time_stamp = time.time()
-        date_time_string = datetime.datetime.fromtimestamp(time_stamp).strftime("%Y-%m-%dT%H-%M-%S")
-        file_name = "flat_map_volts_" + str(dm_string) + "_" + date_time_string + ".fits"
-
-    if output_path is None:
-        raise ValueError
-
     # Convert the dm command units to volts.
     max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
     dm_command_data *= max_volts
-    catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
+
+    if output_path is not None:
+        if file_name is None:
+            # Create a string representation of the current timestamp.
+            time_stamp = time.time()
+            date_time_string = datetime.datetime.fromtimestamp(time_stamp).strftime("%Y-%m-%dT%H-%M-%S")
+            file_name = "flat_map_volts_" + str(dm_string) + "_" + date_time_string + ".fits"
+        catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
+
+    return dm_command_data
 
 
-def create_constant_flat_map(output_path, file_name=None, dm_num=1):
+def create_constant_flat_map(output_path=None, file_name=None, dm_num=1):
     """
-    Creates a uniform flat map and outputs a new flatmap fits file.
-    :param output_path: Path to output the new flatmap fits file.
+    Creates a uniform flat map and returns it and optionally outputs a new flatmap fits file.
+    :param output_path: Path to output the new flatmap fits file.  If not specified file not output.
     :param file_name: Filename for new flatmap fits file. Default is
             flat_map_volts_dm_<1 or 2>_constant.fits
     :param dm_num: Which DM is this for?  Defaults to 1.
-    :return: None
+    :return: dm_command_data: The flat map data in volts.
     """
-    if file_name is None:
-        file_name = "flat_map_volts_dm_" + str(dm_num) + "_constant.fits"
 
     bias_volts = CONFIG_INI.getint('boston_kilo952', f'bias_volts_dm{dm_num}')
     mask = catkit.util.get_dm_mask()
     dm_command_data = mask * bias_volts
-    catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
 
-def add_zernike_to_flat_map(output_path, file_name=None, dm_num=1, zernike_index=4, zernike_coeff_volts=10):
+    if output_path is not None:
+        if file_name is None:
+            file_name = f"flat_map_volts_dm_{dm_num}_constant.fits"
+        catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
+
+    return dm_command_data
+
+
+def add_zernike_to_flat_map(output_path=None, file_name=None, dm_num=1, zernike_index=4, zernike_coeff_volts=10):
     """
     Creates a new flat map from the existing flat map for selected DM by adding a specified Zernike term with the
-    specified coefficient magnitude.
-    :param output_path: Path to output the new flatmap fits file.
+    specified coefficient magnitude and returns it.  Optionally it can be output to a fits file.
+    :param output_path: Path to output the new flatmap fits file.  If not specified it it not output.
     :param file_name: Filename for new flatmap fits file. Default is
             flat_map_volts_dm_<1 or 2>_zernike_<zernike index>_<coefficient value>V.fits
     :param dm_num: Which DM is this for?  Defaults to 1.
-    :param zernike_index: What Zernike term are we applying, defaults to 4, which I think is focus, but should update if not
-    ;param zernike_coeff_volts: Coefficient of the Zernike term that we're adding in volts.  Defaults to +10, which for
+    :param zernike_index: What Zernike term are we applying, defaults to 4, which  is focus.
+    :param zernike_coeff_volts: Coefficient of the Zernike term that we're adding in volts.  Defaults to +10, which for
     :                           most Zernike terms should be a P2V of 20.
-    :return: None
+    :return: flat_map_volts: The flat map data in volts.
     """
+    # Get the current flat map
     flat_map_volts = get_flat_map_volts(dm_num)
 
-    flat_map_volts += (hicat_zernike_module.create_zernike(zernike_index, zernike_coeff_volts) + zernike_coeff_volts/2)
+    # Get the Zernike to perturb it with
+    zernike_values_volts = hicat.experiments.modules.zernike.create_zernike(zernike_index, zernike_coeff_volts)
+
+    # Make sure the Zernike values are all on the same side of zero so that we're only perturbing the flat map by an
+    # entirely positive or negative values.  No mixed signs.
+    coeff_sign = np.sign(zernike_coeff_volts)
+    extreme_value = np.min(coeff_sign * zernike_values_volts)
+    zernike_values_volts = coeff_sign * (coeff_sign * zernike_values_volts - extreme_value)
+
+    # Add in the perturbation
+    flat_map_volts += zernike_values_volts
+
     mask = catkit.util.get_dm_mask().astype('bool')
     flat_map_volts *= mask
-    flat_map_volts_masked = flat_map_volts[mask]
-    flat_map_volts_masked[flat_map_volts_masked < 0] = 0
-    flat_map_volts[mask] = flat_map_volts_masked
+    flat_map_volts[flat_map_volts < 0] = 0  # Clip neg. values at 0.
 
-    if file_name is None:
-        file_name = f"flat_map_volts_dm_{dm_num}_zernike_{zernike_index}_{zernike_coeff_volts:.2f}V.fits"
+    if output_path is not None:
+        if file_name is None:
+            file_name = f"flat_map_volts_dm_{dm_num}_zernike_{zernike_index}_{zernike_coeff_volts:.2f}V.fits"
+        catkit.util.write_fits(flat_map_volts, os.path.join(output_path, file_name))
 
-    catkit.util.write_fits(flat_map_volts, os.path.join(output_path, file_name))
-
+    return flat_map_volts

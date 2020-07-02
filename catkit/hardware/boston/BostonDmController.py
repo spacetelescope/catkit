@@ -90,7 +90,8 @@ class BostonDmController(DeformableMirrorController):
             # Update testbed_state.
             self.__close_dm_controller_testbed_state()
 
-    def apply_shape_to_both(self, dm1_command_object, dm2_command_object):
+    def apply_shape_to_both(self, dm1_command_object, dm2_command_object,
+                            dm1_voltage_offset=0, dm2_voltage_offset=0):
         """Combines both commands and sends to the controller to produce a shape on each DM."""
         self.log.info("Applying shape to both DMs")
 
@@ -99,8 +100,8 @@ class BostonDmController(DeformableMirrorController):
         dm2_command_object.dm_num = 2
 
         # Use DmCommand class to format the commands correctly (with zeros for other DM).
-        dm1_command = dm1_command_object.to_dm_command()
-        dm2_command = dm2_command_object.to_dm_command()
+        dm1_command = dm1_command_object.to_dm_command(voltage_offset=dm1_voltage_offset)
+        dm2_command = dm2_command_object.to_dm_command(voltage_offset=dm2_voltage_offset
 
         # Add both arrays together (first half and second half) and send to DM.
         full_command = dm1_command + dm2_command
