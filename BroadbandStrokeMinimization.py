@@ -42,6 +42,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
     :param exposure_time_direct:  Exposure time in the direct mode (microsec)
     :param use_dm2: Bool to use DM2 for control (2 sided DZ) or not (1 sided)
     :param autoscale_e_field:  [Hack Mode] Brute force autoscaling of the E-field to match intensity at each iteration
+    :param auto_num_exposures: If SNR/pix drops below target_snr_per_pix, increase the number of exposures
+    :param target_snr_per_pix: Desired minimum SNR per pixel, averaged over the dark zone, in reduced, binned images.
     :param direct_every:  defines how often a direct image is taken for the contrast calibration
     :param resume: bool, try to find and reuse DM settings from prior dark zone.
     :param dm_command_dir_to_restore: string, path to the directory where the dm_commands are located for restoring dm
@@ -66,6 +68,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                  auto_adjust_gamma=False,
                  control_gain=1.0,
                  autoscale_e_field=False,
+                 auto_num_exposures=True,
+                 target_snr_per_pix=10,
                  direct_every=1,
                  resume=False,
                  dm_command_dir_to_restore=None,
@@ -165,6 +169,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         self.exposure_time_coron = exposure_time_coron
         self.exposure_time_direct = exposure_time_direct
         self.auto_expose = auto_expose
+        self.auto_num_exposures = auto_num_exposures
+        self.target_snr_per_pix = target_snr_per_pix
         self.use_dm2 = use_dm2
 
         # Cut Jacobian in half if using only DM1
@@ -220,7 +226,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         #self.save_probes()
 
     def take_exposure(self, devices, exposure_type, wavelength, initial_path, flux_attenuation_factor=1., suffix=None,
-                      dm1_actuators=None, dm2_actuators=None, exposure_time=None, auto_expose=None):
+                      dm1_actuators=None, dm2_actuators=None, exposure_time=None, auto_expose=None, **kwargs):
 
         """
         Take an exposure on HiCAT.
@@ -264,7 +270,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             dm1_actuators, dm2_actuators, devices, wavelength=wavelength,
             exposure_type=exposure_type, exposure_time=exposure_time, auto_expose=auto_expose,
             initial_path=initial_path, num_exposures=self.num_exposures, suffix=suffix,
-            file_mode=self.file_mode, raw_skip=self.raw_skip)
+            file_mode=self.file_mode, raw_skip=self.raw_skip,
+            **kwargs)
 
         # For coronagraphic images, this factor is 1 by definition
         if exposure_type == 'direct':
@@ -384,6 +391,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 images_direct = {}
                 self.images_before = {}
                 self.images_after = {}
+                self.estimated_darkzone_SNRs = {}
+                self.estimated_probe_SNRs = {}
                 self.broadband_images = []  # broadband images are however just a list
 
                 # Take starting reference images, in direct and coron, per each wavelength
@@ -394,9 +403,13 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     direct_maxes[wavelength] = images_direct[wavelength].max()
 
                 for wavelength in self.wavelengths:
-                    self.images_before[wavelength], _ = self.take_exposure(devices, 'coron', wavelength, initial_path)
+                    self.images_before[wavelength], header = self.take_exposure(devices, 'coron', wavelength, initial_path,
+                                                                                output_err=True, dark_zone_mask=self.dark_zone)
                     self.images_before[wavelength] /= direct_maxes[wavelength]
                     self.images_after[wavelength] = self.images_before[wavelength]
+                    est_snr = header['SNR_DZ'] if header['SNR_DZ'] > 0 else np.nan  # alas, can't have NaN in FITS header keywords
+                    self.estimated_darkzone_SNRs[wavelength] = [est_snr]
+                    self.estimated_probe_SNRs[wavelength] = []
 
                 # Compute broadband image as the average over wavelength, weighted by the spectral flux at each wavelength
                 self.broadband_images.append(self.compute_broadband_weighted_mean(self.images_before, self.spectral_weights))
@@ -429,14 +442,14 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
 
                     # Make another exposure function with the bound/unbound arguments needed in the pairwise estimator
-                    def take_exposure_pairwise(dm1_actuators, dm2_actuators, suffix, wavelength):
+                    def take_exposure_pairwise(dm1_actuators, dm2_actuators, suffix, wavelength, **kwargs):
                         return self.take_exposure(devices,
                                                   exposure_type='coron',
                                                   wavelength=wavelength,
                                                   initial_path=initial_path,
                                                   suffix=suffix,
                                                   dm1_actuators=dm1_actuators,
-                                                  dm2_actuators=dm2_actuators)
+                                                  dm2_actuators=dm2_actuators, **kwargs)
 
                     # Electric field estimation.  This covers several cases:
                     #   - If we are in "perfect knowledge" mode, which only works in simulation, compute the true electric fields
@@ -455,7 +468,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                                 probe_examples[wavelength] = self.images_before[wavelength]
                             else:
                                 self.log.info(f'Estimating electric fields using pairwise probes at {wavelength} nm...')
-                                E_estimateds[wavelength], probe_examples[wavelength] = stroke_min.take_electric_field_pairwise(
+                                E_estimateds[wavelength], probe_examples[wavelength], probe_snr = stroke_min.take_electric_field_pairwise(
                                     self.dm1_actuators,
                                     self.dm2_actuators,
                                     take_exposure_pairwise,
@@ -470,6 +483,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                                     wavelength=wavelength,
                                     file_mode=self.file_mode)
 
+                                self.estimated_probe_SNRs[wavelength].append(probe_snr)
                                 # TODO: if self.file_mode: HICAT-817
                                 hicat.util.save_complex(f"E_estimated_unscaled_{int(wavelength)}nm.fits", E_estimateds[wavelength], initial_path)
 
@@ -540,8 +554,11 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
                     self.log.info('Taking post-correction coronagraphic images...')
                     for wavelength in self.wavelengths:
-                        self.images_after[wavelength], _ = self.take_exposure(devices, 'coron', wavelength, initial_path)
+                        self.images_after[wavelength], header = self.take_exposure(devices, 'coron', wavelength, initial_path,
+                                                                                   output_err=True, dark_zone_mask=self.dark_zone)
                         self.images_after[wavelength] /= direct_maxes[wavelength]
+                        est_snr = header['SNR_DZ'] if header['SNR_DZ'] > 0 else np.nan  # alas, can't have NaN in FITS header keywords
+                        self.estimated_darkzone_SNRs[wavelength].append(est_snr)
 
                     self.broadband_images.append(self.compute_broadband_weighted_mean(self.images_after, self.spectral_weights))
 
@@ -557,6 +574,9 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
                     # Make diagnostic plots
                     self.show_status_plots(self.broadband_images[-2], self.broadband_images[-1], self.dm1_actuators, self.dm2_actuators, E_estimateds)
+
+                    # Check SNR, and if necessary adjust exposure settings before next iteration
+                    self.check_snr()
 
     def compute_true_e_fields(self, E_estimateds, exposure_kwargs, initial_path, wavelength):
         """ Compute and save the true E-fields.  Only usable in simulation. """
@@ -613,8 +633,12 @@ class BroadbandStrokeMinimization(StrokeMinimization):
     def show_strokemin_plot(self, image_before, image_after, dm1_actuators, dm2_actuators, E_estimateds):
         """ Create the quantities that will be displayed in the show_strokemin_plot() of the parent class """
         e_field_scale_factors = self.e_field_scale_factors
+        estimated_darkzone_snrs = self.estimated_darkzone_SNRs
+        estimated_probe_snrs = self.estimated_probe_SNRs
 
         self.e_field_scale_factors = self.e_field_scale_factors[self.wavelengths[0]]
+        self.estimated_darkzone_SNRs = self.estimated_darkzone_SNRs[self.wavelengths[0]]
+        self.estimated_probe_SNRs = self.estimated_probe_SNRs[self.wavelengths[0]]
         self.jacobian_filename = self.jacobian_filenames[self.wavelengths[0]]
         self.probe_filename = self.probe_filenames[self.wavelengths[0]]
 
@@ -624,6 +648,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         super().show_strokemin_plot(image_before, image_after, dm1_actuators, dm2_actuators, E_estimateds[self.wavelengths[0]])
 
         self.e_field_scale_factors = e_field_scale_factors
+        self.estimated_darkzone_SNRs = estimated_darkzone_snrs
+        self.estimated_probe_SNRs = estimated_probe_snrs
 
     def compute_correction(self, E_estimateds, gamma, devices, exposure_kwargs):
         """
@@ -635,6 +661,27 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             self.mu_start)
 
         return correction, mu_start, predicted_contrast, predicted_contrast_drop
+
+    def check_snr(self):
+        """
+        # Before next iteration, check SNR in image. If it's too low, increase number of exposures.
+        # We should do this _after_ the plot, so the plot labels still reflect the values used
+        # in this iteration.
+        """
+
+        min_last_probe_snr = np.min([self.estimated_probe_SNRs[wl][-1] for wl in self.wavelengths])
+        min_last_dz_snr = np.min([self.estimated_darkzone_SNRs[wl][-1] for wl in self.wavelengths])
+        self.log.info(
+            "Estimated SNR in faintest probe image is {:.2f} per pix, using {} exposures.".format(min_last_probe_snr,
+                                                                                         self.num_exposures))
+        self.log.info("Estimated SNR in faintest dark zone image is {:.2f} per pix, using {} exposures.".format(min_last_dz_snr,
+                                                                                                       self.num_exposures))
+        if self.auto_num_exposures and (min_last_probe_snr < self.target_snr_per_pix) or (min_last_dz_snr < self.target_snr_per_pix):
+
+            self.num_exposures *= 2
+            self.log.warning(
+                ("SNR per pixel in dark zone or probe has dropped below {}. Doubling number of exposures to compensate. "
+                 "New num_exposures = {}").format(self.target_snr_per_pix, self.num_exposures))
 
     def init_strokemin_plots(self, output_path=None):
         """ Set up the infrastructure for writing out plots
@@ -707,10 +754,18 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             _show_one_contrast_image(i_estimated, mask=True, title=f"Estimated $I$ (from $E$): {int(wl)} nm", ax=axes[iwl+1,1])
             axes[iwl+1, 1].text(-15, -15, "$E$ scaled by {:.3f}".format(self.e_field_scale_factors[wl][-1]), color='lightblue',
                     fontsize='x-small')
+            snr = self.estimated_probe_SNRs[wl][-1]
+            axes[iwl + 1, 1].text(15, -15, "SNR in probe = {:.1f}".format(snr),
+                                  color='yellow' if snr > 10 else 'red', horizontalalignment='right',
+                                  fontsize='x-small')
+
             # 3. Plot observed I field before
             #    mask the before image to just show the dark zone
             _show_one_contrast_image(self.images_before[wl], mask=True, title=f"$I$ before iteration {iteration} (masked)", ax=axes[iwl+1,2])
-
+            snr = self.estimated_darkzone_SNRs[wl][-2]
+            axes[iwl + 1, 2].text(15, -15, "SNR in dark zone = {:.1f}".format(snr),
+                                  color='yellow' if snr > 10 else 'red', horizontalalignment='right',
+                                  fontsize='x-small')
             # 4. Plot estimated incoherent background (unmodulated light)
             # Estimated electric field, and residual
             im = _show_one_contrast_image(est_incoherent, mask=False, ax=axes[iwl+1,3])
