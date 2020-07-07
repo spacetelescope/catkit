@@ -121,9 +121,13 @@ class ContrastStability(Experiment):
 
             for i in range(self.iter):
 
+                # Create a new output subfolder for each iteration
+                initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
+
                 coron, _header = self.take_coron_exposure(self.dm1_hold, self.dm2_hold,
                                                           devices, num_exposures=self.num_exposures,
-                                                          initial_path=self.output_path)
+                                                          initial_path=initial_path)
+
                 coron /= direct.max()
                 self.mean_contrasts_image.append(np.mean(coron[self.dark_zone]))
 
