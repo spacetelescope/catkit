@@ -557,6 +557,12 @@ class StrokeMinimization(Experiment):
         hicat.plotting.image_axis_setup(ax, im, title="Estimated $I$ (from $E$)")
         ax.text(-15, -15, "$E$ scaled by {:.3f}".format(self.e_field_scale_factors[-1]), color='lightblue',
                 fontsize='x-small')
+        snr = self.estimated_probe_SNRs[-1]
+        ax.text(15, -15, "SNR in probe = {:.1f}".format(snr),
+                              color='yellow' if snr > 10 else 'red', horizontalalignment='right',
+                              fontsize='x-small')
+
+
 
         # Display images, before and after
         # mask the before image to just show the dark zone
@@ -565,7 +571,10 @@ class StrokeMinimization(Experiment):
         log_img_before_masked[self.dark_zone == False] = -8
         im = hcipy.imshow_field(log_img_before_masked, vmin=-8, vmax=-4, cmap='inferno', ax=ax)
         hicat.plotting.image_axis_setup(ax, im, title="Image before iteration {} (Masked)".format(iteration), control_zone=control_zone)
-
+        snr = self.estimated_darkzone_SNRs[-2]
+        ax.text(15, -15, "SNR in dark zone = {:.1f}".format(snr),
+                              color='yellow' if snr > 10 else 'red', horizontalalignment='right',
+                              fontsize='x-small')
         ax = axes[0,4]
         im = hcipy.imshow_field(log_img_after, vmin=-8, vmax=-4, cmap='inferno', ax=ax)
         hicat.plotting.image_axis_setup(ax, im, title="Image after iteration {}".format(iteration), control_zone=control_zone)
