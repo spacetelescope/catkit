@@ -499,7 +499,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     self.dm1_actuators -= dm1_correction
                     self.dm2_actuators -= dm2_correction
 
-                    self.log.info('Taking post-correction coronagraphic images and pupil image...')
+                    self.log.info('Taking post-correction pupil image...')
 
                     self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
                                                                              num_exposures=1,
@@ -514,6 +514,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                             images_direct[wavelength], _ = self.take_exposure(devices, 'direct', wavelength, initial_path, flux_norm_dir[wavelength])
                             direct_maxes[wavelength] = images_direct[wavelength].max()
 
+                    self.log.info('Taking post-correction coronagraphic images...')
                     for wavelength in self.wavelengths:
                         self.images_after[wavelength], _ = self.take_exposure(devices, 'coron', wavelength, initial_path)
                         self.images_after[wavelength] /= direct_maxes[wavelength]

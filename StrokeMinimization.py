@@ -471,6 +471,18 @@ class StrokeMinimization(Experiment):
         if iteration >= 10 and np.mod(iteration, 5)==0:
             self.show_convergence_plot()
             self.show_environment_plot()
+        if np.mod(iteration, 5) == 0:
+            self.show_log_analysis_plot()
+
+    def show_log_analysis_plot(self):
+        """Analyze log file and produce experiment timing plot"""
+        logfilename = os.path.join(self.output_path, self.suffix+".log")
+        from hicat.plotting.log_analysis_plots import analyze_strokemin_log
+        # This is "nice to have" but should NOT interrupt an experiment if there's a problem
+        try:
+            analyze_strokemin_log(logfilename, save_filename=os.path.join(self.output_path, "log_timing_analysis.pdf"))
+        except Exception:
+            log.warning("Exception encountered in producing log analysis plot. Ignoring so experiment can continue.")
 
     def show_strokemin_plot(self, image_before, image_after, dm1_actuators, dm2_actuators, E_estimated):
         """ Make a nice diagnostic plot after each iteration of stroke minimization
