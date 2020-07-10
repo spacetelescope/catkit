@@ -1,79 +1,200 @@
 # flake8: noqa: E402
-import itertools
 import os
 
+import numpy as np
+from astropy.io import fits
 from catkit.catkit_types import quantity, units, SinSpecification, FpmPosition, LyotStopPosition, \
     ImageCentering  # noqa: E402
-from catkit.hardware.boston.sin_command import sin_command  # noqa: E402
 from catkit.hardware.boston.commands import flat_command
+from catkit.hardware.boston.sin_command import sin_command  # noqa: E402
+
+import hicat.util  # noqa: E402
+from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import Experiment  # noqa: E402
 from hicat.hardware import testbed  # noqa: E402
-import hicat.util  # noqa: E402
 
 
-class CalibrateDMRotation(Experiment):
-    """ Measure DM rotation angles relative to focal plane detector axes.
-
-    :param cycles: range, cycles per aperture (spatial frequency) in lambda/D
-    :param orientation_angles: list, rotation angles for the sine wave in degrees
-    :param phase_shifts: list, phase between DM patterns in degrees - affects relative brightness of resulting speckles
+def compute_centroid(image):
     """
-    name = 'Calibrate DM Rotation'
-    def __init__(self, cycles=16, amplitude=None):
+    Compute the centroid location of an image.
+
+    :param image: array_like
+    """
+    x = np.arange(-image.shape[1] // 2, image.shape[1] // 2)
+    y = np.arange(-image.shape[0] // 2, image.shape[0] // 2)
+    xg, yg = np.meshgrid(x, y)
+    denom = image.sum()
+    return (yg * image).sum() / denom, (xg * image).sum() / denom
+
+
+def postprocess_images(images, speckles, exclusion_radius, threshold, log=None):
+    reference_image = images[..., 0]
+    shape = reference_image.shape
+
+    # Pixel coordinate axes
+    row = np.arange(-shape[0] // 2, shape[0] // 2)
+    col = np.arange(-shape[1] // 2, shape[1] // 2)
+    xg, yg = np.meshgrid(col, row)
+
+    centroids = np.zeros((2, len(speckles)))
+    pipeline_images = np.zeros((len(speckles), 4, *shape))
+
+    for n, (fx, fy) in enumerate(speckles):
+        image = images[..., n + 1]
+        # Postprocess image to extract speckle centroids
+        difference = image / 2 - reference_image
+        no_center = np.ma.masked_where(xg ** 2 + yg ** 2 < exclusion_radius ** 2,
+                                       difference)
+        half = np.ma.masked_where(fx * xg + fy * yg < 0, no_center)
+        peak = np.ma.masked_where(half <= threshold * half.max(), half)
+
+        pipeline_images[n, ...] = np.moveaxis(
+            np.dstack([difference,
+                       no_center.filled(fill_value=0),
+                       half.filled(fill_value=0),
+                       peak.filled(fill_value=0)]), 2, 0)
+
+        centroid = compute_centroid(peak)
+        centroids[:, n] = np.array(centroid)
+        if log is not None:
+            log.info(f'Centroid with (fx, fy) = ({fx:0.2f}, {fy:0.2f}): ({centroid[0]:0.2f}, {centroid[1]:0.2f})')
+
+    return centroids, pipeline_images
+
+
+def reconstruct_mapping_matrix(centroids, speckles):
+    X = np.zeros((3, len(speckles)), dtype=np.float64)  # Inputs
+    Y = np.zeros_like(X)  # Outputs
+    X[2, :] = 1
+    Y[2, :] = 1
+
+    for n, (fx, fy) in enumerate(speckles):
+        X[:-1, n] = np.array([fx, fy])
+        Y[:-1, n] = centroids[:, n]
+
+    return Y @ np.linalg.pinv(X.T).T   # Compute the right-sided pseudoinverse
+
+
+class CalibrateSpatialFrequencyMapping(Experiment):
+    name = 'Calibrate DM mapping'
+
+    def __init__(self, cycles, num_speckle, exclusion_radius, threshold, amplitude=None):
+        """
+        Measure the matrix that maps spatial frequencies on each DM to pixel locations at the
+        detector.  An affine transformation of the form y = Ax + b can be written in terms of an
+        augmented linear system
+
+            row     A00 A01 b0     fx
+            col  =  A10 A11 b1  *  fy
+             1       1   1   0     1
+
+        For each input value of x, we measure the centroid of one of the two speckles that are
+        produced in the focal plane.  They are separated by a line in the detector plane with the
+        expression
+
+                             fx * m + fy * n = 0
+
+        where [m, n] are the (row, column) coordinates for the detector-plane pixels, with
+        [0, 0] at the center of the image.  By convention, we measure the centroid of the speckle
+        for which fx * m + fy * n > 0.  Since centroiding each speckle gives us two measurements
+        (one row and one column), and we have six unknowns (A00, A01, A10, A11, b0, b1),
+        we need to inject three speckle pairs at minimum to characterize the full transformation.
+
+        This measurement is performed for both DMs.
+
+        :param cycles: float, spatial frequency of injected speckles in cycles/DM.  Cannot exceed
+                       Nyquist limit, which is 17 cycles/DM.
+        :param num_speckle: int, number of speckles to inject.  Must be >= 3.  The injected
+                            speckles are equally spaced in rotation angle over the range [0, pi].
+        :param exclusion_radius: int, radius of central region in image that is masked out.  This
+                                 helps to suppress differential photon noise from the bright image
+                                 center.
+        :param threshold: float, cutoff value for pixels in postprocessed images, relative to
+                          maximum absolute value
+        :param amplitude: float, amplitude of injected speckles in nanometers. If None, defaults
+                          to the value dm1_ideal_poke or dm2_ideal_poke in the boston_kilo952
+                          section of the config file.
+        """
         super().__init__()
         self.cycles = cycles
-        self.amplitude=amplitude
-
+        self.num_speckle = num_speckle
+        self.exclusion_radius = exclusion_radius
+        self.threshold = threshold
+        self.amplitude = amplitude
 
     def take_image(self, label):
-        # Take images
         saveto_path = hicat.util.create_data_path(initial_path=self.output_path,
                                                   suffix=label)
         return testbed.run_hicat_imaging(exposure_time=quantity(50, units.millisecond),
-                                  num_exposures=1,
-                                  fpm_position=FpmPosition.coron,
-                                  lyot_stop_position=LyotStopPosition.in_beam,
-                                  file_mode=True,
-                                  raw_skip=False,
-                                  path=saveto_path,
-                                  auto_exposure_time=False,
-                                  exposure_set_name='coron',
-                                  centering=ImageCentering.custom_apodizer_spots,
-                                  auto_exposure_mask_size=5.5,
-                                  resume=False,
-                                  pipeline=True)
+                                         num_exposures=1,
+                                         fpm_position=FpmPosition.coron,
+                                         lyot_stop_position=LyotStopPosition.in_beam,
+                                         file_mode=True,
+                                         raw_skip=False,
+                                         path=saveto_path,
+                                         auto_exposure_time=False,
+                                         exposure_set_name='coron',
+                                         # TODO: this is not always the right centering
+                                         centering=ImageCentering.custom_apodizer_spots,
+                                         auto_exposure_mask_size=5.5,
+                                         resume=False,
+                                         pipeline=True)
 
     def experiment(self):
-
+        self.log.info(f"""Running DM spatial frequency calibration with following parameters:
+         cycles: {self.cycles}
+    num_speckle: {self.num_speckle}
+      amplitude: {self.amplitude} nm
+        """)
         with testbed.dm_controller() as dm:
-
             # Take baseline image with DMs flat
-            dm.apply_shape_to_both(flat_command(bias=False, flat_map=True), flat_command(bias=False, flat_map=True))
-            baseline_image = self.take_image("both_dms_flat")
+            dm.apply_shape_to_both(
+                flat_command(bias=False, flat_map=True),
+                flat_command(bias=False, flat_map=True))
+
+            thetas = np.arange(0, np.pi, np.pi / self.num_speckle)  # Rotation angles of speckles
+            speckles = [(self.cycles * np.cos(theta), self.cycles * np.sin(theta))
+                        for theta in thetas]  # Input (fx, fy) spatial frequency pairs
+
+            # take_image returns a list of images, and a header.  We want the only image in that
+            # list.
+            reference_image = self.take_image('reference_image')[0][0]
 
             # Apply sines to one DM at a time
-            for dm_sin in [1, 2]:
+            for dm_num in [1, 2]:
+                images = np.zeros((*reference_image.shape, len(speckles) + 1))
+                images[..., 0] = reference_image
 
                 if self.amplitude is not None:
                     amplitude = self.amplitude
                 else:
-                    amplitude = CONFIG_INI.getfloat('boston_kilo952', f'dm{dm_sin}_ideal_poke')
+                    amplitude = CONFIG_INI.getfloat('boston_kilo952', f'dm{dm_num}_ideal_poke')
 
-                dm_flat = 2 if dm_sin == 1 else 1
-                for angle in [0,90]:
-                    self.log.info(f"Taking sine wave on DM{dm_sin} at angle {angle} with {self.cycles} cycles/DM.")
-                    sin_specification = SinSpecification(angle, self.cycles,
-                                                               quantity(amplitude, units.nanometer), 0)
-                    sin_command_object = sin_command(sin_specification, flat_map=True, dm_num=dm_sin)
+                # When we put a sine wave on one of the DMs, flatten the other one
+                dm_flat = 2 if dm_num == 1 else 1
+
+                for n, theta in enumerate(thetas):
+                    self.log.info(f"Taking sine wave on DM{dm_num} at angle {theta} with {self.cycles} cycles/DM.")
+                    sin_specification = SinSpecification(theta * 180 / np.pi, self.cycles,
+                                                         quantity(amplitude, units.nanometer),
+                                                         0)
+                    sin_command_object = sin_command(sin_specification, flat_map=True, dm_num=dm_num)
                     flat_command_object = flat_command(bias=False, flat_map=True, dm_num=dm_flat)
 
-                    dm.apply_shape(sin_command_object, dm_num=dm_sin)
+                    dm.apply_shape(sin_command_object, dm_num=dm_num)
                     dm.apply_shape(flat_command_object, dm_num=dm_flat)
 
-                    label = f"dm{dm_sin}_cycle_{self.cycles}_ang_{angle}"
+                    label = f"dm{dm_num}_cycle_{self.cycles}_ang_{theta}"
 
-                    sine_image = self.take_image(label)
+                    images[..., n + 1] = self.take_image(label)[0][0]
 
-                # Now do the subtraction of the reference (flat DMs) image from that image
-                # fits.writeto(os.path.join(self.output_path, f'subtracted_{label}.fits'),
-                #             sine_image - baseline_image)
+                centroids, pipeline_images = postprocess_images(images,
+                                                                speckles,
+                                                                self.exclusion_radius,
+                                                                self.threshold,
+                                                                self.log)
+                mapping_matrix = reconstruct_mapping_matrix(centroids, speckles)
+                fits.writeto(os.path.join(self.output_path, f'mapping_matrix_dm{dm_num}.fits'),
+                             mapping_matrix)
+                fits.writeto(os.path.join(self.output_path, f'pipeline_images_dm{dm_num}.fits'),
+                             pipeline_images)
