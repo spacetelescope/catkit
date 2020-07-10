@@ -28,6 +28,22 @@ def compute_centroid(image):
 
 
 def postprocess_images(images, speckles, exclusion_radius, threshold, log=None):
+    """
+    Postprocess images to find the centroid of one of the two injected speckles.
+
+    :param images: array_like, 3D array with images stacked along 3rd dimension. One per injected speckle pair.
+    :param speckles: list of (fx, fy) pairs in cycles/DM
+    :param exclusion_radius: int, radius of central region in image that is masked out.  This
+                             helps to suppress differential photon noise from the bright image
+                             center.
+    :param threshold: float, cutoff value for pixels in postprocessed images, relative to
+                      maximum absolute value
+    :param log: handle to logger objects to print centroid locations to
+    :return: list of (row, col) centroid locations, and the intermediate images from this
+             pipeline as a 4D array (speckle, pipeline_stage, row, col).  Saving this array as a
+             FITS file makes the pipeline data very convenient to visualize with DS9 because it
+             creates interactive slider bars to explore the (speckle, pipeline_stage) values.
+    """
     reference_image = images[..., 0]
     shape = reference_image.shape
 
@@ -63,6 +79,15 @@ def postprocess_images(images, speckles, exclusion_radius, threshold, log=None):
 
 
 def reconstruct_mapping_matrix(centroids, speckles):
+    """
+    Reconstruct the input-output relationship between 2D spatial frequencies in cycles/DM and
+    pixel locations on the detector.  See docstring of CalibrateSpatialFrequencyMapping for more
+    details.
+
+    :param centroids: list of (row, col) centroid locations
+    :param speckles: list of (fx, fy) spatial frequencies
+    :return: 3x3 numpy array with transformation parameters
+    """
     X = np.zeros((3, len(speckles)), dtype=np.float64)  # Inputs
     Y = np.zeros_like(X)  # Outputs
     X[2, :] = 1
