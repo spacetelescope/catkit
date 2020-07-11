@@ -482,7 +482,7 @@ class StrokeMinimization(Experiment):
         try:
             analyze_strokemin_log(logfilename, save_filename=os.path.join(self.output_path, "log_timing_analysis.pdf"))
         except Exception:
-            log.warning("Exception encountered in producing log analysis plot. Ignoring so experiment can continue.")
+            self.log.warning("Exception encountered in producing log analysis plot. Ignoring so experiment can continue.")
 
     def show_strokemin_plot(self, image_before, image_after, dm1_actuators, dm2_actuators, E_estimated):
         """ Make a nice diagnostic plot after each iteration of stroke minimization
