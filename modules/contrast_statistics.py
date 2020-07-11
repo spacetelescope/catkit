@@ -186,6 +186,10 @@ def plot_environment_and_contrast(filepath):
     axes[1].set_ylabel('Humidity (%)')
     axes[1].set_ylim(0, 30)
 
+    for i, values in enumerate([metrics_data[' temp (C)'], metrics_data[' humidity (%)']]):
+        axes[i].text(0.05, 0.1, f"Mean: {np.mean(values):.2f}       Range: {np.min(values):.2f} - {np.max(values):.2f}       Std dev: {np.std(values):.2f}",
+                     color = 'red' if i==0 else 'blue', transform=axes[i].transAxes)
+
     axes[2].semilogy(datetimes, metrics_data[' mean image contrast'], c='purple', marker='o',
                      label='Broadband contrast')
     axes[2].set_ylabel('Contrast')
