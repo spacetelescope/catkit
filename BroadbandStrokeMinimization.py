@@ -768,12 +768,13 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         ax.set_xlabel("Iteration")
         ax.set_title("Additional diagnostics")
 
-        ax2 = ax.twinx()  # second Y axis for RHS
-        ax2.semilogy(self.estimated_incoherent_backgrounds, 'o-', color='gray', label='Est. Incoherent background')
-        ax2.semilogy(np.arange(iteration)+1, np.abs(self.predicted_contrast_deltas), color='purple', marker='*', label='Predicted contrast deltas')
-        ax2.semilogy(np.arange(iteration)+1, np.abs(self.measured_contrast_deltas), color='C0', marker='*', label='Measured contrast deltas')
-        ax2.set_ylim(contrast_yaxis_min, 1e-3)
-        ax2.legend(loc='lower right', fontsize='x-small', framealpha=0.5)
+        ax.plot(np.arange(iteration)+1, np.abs(self.measured_contrast_deltas)/np.abs(self.predicted_contrast_deltas),
+                     color='purple', marker='*', label='Ratio of Measured/Predicted contrast deltas')
+        ax.plot(np.asarray(self.estimated_incoherent_backgrounds)/np.asarray(self.mean_contrasts_image[:-1]),
+                     'o-', color='gray', label='Ratio of Est. Incoherent background/Contrast')
+        ax.legend(loc='upper left', fontsize='x-small', framealpha=1.0)
+        ax.axhline(1, ls=":", color='black', alpha=0.5)
+
 
         _show_one_contrast_image(self.broadband_images[-1], mask=False, title=f"$I$ after iteration {iteration}, broadband",
                                  ax=axes[0, 4], image_crop=None)
