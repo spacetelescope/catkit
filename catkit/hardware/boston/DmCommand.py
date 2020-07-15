@@ -14,6 +14,9 @@ m_per_volt_map2 = None  # for caching the conversion factor, to avoid reading fr
 
 
 class DmCommand(object):
+
+    valid_dm_nums = (1, 2)
+
     def __init__(self, data, dm_num, flat_map=False, bias=False, as_voltage_percentage=False,
                  as_volts=False, sin_specification=None):
         """
@@ -26,7 +29,8 @@ class DmCommand(object):
         :param dm_num: Valid values are 0, 1, 2.  Default is 0, which will automatically identify which dm to use.
                      You can specify 1 or 2 to ensure a certain DM is used, regardless of how the input data is padded.
         :param flat_map: If true, add flat map correction to the data before outputting commands
-        :param bias: If true, add bias to the data before outputting commands
+        :param bias: None|bool|int
+            The bias voltage to add to the data before outputting commands. If None|True values are pulled from config.
         :param as_voltage_percentage: Interpret the data as a voltage percentage instead of meters; Deprecated.
         :param as_volts: If true, interpret the data as volts instead of meters
         :param sin_specification: Add this sine to the data
@@ -53,15 +57,18 @@ class DmCommand(object):
         self.command_length = CONFIG_INI.getint('boston_kilo952', 'command_length')
         self.pupil_length = CONFIG_INI.getint('boston_kilo952', 'dm_length_actuators')
         self.max_volts = CONFIG_INI.getint('boston_kilo952', 'max_volts')
-        self.bias_volts_dm1 = CONFIG_INI.getint('boston_kilo952', 'bias_volts_dm1')
-        self.bias_volts_dm2 = CONFIG_INI.getint('boston_kilo952', 'bias_volts_dm2')
+
+        # Handle bias voltages.
+        if self.bias is True or self.bias is None:
+            self.bias_voltage = CONFIG_INI.getint('boston_kilo952', f'bias_volts_dm{dm_num}')
+        elif self.bias is False:
+            self.bias_voltage = 0
+        else:
+            self.bias_voltage = self.bias
 
         # Error handling for dm_num.
-        if not (dm_num == 1 or dm_num == 2):
-            raise ValueError("The parameter dm_num must be 1 or 2.")
-
-        if flat_map and bias:
-            raise ValueError("You can only apply flat_map or bias, not both.")
+        if dm_num not in self.valid_dm_nums:
+            raise ValueError(f"The parameter dm_num must be either {self.valid_dm_nums}.")
 
         # Transform data to be a 2D array (ex: 34 x 34 for boston_kilo952).
         # Already 2D, store as-is.
@@ -83,7 +90,7 @@ class DmCommand(object):
     def get_data(self):
         return self.data
 
-    def to_dm_command(self, voltage_offset=0):
+    def to_dm_command(self):
         """ Output DM command suitable for sending to the hardware driver
 
         returns: 1D array, typically 2048 length for HiCAT, in units of percent of max voltage
@@ -101,20 +108,14 @@ class DmCommand(object):
             if not self.as_volts:
                 dm_command = convert_m_to_volts(self.data, self.dm_num)
 
-            # Apply bias.
-            if self.bias:
-                dm_command += self.bias_volts_dm1 if self.dm_num == 1 else self.bias_volts_dm2
+            # Apply bias voltages (which may just be 0 if bias=False was passed in upon instantiation).
+            dm_command += self.bias_voltage
 
-            # OR apply Flat Map (which is itself biased).
-            elif self.flat_map:
-                if self.dm_num == 1:
-                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-                    flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
-                    dm_command += flat_map_volts[0].data + voltage_offset
-                else:
-                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-                    flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
-                    dm_command += flat_map_volts[0].data + voltage_offset
+            # Apply Flat Map (which is itself could be biased).
+            if self.flat_map:
+                flat_map_file_name = CONFIG_INI.get("boston_kilo952", f"flat_map_dm{self.dm_num}")
+                flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
+                dm_command += flat_map_volts[0].data
 
             # Convert between 0-1.
             dm_command /= self.max_volts
