@@ -56,8 +56,9 @@ class Experiment(ABC):
             # Check tests before starting experiment.
             for safety_test in self.safety_tests:
                 status, msg = safety_test.check()
-                print(msg)
-                self.log.info(msg)
+                # msg may have a newline in it; if so split that into separate log messages
+                for msg_line in msg.split("\n"):
+                    self.log.info(msg_line)
                 if not status:
                     errmessage = safety_test.name + " reports unsafe conditions. Aborting experiment before start... Details: {}".format(msg)
                     print(errmessage)
@@ -80,7 +81,8 @@ class Experiment(ABC):
                     status, message = safety_test.check()
                     if status:
                         # Check passed, clear any warning that might be set and proceed to sleep until next iteration.
-                        self.log.info(message)
+                        for msg_line in message.split("\n"):
+                            self.log.info(msg_line)
                         safety_test.warning = False
 
                     elif safety_test.warning:

@@ -4,8 +4,10 @@ import numpy as np
 import pandas
 import os
 import logging
+import glob
 
 from hicat.plotting.plot_utils import careful_savefig
+import hicat.plotting.log_analysis_plots
 
 log = logging.getLogger(__name__)
 
@@ -177,7 +179,7 @@ def plot_environment_and_contrast(filepath):
     fig.suptitle("Lab Environment Metrology during:\n" + os.path.split(os.path.dirname(filepath))[-1], fontweight='bold')
 
     axes[0].plot(datetimes, metrics_data[' temp (C)'], c='red', marker='+',
-                 label='Aux Temp Sensor')
+                 label='Aux Temperature Sensor')
     axes[0].set_ylabel('Temperature (C)')
     axes[0].set_ylim(20, 30)
 
@@ -187,13 +189,28 @@ def plot_environment_and_contrast(filepath):
     axes[1].set_ylim(0, 30)
 
     for i, values in enumerate([metrics_data[' temp (C)'], metrics_data[' humidity (%)']]):
-        axes[i].text(0.05, 0.1, f"Mean: {np.mean(values):.2f}       Range: {np.min(values):.2f} - {np.max(values):.2f}       Std dev: {np.std(values):.2f}",
+        axes[i].text(0.05, 0.15, f"Mean: {np.mean(values):.2f}       Range: {np.min(values):.2f} - {np.max(values):.2f}       Std dev: {np.std(values):.2f}",
                      color = 'red' if i==0 else 'blue', transform=axes[i].transAxes)
 
     axes[2].semilogy(datetimes, metrics_data[' mean image contrast'], c='purple', marker='o',
                      label='Broadband contrast')
     axes[2].set_ylabel('Contrast')
 
+
+    # Try to also parse the safety check temp and humidity from the log file
+    experiment_log = glob.glob(os.path.join(os.path.dirname(filepath), "*.log"))[0]
+    logtable = hicat.plotting.log_analysis_plots.load_log_table(experiment_log)
+
+    for i, qty in enumerate(['Temperature', 'Humidity']):
+        safety_check_results = hicat.plotting.log_analysis_plots.query_log_table(logtable, f'{qty} test passed')
+        safety_check_times = safety_check_results['datetime']
+        safety_check_values = [float(msg.split()[3]) for msg in safety_check_results['message']]
+        axes[i].plot(safety_check_times, safety_check_values, c='orange' if i==0 else 'skyblue',
+                 marker='s', label=f"Safety {qty} Sensor")
+        axes[i].text(0.05, 0.05, f"Mean: {np.mean(safety_check_values):.2f}       Range: "
+                                 f"{np.min(safety_check_values):.2f} - {np.max(safety_check_values):.2f}       "
+                                 f"Std dev: {np.std(safety_check_values):.2f}",
+                     color = 'orange' if i==0 else 'skyblue', transform=axes[i].transAxes)
     for ax in axes:
         ax.grid(True, which='both', alpha=0.3)
         ax.legend()
@@ -202,6 +219,10 @@ def plot_environment_and_contrast(filepath):
         formatter = matplotlib.dates.ConciseDateFormatter(locator)
         ax.xaxis.set_major_locator(locator)
         ax.xaxis.set_major_formatter(formatter)
+
+    # ensure all plots have consistent X axes
+    for i in [1,2]:
+        axes[i].set_xlim(*axes[0].get_xlim())
 
     output_fn = os.path.join(os.path.dirname(filepath), 'environment.pdf')
     careful_savefig(fig, output_fn)
