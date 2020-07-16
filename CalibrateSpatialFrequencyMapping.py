@@ -1,10 +1,5 @@
 # flake8: noqa: E402
 import os
-import matplotlib
-
-matplotlib.use('QT5Agg')
-import matplotlib.pyplot as plt
-from matplotlib import colors
 import scipy.signal
 import numpy as np
 from astropy.io import fits
@@ -193,10 +188,6 @@ class CalibrateSpatialFrequencyMapping(Experiment):
             # list.
             reference_image = self.take_image('reference_image', FpmPosition.coron)[0][0]
             direct_image = self.take_image('direct_image', FpmPosition.direct)[0][0]
-
-            plt.figure()
-            plt.imshow(direct_image, norm=colors.LogNorm())
-            plt.show()
 
             # Apply sines to one DM at a time
             for dm_num in [1, 2]:
