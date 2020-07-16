@@ -28,18 +28,30 @@ def compute_centroid(image):
     return (xg * image).sum() / denom, (yg * image).sum() / denom,
 
 
-def postprocess_images(images, reference_image, direct_image,
-                       speckles, exclusion_radius, threshold, log=None):
+def postprocess_images(images, reference_image, direct_image, speckles, log=None):
     """
-    Postprocess images to find the centroid of one of the two injected speckles.
+    Postprocess images to find the centroid of one of the two injected speckles.  This is done as
+    follows:
+
+        1. Subtract coronagraphic image without speckle to reduce background level
+        2. Mask off half of the image to isolate one injected speckle
+        3. Cross-correlate with direct image
+
+    The desired speckle location is then given by the location where the cross-correlation is
+    maximized.  This is because applying a sinusoidal phase in the pupil plane acts as a
+    diffraction grating that generates copies of the direct image at the grating frequency, so
+    cross-correlation with the direct image is equivalent to a matched filtering operation.
+
+    Cross-correlation is slower, but more robust than directly computing the center-of-mass of
+    the image, because it is less susceptible to residual background after subtraction.
+    Thresholding the image to remove background will bias the estimate of the speckle centroid
+    location, because some of the desired speckle energy will also be rejected.  This bias becomes
+    worse for higher amounts of aberration.
 
     :param images: array_like, 3D array with images stacked along 3rd dimension. One per injected speckle pair.
+    :param reference_image: array_like, coronagraphic image without injected speckles
+    :param direct_image: array_like, direct image without injected speckles.
     :param speckles: list of (fx, fy) pairs in cycles/DM
-    :param exclusion_radius: int, radius of central region in image that is masked out.  This
-                             helps to suppress differential photon noise from the bright image
-                             center.
-    :param threshold: float, cutoff value for pixels in postprocessed images, relative to
-                      maximum absolute value
     :param log: handle to logger objects to print centroid locations to
     :return: list of (col, row) centroid locations (so that they map to (x, y)), and the
              intermediate images from this pipeline as a 4D array
@@ -55,20 +67,19 @@ def postprocess_images(images, reference_image, direct_image,
     xg, yg = np.meshgrid(col, row)
 
     centroids = np.zeros((2, len(speckles)))
-    pipeline_images = np.zeros((len(speckles), 5, *shape))
+    pipeline_images = np.zeros((len(speckles), 4, *shape))
 
     for n, (fx, fy) in enumerate(speckles):
         image = images[..., n]
+
         # Postprocess image to extract speckle centroids
         difference = image - reference_image
-        no_center = difference * (xg ** 2 + yg ** 2 > exclusion_radius ** 2)
-        half = no_center * (fx * xg + fy * yg > 0)
+        half = difference * (fx * xg + fy * yg > 0)
         xcorr = scipy.signal.correlate2d(half, direct_image, mode='same')
         pipeline_images[n, ...] = np.moveaxis(
             np.dstack([
                 image,
                 difference,
-                no_center,
                 half,
                 xcorr
             ]), 2, 0)
@@ -107,7 +118,7 @@ def reconstruct_mapping_matrix(centroids, speckles):
 class CalibrateSpatialFrequencyMapping(Experiment):
     name = 'Calibrate DM mapping'
 
-    def __init__(self, cycles, num_speckle, exclusion_radius, threshold, amplitude=None):
+    def __init__(self, cycles, num_speckle, amplitude=None):
         """
         Measure the matrix that maps spatial frequencies on each DM to pixel locations at the
         detector.  An affine transformation of the form y = Ax + b can be written in terms of an
@@ -135,11 +146,6 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                        Nyquist limit, which is 17 cycles/DM.
         :param num_speckle: int, number of speckles to inject.  Must be >= 3.  The injected
                             speckles are equally spaced in rotation angle over the range [0, pi].
-        :param exclusion_radius: int, radius of central region in image that is masked out.  This
-                                 helps to suppress differential photon noise from the bright image
-                                 center.
-        :param threshold: float, cutoff value for pixels in postprocessed images, relative to
-                          maximum absolute value
         :param amplitude: float, amplitude of injected speckles in nanometers. If None, defaults
                           to the value dm1_ideal_poke or dm2_ideal_poke in the boston_kilo952
                           section of the config file.
@@ -147,8 +153,6 @@ class CalibrateSpatialFrequencyMapping(Experiment):
         super().__init__()
         self.cycles = cycles
         self.num_speckle = num_speckle
-        self.exclusion_radius = exclusion_radius
-        self.threshold = threshold
         self.amplitude = amplitude
 
     def take_image(self, label, fpm_position):
@@ -224,8 +228,6 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                                                                 reference_image,
                                                                 direct_image,
                                                                 speckles,
-                                                                self.exclusion_radius,
-                                                                self.threshold,
                                                                 self.log)
                 mapping_matrix = reconstruct_mapping_matrix(centroids, speckles)
                 fits.writeto(os.path.join(self.output_path, f'mapping_matrix_dm{dm_num}.fits'),
