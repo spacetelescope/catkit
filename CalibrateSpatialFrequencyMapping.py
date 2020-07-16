@@ -1,7 +1,8 @@
 # flake8: noqa: E402
 import os
-import scipy.signal
+
 import numpy as np
+import scipy.signal
 from astropy.io import fits
 from catkit.catkit_types import quantity, units, SinSpecification, FpmPosition, LyotStopPosition, \
     ImageCentering  # noqa: E402
