@@ -24,7 +24,7 @@ def compute_centroid(image):
     y = np.arange(-image.shape[0] // 2, image.shape[0] // 2)
     xg, yg = np.meshgrid(x, y)
     denom = image.sum()
-    return (yg * image).sum() / denom, (xg * image).sum() / denom
+    return (xg * image).sum() / denom, (yg * image).sum() / denom,
 
 
 def postprocess_images(images, speckles, exclusion_radius, threshold, log=None):
@@ -39,10 +39,11 @@ def postprocess_images(images, speckles, exclusion_radius, threshold, log=None):
     :param threshold: float, cutoff value for pixels in postprocessed images, relative to
                       maximum absolute value
     :param log: handle to logger objects to print centroid locations to
-    :return: list of (row, col) centroid locations, and the intermediate images from this
-             pipeline as a 4D array (speckle, pipeline_stage, row, col).  Saving this array as a
-             FITS file makes the pipeline data very convenient to visualize with DS9 because it
-             creates interactive slider bars to explore the (speckle, pipeline_stage) values.
+    :return: list of (col, row) centroid locations (so that they map to (x, y)), and the
+             intermediate images from this pipeline as a 4D array
+             (speckle, pipeline_stage, row, col).  Saving this array as a FITS file makes the
+             pipeline data very convenient to visualize with DS9 because it creates interactive
+             slider bars to explore the (speckle, pipeline_stage) values.
     """
     reference_image = images[..., 0]
     shape = reference_image.shape
