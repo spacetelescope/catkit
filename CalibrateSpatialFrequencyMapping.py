@@ -85,7 +85,7 @@ def reconstruct_mapping_matrix(centroids, speckles):
     pixel locations on the detector.  See docstring of CalibrateSpatialFrequencyMapping for more
     details.
 
-    :param centroids: list of (row, col) centroid locations
+    :param centroids: list of (col, row) centroid locations
     :param speckles: list of (fx, fy) spatial frequencies
     :return: 3x3 numpy array with transformation parameters
     """
