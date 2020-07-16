@@ -1,6 +1,11 @@
 # flake8: noqa: E402
 import os
+import matplotlib
 
+matplotlib.use('QT5Agg')
+import matplotlib.pyplot as plt
+from matplotlib import colors
+import scipy.signal
 import numpy as np
 from astropy.io import fits
 from catkit.catkit_types import quantity, units, SinSpecification, FpmPosition, LyotStopPosition, \
@@ -27,7 +32,8 @@ def compute_centroid(image):
     return (xg * image).sum() / denom, (yg * image).sum() / denom,
 
 
-def postprocess_images(images, speckles, exclusion_radius, threshold, log=None):
+def postprocess_images(images, reference_image, direct_image,
+                       speckles, exclusion_radius, threshold, log=None):
     """
     Postprocess images to find the centroid of one of the two injected speckles.
 
@@ -45,7 +51,6 @@ def postprocess_images(images, speckles, exclusion_radius, threshold, log=None):
              pipeline data very convenient to visualize with DS9 because it creates interactive
              slider bars to explore the (speckle, pipeline_stage) values.
     """
-    reference_image = images[..., 0]
     shape = reference_image.shape
 
     # Pixel coordinate axes
@@ -54,25 +59,26 @@ def postprocess_images(images, speckles, exclusion_radius, threshold, log=None):
     xg, yg = np.meshgrid(col, row)
 
     centroids = np.zeros((2, len(speckles)))
-    pipeline_images = np.zeros((len(speckles), 4, *shape))
+    pipeline_images = np.zeros((len(speckles), 5, *shape))
 
     for n, (fx, fy) in enumerate(speckles):
-        image = images[..., n + 1]
+        image = images[..., n]
         # Postprocess image to extract speckle centroids
         difference = image - reference_image
-        no_center = np.ma.masked_where(xg ** 2 + yg ** 2 < exclusion_radius ** 2,
-                                       difference)
-        half = np.ma.masked_where(fx * xg + fy * yg < 0, no_center)
-        peak = np.ma.masked_where(half <= threshold * half.max(), half)
-
+        no_center = difference * (xg ** 2 + yg ** 2 > exclusion_radius ** 2)
+        half = no_center * (fx * xg + fy * yg > 0)
+        xcorr = scipy.signal.correlate2d(half, direct_image, mode='same')
         pipeline_images[n, ...] = np.moveaxis(
-            np.dstack([difference,
-                       no_center.filled(fill_value=0),
-                       half.filled(fill_value=0),
-                       peak.filled(fill_value=0)]), 2, 0)
+            np.dstack([
+                image,
+                difference,
+                no_center,
+                half,
+                xcorr
+            ]), 2, 0)
 
-        centroid = compute_centroid(peak)
-        centroids[:, n] = np.array(centroid)
+        centroid = np.unravel_index(np.argmax(xcorr), xcorr.shape)
+        centroids[:, n] = np.array([xg[centroid], yg[centroid]])
         if log is not None:
             log.info(f'Centroid with (fx, fy) = ({fx:0.2f}, {fy:0.2f}): ({centroid[0]:0.2f}, {centroid[1]:0.2f})')
 
@@ -148,12 +154,12 @@ class CalibrateSpatialFrequencyMapping(Experiment):
         self.threshold = threshold
         self.amplitude = amplitude
 
-    def take_image(self, label):
+    def take_image(self, label, fpm_position):
         saveto_path = hicat.util.create_data_path(initial_path=self.output_path,
                                                   suffix=label)
         return testbed.run_hicat_imaging(exposure_time=quantity(50, units.millisecond),
                                          num_exposures=1,
-                                         fpm_position=FpmPosition.coron,
+                                         fpm_position=fpm_position,
                                          lyot_stop_position=LyotStopPosition.in_beam,
                                          file_mode=True,
                                          raw_skip=False,
@@ -184,12 +190,16 @@ class CalibrateSpatialFrequencyMapping(Experiment):
 
             # take_image returns a list of images, and a header.  We want the only image in that
             # list.
-            reference_image = self.take_image('reference_image')[0][0]
+            reference_image = self.take_image('reference_image', FpmPosition.coron)[0][0]
+            direct_image = self.take_image('direct_image', FpmPosition.direct)[0][0]
+
+            plt.figure()
+            plt.imshow(direct_image, norm=colors.LogNorm())
+            plt.show()
 
             # Apply sines to one DM at a time
             for dm_num in [1, 2]:
-                images = np.zeros((*reference_image.shape, len(speckles) + 1))
-                images[..., 0] = reference_image
+                images = np.zeros((*reference_image.shape, len(speckles)))
 
                 if self.amplitude is not None:
                     amplitude = self.amplitude
@@ -200,21 +210,26 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                 dm_flat = 2 if dm_num == 1 else 1
 
                 for n, theta in enumerate(thetas):
-                    self.log.info(f"Taking sine wave on DM{dm_num} at angle {theta} with {self.cycles} cycles/DM.")
-                    sin_specification = SinSpecification(theta * 180 / np.pi, self.cycles,
-                                                         quantity(amplitude, units.nanometer),
-                                                         0)
-                    sin_command_object = sin_command(sin_specification, flat_map=True, dm_num=dm_num)
-                    flat_command_object = flat_command(bias=False, flat_map=True, dm_num=dm_flat)
+                    image = 0.
+                    for sign in [-1, 1]:
+                        self.log.info(f"Taking sine wave on DM{dm_num} at angle {theta} with {self.cycles} cycles/DM.")
+                        sin_specification = SinSpecification(
+                            theta * 180 / np.pi,
+                            self.cycles, quantity(sign * amplitude, units.nanometer), 0)
+                        sin_command_object = sin_command(sin_specification, flat_map=True, dm_num=dm_num)
+                        flat_command_object = flat_command(bias=False, flat_map=True, dm_num=dm_flat)
 
-                    dm.apply_shape(sin_command_object, dm_num=dm_num)
-                    dm.apply_shape(flat_command_object, dm_num=dm_flat)
+                        dm.apply_shape(sin_command_object, dm_num=dm_num)
+                        dm.apply_shape(flat_command_object, dm_num=dm_flat)
 
-                    label = f"dm{dm_num}_cycle_{self.cycles}_ang_{theta}"
+                        label = f"dm{dm_num}_cycle_{self.cycles}_ang_{theta}"
+                        image += self.take_image(label, FpmPosition.coron)[0][0] / 2
 
-                    images[..., n + 1] = self.take_image(label)[0][0]
+                    images[..., n] = image
 
                 centroids, pipeline_images = postprocess_images(images,
+                                                                reference_image,
+                                                                direct_image,
                                                                 speckles,
                                                                 self.exclusion_radius,
                                                                 self.threshold,
