@@ -64,8 +64,9 @@ def take_auto_focus_data(bias,
 
 def collect_final_images(path):
     results = [y for x in os.walk(path) for y in glob(os.path.join(x[0], "*_cal.fits"))]
-    for img in results:
-        copyfile(img, os.path.join(path, os.path.basename(img)))
+    for i, img in enumerate(results):
+        # There's no shutil copy func that will NOT overwrite, so just copy to unique filenames.
+        copyfile(img, os.path.join(path, f"{i}_{os.path.basename(img)}"))
 
 
 def auto_focus_mtf(filePath, threshold):
