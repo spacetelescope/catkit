@@ -88,7 +88,7 @@ def postprocess_images(images, reference_image, direct_image, speckles, log=None
         centroids[:, n] = np.array([xg[centroid], yg[centroid]])
         if log is not None:
             log.info(f'Centroid with (fx, fy) = ({fx:0.2f}, {fy:0.2f}): '
-                     f'({xg[centroid[0]]:0.2f}, {yg[centroid[1]]:0.2f})')
+                     f'({xg[centroid]:0.2f}, {yg[centroid]:0.2f})')
 
     return centroids, pipeline_images
 
