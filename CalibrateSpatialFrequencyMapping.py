@@ -80,7 +80,8 @@ def postprocess_images(images, reference_image, direct_image,
         centroid = np.unravel_index(np.argmax(xcorr), xcorr.shape)
         centroids[:, n] = np.array([xg[centroid], yg[centroid]])
         if log is not None:
-            log.info(f'Centroid with (fx, fy) = ({fx:0.2f}, {fy:0.2f}): ({centroid[0]:0.2f}, {centroid[1]:0.2f})')
+            log.info(f'Centroid with (fx, fy) = ({fx:0.2f}, {fy:0.2f}): '
+                     f'({xg[centroid[0]]:0.2f}, {yg[centroid[1]]:0.2f})')
 
     return centroids, pipeline_images
 
