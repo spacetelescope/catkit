@@ -59,7 +59,7 @@ def postprocess_images(images, speckles, exclusion_radius, threshold, log=None):
     for n, (fx, fy) in enumerate(speckles):
         image = images[..., n + 1]
         # Postprocess image to extract speckle centroids
-        difference = image / 2 - reference_image
+        difference = image - reference_image
         no_center = np.ma.masked_where(xg ** 2 + yg ** 2 < exclusion_radius ** 2,
                                        difference)
         half = np.ma.masked_where(fx * xg + fy * yg < 0, no_center)
