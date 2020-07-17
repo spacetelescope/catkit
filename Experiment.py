@@ -135,9 +135,9 @@ class Experiment(ABC):
         """
         try:
             self.init_experiment_log()
-            pre_return = self.pre_experiment()
-            experiment_return = self.experiment(pre_return)
-            self.post_experiment(experiment_return)
+            testbed_state.pre_experiment_return = self.pre_experiment()
+            testbed_state.experiment_return = self.experiment(testbed_state.pre_experiment_return)
+            testbed_state.post_experiment_return = self.post_experiment(testbed_state.experiment_return)
         except KeyboardInterrupt:
             self.log.warn("Child process: caught ctrl-c, raising exception.")
             raise
