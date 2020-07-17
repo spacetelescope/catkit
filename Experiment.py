@@ -39,10 +39,19 @@ class Experiment(ABC):
             for test in self.list_of_safety_tests:
                 self.safety_tests.append(test())
 
+    def pre_experiment(self, *args, **kwargs):
+        """ This is called immediately BEFORE self.experiment(). Anything returned is passed to self.experiment() """
+        pass
+
+    def post_experiment(self, *args, **kwargs):
+        """ This is called immediately AFTER self.experiment(). Anything returned from self.experiment() is passed to this. """
+        pass
+
     @abstractmethod
-    def experiment(self):
+    def experiment(self, *args, **kwargs):
         """
         This is where the experiment gets implemented. All child classes must implement this.
+        Anything returned is passed to self.post_experiment().
         """
 
     def start(self):
@@ -126,7 +135,9 @@ class Experiment(ABC):
         """
         try:
             self.init_experiment_log()
-            self.experiment()
+            pre_return = self.pre_experiment()
+            experiment_return = self.experiment(pre_return)
+            self.post_experiment(experiment_return)
         except KeyboardInterrupt:
             self.log.warn("Child process: caught ctrl-c, raising exception.")
             raise
