@@ -164,7 +164,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                                          file_mode=True,
                                          raw_skip=False,
                                          path=saveto_path,
-                                         auto_exposure_time=False,
+                                         auto_expose=False,
                                          exposure_set_name='coron',
                                          # TODO: this is not always the right centering
                                          centering=ImageCentering.custom_apodizer_spots,
