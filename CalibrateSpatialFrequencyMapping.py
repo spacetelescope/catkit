@@ -2,7 +2,7 @@
 import os
 
 import numpy as np
-import scipy.signal
+from skimage.feature import register_translation  # WARNING! Deprecated in skimage v0.17
 from astropy.io import fits
 from catkit.catkit_types import quantity, units, SinSpecification, FpmPosition, LyotStopPosition, \
     ImageCentering  # noqa: E402
@@ -67,7 +67,7 @@ def postprocess_images(images, reference_image, direct_image, speckles, log=None
     xg, yg = np.meshgrid(col, row)
 
     centroids = np.zeros((2, len(speckles)))
-    pipeline_images = np.zeros((len(speckles), 4, *shape))
+    pipeline_images = np.zeros((len(speckles), 3, *shape))
 
     for n, (fx, fy) in enumerate(speckles):
         image = images[..., n]
@@ -75,20 +75,19 @@ def postprocess_images(images, reference_image, direct_image, speckles, log=None
         # Postprocess image to extract speckle centroids
         difference = image - reference_image
         half = difference * (fx * xg + fy * yg > 0)
-        xcorr = scipy.signal.correlate2d(half, direct_image, mode='same')
+        shifts, _, _ = register_translation(half, direct_image, upsample_factor=1)
         pipeline_images[n, ...] = np.moveaxis(
             np.dstack([
                 image,
                 difference,
                 half,
-                xcorr
             ]), 2, 0)
 
-        centroid = np.unravel_index(np.argmax(xcorr), xcorr.shape)
-        centroids[:, n] = np.array([xg[centroid], yg[centroid]])
+        centroid = shifts[::-1]
+        centroids[:, n] = np.array(centroid)
         if log is not None:
             log.info(f'Centroid with (fx, fy) = ({fx:0.2f}, {fy:0.2f}): '
-                     f'({xg[centroid]:0.2f}, {yg[centroid]:0.2f})')
+                     f'({centroid[0]:0.2f}, {centroid[1]:0.2f})')
 
     return centroids, pipeline_images
 
