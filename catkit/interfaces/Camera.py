@@ -12,6 +12,7 @@ class Camera(ABC):
         """Opens connection with camera sets class attributes for 'config_id' and 'camera'."""
         self.config_id = config_id
         self.camera = self.initialize(self, *args, **kwargs)
+        self._keep_alive = False
         self.log.info("Opened connection to camera: " + self.config_id)
 
     # Implementing context manager.
@@ -19,9 +20,14 @@ class Camera(ABC):
         return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
-        self.close()
-        self.camera = None
-        self.log.info("Safely closed camera: " + self.config_id)
+        try:
+            if not self._keep_alive:
+                self.close()
+                self.camera = None
+                self.log.info("Safely closed camera: " + self.config_id)
+        finally:
+            # Reset, single use basis only.
+            self._keep_alive = False
 
     # Abstract Methods.
     @abstractmethod
