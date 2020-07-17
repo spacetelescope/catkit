@@ -152,21 +152,25 @@ def save_images(images, meta_data, path, base_filename, raw_skip=0):
         # Create a PrimaryHDU object to encapsulate the data.
         hdu = fits.PrimaryHDU(img)
 
-        # Add headers.
+        # Add header info.
         hdu.header["FRAME"] = i + 1
         hdu.header["FILENAME"] = filename
+        hdu.header["PATH"] = full_path  # Add file Path for introspection.
 
-        # Add file Path to meta/header for introspection.
-        hdu.header["PATH"] = full_path
         # The meta data could be an astropy.io.fits.Header or a list of MetaDataEntrys.
         if isinstance(meta_data, fits.Header):
+            # Add this info to meta_data so that it persist beyond this call.
             meta_data["PATH"] = full_path
+            meta_data["FRAME"] = i + 1
+            meta_data["FILENAME"] = filename
+            hdu.header.update(meta_data)
         elif isinstance(meta_data, list):
             meta_data.append((MetaDataEntry("PATH", "PATH", full_path, "File path on disk")))
-
-        if meta_data:
-            # Add testbed state metadata.
+            meta_data.append((MetaDataEntry("FRAME", "FRAME", i + 1, "Frame")))
+            meta_data.append((MetaDataEntry("FILENAME", "FILENAME", full_path, "Filename")))
             for entry in meta_data:
+                if not isinstance(entry, MetaDataEntry):
+                    raise TypeError(f"Expected '{MetaDataEntry.__qualname__}' but got '{type(MetaDataEntry)}'")
                 if len(entry.name_8chars) > 8:
                     log.warning("Fits Header Keyword: " + entry.name_8chars +
                                 " is greater than 8 characters and will be truncated.")
