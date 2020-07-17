@@ -6,6 +6,7 @@ import logging
 from hicat.config import CONFIG_INI
 import hicat.util
 from hicat.experiments.SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
+from hicat.hardware import testbed_state
 
 
 class Experiment(ABC):
@@ -141,6 +142,8 @@ class Experiment(ABC):
         except KeyboardInterrupt:
             self.log.warn("Child process: caught ctrl-c, raising exception.")
             raise
+        finally:
+            testbed_state.devices.exit_all_devices()
 
     @staticmethod
     def __smart_sleep(interval, process):

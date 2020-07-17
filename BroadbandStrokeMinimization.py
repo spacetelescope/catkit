@@ -20,7 +20,7 @@ from catkit.catkit_types import FpmPosition
 
 from hicat.control.target_acq import MotorMount, TargetCamera, TargetAcquisition
 from hicat.control.align_lyot import LyotStopAlignment
-from hicat.hardware import testbed
+from hicat.hardware import testbed, testbed_state
 import hicat.plotting.animation
 from hicat import util
 from hicat.wfc_algorithms import stroke_min
@@ -326,6 +326,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                        'temp_sensor': temp_sensor,
                        'color_wheel': color_wheel,
                        'nd_wheel': nd_wheel}
+            # Cache devices in testbed_state.
+            testbed_state.devices.update(devices)
 
             # Flatten DMs before attempting initial target acquisition or Lyot alignment.
             from catkit.hardware.boston.commands import flat_command
