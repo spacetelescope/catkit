@@ -147,9 +147,9 @@ class CalibrateSpatialFrequencyMapping(Experiment):
         detector.  An affine transformation of the form y = Ax + b can be written in terms of an
         augmented linear system
 
-            row     A00 A01 b0     fx
-            col  =  A10 A11 b1  *  fy
-             1       1   1   0     1
+            col     A00 A01 b0     fx
+            row  =  A10 A11 b1  *  fy
+             1       0   0   1      1
 
         For each input value of x, we measure the centroid of one of the two speckles that are
         produced in the focal plane.  They are separated by a line in the detector plane with the
