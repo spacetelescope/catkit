@@ -28,7 +28,8 @@ def compute_centroid(image):
     return (xg * image).sum() / denom, (yg * image).sum() / denom,
 
 
-def postprocess_images(images, reference_image, direct_image, speckles, log=None):
+def postprocess_images(images, reference_image, direct_image, speckles,
+                       reflect_x=False, reflect_y=False, log=None):
     """
     Postprocess images to find the centroid of one of the two injected speckles.  This is done as
     follows:
@@ -42,6 +43,12 @@ def postprocess_images(images, reference_image, direct_image, speckles, log=None
     diffraction grating that generates copies of the direct image at the grating frequency, so
     cross-correlation with the direct image is equivalent to a matched filtering operation.
 
+    If the data is known in advance to contain a reflection component in either the horizontal or
+    vertical directions, this can be flagged.  This will flip the corresponding sign of the line
+    that divides the focal plane between the two speckles, which ensures that the desired speckle
+    is correctly extracted, and will also flip the sign of the centroid in that direction so that
+    the affine transformation matrix contains only a rotation and scale.
+
     Cross-correlation is slower, but more robust than directly computing the center-of-mass of
     the image, because it is less susceptible to residual background after subtraction.
     Thresholding the image to remove background will bias the estimate of the speckle centroid
@@ -52,6 +59,10 @@ def postprocess_images(images, reference_image, direct_image, speckles, log=None
     :param reference_image: array_like, coronagraphic image without injected speckles
     :param direct_image: array_like, direct image without injected speckles.
     :param speckles: list of (fx, fy) pairs in cycles/DM
+    :param reflect_x: whether there is a known reflection component in the x direction (across
+                      the y axis) that we should account for during postprocessing
+    :param reflect_y: whether there is a known reflection component in the y direction (across
+                      the x axis) that we should account for during postprocessing
     :param log: handle to logger objects to print centroid locations to
     :return: list of (col, row) centroid locations (so that they map to (x, y)), and the
              intermediate images from this pipeline as a 4D array
@@ -65,6 +76,12 @@ def postprocess_images(images, reference_image, direct_image, speckles, log=None
     row = np.arange(-shape[0] // 2, shape[0] // 2)
     col = np.arange(-shape[1] // 2, shape[1] // 2)
     xg, yg = np.meshgrid(col, row)
+
+    if reflect_x:
+        xg = np.fliplr(xg)
+
+    if reflect_y:
+        yg = np.flipud(yg)
 
     centroids = np.zeros((2, len(speckles)))
     pipeline_images = np.zeros((len(speckles), 3, *shape))
@@ -83,8 +100,15 @@ def postprocess_images(images, reference_image, direct_image, speckles, log=None
                 half,
             ]), 2, 0)
 
-        centroid = shifts[::-1]
-        centroids[:, n] = np.array(centroid)
+        centroid = np.array(shifts[::-1])
+
+        if reflect_x:
+            centroid[0] *= -1
+
+        if reflect_y:
+            centroid[1] *= -1
+
+        centroids[:, n] = centroid
         if log is not None:
             log.info(f'Centroid with (fx, fy) = ({fx:0.2f}, {fy:0.2f}): '
                      f'({centroid[0]:0.2f}, {centroid[1]:0.2f})')
@@ -195,6 +219,10 @@ class CalibrateSpatialFrequencyMapping(Experiment):
 
             # Apply sines to one DM at a time
             for dm_num in [1, 2]:
+                # Account for the mirror-image effect from DM2
+                reflect_x = (dm_num == 2)
+                reflect_y = False
+
                 images = np.zeros((*reference_image.shape, len(speckles)))
 
                 if self.amplitude is not None:
@@ -227,6 +255,8 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                                                                 reference_image,
                                                                 direct_image,
                                                                 speckles,
+                                                                reflect_x,
+                                                                reflect_y,
                                                                 self.log)
                 mapping_matrix = reconstruct_mapping_matrix(centroids, speckles)
                 fits.writeto(os.path.join(self.output_path, f'mapping_matrix_dm{dm_num}.fits'),
