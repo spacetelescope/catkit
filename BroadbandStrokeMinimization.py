@@ -334,7 +334,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     ta_controller.acquire_target(coarse_align=True)
                 else:
                     # Plot position of PSF centroid on TA camera.
-                    ta_controller.distance_to_target(TargetCamera.TA)
+                    ta_controller.distance_to_target(TargetCamera.TA, check_threshold=False)
 
                 # Calculate flux attenuation factor between direct+ND and coronagraphic images
                 flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=self.wavelengths,
@@ -398,7 +398,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                         ta_controller.acquire_target(coarse_align=False)
                     else:
                         # Plot position of PSF centroid on TA camera.
-                        ta_controller.distance_to_target(TargetCamera.TA)
+                        ta_controller.distance_to_target(TargetCamera.TA,check_threshold=False)
 
                     # Create a new output subfolder for each iteration
                     initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))

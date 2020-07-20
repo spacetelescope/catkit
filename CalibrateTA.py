@@ -35,7 +35,7 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
             self.ta_controller.misalign(motor_mount, target_camera)
 
             n_moves = 20
-            _centered, *delta_from_center = self.ta_controller.is_centered(target_camera)
+            _centered, *delta_from_center = self.ta_controller.is_centered(target_camera, check_threshold=False)
             move_pixel_step = [(delta / n_moves) for delta in delta_from_center]
             self.log.info(
                 f"PSF missaligned by {self.ta_controller.misalignment_step_size}. Incrementally moving back towards center by {move_pixel_step} pixels over a total of {n_moves} moves.")
@@ -93,7 +93,7 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
         self.ta_controller.misalign(MotorMount.APODIZER, TargetCamera.SCI)
 
         n_moves = 20
-        _centered, *delta_from_center = self.ta_controller.is_centered(TargetCamera.SCI)
+        _centered, *delta_from_center = self.ta_controller.is_centered(TargetCamera.SCI, check_threshold=False)
         move_pixel_step = [delta / n_moves for delta in delta_from_center]
         self.log.info(
             f"PSF missaligned by {self.ta_controller.misalignment_step_size}. Incrementally moving back towards center by {move_pixel_step} pixels over a total of {n_moves} moves.")
@@ -104,7 +104,7 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
                       motor_mount=MotorMount.APODIZER,
                       target_camera=TargetCamera.SCI)
             # Utilize this func to take images, log counts, and centroid deltas to later plot.
-            self.ta_controller.distance_to_target(TargetCamera.SCI)
+            self.ta_controller.distance_to_target(TargetCamera.SCI, check_threshold=False)
 
         self.log.info("Alignment thresholding calibration complete")
 
