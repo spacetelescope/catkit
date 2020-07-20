@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 from skimage.feature import register_translation  # WARNING! Deprecated in skimage v0.17
+from scipy.linalg import polar
 from astropy.io import fits
 from catkit.catkit_types import quantity, units, SinSpecification, FpmPosition, LyotStopPosition, \
     ImageCentering  # noqa: E402
@@ -138,6 +139,70 @@ def reconstruct_mapping_matrix(centroids, speckles):
     return Y @ np.linalg.pinv(X.T).T   # Compute the right-sided pseudoinverse
 
 
+def extract_rotation_and_scale(mapping_matrix, off_diagonal_tol=1e-2, theta_tol=10., log=None):
+    """
+    Estimate the rotation angle and horizontal/vertical scaling components of an affine
+    transformation of the form y = Ax + b using the polar decomposition.
+
+    An affine transformation in two dimensions can be represented by the matrix
+
+                                                A00 A01 b0
+                                            C = A10 A11 b1          (1)
+                                                 0   0   1
+    where
+                                            A = A00 A01             (2)
+                                                A10 A11
+                                            b = b0                  (3)
+                                                b1
+
+    We can further decompose A using the polar decomposition into the form A = RS, where R is
+    unitary (a combination of rotations and reflections), and S is orthonormal.  Ideally,
+    in this application, R will be a pure rotation matrix and S will be diagonal:
+
+                                            R = cos(theta) sin(theta)       (4)
+                                               -sin(theta) cos(theta)
+                                            S = s_x  0                      (5)
+                                                 0  s_y
+
+    where s_x and s_y are the scaling factors along the horizontal and vertical directions in
+    units of (binned pixels) / (cycles/DM).
+
+    :param mapping_matrix: 3x3 numpy array in the form described by Eq. (1)
+    :param off_diagonal_tol: float, how large the off-diagonal elements of S can be before we
+                             issue a warning.
+    :param theta_tol: float, how large the estimated rotation angle can be (in degrees) before we
+                      issue a warning, since the HiCAT DMs are known to be well-aligned and
+                      should have a rotation angle close to zero.
+    :param log: logger object, for displaying warnings
+    :return: (s_x, s_y, theta) with theta in degrees
+    """
+
+    A = mapping_matrix[:2, :2]  # 2x2 submatrix in top-left corner: contains rotation/scaling
+    b = mapping_matrix[:2, 2]  # First two elements of last column: contains translation
+
+    R, S = polar(A)
+
+    # Average the angles from each of the four elements of the rotation matrix to estimate
+    # rotation angle
+    theta = np.mean([np.arccos(R[0, 0]), np.arcsin(R[0, 1]),
+                    -np.arcsin(R[1, 0]), np.arccos(R[1, 1])]) * 180 / np.pi
+
+    # Rotation should be small
+    if np.abs(theta) > theta_tol and log is not None:
+        log.warning(f'Estimated rotation is larger than {theta_tol}. Results may not be accurate.')
+
+    # Scaling matrix should be diagonal
+    if ((np.abs(S[0, 1]) > off_diagonal_tol or np.abs(S[1, 0]) > off_diagonal_tol)
+            and log is not None):
+        log.warning('Scaling matrix has significant off-diagonal components. Results may not be '
+                    'accurate.')
+
+    # Scale along horizontal and vertical directions, in (binned pixels) / (cycles/DM)
+    s_x, s_y = S[0, 0], S[1, 1]
+
+    return s_x, s_y, theta
+
+
 class CalibrateSpatialFrequencyMapping(Experiment):
     name = 'Calibrate DM mapping'
 
@@ -216,6 +281,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
             # list.
             reference_image = self.take_image('reference_image', FpmPosition.coron)[0][0]
             direct_image = self.take_image('direct_image', FpmPosition.direct)[0][0]
+            results = np.zeros((2, 3), dtype=np.float64)  # 2 DMs x 3 parameters
 
             # Apply sines to one DM at a time
             for dm_num in [1, 2]:
@@ -263,3 +329,15 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                              mapping_matrix)
                 fits.writeto(os.path.join(self.output_path, f'pipeline_images_dm{dm_num}.fits'),
                              pipeline_images)
+
+                results[dm_num - 1, :] = np.array(
+                    extract_rotation_and_scale(mapping_matrix, log=self.log))
+
+        for dm_num in [1, 2]:
+            index = dm_num - 1
+            s_x, s_y, theta = results[index, :]
+            self.log.info(f"""Estimated mapping parameters for DM {dm_num}:
+                x scale: {s_x:0.3f} pixels/(cycles/DM)
+                y scale: {s_y:0.3f} pixels/(cycles/DM)
+                  theta: {theta:0.3f} degrees
+            """)
