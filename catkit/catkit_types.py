@@ -52,7 +52,29 @@ SinSpecification = namedtuple("SinSpecification", "angle, ncycles, peak_to_valle
 
 # Create shortcuts for using Pint globally.
 units = UnitRegistry()
-quantity = units.Quantity
+
+
+class Quantity(units.Quantity):
+    """ Wrapper for pint.Quantity to avoid compounding quantities.
+
+        https://pint.readthedocs.io/en/stable/developers_reference.html#pint.Quantity
+    """
+    # Add this alias due to __news__() shadowing of the above global units.
+    _units = units
+
+    def __new__(cls, value, units=None):
+        if isinstance(value, cls._units.Quantity):
+            if isinstance(units, str):
+                units = cls._units.parse_units(units)
+            if value.units != units:
+                return value.to(units)
+            return value
+        else:
+            return super().__new__(cls, value, units=units)
+
+
+# Alias to lower case for backward comparability and to stop linters complaining if we made lower cased the above class.
+quantity = Quantity
 
 
 class Pointer:
