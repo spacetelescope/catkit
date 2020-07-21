@@ -331,7 +331,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                             nd="clear_1",
                             devices={"color_wheel": devices["color_wheel"], "nd_wheel": devices["nd_wheel"]})
                 if self.run_ta:
-                    ta_controller.acquire_target(coarse_align=True)
+                    ta_controller.acquire_target(recover_from_coarse_misalignment=True)
                 else:
                     # Plot position of PSF centroid on TA camera.
                     ta_controller.distance_to_target(TargetCamera.TA, check_threshold=False)
@@ -395,10 +395,10 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     # Check for any drifts and correct
                     if self.run_ta:
                         # TODO: Are the filters in their optimal positions for TA?
-                        ta_controller.acquire_target(coarse_align=False)
+                        ta_controller.acquire_target(recover_from_coarse_misalignment=False)
                     else:
                         # Plot position of PSF centroid on TA camera.
-                        ta_controller.distance_to_target(TargetCamera.TA,check_threshold=False)
+                        ta_controller.distance_to_target(TargetCamera.TA, check_threshold=False)
 
                     # Create a new output subfolder for each iteration
                     initial_path = os.path.join(self.output_path, 'iter{:04d}'.format(i))
