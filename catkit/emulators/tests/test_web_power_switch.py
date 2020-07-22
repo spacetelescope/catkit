@@ -25,13 +25,13 @@ def test_all_off():
 @pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
 def test_individual_on():
     switch = WebPowerSwitch(config_id="web_power_switch")
-    switch.turn_on("dm1_outlet")
+    switch.turn_on("fpm_led")
 
 
 @pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
 def test_individual_off():
     switch = WebPowerSwitch(config_id="web_power_switch")
-    switch.turn_off("dm1_outlet")
+    switch.turn_off("fpm_led")
 
 
 @pytest.mark.parametrize("on", (True, False))
@@ -44,7 +44,7 @@ def test_switch(on):
 @pytest.mark.parametrize("on", (True, False))
 @pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
 def test_switch_lists(on):
-    outlet_ids = ("dm1_outlet", "motor_controller_outlet")
+    outlet_ids = ("fpm_led", "pupil_led")
 
     switch = WebPowerSwitch(config_id="web_power_switch")
     switch.switch(outlet_id=outlet_ids, on=on)
@@ -53,7 +53,7 @@ def test_switch_lists(on):
 def test_outlet_list():
     switch = WebPowerSwitch(config_id="web_power_switch", outlet_list={"switch_1": 1, "switch_2": 2})
     switch.switch(outlet_id="switch_2", on=True)
-    switch.turn_on("dm1_outlet")
+    switch.turn_on("fpm_led")
 
 
 @pytest.mark.parametrize("status_code", (400, 500))
