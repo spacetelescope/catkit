@@ -54,7 +54,7 @@ class PoppyZwoEmulator(ZwoASI):
     def list_cameras(self):
         return [camera["name"] for camera in self.camera_mappings.values()]
 
-    def Camera(self, index):
+    def Camera(self, id_):
         return self
 
     def get_controls(self):
@@ -126,7 +126,7 @@ class PoppyZwoEmulator(ZwoASI):
         return {'MaxWidth': 4096, 'MaxHeight': 4096} 
         pass
 
-    def set_id(self):
+    def set_id(self, id, id_str):
         pass
 
     def set_roi(self, start_x=None, start_y=None, width=None, height=None, bins=None, image_type=None):
