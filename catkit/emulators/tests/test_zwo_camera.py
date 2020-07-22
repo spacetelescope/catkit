@@ -1,8 +1,10 @@
+import itertools
 import os
 import pytest
 
 from hicat.config import CONFIG_INI
 
+from catkit.catkit_types import quantity
 from catkit.emulators.ZwoCamera import PoppyZwoEmulator, ZwoCamera
 from catkit.config import load_config_ini
 
@@ -19,3 +21,12 @@ def test_connect(config_id):
     camera_name = CONFIG_INI.get("testbed", "imaging_camera")
     with ZwoCamera(config_id=camera_name) as camera:
         pass
+
+
+@pytest.mark.parametrize(("config_id", "exposure_time"),
+                         itertools.product(PoppyZwoEmulator.implemented_camera_purposes,
+                                           (10, quantity(10, "seconds"))))
+def test_capture(config_id, exposure_time):
+    camera_name = CONFIG_INI.get("testbed", "imaging_camera")
+    with ZwoCamera(config_id=camera_name) as camera:
+        camera.take_exposures(exposure_time=exposure_time, num_exposures=2)

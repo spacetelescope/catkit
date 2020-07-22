@@ -99,9 +99,7 @@ class PoppyZwoEmulator(ZwoASI):
 
         # Here's the actual PSF calculation! Retrieve the simulated image from the optical system mode. This will do a
         # propagation up to the detector plane.
-        self.log.info(f"HICAT_SIM: Simulating image capture for {self.camera_purpose}")
         image_hdulist = hicat.simulators.optics_simulator.calc_psf(apply_pipeline_binning=False)
-        self.log.info("HICAT_SIM: Simulation complete for image.")
         testbed_state._simulation_latest_image = image_hdulist # Save so we can later copy some of the FITS header keywords
 
         counts_per_microsec = CONFIG_INI.getfloat('photometry', self.photometry_config_key, fallback=90000)
@@ -111,7 +109,7 @@ class PoppyZwoEmulator(ZwoASI):
         counts_per_microsec /= exit_pupil_flux_correction_factor
 
         # Apply flux normalization and exposure time scaling to the output image
-        exposure_time = self.control_values[self.instrument_lib.ASI_EXPOSURE]
+        exposure_time = self.control_values[self.ASI_EXPOSURE]
         image = image_hdulist[0].data * counts_per_microsec * exposure_time
 
         return image.astype(np.dtype(np.int32))
@@ -131,8 +129,8 @@ class PoppyZwoEmulator(ZwoASI):
     def set_id(self):
         pass
 
-    def set_roi(self, start_x=None, start_y=None, width=None, height=None, image_type=None):
-        # sets region of interest 
+    def set_roi(self, start_x=None, start_y=None, width=None, height=None, bins=None, image_type=None):
+        # sets region of interest
         # purpose : set_roi_format, set_roi_start_position
         # set_roi_format --> _set_roi_format : 
         # check for all the errors 
