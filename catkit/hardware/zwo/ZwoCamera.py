@@ -41,8 +41,11 @@ class ZwoCamera(Camera):
         # Create a camera object using the zwoasi library.
         camera = self.instrument_lib.Camera(camera_index)
         self.log.info("Opened connection to camera: " + self.config_id)
-        
+
+        # Assign this here and now since we touch within this func and may trigger an exception.
+        # Assigning this here will facilitate in correct closure.
         self.instrument = camera
+        # Alias for backward compatibility.
         self.camera = self.instrument
         
         # Get all of the camera controls.
@@ -89,7 +92,7 @@ class ZwoCamera(Camera):
         poll = quantity(0.1, units.second)
         try:
             image = self.instrument.capture(initial_sleep=initial_sleep.to(units.second).magnitude, poll=poll.magnitude)
-        except zwoasi.ZWO_CaptureError as error:
+        except self.instrument_lib.ZWO_CaptureError as error:
             # Maps to:
             # https://github.com/stevemarple/python-zwoasi/blob/1aadf7924dd1cb3b8587d97689d82cd5f1a0b5f6/zwoasi/__init__.py#L889-L893
             raise RuntimeError(f"Exposure status: {error.exposure_status}") from error
@@ -121,12 +124,8 @@ class ZwoCamera(Camera):
     
     def _close(self):
         """Close camera connection"""
-        try:
-            self.log.info("Closing camera connection.")
-            self.instrument.close()
-        
-        finally:
-            self.instrument = None
+        self.log.info("Closing camera connection.")
+        self.instrument.close()
 
     def take_exposures(self, exposure_time, num_exposures,
                        file_mode=False, raw_skip=0, path=None, filename=None,
@@ -174,11 +173,12 @@ class ZwoCamera(Camera):
         """
 
         # Convert exposure time to contain units if not already a Pint quantity.
+        # if not isintance(quantity):
         if type(exposure_time) is int or type(exposure_time) is float:
             exposure_time = quantity(exposure_time, units.microsecond)
 
         # Set control values on the ZWO camera.
-        # WARNING! This is the only time that the exposure time is set.
+        # WARNING! This is the only place that the exposure time is set.
         self.__setup_control_values(exposure_time, subarray_x=subarray_x, subarray_y=subarray_y, width=width,
                                     height=height, gain=gain, full_image=full_image, bins=bins)
 
@@ -308,4 +308,3 @@ class ZwoCamera(Camera):
                                 height=height,
                                 image_type=self.instrument_lib.ASI_IMG_RAW16,
                                 bins=bins)
-
