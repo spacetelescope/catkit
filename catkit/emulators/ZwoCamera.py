@@ -19,7 +19,10 @@ ZwoASI = type("ZwoASI", (), zwoasi.__dict__)
 class PoppyZwoEmulator(ZwoASI):
     """ Class to emulate *only our usage* of the zwoasi library. """
 
-    implemented_camera_purposes = ("imaging_camera", "phase_retrieval_camera", "pupil_camera")#, "target_acquisition_camera")
+    implemented_camera_purposes = ("imaging_camera",
+                                   "phase_retrieval_camera",
+                                   "pupil_camera",
+                                   "target_acquisition_camera")
 
     @classmethod
     def get_camera_mappings(cls):
@@ -83,6 +86,10 @@ class PoppyZwoEmulator(ZwoASI):
     def capture(self, initial_sleep=0.01, poll=0.01, buffer=None, filename=None):
         """ Get a simulated image capture from the simulator """
         if self.camera_purpose == 'imaging_camera':
+            hicat.simulators.optics_simulator.detector = 'imager'
+            self.photometry_config_key = 'total_direct_photometry_cts_per_microsec'
+        elif self.camera_purpose == 'target_acquisition_camera':
+            # TODO: Simulate the actual TA camera rather than using imaging camera.
             hicat.simulators.optics_simulator.detector = 'imager'
             self.photometry_config_key = 'total_direct_photometry_cts_per_microsec'
         elif self.camera_purpose == 'pupil_camera':
