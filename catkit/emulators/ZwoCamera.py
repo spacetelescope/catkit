@@ -1,16 +1,14 @@
-from astropy.io import fits
 import numpy as np
-import logging
-import os
-import sys
 
-from hicat.hicat_types import MetaDataEntry, units, quantity
-from catkit.interfaces.Camera import Camera
+from catkit.catkit_types import units, quantity
 from hicat.config import CONFIG_INI
-import catkit.util
 from hicat.hardware import testbed_state
-
 import hicat.simulators
+
+
+from catkit.interfaces.Instrument import SimInstrument
+import catkit.hardware.zwo.ZwoCamera
+
 
 """SIMULATED Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
 
@@ -24,7 +22,7 @@ class PoppyZwoEmulator:
             if self.config_id == CONFIG_INI.get("testbed", cam_description):
                 self.camera_purpose = cam_description
         if not hasattr(self, 'camera_purpose'):
-            raise ValueError("Unknown camera for simulations: "+camera_name)
+            raise ValueError(f"Unknown camera for simulations: {cam_description}")
         
         if self.camera_purpose == 'imaging_camera':
             hicat.simulators.optics_simulator.detector = 'imager'
@@ -39,6 +37,8 @@ class PoppyZwoEmulator:
             hicat.simulators.optics_simulator.detector = 'zernike_wfs_camera'
             self.photometry_config_key = 'total_zernike_direct_photometry_cts_per_microsec'
 
+    def init(self, library_file=None):
+        pass
 
     def get_controls(self):
         # only used for oepn behavior to 
@@ -76,7 +76,7 @@ class PoppyZwoEmulator:
         # it looks like the og call was in seconds, does poppy want
         # microseconds? 
         #image = self.camera.capture(initial_sleep=exposure_time.to(units.second).magnitude, poll=poll.magnitude)
-        exposure_time = intial_sleep.to(units.microseconds) 
+        exposure_time = initial_sleep.to(units.microseconds)
 
         # Here's the actual PSF calculation! Retrieve the simulated image from the optical system mode. This will do a
         # propagation up to the detector plane.
@@ -98,11 +98,11 @@ class PoppyZwoEmulator:
 
         return image.astype(np.dtype(np.int32))
 
-    def close():
+    def close(self):
         # this can just pass
         pass
 
-    def get_camera_property():
+    def get_camera_property(self):
         # sometimes this just gets logged
         # one use where it needs keys 'MaxWidth', 'MaxHeight'
         # I *think* this can just return a dict with milquetoast values for this
@@ -112,7 +112,7 @@ class PoppyZwoEmulator:
         return {'MaxWidth': 4096, 'MaxHeight': 4096} 
         pass
 
-    def set_id():
+    def set_id(self):
         # i think this can just pass
         # it doesn't seem to exist in zwoasi...
         pass
@@ -128,7 +128,7 @@ class PoppyZwoEmulator:
         pass # according to Marshall
 
 
-class PoppyZwoCamera(SimInstrument, ZwoCamera):
+class ZwoCamera(SimInstrument,  catkit.hardware.zwo.ZwoCamera.ZwoCamera):
     """ Now we use poppy to take images."""
 
     instrument_lib = PoppyZwoEmulator

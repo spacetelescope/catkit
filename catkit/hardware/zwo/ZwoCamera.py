@@ -1,14 +1,16 @@
-from astropy.io import fits
-import numpy as np
 import os
-import zwoasi
 import sys
+
+import numpy as np
+import zwoasi
+
+from hicat.config import CONFIG_INI
+from hicat.hardware import testbed_state
+
 
 from catkit.catkit_types import MetaDataEntry, units, quantity
 from catkit.interfaces.Camera import Camera
-from hicat.config import CONFIG_INI
 import catkit.util
-from hicat.hardware import testbed_state
 
 
 """Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
@@ -17,10 +19,41 @@ from hicat.hardware import testbed_state
 class ZwoCamera(Camera):
     
     instrument_lib = zwoasi
+    __ZWO_ASI_LIB = 'ZWO_ASI_LIB'
+
+    @classmethod
+    def load_asi_lib(cls):
+        # Importing zwoasi doesn't hook it up to the backend driver, we have to unfortunately do this.
+        # This is achieved by zwoasi.init(<file to ASI SDK lib>)
+
+        # NOTE: The ZWO ASI SDK can be downloaded from https://astronomy-imaging-camera.com/software-drivers
+        # Windows requires additional drivers also from https://astronomy-imaging-camera.com/software-drivers
+
+        try:
+            __env_filename = os.getenv(cls.__ZWO_ASI_LIB)
+
+            if not __env_filename:
+                raise OSError("Environment variable '{}' doesn't exist. Create and point to ASICamera2 lib".format(cls.__ZWO_ASI_LIB))
+            if not os.path.exists(__env_filename):
+                raise OSError("File not found: '{}' -> '{}'".format(cls.__ZWO_ASI_LIB, __env_filename))
+
+            try:
+                cls.instrument_lib.init(__env_filename)
+            except cls.instrument_lib.ZWO_Error as error:
+                if str(error) == 'Library already initialized':  # weak but better than nothing...
+                    # Library already initialized, continuing...
+                    pass
+                else:
+                    raise
+        except Exception as error:
+            raise ImportError(f"Failed to load {cls.__ZWO_ASI_LIB} library backend to {cls.instrument_lib.__qualname__}") from error
 
     def initialize(self):
         """Uses the config_id to look up parameters in the config.ini."""
-        
+
+        # Importing zwoasi doesn't hook it up to the backend driver, we have to unfortunately do this.
+        self.load_asi_lib()
+
         # Pull flip parameters
         self.theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
         self.fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
