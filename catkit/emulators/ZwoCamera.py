@@ -1,29 +1,47 @@
 import numpy as np
 
-from catkit.catkit_types import units, quantity
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed_state
 import hicat.simulators
+import zwoasi
 
-
+from catkit.catkit_types import units, quantity
 from catkit.interfaces.Instrument import SimInstrument
 import catkit.hardware.zwo.ZwoCamera
 
 
 """SIMULATED Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
 
+# Convert zwoasi module to a class such that it can be inherited.
+ZwoASI = type("ZwoASI", (), zwoasi.__dict__)
 
-class PoppyZwoEmulator:
+
+class PoppyZwoEmulator(ZwoASI):
     """ Class to emulate *only our usage* of the zwoasi library. """
-    
-    def __init__(self):
 
-        for cam_description in ["imaging_camera", "phase_retrieval_camera", "pupil_camera"]:
-            if self.config_id == CONFIG_INI.get("testbed", cam_description):
-                self.camera_purpose = cam_description
-        if not hasattr(self, 'camera_purpose'):
-            raise ValueError(f"Unknown camera for simulations: {cam_description}")
-        
+    implemented_camera_purposes = ("imaging_camera", "phase_retrieval_camera", "pupil_camera")#, "target_acquisition_camera")
+
+    @classmethod
+    def get_camera_mappings(cls):
+        # Find all cameras
+        camera_mappings = {}
+        for camera_purpose in cls.implemented_camera_purposes:
+            camera_config_id = CONFIG_INI.get("testbed", camera_purpose)
+            camera_name = CONFIG_INI.get(camera_config_id, 'camera_name')
+            camera_mappings[camera_config_id] = {"purpose": camera_purpose, "name": camera_name}
+        return camera_mappings
+
+    def __init__(self, config_id):
+
+        self.config_id = config_id
+        self.image_type = None
+        self.camera_mappings = self.get_camera_mappings()
+
+        if self.config_id not in self.camera_mappings:
+            raise ValueError(f"Unknown camera for simulations: {self.config_id}")
+
+        self.camera_purpose = self.camera_mappings[self.config_id]["purpose"]
+
         if self.camera_purpose == 'imaging_camera':
             hicat.simulators.optics_simulator.detector = 'imager'
             self.photometry_config_key = 'total_direct_photometry_cts_per_microsec'
@@ -36,9 +54,21 @@ class PoppyZwoEmulator:
         elif self.camera_purpose == 'zernike_camera':
             hicat.simulators.optics_simulator.detector = 'zernike_wfs_camera'
             self.photometry_config_key = 'total_zernike_direct_photometry_cts_per_microsec'
+        else:
+            raise NotImplementedError(f"Unknown camera for simulations: {self.camera_purpose}")
 
     def init(self, library_file=None):
         pass
+
+    @classmethod
+    def get_num_cameras(cls):
+        return len(cls.implemented_camera_purposes)
+
+    def list_cameras(self):
+        return [camera["name"] for camera in self.camera_mappings.values()]
+
+    def Camera(self, index):
+        return self
 
     def get_controls(self):
         # only used for oepn behavior to 
@@ -46,26 +76,19 @@ class PoppyZwoEmulator:
         # needs to play nicely with calls to set_controls
         # this phony dict is set to have *some* accessible value (None) for
         # every dict key we ask for
-        return {'BandWidth':{'MinValue': None, 'ControlType': None, 'DefaultValue': None}}
+        return {'BandWidth': {'MinValue': None, 'ControlType': None, 'DefaultValue': None}}
 
-    def set_control_value(self, mock_control_type, mock_default_value):
-        # this can just pass
+    def set_control_value(self, control_type, value, auto=False):
         pass
 
     def stop_video_capture(self):
-        # only used on open behavior
-        # this can just pass
         pass
 
     def stop_exposure(self):
-        # only used on open behavior
-        # this can just pass
         pass
 
     def set_image_type(self, image_type):
-        # should be set by poppy?
-        # can just pass
-        pass
+        self.image_type = image_type
 
     def capture(self, initial_sleep, poll):
         """ Get a simulated image capture from the simulator
@@ -99,7 +122,6 @@ class PoppyZwoEmulator:
         return image.astype(np.dtype(np.int32))
 
     def close(self):
-        # this can just pass
         pass
 
     def get_camera_property(self):
@@ -113,8 +135,6 @@ class PoppyZwoEmulator:
         pass
 
     def set_id(self):
-        # i think this can just pass
-        # it doesn't seem to exist in zwoasi...
         pass
 
     def set_roi(self, start_x=None, start_y=None, width=None, height=None, image_type=None):
@@ -132,3 +152,7 @@ class ZwoCamera(SimInstrument,  catkit.hardware.zwo.ZwoCamera.ZwoCamera):
     """ Now we use poppy to take images."""
 
     instrument_lib = PoppyZwoEmulator
+
+    @classmethod
+    def load_asi_lib(cls):
+        pass
