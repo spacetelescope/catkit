@@ -28,11 +28,12 @@ class AlignLyotStop(Experiment):
         # Make sure fpm illuminator / beam dump are squared away 
         testbed.remove_all_flip_mounts()
 
-        with testbed.pupil_camera as pupil_cam:
+        with testbed.pupil_camera() as pupil_cam:
 
             start_time = time.time()
-            
-            lyot_stop_controller = LyotStopAlignment(pupil_cam=pupil_cam, calculate_pixel_scale=True)
+            lyot_stop_controller = LyotStopAlignment(pupil_cam=pupil_cam,
+                                                     output_path_root=self.output_path,
+                                                     calculate_pixel_scale=True)
             lyot_stop_controller.align_lyot_stop()
             
             # self.extensions allows for this experiment to be extended.
