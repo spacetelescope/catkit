@@ -128,6 +128,8 @@ class ZwoCamera(Camera):
         except self.instrument_lib.ZWO_CaptureError as error:
             # Maps to:
             # https://github.com/stevemarple/python-zwoasi/blob/1aadf7924dd1cb3b8587d97689d82cd5f1a0b5f6/zwoasi/__init__.py#L889-L893
+            if error.exposure_statu == 3:
+                raise RuntimeError("Exposure error: camera already in use, please close other all uses, e.g., SharpCap.") from error
             raise RuntimeError(f"Exposure status: {error.exposure_status}") from error
         return image.astype(np.dtype(np.float32))
 
