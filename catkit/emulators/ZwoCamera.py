@@ -119,7 +119,7 @@ class PoppyZwoEmulator(ZwoASI):
         exposure_time = self.control_values[self.ASI_EXPOSURE]
         image = image_hdulist[0].data * counts_per_microsec * exposure_time
 
-        return image.astype(np.dtype(np.int32))
+        return image
 
     def close(self):
         pass
