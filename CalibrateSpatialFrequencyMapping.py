@@ -14,7 +14,7 @@ import hicat.util  # noqa: E402
 from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import Experiment  # noqa: E402
 from hicat.hardware import testbed  # noqa: E402
-
+from hicat.hardware.testbed import move_filter
 
 def compute_centroid(image):
     """
@@ -246,20 +246,29 @@ class CalibrateSpatialFrequencyMapping(Experiment):
     def take_image(self, label, fpm_position):
         saveto_path = hicat.util.create_data_path(initial_path=self.output_path,
                                                   suffix=label)
-        return testbed.run_hicat_imaging(exposure_time=quantity(50, units.millisecond),
-                                         num_exposures=1,
+        if fpm_position == FpmPosition.coron:
+            exposure_time = quantity(50, units.millisecond)
+            move_filter(wavelength=640, nd='clear_1')
+            exposure_set_name = 'coron'
+        elif fpm_position == FpmPosition.direct:
+            exposure_time = quantity(1, units.millisecond)
+            move_filter(wavelength=640, nd='9_percent')
+            exposure_set_name = 'direct'
+
+        return testbed.run_hicat_imaging(exposure_time=exposure_time,
+                                         num_exposures=40,
                                          fpm_position=fpm_position,
                                          lyot_stop_position=LyotStopPosition.in_beam,
                                          file_mode=True,
                                          raw_skip=False,
                                          path=saveto_path,
-                                         auto_expose=False,
-                                         exposure_set_name='coron',
+                                         auto_expose=True,
+                                         exposure_set_name=exposure_set_name,
                                          # TODO: this is not always the right centering
                                          centering=ImageCentering.custom_apodizer_spots,
                                          auto_exposure_mask_size=5.5,
                                          resume=False,
-                                         pipeline=True)
+                                         pipeline=False)
 
     def experiment(self):
         self.log.info(f"""Running DM spatial frequency calibration with following parameters:
