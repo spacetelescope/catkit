@@ -34,7 +34,7 @@ class AlignLyotStop(Experiment):
             lyot_stop_controller = LyotStopAlignment(pupil_cam=pupil_cam,
                                                      output_path_root=self.output_path,
                                                      calculate_pixel_scale=True)
-            lyot_stop_controller.align_lyot_stop()
+            lyot_stop_controller.iterative_align_lyot_stop()
             
             # self.extensions allows for this experiment to be extended.
             for extension in self.extensions:
