@@ -48,14 +48,18 @@ class ThorlabsMFF101(FlipMotor):
 
     def move_to_position1(self):
         """Implements a move to the "up" position."""
-        self.log.info("Moving to 'up' position")
+        is_in_beam = CONFIG_INI.getint(self.config_id, 'in_beam_position') == 1
+        inout_label = 'in' if is_in_beam else "out of"
+        self.log.info(f"Moving to 'up' position, which is {inout_label} beam")
         up_command = b"\x6A\x04\x00\x01\x21\x01"
         self.motor.write(up_command)
         time.sleep(1)
 
     def move_to_position2(self):
         """Implements a move to "down" position """
-        self.log.info("Moving to 'down' position")
+        is_in_beam = CONFIG_INI.getint(self.config_id, 'in_beam_position') == 2
+        inout_label = 'in' if is_in_beam else "out of"
+        self.log.info(f"Moving to 'down' position, which is {inout_label} beam")
         down_command = b"\x6A\x04\x00\x02\x21\x01"
         self.motor.write(down_command)
         time.sleep(1)
