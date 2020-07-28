@@ -268,7 +268,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                                          centering=ImageCentering.custom_apodizer_spots,
                                          auto_exposure_mask_size=5.5,
                                          resume=False,
-                                         pipeline=False)
+                                         pipeline=True)
 
     def experiment(self):
         self.log.info(f"""Running DM spatial frequency calibration with following parameters:
