@@ -19,6 +19,7 @@ from catkit.hardware.boston.commands import flat_command
 from catkit.catkit_types import FpmPosition
 
 from hicat.control.target_acq import MotorMount, TargetCamera, TargetAcquisition
+from hicat.control.align_lyot import LyotStopAlignment
 from hicat.hardware import testbed
 import hicat.plotting.animation
 from hicat import util
@@ -77,6 +78,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                  perfect_knowledge_mode=False,
                  file_mode=True,
                  raw_skip=0,
+                 align_lyot_stop=False,
                  run_ta=False):
         super(StrokeMinimization, self).__init__(suffix=suffix)
 
@@ -174,6 +176,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         self.prior_correction = np.zeros(stroke_min.num_actuators*2, float)
         self.git_label = util.git_description()
         self.perfect_knowledge_mode = perfect_knowledge_mode
+        self.align_lyot_stop = align_lyot_stop
         self.run_ta = run_ta
 
         # Metrics
@@ -308,6 +311,13 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                        'temp_sensor': temp_sensor,
                        'color_wheel': color_wheel,
                        'nd_wheel': nd_wheel}
+            
+            # Align the Lyot Stop
+            if self.align_lyot_stop:
+                lyot_stop_controller = LyotStopAlignment(pupil_cam=pupilcam,
+                                                     output_path_root=self.output_path,
+                                                     calculate_pixel_scale=True)
+                lyot_stop_controller.iterative_align_lyot_stop()
 
             # Instantiate TA Controller and run initial centering
             ta_devices = {'picomotors': {MotorMount.APODIZER: apodizer_picomotor_mount,

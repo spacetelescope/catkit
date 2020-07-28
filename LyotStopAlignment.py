@@ -25,9 +25,6 @@ class AlignLyotStop(Experiment):
 
     def experiment(self):
         
-        # Make sure fpm illuminator / beam dump are squared away 
-        testbed.remove_all_flip_mounts()
-
         with testbed.pupil_camera() as pupil_cam:
 
             start_time = time.time()
