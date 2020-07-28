@@ -87,22 +87,26 @@ def postprocess_images(images, reference_image, direct_image, speckles,
         yg = np.flipud(yg)
 
     centroids = np.zeros((2, len(speckles)))
-    pipeline_images = np.zeros((len(speckles), 3, *shape))
+    pipeline_images = np.zeros((len(speckles), 4, *shape))
 
     for n, (fx, fy) in enumerate(speckles):
         image = images[..., n]
 
         # Postprocess image to extract speckle centroids
         difference = image - reference_image
-        half = difference * (fx * xg + fy * yg > 0)
-        shifts, _, _ = register_translation(half, direct_image, upsample_factor=1)
+        pos = difference * (fx * xg + fy * yg > 0)
+        neg = difference * (fx * xg + fy * yg < 0)
+        pos_shifts, _, _ = register_translation(pos, direct_image, upsample_factor=1)
+        neg_shifts, _, _ = register_translation(neg, direct_image, upsample_factor=1)
         pipeline_images[n, ...] = np.moveaxis(
             np.dstack([
                 image,
                 difference,
-                half,
+                pos,
+                neg
             ]), 2, 0)
 
+        shifts = (pos_shifts - neg_shifts) / 2
         centroid = np.array(shifts[::-1])
 
         if reflect_x:
@@ -267,7 +271,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                                          auto_expose=True,
                                          exposure_set_name=exposure_set_name,
                                          # TODO: this is not always the right centering
-                                         centering=ImageCentering.custom_apodizer_spots,
+                                         centering=ImageCentering.satellite_spots,
                                          auto_exposure_mask_size=5.5,
                                          resume=False,
                                          pipeline=True)
