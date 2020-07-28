@@ -218,7 +218,7 @@ def extract_rotation_and_scale(mapping_matrix, off_diagonal_tol=1e-2, theta_tol=
 class CalibrateSpatialFrequencyMapping(Experiment):
     name = 'Calibrate DM mapping'
 
-    def __init__(self, cycles, num_speckle, amplitude=None):
+    def __init__(self, inner_radius, outer_radius, num_speckle, amplitude=None):
         """
         Measure the matrix that maps spatial frequencies on each DM to pixel locations at the
         detector.  An affine transformation of the form y = Ax + b can be written in terms of an
@@ -242,16 +242,18 @@ class CalibrateSpatialFrequencyMapping(Experiment):
 
         This measurement is performed for both DMs.
 
-        :param cycles: float, spatial frequency of injected speckles in cycles/DM.  Cannot exceed
-                       Nyquist limit, which is 17 cycles/DM.
+        :param inner_radius: float, the inner radius of the sample region in cycles/DM.
+        :param outer_radius: float, the outer radius of the sample region in cycles/DM.
         :param num_speckle: int, number of speckles to inject.  Must be >= 3.  The injected
-                            speckles are equally spaced in rotation angle over the range [0, pi].
+                            speckles are chosen randomly from a uniform distribution over the
+                            focal-plane annulus between inner_radius and outer_radius.
         :param amplitude: float, amplitude of injected speckles in nanometers. If None, defaults
                           to the value dm1_ideal_poke or dm2_ideal_poke in the boston_kilo952
                           section of the config file.
         """
         super().__init__()
-        self.cycles = cycles
+        self.inner_radius = inner_radius
+        self.outer_radius = outer_radius
         self.num_speckle = num_speckle
         self.amplitude = amplitude
 
@@ -284,19 +286,27 @@ class CalibrateSpatialFrequencyMapping(Experiment):
 
     def experiment(self):
         self.log.info(f"""Running DM spatial frequency calibration with following parameters:
-         cycles: {self.cycles}
+   inner radius: {self.inner_radius} cycles
+   outer radius: {self.outer_radius} cycles
     num_speckle: {self.num_speckle}
       amplitude: {self.amplitude} nm
         """)
+        # Select azimuthal angle from uniform distribution over [0, 2pi]
+        thetas = 2 * np.pi * np.random.rand(self.num_speckle)
+
+        # Select radii using inverse transform sampling so that speckles are uniformly distributed
+        # over the annulus between inner_radius and outer_radius
+        # See https://math.stackexchange.com/questions/2530527/
+        radii = np.sqrt(np.random.rand(self.num_speckle) * (self.outer_radius ** 2 - self.inner_radius ** 2)
+                        + self.inner_radius ** 2)
+
+        # Generate (fx, fy) spatial frequency pairs
+        speckles = [(R * np.cos(theta), R * np.sin(theta)) for R, theta in zip(radii, thetas)]
         with testbed.dm_controller() as dm:
             # Take baseline image with DMs flat
             dm.apply_shape_to_both(
                 flat_command(bias=False, flat_map=True),
                 flat_command(bias=False, flat_map=True))
-
-            thetas = np.arange(0, np.pi, np.pi/self.num_speckle)  # Rotation angles of speckles
-            speckles = [(self.cycles * np.cos(theta), self.cycles * np.sin(theta))
-                        for theta in thetas]  # Input (fx, fy) spatial frequency pairs
 
             # take_image returns a list of images, and a header.  We want the only image in that
             # list.
@@ -320,10 +330,10 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                 # When we put a sine wave on one of the DMs, flatten the other one
                 dm_flat = 2 if dm_num == 1 else 1
 
-                for n, theta in enumerate(thetas):
+                for n, (R, theta) in enumerate(zip(radii, thetas)):
                     image = 0.
                     # Note: in a previous version of this script, I injected both a positive and
-                    # a negative speckle and then averaging the two images.  This helps to reject
+                    # a negative speckle and then averaged the two images.  This helps to reject
                     # some of the coherent interference between the injected speckle and the
                     # background speckles, and improves the accuracy of the eventual centroid
                     # estimate.  However, this requires that the two images are globally
@@ -331,17 +341,18 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                     # aren't, we lose even more accuracy than we gain by averaging.  Therefore,
                     # I have removed this for now, but could return to it in the future.
                     for sign in [1]:
-                        self.log.info(f"Taking sine wave on DM{dm_num} at angle {theta} with {self.cycles} cycles/DM.")
+                        self.log.info(f"Applying sine wave on DM{dm_num} at angle {theta} with "
+                                      f"{R} cycles/DM.")
                         sin_specification = SinSpecification(
                             theta * 180 / np.pi,
-                            self.cycles, quantity(sign * amplitude, units.nanometer), 0)
+                            R, quantity(sign * amplitude, units.nanometer), 0)
                         sin_command_object = sin_command(sin_specification, flat_map=True, dm_num=dm_num)
                         flat_command_object = flat_command(bias=False, flat_map=True, dm_num=dm_flat)
 
                         dm.apply_shape(sin_command_object, dm_num=dm_num)
                         dm.apply_shape(flat_command_object, dm_num=dm_flat)
 
-                        label = f"dm{dm_num}_cycle_{self.cycles}_ang_{theta}"
+                        label = f"dm{dm_num}_cycle_{R}_ang_{theta}"
                         image += self.take_image(label, FpmPosition.coron)[0][0]
 
                     images[..., n] = image
