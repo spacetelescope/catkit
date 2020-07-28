@@ -94,10 +94,15 @@ def postprocess_images(images, reference_image, direct_image, speckles,
 
         # Postprocess image to extract speckle centroids
         difference = image - reference_image
+
+        # Split the image into halves, each containing one of the two injected speckles
         pos = difference * (fx * xg + fy * yg > 0)
         neg = difference * (fx * xg + fy * yg < 0)
-        pos_shifts, _, _ = register_translation(pos, direct_image, upsample_factor=1)
-        neg_shifts, _, _ = register_translation(neg, direct_image, upsample_factor=1)
+
+        # Cross-correlate the two halves to find the separation distance and direction.  This is
+        # independent of the global centering of the image, so it is more robust to image jitter
+        # on hardware experiments.
+        shifts, _, _ = register_translation(pos, neg, upsample_factor=1)
         pipeline_images[n, ...] = np.moveaxis(
             np.dstack([
                 image,
@@ -106,8 +111,9 @@ def postprocess_images(images, reference_image, direct_image, speckles,
                 neg
             ]), 2, 0)
 
-        shifts = (pos_shifts - neg_shifts) / 2
-        centroid = np.array(shifts[::-1])
+        # Reverse order to get (col, row) ordering, which is the same as (x, y).
+        # Separation from origin is half the measured baseline between the two speckles
+        centroid = np.array(shifts[::-1]) / 2
 
         if reflect_x:
             centroid[0] *= -1
@@ -288,7 +294,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                 flat_command(bias=False, flat_map=True),
                 flat_command(bias=False, flat_map=True))
 
-            thetas = np.arange(0, np.pi, np.pi / self.num_speckle)  # Rotation angles of speckles
+            thetas = np.arange(0, np.pi, np.pi/self.num_speckle)  # Rotation angles of speckles
             speckles = [(self.cycles * np.cos(theta), self.cycles * np.sin(theta))
                         for theta in thetas]  # Input (fx, fy) spatial frequency pairs
 
@@ -316,7 +322,15 @@ class CalibrateSpatialFrequencyMapping(Experiment):
 
                 for n, theta in enumerate(thetas):
                     image = 0.
-                    for sign in [-1, 1]:
+                    # Note: in a previous version of this script, I injected both a positive and
+                    # a negative speckle and then averaging the two images.  This helps to reject
+                    # some of the coherent interference between the injected speckle and the
+                    # background speckles, and improves the accuracy of the eventual centroid
+                    # estimate.  However, this requires that the two images are globally
+                    # registered to each other which is hard to guarantee on hardware; if they
+                    # aren't, we lose even more accuracy than we gain by averaging.  Therefore,
+                    # I have removed this for now, but could return to it in the future.
+                    for sign in [1]:
                         self.log.info(f"Taking sine wave on DM{dm_num} at angle {theta} with {self.cycles} cycles/DM.")
                         sin_specification = SinSpecification(
                             theta * 180 / np.pi,
@@ -328,7 +342,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                         dm.apply_shape(flat_command_object, dm_num=dm_flat)
 
                         label = f"dm{dm_num}_cycle_{self.cycles}_ang_{theta}"
-                        image += self.take_image(label, FpmPosition.coron)[0][0] / 2
+                        image += self.take_image(label, FpmPosition.coron)[0][0]
 
                     images[..., n] = image
 
