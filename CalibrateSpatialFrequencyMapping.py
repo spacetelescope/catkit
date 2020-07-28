@@ -292,7 +292,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
       amplitude: {self.amplitude} nm
         """)
         # Select azimuthal angle from uniform distribution over [0, 2pi]
-        thetas = 2 * np.pi * np.random.rand(self.num_speckle)
+        thetas = np.pi * np.random.rand(self.num_speckle)
 
         # Select radii using inverse transform sampling so that speckles are uniformly distributed
         # over the annulus between inner_radius and outer_radius
