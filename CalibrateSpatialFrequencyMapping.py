@@ -1,5 +1,7 @@
 # flake8: noqa: E402
 import os
+import hicat.simulators
+sim = hicat.simulators.auto_enable_sim()
 
 import numpy as np
 from skimage.feature import register_translation  # WARNING! Deprecated in skimage v0.17
@@ -256,7 +258,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
             exposure_set_name = 'direct'
 
         return testbed.run_hicat_imaging(exposure_time=exposure_time,
-                                         num_exposures=40,
+                                         num_exposures=1 if sim else 40,
                                          fpm_position=fpm_position,
                                          lyot_stop_position=LyotStopPosition.in_beam,
                                          file_mode=True,
