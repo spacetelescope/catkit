@@ -53,6 +53,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
     :param perfect_knowledge_mode: Whether to use perfect-knowledge of the electric field as input to the controller, instead of the pairwise-probe estimate.  Only works in simulation.
     :param file_mode: If true files will be written to disk otherwise only final plots are saved.
     :param raw_skip: Skips x writes for every one taken. raw_skip=math.inf will skip all and save no raw image files.
+    :param align_lyot_stop : Whether to align the Lyot Stop at the start of the experiment
     :param run_ta: Whether to run with target acquisition.
     """
     def __init__(self, wavelengths, jacobian_filenames, probe_filenames, num_iterations,
