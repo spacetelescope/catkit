@@ -404,7 +404,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
                 for wavelength in self.wavelengths:
                     self.images_before[wavelength], header = self.take_exposure(devices, 'coron', wavelength, initial_path,
-                                                                                output_err=True, dark_zone_mask=self.dark_zone)
+                                                                                dark_zone_mask=self.dark_zone)
                     self.images_before[wavelength] /= direct_maxes[wavelength]
                     self.images_after[wavelength] = self.images_before[wavelength]
                     est_snr = header['SNR_DZ'] if header['SNR_DZ'] > 0 else np.nan  # alas, can't have NaN in FITS header keywords
@@ -555,7 +555,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     self.log.info('Taking post-correction coronagraphic images...')
                     for wavelength in self.wavelengths:
                         self.images_after[wavelength], header = self.take_exposure(devices, 'coron', wavelength, initial_path,
-                                                                                   output_err=True, dark_zone_mask=self.dark_zone)
+                                                                                   dark_zone_mask=self.dark_zone)
                         self.images_after[wavelength] /= direct_maxes[wavelength]
                         est_snr = header['SNR_DZ'] if header['SNR_DZ'] > 0 else np.nan  # alas, can't have NaN in FITS header keywords
                         self.estimated_darkzone_SNRs[wavelength].append(est_snr)
