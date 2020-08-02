@@ -181,21 +181,18 @@ def plot_environment_and_contrast(filepath):
     axes[0].plot(datetimes, metrics_data[' temp (C)'], c='red', marker='+',
                  label='Aux Temperature Sensor')
     axes[0].set_ylabel('Temperature (C)')
-    axes[0].set_ylim(20, 30)
 
     axes[1].plot(datetimes, metrics_data[' humidity (%)'], c='blue', marker='+',
                  label='Aux Humidity Sensor')
     axes[1].set_ylabel('Humidity (%)')
-    axes[1].set_ylim(0, 30)
 
     for i, values in enumerate([metrics_data[' temp (C)'], metrics_data[' humidity (%)']]):
         axes[i].text(0.05, 0.15, f"Mean: {np.mean(values):.2f}       Range: {np.min(values):.2f} - {np.max(values):.2f}       Std dev: {np.std(values):.2f}",
-                     color = 'red' if i==0 else 'blue', transform=axes[i].transAxes)
+                     color = 'darkred' if i==0 else 'darkblue', transform=axes[i].transAxes)
 
     axes[2].semilogy(datetimes, metrics_data[' mean image contrast'], c='purple', marker='o',
                      label='Broadband contrast')
     axes[2].set_ylabel('Contrast')
-
 
     # Try to also parse the safety check temp and humidity from the log file
     experiment_log = glob.glob(os.path.join(os.path.dirname(filepath), "*.log"))[0]
@@ -206,14 +203,14 @@ def plot_environment_and_contrast(filepath):
         safety_check_times = safety_check_results['datetime']
         safety_check_values = [float(msg.split()[3]) for msg in safety_check_results['message']]
         axes[i].plot(safety_check_times, safety_check_values, c='orange' if i==0 else 'skyblue',
-                 marker='s', label=f"Safety {qty} Sensor")
+                 marker='|', label=f"Safety {qty} Sensor")
         axes[i].text(0.05, 0.05, f"Mean: {np.mean(safety_check_values):.2f}       Range: "
                                  f"{np.min(safety_check_values):.2f} - {np.max(safety_check_values):.2f}       "
                                  f"Std dev: {np.std(safety_check_values):.2f}",
-                     color = 'orange' if i==0 else 'skyblue', transform=axes[i].transAxes)
+                     color = 'peru' if i==0 else 'dodgerblue', transform=axes[i].transAxes)
     for ax in axes:
         ax.grid(True, which='both', alpha=0.3)
-        ax.legend()
+        ax.legend(loc='upper right')
 
         locator = matplotlib.dates.AutoDateLocator(minticks=3, maxticks=7)
         formatter = matplotlib.dates.ConciseDateFormatter(locator)
@@ -223,6 +220,14 @@ def plot_environment_and_contrast(filepath):
     # ensure all plots have consistent X axes
     for i in [1,2]:
         axes[i].set_xlim(*axes[0].get_xlim())
+    # allow Y axis to autoscale but enforce minimum y range +- 1 deg temp or +- 1% humidity
+    # This minimum range is semi-arbitrary but helps avoid the text labels landing on top of the
+    # plot lines.
+    for i in [0,1]:
+        ylim = axes[i].get_ylim()
+        yrange = ylim[1]-ylim[0]
+        if yrange < 2:
+            axes[i].set_ylim(min(np.mean(ylim)-1, ylim[0]), max(np.mean(ylim)+1, ylim[1]))
 
     output_fn = os.path.join(os.path.dirname(filepath), 'environment.pdf')
     careful_savefig(fig, output_fn)
