@@ -6,18 +6,22 @@ from hicat.control.align_lyot import LyotStopAlignment
 from hicat.experiments.Experiment import Experiment
 from hicat.hardware import testbed 
 
+from catkit.catkit_types import FpmPosition
+
 
 class AlignLyotStop(Experiment):
     """ Class to run the Lyot Stop Alignment as an experiment. """
 
-    def __init__(self):
+    def __init__(self, fpm_in=True):
         self.name = "Independent Lyot Stop Alignment Experiment"
+        self.fpm_position = FpmPosition.coron if fpm_in else FpmPosition.direct
         super().__init__()
 
     def experiment(self):
 
-        # Make sure fpm illuminator / beam dump are squared away 
+        # Make sure fpm illuminator / beam dump are squared away and FPM is in/out
         testbed.remove_all_flip_mounts()
+        testbed.move_fpm(self.fpm_position)
         
         with testbed.pupil_camera() as pupil_cam:
 
