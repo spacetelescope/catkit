@@ -312,6 +312,12 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                        'temp_sensor': temp_sensor,
                        'color_wheel': color_wheel,
                        'nd_wheel': nd_wheel}
+
+            # Flatten DMs before attempting initial target acquisition or Lyot alignment.
+            from catkit.hardware.boston.commands import flat_command
+            import copy
+            ta_dm_flat = flat_command(bias=False, flat_map=True)
+            devices["dm"].apply_shape_to_both(ta_dm_flat, copy.deepcopy(ta_dm_flat))
             
             # Align the Lyot Stop
             if self.align_lyot_stop:
@@ -334,9 +340,6 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                                    exposure_period=5,
                                    target_pixel_tolerance={TargetCamera.TA: 2, TargetCamera.SCI: 25}) as ta_controller:
 
-                # Flatten DMs before attempting initial target acquisition.
-                ta_dm_flat = flat_command(bias=False, flat_map=True)
-                devices["dm"].apply_shape_to_both(ta_dm_flat, copy.deepcopy(ta_dm_flat))
                 # Now setup filter wheels.
                 move_filter(wavelength=640,
                             nd="clear_1",
