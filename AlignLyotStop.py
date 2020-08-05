@@ -23,10 +23,14 @@ class AlignLyotStop(Experiment):
         testbed.remove_all_flip_mounts()
         testbed.move_fpm(self.fpm_position)
         
-        with testbed.pupil_camera() as pupil_cam:
+        with testbed.motor_controller() as motor_controller, \
+                testbed.pupil_camera() as pupilcam:
 
+            ls_align_devices = {'motor_controller': motor_controller, 
+                                'pupil_camera': pupilcam}
+ 
             start_time = time.time()
-            lyot_stop_controller = LyotStopAlignment(pupil_cam=pupil_cam,
+            lyot_stop_controller = LyotStopAlignment(ls_align_devices,
                                                      output_path_root=self.output_path,
                                                      calculate_pixel_scale=True)
             lyot_stop_controller.iterative_align_lyot_stop(inject_test_offset=True)

@@ -316,12 +316,16 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             # Flatten DMs before attempting initial target acquisition or Lyot alignment.
             from catkit.hardware.boston.commands import flat_command
             import copy
-            ta_dm_flat = flat_command(bias=False, flat_map=True)
-            devices["dm"].apply_shape_to_both(ta_dm_flat, copy.deepcopy(ta_dm_flat))
+            dm_flat = flat_command(bias=False, flat_map=True)
+            devices["dm"].apply_shape_to_both(dm_flat, copy.deepcopy(dm_flat))
             
+            
+            ls_align_devices = {'motor_controller': motor_controller, 
+                                'pupil_camera': pupilcam}
+
             # Align the Lyot Stop
             if self.align_lyot_stop:
-                lyot_stop_controller = LyotStopAlignment(pupil_cam=pupilcam,
+                lyot_stop_controller = LyotStopAlignment(ls_align_devices,
                                                      output_path_root=self.output_path,
                                                      calculate_pixel_scale=True)
                 lyot_stop_controller.iterative_align_lyot_stop()
