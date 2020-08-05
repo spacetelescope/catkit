@@ -18,7 +18,7 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
     def __init__(self, motor_camera_pairs):
         super().__init__()
         self.motor_camera_pairs = motor_camera_pairs
-        self.extensions.extend([self.compare_centroiding_methods])#self.calibrate_alignment_thresholds])#self.calibrate_motors, self.find_hole])#, self.calibrate_fpm_center])
+        self.extensions.extend([self.calibrate_motors])#self.calibrate_alignment_thresholds])#self.calibrate_motors, self.find_hole])#, self.calibrate_fpm_center])
 
     def compare_centroiding_methods(self, motor_mount=MotorMount.APODIZER, target_camera=TargetCamera.SCI):
         start_time = time.time()
@@ -84,8 +84,6 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
         """ Move PSF by small-ish steps and measure total image counts as we do.
             The idea is to observe adequate thresholding ratios as the PSF moves through the FPM.
         """
-        self.ta_controller.misalign_pixel_step = 100
-
         # Start with PSF on target.
         self.ta_controller.acquire_target()
 
@@ -100,11 +98,12 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
 
         for i in range(n_moves):
             # Move.
-            self.move(move_pixel_step,
-                      motor_mount=MotorMount.APODIZER,
-                      target_camera=TargetCamera.SCI)
+            self.ta_controller.move(move_pixel_step,
+                                    motor_mount=MotorMount.APODIZER,
+                                    target_camera=TargetCamera.SCI)
             # Utilize this func to take images, log counts, and centroid deltas to later plot.
-            self.ta_controller.distance_to_target(TargetCamera.SCI, check_threshold=False)
+            for target_camera in TargetCamera:
+                self.ta_controller.distance_to_target(target_camera, check_threshold=False)
 
         self.log.info("Alignment thresholding calibration complete")
 
@@ -115,21 +114,12 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
         # Plot
         plt.clf()
         fig = plt.figure(figsize=(12, 8))
-        ax = [fig.add_subplot(1, 2, 1),
-              fig.add_subplot(1, 2, 2)]
-        current_ax_cursor = 0
-        for target_camera in TargetCamera:
-            raidal_distance_from_center = np.sqrt(np.asarray(self.ta_controller.centroid_log[target_camera]["x from target"])**2 + \
-                                                  np.asarray(self.ta_controller.centroid_log[target_camera]["y from target"])**2)
-            ax[current_ax_cursor].plot(raidal_distance_from_center[-n_moves:],
-                                       self.ta_controller.counts_log[target_camera]["ratio"][-n_moves:], "b.-")
-            ax[current_ax_cursor].axhline(self.ta_controller.thresholds[target_camera]["minimal background ratio"], color='r')
-            ax[current_ax_cursor].axhline(self.ta_controller.thresholds[target_camera]["sufficient background ratio"], color='g')
-            ax[current_ax_cursor].set_xlabel("Radial pixel distance from target")
-            ax[current_ax_cursor].set_ylabel("sum(image)/sum(background)")
-            ax[current_ax_cursor].set_title(
-                f"{target_camera.value} camera (exposure_time: {self.ta_controller.exposure_time[target_camera]})")
-            current_ax_cursor += 1
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(self.ta_controller.counts_log[TargetCamera.SCI]["ratio"][-n_moves:], "r.-", lable="SCI camera")
+        ax.plot(self.ta_controller.counts_log[TargetCamera.TA]["ratio"][-n_moves:], "b.-", lable="TA camera")
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel("sum(image)/sum(background)")
+        ax.set_title("Count Thresholding Calibration")
 
         # Save
         careful_savefig(fig, os.path.join(self.ta_controller.ta_output_path, "alignment_threshold_calibration.pdf"))
@@ -155,9 +145,9 @@ class CalibrateTargetAcquisition(TargetAcquisitionExperiment):
             mean_runtime = np.mean(runtimes[combo], axis=0)/60
             self.log.info(f"Mean calibrated pixels/step values for {combo}: {mean_calibration_value}. (mean runtime ~{mean_runtime}mins)")
 
-    def calibrate_fpm_center(self, target_camera=TargetCamera.TA, clip_threshold=0.25, exposure_time=500000):
+    def calibrate_fpm_center(self, target_camera=TargetCamera.TA, clip_threshold=0.1, exposure_time=1000000):
         self.ta_controller.calibrate_target_pixel(target_camera=target_camera, clip_threshold=clip_threshold, exposure_time=exposure_time)
 
 
 if __name__ == "__main__":
-    CalibrateTargetAcquisition(motor_camera_pairs=[(MotorMount.APODIZER, TargetCamera.SCI)]).start()
+    CalibrateTargetAcquisition(motor_camera_pairs=[(MotorMount.APODIZER, TargetCamera.SCI), (MotorMount.APODIZER, TargetCamera.TA)]).start()
