@@ -43,8 +43,8 @@ class NewportMotorController(MotorController):
                 self.__move_to_nominal(motor_name)
 
         # Update the testbed_state for the FPM and Lyot Stop.
-        self.__update_testbed_state("motor_lyot_stop_x")
-        self.__update_testbed_state("motor_FPM_Y")
+        self.__update_testbed_state("motor_lyot_stop_y")
+        self.__update_testbed_state("motor_FPM_X")
         return myxps
 
     def close(self):
