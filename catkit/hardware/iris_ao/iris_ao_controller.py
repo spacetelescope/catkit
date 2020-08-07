@@ -3,12 +3,10 @@
 import os
 import subprocess
 
-import numpy as np
-
 from catkit.hardware import testbed_state
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 
-from catkit.hardware.iris_ao import util as segmented_dm_util
+from catkit.hardware.iris_ao import util
 
 
 class IrisAoDmController(DeformableMirrorController):
@@ -30,13 +28,12 @@ class IrisAoDmController(DeformableMirrorController):
         self.driver_serial = driver_serial
 
         # For the suprocess call
-        self.disableHardware = disable_hardware
+        self.disable_hardware = disable_hardware
         self.path_to_dm_exe = path_to_dm_exe
         self.full_path_dm_exe = os.path.join(path_to_dm_exe, 'DM_Control.exe')
 
         # Where to write ConfigPTT.ini file that gets read by the C++ code
         self.filename_ptt_dm = filename_ptt_dm
-
 
     def send_data(self, data):
         """
@@ -47,17 +44,16 @@ class IrisAoDmController(DeformableMirrorController):
         """
         # Write to ConfigPTT.ini
         self.log.info("Creating config file: %s", self.filename_ptt_dm)
-        segmented_dm_util.write_ini(data, path=self.filename_ptt_dm, mirror_serial=self.mirror_serial,
+        util.write_ini(data, path=self.filename_ptt_dm, mirror_serial=self.mirror_serial,
                        driver_serial=self.driver_serial)
 
         # Apply the written .ini file to DM
         self.instrument.stdin.write(b'config\n')
         self.instrument.stdin.flush()
 
-
     def _open(self):
         """Open a connection to the IrisAO"""
-        self.instrument = self.instrument_lib.Popen([self.full_path_dm_exe, self.disableHardware],
+        self.instrument = self.instrument_lib.Popen([self.full_path_dm_exe, self.disable_hardware],
                                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                                     stderr=subprocess.PIPE,
                                                     cwd=self.path_to_dm_exe, bufsize=1)
@@ -70,15 +66,13 @@ class IrisAoDmController(DeformableMirrorController):
 
         return self.instrument
 
-
     def zero(self, return_zeros=False):
         """Put zeros on the DM.
 
         :return: If return_zeros=True, return a dictionary of zeros
         """
-        zero_list = segmented_dm_util.create_zero_list(segmented_dm_util.iris_num_segments())
-        zeros = segmented_dm_util.create_dict_from_list(zero_list,
-                                                        segmented_dm_util.iris_pupil_naming())
+        zero_list = util.create_zero_list(util.iris_num_segments())
+        zeros = util.create_dict_from_list(zero_list, util.iris_pupil_naming())
         self.send_data(zeros)
 
         # Update the testbed state
@@ -86,7 +80,6 @@ class IrisAoDmController(DeformableMirrorController):
 
         if return_zeros:
             return zeros
-
 
     def _close(self):
         """Close connection safely."""
@@ -99,7 +92,6 @@ class IrisAoDmController(DeformableMirrorController):
         finally:
             self.instrument = None
             self._close_iris_controller_testbed_state()
-
 
     def apply_shape(self, dm_shape, dm_num=1):
         """
@@ -125,11 +117,9 @@ class IrisAoDmController(DeformableMirrorController):
         # Update the testbed_state.
         self._update_iris_state(dm_shape)
 
-
     def apply_shape_to_both(self, dm1_shape=None, dm2_shape=None):
         """ Method only used by the BostomDmController"""
         raise NotImplementedError("apply_shape_to_both is not implmented for the Iris AO")
-
 
     @staticmethod
     def _update_iris_state(command_object):

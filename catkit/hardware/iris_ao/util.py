@@ -10,27 +10,24 @@ import numpy as np
 from catkit.config import CONFIG_INI
 
 
-def iris_num_segments(dm_config_id='iris_ao'):
-    """Number of segments in your Iris AO"""
+def iris_num_segments(dm_config_id):
+    """Returns the total number of segments in your Iris AO"""
     return CONFIG_INI.getint(dm_config_id, 'total_number_of_segments')
 
-
-def iris_pupil_naming(dm_config_id='iris_ao'):
-    """Naming of the Iris AO pupil starting at the center of the pupil and working
-    outward in a clockwise direction. This is dependent on your IRISAO and the number
-    of segments it has. This module has not yet been tested for the PTT489
-    IrisAO model though it supports up to 163 segments."""
+def iris_pupil_naming(dm_config_id):
+    """Returns the maming of the Iris AO pupil starting at the center of the pupil and working
+    outward in a clockwise direction. This is dependent on your IRISAO and the number of
+    segments it has. This module has not yet been tested for the PTT489 IrisAO model though
+    it supports up to 163 segments."""
     num_segs = iris_num_segments(dm_config_id)
-    seg_names = np.concatenate((np.array([1, 2]), np.flip(np.arange(3, 8)),
-                                np.array([8]), np.flip(np.arange(9, 20)),
-                                np.array([20]), np.flip(np.arange(21, 38)),
-                                np.array([38]), np.flip(np.arange(39, 62)),
-                                np.array([62]), np.flip(np.arange(63, 92)),
-                                np.array([92]), np.flip(np.arange(93, 128)),
-                                np.array([128]), np.flip(np.arange(129, 164))))
-
+    seg_names = np.concatenate((np.array([1, 2]), np.arange(7, 2, -1),
+                                np.array([8]), np.arange(19, 8, -1),
+                                np.array([20]), np.arange(37, 20, -1),
+                                np.array([38]), np.arange(61, 38, -1),
+                                np.array([62]), np.arange(91, 62, -1),
+                                np.array([92]), np.arange(127, 92, -1),
+                                np.array([128]), np.arange(163, 128, -1)))
     return seg_names[:num_segs]
-
 
 def create_dict_from_list(ptt_list, seglist=None):
     """
@@ -38,7 +35,7 @@ def create_dict_from_list(ptt_list, seglist=None):
     and convert to a dictionary
 
     Seglist is a list of equal length with a single value equal to the segment number
-    for the index in the list. If seglist is None, will asssume Iris AO numbering
+    for the index in the list. If seglist is None, will assume Iris AO numbering
 
     :param ptt_list: list, list with length equal to number of segments in the pupil
                   with each entry a tuple of piston, tip, tilt values.
@@ -56,20 +53,18 @@ def create_dict_from_list(ptt_list, seglist=None):
 
     return command_dict
 
-
 def create_zero_list(number_of_segments):
     """
-    Create an list of zeros for the Iris AO
+    Create a list of zeros for the Iris AO
 
     :param number_of_segments: int, the number of segments in your pupil
-    :return: list of zeros the length of the number of total segments in the DM
+    :return: list of tuples with three zeros, the length of the number of total segments in the DM
     """
     return [(0., 0., 0.)] * number_of_segments
 
-
 def write_ini(data, path, dm_config_id='iris_ao', mirror_serial=None, driver_serial=None):
     """
-    Write a new ConfigPTT.ini file containing the command for the Iris AO.
+    Write a new .ini file containing a command for the Iris AO.
 
     :param data: dict, wavefront map in Iris AO format
     :param path: full path incl. filename to save the configfile to
@@ -109,7 +104,6 @@ def write_ini(data, path, dm_config_id='iris_ao', mirror_serial=None, driver_ser
     with open(path, 'w') as configfile:
         config.write(configfile)
 
-
 ## Read commands
 # Functions for reading the .PTT11 file
 def clean_string(line):#filename, raw_line=False):
@@ -118,12 +112,10 @@ def clean_string(line):#filename, raw_line=False):
     """
     return re.sub(r"[\n\t\s]*", "", line)
 
-
 def convert_to_float(string):
     """Convert a string to a float, if possible
     """
     return float(string) if string else 0.0
-
 
 def read_global(path):
     """
@@ -161,7 +153,6 @@ def read_global(path):
 
         else:
             raise Exception("Iris AO file formatting problem, can't process the global line:\n" + raw_line)
-
 
 def read_zernikes(path):
     """
@@ -203,7 +194,6 @@ def read_zernikes(path):
             return zernike_commands
         else:
             return None
-
 
 def read_segments(path):
     """
@@ -248,7 +238,6 @@ def read_segments(path):
         else:
             return None
 
-
 def read_ptt111(path):
     """
     Read the entirety of a PTT111 file
@@ -281,7 +270,6 @@ def read_ptt111(path):
     # No command found in file.
     return None
 
-
 def read_ini(path):
     """
     Read the Iris AO segment PTT parameters from an .ini file into Iris AO style
@@ -307,19 +295,18 @@ def read_ini(path):
 
     return command_dict
 
-
-def read_segment_values(segment_values):
+def read_segment_values(segment_values=None):
     """
     Each of the following formats can be read in. This function takes in
-    any of these three formats and converts it to a dictionary of the form:
-            {seg:(piston, tip, tilt)}
-    With units of : ([um], [mrad], [mrad])
+    any of these three formats and converts it to a list of tuples of the form:
+            [(piston, tip, tilt), ]
+    Where each tuple has units of : ([um], [mrad], [mrad])
 
     See the README for the semented dm for more details.
 
     - .PTT111/.PTT489 file: File format of the segments values coming out of the IrisAO GUI
     - .ini file: File format of segments values that gets sent to the IrisAO controls
-    - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
+    - list of tuples: Same format that gets returned: [(piston, tip, tilt), ]
 
     :param segment_values: str, list. Can be .PTT111, .ini files or a list with piston, tip,
                            tilt values in a tuple for each segment. For the list, the first
@@ -340,8 +327,10 @@ def read_segment_values(segment_values):
             command_dict = read_segments(segment_values)
         elif segment_values.endswith("ini"):
             command_dict = read_ini(segment_values)
-        ptt_list = [*command_dict.values()]
-        segment_names = [*command_dict.keys()]
+        else:
+            raise ValueError("The file given is not supported")
+        ptt_list = list(command_dict.values())
+        segment_names = list(command_dict.keys())
     elif isinstance(segment_values, (np.ndarray, list)):
         ptt_list = segment_values
         segment_names = None
