@@ -4,14 +4,14 @@ If you have an Iris AO segmented DM, congratulations! You are one of only a few.
 
 
 ## Segment numbering and input formats
-IrisAO segmented DMs have a numbering system that puts segment 1 in the center and continues up. and counterclockwise around the DM. See figures for examples of the PTT11 and PTT489 from IrisAO with their IrisAO numbering.
+IrisAO segmented DMs have a numbering system that puts segment 1 in the center and continues up and counterclockwise around the DM. See figures for examples of the PTT111 and PTT489 from IrisAO with their IrisAO numbering.
 
 ![Figure 1: IrisAO PTT111/PTT111L](figures/iris_ao_ptt111.jpg)
 ![Figure 2: IrisAO PTT489](figures/iris_ao_ptt489.jpg)
 
 In creating a command for your aperture on a IrisAO segmented DM, you will need to specify the aperture and segments to be commanded in the config.ini file (see more on that below). That aperture, is what you will be commanding. When loading a custom command, the list of PTT values to be loaded will only be for the segments that you wish to move, however, in native Python numbering such that the first element in your list will be the first segment to be moved, either the center segment or the first segment (at the "top") in the innermost ring. In Python the segment numbering is clockwise. The only time the IrisAO numbering is used is in the native .PTT### files or .ini files.
 
-For example, if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L, you will only be using a subset of segments to build your aperture, when passing in a custom command, your command will be given in the order as seen in Figure 3.
+For example, if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L, you will only be using a subset of segments to build your aperture and will not include the center segment, when passing in a custom command, your command will be given in the order as seen in Figure 3.
 
 ![Figure 3: JWST aperture on a PTT111/PTT111L](figures/jwst_on_iris_ao_ptt111.jpg)
 
@@ -34,7 +34,7 @@ The `catkit` module for the Iris AO expects that you will be passing in one of t
         [ZV: 37, 0, 0, 0]
 
 * *.ini* file: File format of command that gets sent to the IrisAO controls
-* list: Same format that gets returned: [(piston, tip, tilt), ...] (see figure 3 for numbering)
+* list: A list of tuples with three entries for each segment in the aperture in the following form: [(piston, tip, tilt), ...] (see figure 3 for numbering)
 
 Each of these types has to be handled slightly differently, but never fear, we figured that out for you!
 
@@ -49,12 +49,13 @@ Note that catkit.hardware.iris_ao.segmented_dm_command and catkit.hardware.iris_
 
 ### Example:
 If putting *only* the flat map on the Iris AO:
-
+    ```
     from catkit.hardware.iris_ao.segmented_dm_command import load_command
 
     with testbed.segmented_dm() as iris:
         iris_command = load_command(None, flat_map=True, dm_config_id='iris_ao')
         iris.apply_shape(iris_command)
+    ```
 
 
 ## `config.ini` additions
@@ -69,20 +70,20 @@ Important hardware information:
 * `driver_serial`: The driver serial number. This corresponds to a .dcf file.
 
 IrisAO DM information:
-* `total_number_of_segments`: The number of segments in your Iris AO DM (including any non-functioning segments).
-* `active_number_of_segments`: (Optional) The number of segments in your specific pupil (for most, this is less than `total_number_of_segments`).
+* `total_number_of_segments`: The total number of segments in your Iris AO DM hardware (including any non-functioning segments).
+* `active_number_of_segments`: (Optional) The number of segments in your specific pupil. This parameter is only necessary if the number of segments used in the aperture is is less than `total_number_of_segments`.
 * `active_segment_list`: (Optional) This parameter only needs to be provided if `active_number_of_segments` is less than `total_number_of_segments`. This will be a list of the segment numbers associated with the segments that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20 (see figures 1 and 2). For example, if your pupil is centered on segment 3, and you want to command the center segment, and is only one ring, then active_segment_list = [3, 9, 2, 1, 4, 11, 10]
 
 File locations:
-* `flat_file_ini`: The location of the custom flat .ini file for your Iris AO DM.  
+* `flat_file_ini`: The location of the custom flat .ini file for your specific Iris AO DM. Note that this file will likely never be changed by the user.  
 * `config_ptt_file`: The location of the ConfigPTT.ini file which is the file that contains whatever command you want to put on the DM.
 * `path_to_dm_ex`: The path to the directory that houses the DM_Control.exe file
 
 If using segmented_dm_command.PoppySegmentedCommand or segmented_dm_command.DisplayCommand, you will need to include the following parameters:
 * `flat_to_flat_mm`: The flat side to flat side diameter of each segment in units of mm
 * `gap_um`: The size of the gap between segments in units of um
-* `dm_ptt_units`: A list of the units the PTT values are in for the DM.
-* `include_center_segment`: This a boolean value that will indicate if the aperture you are creating includes the center segment. Examples of when this will be "true": LUVOIR B-like aperture. Examples of when this will be "false": JWST-, Keck-, or LUVOIR A-like apertures.
+* `dm_ptt_units`: A list of the units for the PTT that are internal to the DM. For IrisAO DMs, this will be: [um, mrad, mrad]
+* `include_center_segment`: This a boolean value that will indicate if the aperture you are creating includes the center segment for active control. Examples of when this will be "true": LUVOIR B-like aperture. Examples of when this will be "false": JWST-, Keck-, or LUVOIR A-like apertures.
 * `include_outer_ring_corners`: This is a boolean value that will indicate if the corner segments of the outermost ring of your aperture will be used. For example, for LUVIOR A- or B-like apertures, this parameter would be "false", but for a JWST- or Keck-like aperture it would be "true".
 
 
@@ -96,8 +97,7 @@ Each segmented DM from Iris AO was calibrated with a specific driver(s). This ca
 ---
 
 ### Example:
-
-
+    ```
     [iris_ao]
 
     mirror_serial = 'PWA##-##-##-####'
@@ -113,21 +113,25 @@ Each segmented DM from Iris AO was calibrated with a specific driver(s). This ca
     dm_ptt_units = um,mrad,mrad
     include_center_segment = false
     include_outer_ring_corners = true
+    ```
 
 Note that the code expects to find the `DM_Control.exe` file in `path_to_dm_exe`.
 
 
 ## Update your `testbed_state.py` file
-The `iris_ao_controller` will update your `testbed_state.py` file with the current command being applied to the Iris AO. In order to do this, you will need to add the following to your file:
+The `iris_ao_controller` will update your `testbed_state.py` file with the current command being applied to the Iris AO. In order to allow this, you will need to add the following to your file:
 
+    ```
     # IrisAO command object currently being applied.
     iris_command_object = None
+    ```
 
 When there is no command on the the Iris AO, this variable will be changed back to `None`.
 
 ## Update your `testbed.py` file
-You also want to make sure you can open and close your Iris AO like other hardware, as a context manager.
+You also need to make sure you can open and close your Iris AO like other hardware, as a context manager. To do this, add the following block of code (edited as necessary for your testbed) to your `testbed.py` file
 
+    ```
     from catkit.hardware.iris_ao.iris_ao_controller import IrisAoDmController # Iris AO
 
     def segmented_dm_controller():
@@ -151,3 +155,4 @@ You also want to make sure you can open and close your Iris AO like other hardwa
                                     disable_hardware="false",
                                     path_to_dm_exe=path_to_dm_exe,
                                     filename_ptt_dm=filename_ptt_dm)
+      ```
