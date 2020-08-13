@@ -12,6 +12,7 @@ class FlipMotor(ABC):
         self.config_id = config_id
         self.serial = None
         self.motor = self.initialize(*args, **kwargs)
+        self._keep_alive = False
         self.log.info("Opened connection to flip motor " + config_id)
 
     # Implementing context manager.
@@ -19,9 +20,14 @@ class FlipMotor(ABC):
         return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
-        self.close()
-        self.motor = None
-        self.log.info("Safely closed connection to flip motor " + self.config_id)
+        try:
+            if not self._keep_alive:
+                self.close()
+                self.motor = None
+                self.log.info(f"Safely closed connection to flip motor {self.config_id}")
+        finally:
+            # Reset, single use basis only.
+            self._keep_alive = False
 
     # Abstract Methods.
     @abstractmethod
