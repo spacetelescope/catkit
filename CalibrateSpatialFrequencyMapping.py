@@ -12,11 +12,13 @@ from catkit.catkit_types import quantity, units, SinSpecification, FpmPosition, 
 from catkit.hardware.boston.commands import flat_command
 from catkit.hardware.boston.sin_command import sin_command  # noqa: E402
 
-import hicat.util  # noqa: E402
+from hicat import util
 from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import Experiment  # noqa: E402
 from hicat.hardware import testbed  # noqa: E402
 from hicat.hardware.testbed import move_filter
+from hicat.wfc_algorithms import stroke_min
+
 
 def compute_centroid(image):
     """
@@ -31,7 +33,7 @@ def compute_centroid(image):
     return (xg * image).sum() / denom, (yg * image).sum() / denom,
 
 
-def postprocess_images(images, reference_image, direct_image, speckles,
+def postprocess_images(images, reference_image, speckles,
                        reflect_x=False, reflect_y=False, log=None):
     """
     Postprocess images to find the centroid of one of the two injected speckles.  This is done as
@@ -60,7 +62,6 @@ def postprocess_images(images, reference_image, direct_image, speckles,
 
     :param images: array_like, 3D array with images stacked along 3rd dimension. One per injected speckle pair.
     :param reference_image: array_like, coronagraphic image without injected speckles
-    :param direct_image: array_like, direct image without injected speckles.
     :param speckles: list of (fx, fy) pairs in cycles/DM
     :param reflect_x: whether there is a known reflection component in the x direction (across
                       the y axis) that we should account for during postprocessing
@@ -218,7 +219,13 @@ def extract_rotation_and_scale(mapping_matrix, off_diagonal_tol=1e-2, theta_tol=
 class CalibrateSpatialFrequencyMapping(Experiment):
     name = 'Calibrate DM mapping'
 
-    def __init__(self, inner_radius, outer_radius, num_speckle, amplitude=None):
+    def __init__(self, inner_radius, outer_radius, num_speckle, amplitude=None,
+                 file_mode=True,
+                 auto_expose=True,
+                 num_exposures=40,
+                 exposure_time=140000,  # microseconds
+                 raw_skip=0
+                ):
         """
         Measure the matrix that maps spatial frequencies on each DM to pixel locations at the
         detector.  An affine transformation of the form y = Ax + b can be written in terms of an
@@ -257,32 +264,57 @@ class CalibrateSpatialFrequencyMapping(Experiment):
         self.num_speckle = num_speckle
         self.amplitude = amplitude
 
-    def take_image(self, label, fpm_position):
-        saveto_path = hicat.util.create_data_path(initial_path=self.output_path,
-                                                  suffix=label)
-        if fpm_position == FpmPosition.coron:
-            exposure_time = quantity(50, units.millisecond)
-            move_filter(wavelength=640, nd='clear_1')
-            exposure_set_name = 'coron'
-        elif fpm_position == FpmPosition.direct:
-            exposure_time = quantity(1, units.millisecond)
-            move_filter(wavelength=640, nd='9_percent')
-            exposure_set_name = 'direct'
+        # Parameters for imaging
+        self.file_mode = file_mode
+        self.auto_expose = auto_expose
+        self.num_exposures = num_exposures
+        self.exposure_time = exposure_time
+        self.raw_skip = raw_skip
 
-        return testbed.run_hicat_imaging(exposure_time=exposure_time,
-                                         num_exposures=1 if sim else 40,
-                                         fpm_position=fpm_position,
-                                         lyot_stop_position=LyotStopPosition.in_beam,
-                                         file_mode=True,
-                                         raw_skip=False,
-                                         path=saveto_path,
-                                         auto_expose=True,
-                                         exposure_set_name=exposure_set_name,
-                                         # TODO: this is not always the right centering
-                                         centering=ImageCentering.satellite_spots,
-                                         auto_exposure_mask_size=5.5,
-                                         resume=False,
-                                         pipeline=True)
+
+        # Additional setup items
+        self.suffix = 'dm_spatial_frequency_calibration'
+        self.output_path = util.create_data_path(suffix=self.suffix)
+        # These don't affect the imaging wavelength at all; they are just passed into the
+        # take_exposure_hicat() function from stroke_min.py, which uses it to generate
+        # directory names
+        if CONFIG_INI['testbed']['laser_source'] == 'light_source_assembly':
+            self.wavelength = 640  # center wavelength of LSA source, nm
+        else:
+            self.wavelength = 638  # center wavelength of MCLS1 source, nm
+
+    def take_exposure(self,
+                      devices,
+                      initial_path,
+                      suffix='',
+                      dm1_actuators=None,
+                      dm2_actuators=None):
+        """
+        Take an exposure on HiCAT.
+
+        :param devices: handles to HiCAT hardware
+        :param initial_path: root path on disk where raw data is saved
+        :param suffix: string, appends this to the end of the timestamp, passed to take_exposure_hicat()
+        :param dm1_actuators: array, DM1 actuator vector, in nm, passed to take_exposure_hicat()
+        :param dm2_actuators: array, DM2 actuator vector, in nm, passed to take_exposure_hicat()
+        :return: numpy array and header
+        """
+
+        image, header = stroke_min.take_exposure_hicat(
+            dm1_actuators,
+            dm2_actuators,
+            devices,
+            wavelength=self.wavelength,
+            exposure_type='coron',
+            exposure_time=self.exposure_time,
+            auto_expose=self.auto_expose,
+            initial_path=initial_path,
+            num_exposures=1 if sim else self.num_exposures,
+            suffix=suffix,
+            file_mode=self.file_mode,
+            raw_skip=self.raw_skip)
+
+        return image, header
 
     def experiment(self):
         self.log.info(f"""Running DM spatial frequency calibration with following parameters:
@@ -302,16 +334,40 @@ class CalibrateSpatialFrequencyMapping(Experiment):
 
         # Generate (fx, fy) spatial frequency pairs
         speckles = [(R * np.cos(theta), R * np.sin(theta)) for R, theta in zip(radii, thetas)]
-        with testbed.dm_controller() as dm:
-            # Take baseline image with DMs flat
-            dm.apply_shape_to_both(
-                flat_command(bias=False, flat_map=True),
-                flat_command(bias=False, flat_map=True))
 
-            # take_image returns a list of images, and a header.  We want the only image in that
-            # list.
-            reference_image = self.take_image('reference_image', FpmPosition.coron)[0][0]
-            direct_image = self.take_image('direct_image', FpmPosition.direct)[0][0]
+        with testbed.laser_source() as laser, \
+                testbed.dm_controller() as dm, \
+                testbed.motor_controller() as motor_controller, \
+                testbed.apodizer_picomotor_mount() as apodizer_picomotor_mount, \
+                testbed.quadcell_picomotor_mount() as quadcell_picomotor_mount, \
+                testbed.beam_dump() as beam_dump, \
+                testbed.imaging_camera() as cam, \
+                testbed.pupil_camera() as pupilcam, \
+                testbed.temp_sensor(config_id="aux_temperature_sensor") as temp_sensor, \
+                testbed.target_acquisition_camera() as ta_cam, \
+                testbed.color_wheel() as color_wheel, \
+                testbed.nd_wheel() as nd_wheel:
+
+            devices = {'laser': laser,
+                       'dm': dm,
+                       'motor_controller': motor_controller,
+                       'beam_dump': beam_dump,
+                       'imaging_camera': cam,
+                       'pupil_camera': pupilcam,
+                       'temp_sensor': temp_sensor,
+                       'color_wheel': color_wheel,
+                       'nd_wheel': nd_wheel}
+
+            num_actuators = stroke_min.dm_mask.sum()
+            flat = np.zeros(num_actuators)  # Flat DM command
+
+            # Reference image with no injected speckles
+            reference_image, _ = self.take_exposure(
+                devices,
+                initial_path=os.path.join(self.output_path, 'reference'),
+                dm1_actuators=flat,
+                dm2_actuators=flat)
+            reference_image = reference_image.shaped
             results = np.zeros((2, 3), dtype=np.float64)  # 2 DMs x 3 parameters
 
             # Apply sines to one DM at a time
@@ -327,11 +383,8 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                 else:
                     amplitude = CONFIG_INI.getfloat('boston_kilo952', f'dm{dm_num}_ideal_poke')
 
-                # When we put a sine wave on one of the DMs, flatten the other one
-                dm_flat = 2 if dm_num == 1 else 1
-
                 for n, (R, theta) in enumerate(zip(radii, thetas)):
-                    image = 0.
+                    total_image = 0.
                     # Note: in a previous version of this script, I injected both a positive and
                     # a negative speckle and then averaged the two images.  This helps to reject
                     # some of the coherent interference between the injected speckle and the
@@ -343,23 +396,20 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                     for sign in [1]:
                         self.log.info(f"Applying sine wave on DM{dm_num} at angle {theta} with "
                                       f"{R} cycles/DM.")
-                        sin_specification = SinSpecification(
-                            theta * 180 / np.pi,
-                            R, quantity(sign * amplitude, units.nanometer), 0)
-                        sin_command_object = sin_command(sin_specification, flat_map=True, dm_num=dm_num)
-                        flat_command_object = flat_command(bias=False, flat_map=True, dm_num=dm_flat)
+                        sine = sign * amplitude * np.sin(2 * np.pi * R * (
+                                np.cos(theta) * stroke_min.actuator_grid.x +
+                                np.sin(theta) * stroke_min.actuator_grid.y))[stroke_min.dm_mask]
 
-                        dm.apply_shape(sin_command_object, dm_num=dm_num)
-                        dm.apply_shape(flat_command_object, dm_num=dm_flat)
-
-                        label = f"dm{dm_num}_cycle_{R}_ang_{theta}"
-                        image += self.take_image(label, FpmPosition.coron)[0][0]
-
-                    images[..., n] = image
+                        initial_path = os.path.join(self.output_path,
+                                                    f"dm{dm_num}_cycle_{R:0.3f}_ang_{theta:0.3f}")
+                        image, _ = self.take_exposure(devices, initial_path=initial_path,
+                                                      dm1_actuators=sine if dm_num == 1 else flat,
+                                                      dm2_actuators=sine if dm_num == 2 else flat)
+                        total_image += image.shaped
+                    images[..., n] = total_image
 
                 centroids, pipeline_images = postprocess_images(images,
                                                                 reference_image,
-                                                                direct_image,
                                                                 speckles,
                                                                 reflect_x,
                                                                 reflect_y,
