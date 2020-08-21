@@ -129,6 +129,13 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 # self.wavelengths.append(wavelen)
 
                 self.jacobians[wavelength] = hcipy.read_fits(self.jacobian_filenames[wavelength])
+
+                jac_hdr = fits.getheader((self.jacobian_filenames[wavelength]))
+                if 'CRN_MODE' in jac_hdr:
+                    if jac_hdr['CRN_MODE'] != stroke_min.current_mode:
+                        raise RuntimeError(f"This jacobian file is for mode={jac_hdr['CRN_MODE']} but the system is"
+                                           f" configured for mode {stroke_min.current_mode}: "
+                                           f"filename {self.jacobian_filenames[wavelength]}")
             except Exception as e:
                 raise RuntimeError("Can't read Jacobian from {}.".format(self.jacobian_filenames[wavelength])) from e
 
