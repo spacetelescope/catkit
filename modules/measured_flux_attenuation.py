@@ -72,7 +72,7 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
             plt.ylim(sources['ycentroid'] - fwhm * 2, sources['ycentroid'] + fwhm * 2)
             plt.xlim(sources['xcentroid'] - fwhm * 2, sources['xcentroid'] + fwhm * 2)
 
-        im = plt.imshow(data, norm=LogNorm())
+        im = plt.imshow(data, norm=LogNorm(vmax=data.max(), vmin=data.max()/1e5))
         apertures.plot(color='red', lw=1.5, alpha=1)
 
         cbar_ax = fig.add_axes([0.9, 0.125, 0.05, 0.755])
