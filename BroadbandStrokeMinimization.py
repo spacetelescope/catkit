@@ -490,8 +490,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                                 mean_contrast_probe[wavelength] = np.mean(probe_examples[wavelength][self.dark_zone])
 
                                 if self.autoscale_e_field:
-                                    # automatically scale the estimated E field to match the prior image contrast
-                                    expected_contrast = self.mean_contrasts_image[-1]
+                                    # automatically scale the estimated E field to match the prior image contrast, at this wavelength
+                                    expected_contrast = np.mean(self.images_before[wavelength][self.dark_zone])
                                     estimated_contrast = np.mean(np.abs(E_estimateds[wavelength][self.dark_zone]) ** 2)
                                     contrast_ratio = expected_contrast/estimated_contrast
                                     self.log.info("Scaling estimated e field by {} to match image contrast ".format(np.sqrt(contrast_ratio)))
