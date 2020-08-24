@@ -94,7 +94,7 @@ class IrisAoDmController(DeformableMirrorController):
         return self.instrument
 
     def zero(self, return_zeros=False):
-        """Put zeros on the DM. This does not in general correspond to a flattened DM.
+        """Put zeros on the DM. This does not correspond to a flattened DM.
 
         :return: If return_zeros=True, return a dictionary of zeros
         """
