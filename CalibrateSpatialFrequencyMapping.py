@@ -18,6 +18,7 @@ from hicat.experiments.Experiment import Experiment  # noqa: E402
 from hicat.hardware import testbed  # noqa: E402
 from hicat.hardware.testbed import move_filter
 from hicat.wfc_algorithms import stroke_min
+from astropy.io import ascii
 
 
 def compute_centroid(image):
@@ -414,6 +415,19 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                                                                 reflect_x,
                                                                 reflect_y,
                                                                 self.log)
+
+                results_table = {
+                    'R [cycles/DM]': radii,
+                    'theta [rad]': thetas,
+                    'fx [cycles/DM]': radii * np.cos(thetas),
+                    'fy [cycles/DM]': radii * np.sin(thetas),
+                    'cx [pix]': centroids[0, :],
+                    'cy [pix]': centroids[1, :]
+                }
+
+                ascii.write(results_table, os.path.join(self.output_path, f'results_table_dm'
+                                                                          f'{dm_num}.csv'),
+                            format='csv')
                 mapping_matrix = reconstruct_mapping_matrix(centroids, speckles)
                 fits.writeto(os.path.join(self.output_path, f'mapping_matrix_dm{dm_num}.fits'),
                              mapping_matrix)
