@@ -770,7 +770,7 @@ class StrokeMinimization(Experiment):
                 iter_dirs.sort()
                 # Get the penultimate iteration; the last one may not have completed yet.
                 iter_to_restore = iter_dirs[-2]
-                dir_to_restore = glob.glob(os.path.join(iter_to_restore, '*_coron', 'coron', 'dm_command'))[0]
+                dir_to_restore = glob.glob(os.path.join(iter_to_restore, 'coron_*', 'dm_command'))[0]
                 self.log.info("Retrieving DM settings from " + dir_to_restore)
                 break
 
