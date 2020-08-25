@@ -85,7 +85,9 @@ class ZwoCamera(Camera):
         # Passing the initial_sleep and poll values prevent crashes. DO NOT REMOVE!!!
         poll = quantity(0.1, units.second)
         try:
-            image = self.camera.capture(initial_sleep=initial_sleep.to(units.second).magnitude, poll=poll.magnitude)
+            # FIXME : AHHHH this is an ugly hack is there a better option???
+            initial_sleep = int(self._strip_units(initial_sleep)/1000)
+            image = self.camera.capture(initial_sleep=initial_sleep, poll=poll.magnitude)
         except zwoasi.ZWO_CaptureError as error:
             # Maps to:
             # https://github.com/stevemarple/python-zwoasi/blob/1aadf7924dd1cb3b8587d97689d82cd5f1a0b5f6/zwoasi/__init__.py#L889-L893
@@ -166,9 +168,9 @@ class ZwoCamera(Camera):
         """
 
         # Convert exposure time to contain units if not already a Pint quantity.
+        exposure_time = self._strip_units(exposure_time)
         if type(exposure_time) is int or type(exposure_time) is float:
             exposure_time = quantity(exposure_time, units.microsecond)
-
         # Set control values on the ZWO camera.
         # WARNING! This is the only time that the exposure time is set.
         self.__setup_control_values(exposure_time, subarray_x=subarray_x, subarray_y=subarray_y, width=width,
@@ -195,6 +197,17 @@ class ZwoCamera(Camera):
 
         return img_list, meta_data
 
+    def _strip_units(self, nested_quantity):
+
+        n = 0
+        has_units = 'magnitude' in dir(nested_quantity)
+        stripped_quantity = nested_quantity
+        while has_units and n < 10:
+            stripped_quantity = stripped_quantity.magnitude
+            has_units = 'magnitude' in dir(stripped_quantity)
+            n += 1
+        return stripped_quantity
+
     def flash_id(self, new_id):
         """
         Flashes the camera memory to append a string at the end of the camera name.
@@ -220,6 +233,8 @@ class ZwoCamera(Camera):
         # Convert exposure time to contain units if not already a Pint quantity.
         if type(exposure_time) is int or type(exposure_time) is float:
             exposure_time = quantity(exposure_time, units.microsecond)
+        elif exposure_time.units is units.dimensionless:
+            exposure_time = quantity(exposure_time.magnitude, units.microsecond)
         subarray_x = subarray_x if subarray_x is not None else CONFIG_INI.getint(self.config_id, 'subarray_x')
         subarray_y = subarray_y if subarray_y is not None else CONFIG_INI.getint(self.config_id, 'subarray_y')
         width = width if width is not None else CONFIG_INI.getint(self.config_id, 'width')
@@ -234,7 +249,8 @@ class ZwoCamera(Camera):
 
         # Set up our custom control values.
         self.camera.set_control_value(zwoasi.ASI_GAIN, gain)
-        self.camera.set_control_value(zwoasi.ASI_EXPOSURE, int(exposure_time.to(units.microsecond).magnitude))
+        stripped_exposure_time = int(self._strip_units(exposure_time))
+        self.camera.set_control_value(zwoasi.ASI_EXPOSURE, stripped_exposure_time)
 
         # Store the camera's detector shape.
         cam_info = self.camera.get_camera_property()
