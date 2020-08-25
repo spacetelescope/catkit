@@ -419,8 +419,8 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                     'cy [pix]': centroids[1, :]
                 }
 
-                ascii.write(results_table, os.path.join(self.output_path, f'results_table_dm'
-                                                                          f'{dm_num}.csv'),
+                ascii.write(results_table,
+                            os.path.join(self.output_path, f'results_table_dm{dm_num}.csv'),
                             format='csv')
                 mapping_matrix = reconstruct_mapping_matrix(centroids, speckles)
                 fits.writeto(os.path.join(self.output_path, f'mapping_matrix_dm{dm_num}.fits'),
