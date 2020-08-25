@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import numpy as np
 import hicat.util
+import logging
 
 
 def mtf_sampling(dirpath, im_path, threshold):
@@ -22,10 +23,12 @@ def mtf_sampling(dirpath, im_path, threshold):
 	    Output
 	        sampling: float, the MTF sampling in pixels per lambda/D
 	"""
+	log = logging.getLogger(__name__)
 	mtf_dir = hicat.util.create_data_path(dirpath, suffix='mtf_diagnostics')
 	os.makedirs(mtf_dir, exist_ok=True)
 
 	psf = fits.getdata(im_path)
+	log.info(f"Loaded image data from {im_path}")
 	full_imsize = psf.shape[1]
 	psf_sub = psf[int(full_imsize/4):int(3*full_imsize/4), int(full_imsize/4):int(3*full_imsize/4)]
 	imsize = psf_sub.shape[1]
@@ -54,6 +57,8 @@ def mtf_sampling(dirpath, im_path, threshold):
 	bkgr = np.where(mtf < (med + threshold*noise))
 
 	axes[0].set_xlabel(f"Estimated background noise std dev: {noise:.4g}" )
+	log.info(f"Estimated background noise std dev: {noise:.4g}")
+
 	mask[bkgr] = 0
 
 	# draw contour in alternating colors to ensure reasonable contrast
@@ -68,11 +73,21 @@ def mtf_sampling(dirpath, im_path, threshold):
 	axes[2].imshow(mtf_masked, norm=norm)
 	axes[2].set_title('Modulation transfer function (MTF) Masked')
 
+	log.info(f"Masked using threshold: {threshold:.4g}")
+
 	area = np.count_nonzero(mtf_masked)
+	log.info(f"Area in mask: {area:.4g} pixels")
+
+	if area == 0:
+		raise RuntimeError("MTF masking error; no valid pixels after masking. Check data or adjust threshold.")
+
 	cutoff_eq = np.sqrt(area/np.pi)
 	sampling = float(imsize) / float(cutoff_eq)
 
 	fig.suptitle(f"MTF Measurement: {dirpath}\n\nSampling = {sampling:.4f}")
+	log.info(f"Sampling: {sampling:.4f}")
+
+	fig.text(0.05, 0.05, f"Input image data: {im_path}")
 
 	output_pdf = os.path.join(mtf_dir, 'mtf_results.pdf')
 	plt.savefig(output_pdf)

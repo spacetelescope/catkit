@@ -66,12 +66,12 @@ class CalculateSampling(Experiment):
 
         bin_file_path = header["PATH"]
         self.log.info("Binned file: "+bin_file_path)
-        cal_file_path = bin_file_path.replace('pipeline_bin', 'pipeline_cal')
-        self.log.info("Using calibrated file: "+bin_file_path)
+        cal_file_path = bin_file_path.replace('_bin.fits', '_cal.fits')
+        self.log.info("Using calibrated file: "+cal_file_path)
 
         pixel_sampling = mtf_sampling(self.output_path, cal_file_path, self.mtf_snr_threshold)
         self.log.info("pixel sampling in focused image = {}".format(pixel_sampling))
 
         hicat.calibration_util.record_calibration_measurement(f"Pixel Sampling from MTF",
-                                                              pixel_sampling, "pixels"
-                                                              f"MTF SNR threshold={self.mtf_snr_threshold}" )
+                                                              pixel_sampling, "pixels",
+                                                              comment=f"MTF SNR threshold={self.mtf_snr_threshold}" )
