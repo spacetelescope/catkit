@@ -18,6 +18,7 @@ class Experiment(ABC):
     log = logging.getLogger(__name__)
     interval = CONFIG_INI.getint("safety", "check_interval")
     list_of_safety_tests = [UpsSafetyTest, HumidityTemperatureTest]#, WeatherWarningTest()]
+    safety_tests =[]
 
     def __init__(self, output_path=None, suffix=None):
         """ Initialize attributes common to all Experiments.
@@ -34,9 +35,10 @@ class Experiment(ABC):
         self.output_path = output_path
         self.suffix = suffix
 
-        self.safety_tests = [] #
-        for test in self.list_of_safety_tests:
-            self.safety_tests.append(test())
+        #self.safety_tests = [] #
+        if self.safety_tests is []:
+            for test in self.list_of_safety_tests:
+                self.safety_tests.append(test())
 
     @abstractmethod
     def experiment(self):
