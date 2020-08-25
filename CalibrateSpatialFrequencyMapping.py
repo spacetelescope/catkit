@@ -225,7 +225,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                  auto_expose=True,
                  num_exposures=40,
                  exposure_time=140000,  # microseconds
-                 raw_skip=0
+                 raw_skip=None
                 ):
         """
         Measure the matrix that maps spatial frequencies on each DM to pixel locations at the
@@ -270,7 +270,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
         self.auto_expose = auto_expose
         self.num_exposures = num_exposures
         self.exposure_time = exposure_time
-        self.raw_skip = raw_skip
+        self.raw_skip = raw_skip if raw_skip is not None else num_exposures+1
 
 
         # Additional setup items
@@ -310,10 +310,11 @@ class CalibrateSpatialFrequencyMapping(Experiment):
             exposure_time=self.exposure_time,
             auto_expose=self.auto_expose,
             initial_path=initial_path,
-            num_exposures=1 if sim else self.num_exposures,
+            num_exposures=self.num_exposures,
             suffix=suffix,
             file_mode=self.file_mode,
-            raw_skip=self.raw_skip)
+            raw_skip=self.raw_skip,
+            return_binned_image=False)
 
         return image, header
 
