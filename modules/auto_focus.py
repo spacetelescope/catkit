@@ -13,6 +13,8 @@ import numpy as np
 from catkit.hardware.boston.commands import flat_command
 import hicat.util
 from hicat.hardware import testbed
+import hicat.calibration_util
+
 from catkit.catkit_types import *
 from hicat.config import CONFIG_INI
 
@@ -156,6 +158,7 @@ def auto_focus_mtf(filePath, threshold):
     best_foc = np.round(foc_ideal, 2)
 
     print('Best focus is at ' + str(best_foc) + 'mm')
+    hicat.calibration_util.record_calibration_measurement("Autofocus", best_foc, 'mm', filePath, f"threshold={threshold}")
 
     # Plot focus fit
     plt.clf()

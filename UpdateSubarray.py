@@ -95,3 +95,11 @@ class UpdateSubarray(Experiment):
         print("centroid: " + str(coords))
         print("subarray_x = " + str(subarray_x - offset_x))
         print("subarray_y = " + str(subarray_y - offset_y))
+
+        result = (subarray_x - offset_x, subarray_y - offset_y)
+
+        for i, ax in enumerate(['x', 'y']):
+            hicat.calibration_util.record_calibration_measurement(f"Subarray {ax}",
+                                                                  result[i],
+                                                                  'pixel')
+
