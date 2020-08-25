@@ -6,6 +6,7 @@ from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import Experiment
 from hicat.experiments.modules.mtf_sampling import mtf_sampling
 from hicat.hardware import testbed
+import hicat.calibration_util
 
 
 class CalculateSampling(Experiment):
@@ -20,7 +21,7 @@ class CalculateSampling(Experiment):
                  output_path=None,
                  camera_type="imaging_camera",
                  suffix="mtf_calibration",
-                 mtf_snr_threshold=100,
+                 mtf_snr_threshold=None,
                  **kwargs):
         super().__init__(output_path=output_path, suffix=suffix)
 
@@ -29,6 +30,9 @@ class CalculateSampling(Experiment):
         self.exposure_time = exposure_time
         self.num_exposures = num_exposures
         self.camera_type = camera_type
+
+        if mtf_snr_threshold is None:
+            mtf_snr_threshold = CONFIG_INI.getint("calibration", "sampling_mtf_snr_thrshold")
         self.mtf_snr_threshold = mtf_snr_threshold
         self.kwargs = kwargs
 
@@ -67,3 +71,7 @@ class CalculateSampling(Experiment):
 
         pixel_sampling = mtf_sampling(self.output_path, cal_file_path, self.mtf_snr_threshold)
         self.log.info("pixel sampling in focused image = {}".format(pixel_sampling))
+
+        hicat.calibration_util.record_calibration_measurement(f"Pixel Sampling from MTF",
+                                                              pixel_sampling, "pixels"
+                                                              f"MTF SNR threshold={self.mtf_snr_threshold}" )

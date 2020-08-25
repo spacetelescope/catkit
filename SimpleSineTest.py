@@ -25,8 +25,7 @@ class SimpleSineTest(Experiment):
     """
     def __init__(self, cycles, orientation_angles, phase_shifts, exposure_time=None, num_exposures=20):
         super().__init__()
-        self.name = 'Sine wave tests for DM alignment'
-        self.suffix = 'sine_wave_dm_alignment_tests'
+        self.name = 'Sine wave DM alignment tests'
         self.cycles = cycles
         self.orientation_angles = orientation_angles
         self.phase_shifts = phase_shifts
@@ -58,7 +57,7 @@ class SimpleSineTest(Experiment):
                                       fpm_position=FpmPosition.coron,
                                       lyot_stop_position=LyotStopPosition.in_beam,
                                       file_mode=True,
-                                      raw_skip=False,
+                                      raw_skip=self.num_exposures+1,
                                       path=saveto_path,
                                       exposure_set_name='coron',
                                       filename='dms_flat',
@@ -104,7 +103,7 @@ class SimpleSineTest(Experiment):
                                           fpm_position=FpmPosition.coron,
                                           lyot_stop_position=LyotStopPosition.in_beam,
                                           file_mode=True,
-                                          raw_skip=False,
+                                          raw_skip=self.num_exposures + 1,
                                           path=saveto_path,
                                           exposure_set_name='coron',
                                           filename=sin_file_name_dm1,
@@ -113,3 +112,9 @@ class SimpleSineTest(Experiment):
                                           auto_exposure_mask_size=5.5,
                                           resume=False,
                                           pipeline=True)
+            # Eventually we should extract and record some of the photometry from here, as opposed to measuring that
+            # only later in the plot script. For now, just record the existence of this dataset into the calibration DB
+            # to make it easier to later script the analysis thereof.
+            hicat.calibration_util.record_calibration_measurement(f"Sine wave DM alignment data",
+                                                                  -1,
+                                                                  'TBD')

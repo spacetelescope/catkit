@@ -3,6 +3,7 @@ import numpy as np
 
 from hicat.experiments.Experiment import Experiment
 from hicat.experiments.modules import auto_focus
+from hicat.config import CONFIG_INI
 from catkit.catkit_types import *
 
 
@@ -38,6 +39,10 @@ class AutoFocus(Experiment):
         self.camera_type = camera_type
         self.mtf_snr_threshold = mtf_snr_threshold
         self.kwargs = kwargs
+
+        if 'raw_skip' not in kwargs:
+            # Only save 1 representative raw image per position, not all of them
+            kwargs['raw_skip'] = self.num_exposures + 1
 
     def experiment(self):
         output_path = auto_focus.take_auto_focus_data(self.bias,

@@ -12,9 +12,15 @@ from catkit.catkit_types import FpmPosition
 class AlignLyotStop(Experiment):
     """ Class to run the Lyot Stop Alignment as an experiment. """
 
-    def __init__(self, fpm_in=True):
+    def __init__(self, fpm_in=True, inject_test_offset=False):
+        """
+
+        :param fpm_in: bool, whether to do the alignment with FPM in or out.
+        :param inject_test_offset: bool, whether to inject an intentional misalignment to test re-alignment.
+        """
         self.name = "Independent Lyot Stop Alignment Experiment"
         self.fpm_position = FpmPosition.coron if fpm_in else FpmPosition.direct
+        self.inject_test_offset=inject_test_offset
         super().__init__()
 
     def experiment(self):
@@ -33,7 +39,7 @@ class AlignLyotStop(Experiment):
             lyot_stop_controller = LyotStopAlignment(ls_align_devices,
                                                      output_path_root=self.output_path,
                                                      calculate_pixel_scale=True)
-            lyot_stop_controller.iterative_align_lyot_stop(inject_test_offset=True)
+            lyot_stop_controller.iterative_align_lyot_stop(inject_test_offset=self.inject_test_offset)
 
             self.log.info(f"LS Alignment runtime: {(time.time() - start_time)/60:.3}mins")
 
