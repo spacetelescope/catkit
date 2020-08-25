@@ -1,7 +1,6 @@
 from astropy.io import fits
 import numpy as np
 import logging
-import os
 import zwoasi
 import sys
 
@@ -218,6 +217,9 @@ class ZwoCamera(Camera):
         """Applies control values found in the config.ini unless overrides are passed in, and does error checking."""
 
         # Load values from config.ini into variables, and override with keyword args when applicable.
+        # Convert exposure time to contain units if not already a Pint quantity.
+        if type(exposure_time) is int or type(exposure_time) is float:
+            exposure_time = quantity(exposure_time, units.microsecond)
         subarray_x = subarray_x if subarray_x is not None else CONFIG_INI.getint(self.config_id, 'subarray_x')
         subarray_y = subarray_y if subarray_y is not None else CONFIG_INI.getint(self.config_id, 'subarray_y')
         width = width if width is not None else CONFIG_INI.getint(self.config_id, 'width')
