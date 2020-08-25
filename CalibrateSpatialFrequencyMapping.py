@@ -1,8 +1,5 @@
 # flake8: noqa: E402
 import os
-import hicat.simulators
-sim = hicat.simulators.auto_enable_sim()
-
 import numpy as np
 from skimage.feature import register_translation  # WARNING! Deprecated in skimage v0.17
 from scipy.linalg import polar
