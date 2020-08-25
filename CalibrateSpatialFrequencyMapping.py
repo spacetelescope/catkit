@@ -1,21 +1,17 @@
 # flake8: noqa: E402
 import os
+
 import numpy as np
-from skimage.feature import register_translation  # WARNING! Deprecated in skimage v0.17
-from scipy.linalg import polar
+from astropy.io import ascii
 from astropy.io import fits
-from catkit.catkit_types import quantity, units, SinSpecification, FpmPosition, LyotStopPosition, \
-    ImageCentering  # noqa: E402
-from catkit.hardware.boston.commands import flat_command
-from catkit.hardware.boston.sin_command import sin_command  # noqa: E402
+from scipy.linalg import polar
+from skimage.feature import register_translation  # WARNING! Deprecated in skimage v0.17
 
 from hicat import util
 from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import Experiment  # noqa: E402
 from hicat.hardware import testbed  # noqa: E402
-from hicat.hardware.testbed import move_filter
 from hicat.wfc_algorithms import stroke_min
-from astropy.io import ascii
 
 
 def compute_centroid(image):
