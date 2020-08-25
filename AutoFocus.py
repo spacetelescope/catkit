@@ -14,13 +14,22 @@ class AutoFocus(Experiment):
                  bias=False,
                  flat_map=True,
                  exposure_time=quantity(250, units.microsecond),
-                 num_exposures=500,
-                 position_list=np.arange(10.0, 16.0, step=0.1),
+                 num_exposures=20,
+                 position_list=None,
                  output_path=None,
                  camera_type="imaging_camera",
-                 mtf_snr_threshold=100,
+                 mtf_snr_threshold=None,
                  **kwargs):
         super(AutoFocus, self).__init__(output_path=output_path, **kwargs)
+
+        if position_list is None:
+            start_pos = CONFIG_INI.getfloat("calibration", "auto_focus_start_position")
+            end_pos = CONFIG_INI.getfloat("calibration", "auto_focus_end_position")
+            step_size = CONFIG_INI.getfloat("calibration", "auto_focus_position_step_size")
+            position_list = np.arange(start_pos, end_pos, step_size)
+        if mtf_snr_threshold is None:
+            mtf_snr_threshold = CONFIG_INI.getint("calibration", "auto_focus_mtf_snr_thrshold")
+
         self.bias = bias
         self.flat_map = flat_map
         self.exposure_time = exposure_time
