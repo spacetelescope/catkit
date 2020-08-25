@@ -73,13 +73,13 @@ def postprocess_images(images, reference_image, speckles,
     # Pixel coordinate axes
     row = np.arange(-shape[0] // 2, shape[0] // 2)
     col = np.arange(-shape[1] // 2, shape[1] // 2)
-    xg, yg = np.meshgrid(col, row)
+    xgrid, ygrid = np.meshgrid(col, row)
 
     if reflect_x:
-        xg = np.fliplr(xg)
+        xgrid = np.fliplr(xgrid)
 
     if reflect_y:
-        yg = np.flipud(yg)
+        ygrid = np.flipud(ygrid)
 
     centroids = np.zeros((2, len(speckles)))
     pipeline_images = np.zeros((len(speckles), 4, *shape))
@@ -91,8 +91,8 @@ def postprocess_images(images, reference_image, speckles,
         difference = image - reference_image
 
         # Split the image into halves, each containing one of the two injected speckles
-        pos = difference * (fx * xg + fy * yg > 0)
-        neg = difference * (fx * xg + fy * yg < 0)
+        pos = difference * (fx * xgrid + fy * ygrid > 0)
+        neg = difference * (fx * xgrid + fy * ygrid < 0)
 
         # Cross-correlate the two halves to find the separation distance and direction.  This is
         # independent of the global centering of the image, so it is more robust to image jitter
