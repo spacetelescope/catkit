@@ -14,16 +14,13 @@ from hicat.hardware.testbed import move_filter
 
 class TargetAcquisitionExperiment(Experiment):
 
-    name = "independent_target_acquisition_experiment"
+    name = "Independent Target_Acquisition Experiment"
 
     def __init__(self, *args, extensions=[], num_iterations=1, **kwargs):
         # Initialize output path and logging
         self.extensions = extensions
         self.num_iterations = num_iterations
-        suffix = self.name
-        output_path = hicat.util.create_data_path(suffix=suffix)
-        super().__init__(output_path=output_path, suffix=suffix)
-        hicat.util.setup_hicat_logging(self.output_path, self.suffix)
+        super().__init__()
         self.log.info(f"LOGGING: {self.output_path}  {self.suffix}")
         self.args = args
         self.kwargs = kwargs
