@@ -11,14 +11,29 @@ from catkit.config import CONFIG_INI
 
 
 def iris_num_segments(dm_config_id):
-    """Returns the total number of segments in your Iris AO"""
+    """
+    Returns the total number of segments in your Iris AO
+
+    :param dm_config_id: str, name of the section in the config_ini file where information
+                         regarding the segmented DM can be found.
+    :return: int, total number of segments in your deformable mirror
+    """
     return CONFIG_INI.getint(dm_config_id, 'total_number_of_segments')
 
 def iris_pupil_naming(dm_config_id):
-    """Returns the maming of the Iris AO pupil starting at the center of the pupil and working
+    """
+    Returns the maming of the Iris AO pupil starting at the center of the pupil and working
     outward in a clockwise direction. This is dependent on your IRISAO and the number of
-    segments it has. This module has not yet been tested for the PTT489 IrisAO model though
-    it supports up to 163 segments."""
+    segments it has. This module has not yet been tested for the PTT489 IrisAO model but
+    it supports up to 163 segments.
+
+    :param dm_config_id: str, name of the section in the config_ini file where information
+                         regarding the segmented DM can be found.
+    :return: list, numerical segment names assigned by IrisAO re-ordered so that they
+             are listed in order of traveling clockwise when looking in the entrance pupil
+             at the DM
+
+    """
     num_segs = iris_num_segments(dm_config_id)
     seg_names = np.concatenate((np.array([1, 2]), np.arange(7, 2, -1),
                                 np.array([8]), np.arange(19, 8, -1),
@@ -41,7 +56,6 @@ def create_dict_from_list(ptt_list, seglist=None):
                   with each entry a tuple of piston, tip, tilt values.
     :param seglist: list, list of segment numbers to grab from the list where the segment
                     number in the list is given by the index of the tuple
-
     :return: dict, command in the form of a dictionary of the form
              {seg: (piston, tip, tilt)}
     """
@@ -67,7 +81,9 @@ def write_ini(data, path, dm_config_id, mirror_serial=None, driver_serial=None):
     Write a new .ini file containing a command for the Iris AO.
 
     :param data: dict, wavefront map in Iris AO format
-    :param path: full path incl. filename to save the configfile to
+    :param path: full path incl. filename where to save the config file
+    :param dm_config_id: str, name of the section in the config_ini file where information
+                         regarding the segmented DM can be found.
     :param mirror_serial: serial number of the Iris AO
     :param driver_serial: serial number of the driver used for the Iris AO
     """
@@ -107,8 +123,7 @@ def write_ini(data, path, dm_config_id, mirror_serial=None, driver_serial=None):
 ## Read commands
 # Functions for reading the .PTT11 file
 def clean_string(line):#filename, raw_line=False):
-    """
-    Delete "\n", "\t", and "\s" from a given line
+    """Return a line without "\n", "\t", and "\s"
     """
     return re.sub(r"[\n\t\s]*", "", line)
 
@@ -126,7 +141,6 @@ def read_global(path):
     Example: [GV: 0, 0, 0]
 
     :param path: path to the PTT111 file
-
     :return: global commands if they exist
     """
     with open(path, "r") as irisao_file:
@@ -152,7 +166,7 @@ def read_global(path):
                 return None
 
         else:
-            raise Exception("Iris AO file formatting problem, can't process the global line:\n" + raw_line)
+            raise Exception(f"Iris AO file formatting problem, can't process the global line:\n{raw_line}")
 
 def read_zernikes(path):
     """
@@ -164,7 +178,6 @@ def read_zernikes(path):
     Example: [MV: 1, 0]
 
     :param path: path to the PTT111 file
-
     :return: zernike commands if they exist
     """
     with open(path, "r") as irisao_file:
@@ -205,7 +218,6 @@ def read_segments(path):
     Example : [ZV: 1, 0, 0, 0]
 
     :param path: path to the PTT111 file
-
     :return: segment commands if they exist
     """
     with open(path, "r") as irisao_file:
@@ -243,7 +255,7 @@ def read_ptt111(path, number_of_segments):
     Read the entirety of a PTT111 file
 
     :param path: path to the PTT111 file
-
+    :param number_of_segments: int, total number of segments on your deformable mirror
     :return: commands, if they exist
     """
 
@@ -278,7 +290,7 @@ def read_ini(path, number_of_segments):
     This expects 37 segments with centering such that it is in the center of the IrisAO
 
     :param path: path and filename of ini file to be read
-
+    :param number_of_segments: int, total number of segments on your deformable mirror
     :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
     """
     config = ConfigParser()
@@ -313,7 +325,7 @@ def read_segment_values(segment_values=None, dm_config_id=None):
                            element is the center or top of the innermost ring of the pupil,
                            and subsequent elements continue up and/or clockwise around the
                            pupil (see README for more information)
-
+    :param dm_config_id: str,
     :return: list, PTT tuples in list of the form (piston, tip, tilt) the first element is
              the center or top of the innermost ring of the pupil, and subsequent elements
              continue up and/or clockwise around the pupil (see README for more information)
@@ -328,7 +340,7 @@ def read_segment_values(segment_values=None, dm_config_id=None):
         segment_names = None
     elif isinstance(segment_values, str):
         if segment_values.endswith("PTT111") or segment_values.endswith("PTT489"):
-            command_dict = read_segments(segment_values, number_of_segments)
+            command_dict = read_segments(segment_values)
         elif segment_values.endswith("ini"):
             command_dict = read_ini(segment_values, number_of_segments)
         else:
