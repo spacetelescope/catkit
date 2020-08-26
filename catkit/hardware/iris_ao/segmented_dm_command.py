@@ -4,9 +4,11 @@ segmented DM hardware as a command.
 
 
 This module can be used to create a command in the following way:
-    command_from_poppy = PoppySegmentedCommand(global_coefficients)
+    command_from_poppy = PoppySegmentedCommand(global_coefficients, dm_config_id, laser_config_id)
     command = poppy_obj.to_dm_list()
-    iris_command = segmented_dm_command.load_command(command,
+    iris_command = segmented_dm_command.load_command(command, dm_config_id,
+                                                     laser_config_id,
+                                                     testbed_config_id, 
                                                      apply_flat_map=True)
     iris_command.display()
 
@@ -82,7 +84,7 @@ class SegmentedAperture():
         """
         Based on values in config file, create the aperture to be simulated
 
-        :returns: A Poppy HexSegmentedDeformableMirror object for this aperture
+        :return: A Poppy HexSegmentedDeformableMirror object for this aperture
         """
         aperture = poppy.dms.HexSegmentedDeformableMirror(name='Segmented DM',
                                                           rings=self._num_rings,
@@ -120,7 +122,7 @@ class SegmentedAperture():
         Get the number of rings based on the number of active segments specified in the
         config.ini file. Note: The maximum number of rings for the PTT489 from IrisAO, is 7
 
-        :returns: num_rings: int, the number of full rings of hexagonal segments in the aperture
+        :return: num_rings: int, the number of full rings of hexagonal segments in the aperture
         """
         segs_per_ring = super().number_segments_in_aperture(max_rings, return_list=True)
 
@@ -147,10 +149,35 @@ class SegmentedAperture():
         is indicated by the index in the list.
 
         param: number_of_rings, int, the number of rings in the aperture
-
-        returns: a list of segments where the index of the value corresponds to the
+        return: a list of segments where the index of the value corresponds to the
                  number of rings. For example: index 0 corresponds with the center
                  where there is one segment.
+        """
+        number_segs_per_ring = SegmentedAperture.get_max_number_segments_per_ring(number_of_rings)
+
+        return number_segs_per_ring[number_of_rings]
+
+    def get_active_number_of_segments_per_ring(self):
+        """ Given the use of the center segment or outer ring corner segments,
+        return a list of the number of active segments per ring in the aperture.
+
+        return: list of total number of active segments in the aperture for each added ring
+
+        """
+        max_number_segments_per_ring = self.get_max_number_segments_per_ring()
+
+        # If no outer corners, you will have 6 fewer segments in that outer ring
+        if not self.outer_ring_corners:
+            active_segs_per_ring = [num-6 if num > 6 else num for num in max_number_segments_per_ring]
+        # If no center segment, you will have 1 fewer segment overall
+        if not self.center_segment:
+            active_segs_per_ring = [num-1 for num in max_number_segments_per_ring]
+
+        return active_segs_per_ring
+
+    def get_max_number_segments_per_ring(self, number_of_rings=7):
+        """ Given a number of rings, return a list of the number of segments per
+        ring in the aperture.
         """
         segs_per_ring = [1,] # number of segments per ring
         for i in np.arange(number_of_rings)+1:
@@ -365,10 +392,18 @@ class SegmentedDmCommand(SegmentedAperture):
 
     def plot_wavefront(self, figure_name_prefix, out_dir, vmax=0.5e-6*u.meter, save_figure=True):
         """
-        Plot the deployed mirror state ("wavefront")
+        Plot the deployed mirror state (wavefront error)
+
+        :param figure_name_prefix: str, String to be added to filenames of output figures
+        :param out_dir: str, name of output directory
+        :param vmax: astropy unit quantity, the maximum value to display in the plot (as expected
+                     by Poppy)
+        :param save_figure: bool, If true, save out the figures in the directory specified by
+                            out_dir
         """
         plt.figure()
-        self.aperture.display(what='opd', title='Shape put on the active segments', opd_vmax=vmax)
+        self.aperture.display(what='opd', title='Wavefront error applied to the active segments',
+                              opd_vmax=vmax)
         if save_figure:
             plt.savefig(os.path.join(out_dir, f'{figure_name_prefix}shape_on_dm.png'))
             plt.close()
@@ -379,12 +414,21 @@ class SegmentedDmCommand(SegmentedAperture):
                  vmax=10e-2, save_figure=True):
         """
         Plot the simulated PSF based on the mirror state
+
+        :param rotation_anlge: float, the rotation to apply to the PSF image in order to match
+                               our testbed. Note that this value is specific to each testbed
+        :param figure_name_prefix: str, String to be added to filenames of output figures
+        :param out_dir: str, name of output directory
+        :param vmin: float, the minimum value to display in the plot
+        :param vmax: float, the maximum value to display in the plot
+        :param save_figure: bool, If true, save out the figures in the directory specified by
+                            out_dir
         """
         plt.figure()
         osys = poppy.OpticalSystem()
         osys.add_pupil(self.aperture)
         osys.add_detector(pixelscale=self.pixelscale, fov_arcsec=self.instrument_fov)
-        osys.add_rotation(angle=rotation_angle) # Note: The best rotation depends on each testbed
+        osys.add_rotation(angle=rotation_angle)
 
         psf = osys.calc_psf(wavelength=self.wavelength)
         poppy.display_psf(psf, vmin=vmin, vmax=vmax,
@@ -411,7 +455,6 @@ def load_command(segment_values, dm_config_id, apply_flat_map=True):
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
     :param apply_flat_map: Apply a flat map in addition to the data.
-
     :return: SegmentedDmCommand object representing the command dictionary.
     """
     dm_command_obj = SegmentedDmCommand(apply_flat_map=apply_flat_map, dm_config_id=dm_config_id)
@@ -425,8 +468,10 @@ def round_ptt_list(ptt_list, decimals=3):
     """
     Make sure that the PTT coefficients are rounded to a reasonable number of decimals
 
-    :param ptt_arr: list, of tuples existing of piston, tip, tilt, values for each
-                    segment in a pupil
+    :param ptt_list: list, of tuples existing of piston, tip, tilt, values for each
+                     segment in a pupil
+    :return: list of coefficients for piston, tip, and tilt, for your pupil rounded to
+             the specified number of decimal places
     """
     return [(np.round(ptt[0], decimals), np.round(ptt[1], decimals),
              np.round(ptt[2], decimals)) for ptt in ptt_list]
@@ -451,6 +496,15 @@ def convert_ptt_units(ptt_list, tip_factor, tilt_factor, starting_units, ending_
     - starting_units = dm_ptt_units from the config.ini file
     - ending_units = (u.m, u.rad, u.rad)
 
+    :param ppt_list: list, of tuples existing of piston, tip, tilt, values for each
+                     segment in a pupil
+    :param tip_factor: int, either -1 or 1 based on the information above
+    :param tilt_factor: int, either -1 or 1 based on the information above
+    :param starting_units: tuple or list of the units associated with the piston, tip,
+                           tilt values respectively of the input ptt_list
+    :param ending_units: tuple_or_list of the units associated with the piston, tip,
+                           tilt values respectively of the expected output
+    :return: list of tuples of the piston, tip, tilt values for each segment listed
     """
     converted = [(ptt[0]*(starting_units[0]).to(ending_units[0]),
                   tip_factor*ptt[2]*(starting_units[2]).to(ending_units[2]),
@@ -464,7 +518,11 @@ def set_to_dm_limits(ptt_list, limit=5.):
     limit and reset to limit if limit is exceeded. These limits are the same as what
     the IrisAO GUI has set.
 
+    :param ppt_list: list, of tuples existing of piston, tip, tilt, values for each
+                     segment in a pupil
     :param limit: float, in DM units. Default = 5.
+    :return: list of tuples of the piston, tip, tilt values for each segment listed
+             such that none of the values exceed the limit
     """
     updated = [tuple(min(i, limit) for i in ptt) for ptt in ptt_list]
 
@@ -480,7 +538,6 @@ def get_wavefront_from_coeffs(coeff_list, basis):
     :params basis: POPPY Segment_PTT_Basis object, basis created that represents pupil
     :params coeff_list: list, per-segment list of piston, tip, tilt values for
                          the pupil described by basis
-
     :return wavefront, POPPY wavefront
     """
     wavefront = poppy.zernike.opd_from_zernikes(coeff_list, basis=basis)
@@ -558,7 +615,6 @@ class PoppySegmentedCommand(SegmentedAperture):
 
         :param global_coefficients: list of global zernike coefficients in the form
                                     [piston, tip, tilt, defocus, ...] (Noll convention)
-
         :return: Poppy ZernikeWFE object, the global wavefront described by the input coefficients
         """
         wavefront = poppy.ZernikeWFE(radius=self.radius, coefficients=global_coefficients)
@@ -574,7 +630,6 @@ class PoppySegmentedCommand(SegmentedAperture):
 
         :param wavefront: Poppy ZernikeWFE object, the global wavefront over the
                           pupil
-
         :return: list, (piston, tip, tilt) values for each segment in the pupil
                  in units of [m] for piston, and [rad] for tip and tilt
         """
@@ -598,6 +653,8 @@ class PoppySegmentedCommand(SegmentedAperture):
         """
         Convert the PTT list to DM hardware units so that it can be passed to the
         SegmentDmCommand class
+
+        :return: list of coefficients for piston, tip, and tilt, for your pupil
         """
         input_list = self.list_of_coefficients
         # Convert from Poppy's m, rad, rad to the DM units

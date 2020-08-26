@@ -77,7 +77,7 @@ IrisAO DM information:
 File locations:
 * `flat_file_ini`: The location of the custom flat .ini file for your specific Iris AO DM. Note that this file will likely never be changed by the user.  
 * `config_ptt_file`: The location of the ConfigPTT.ini file which is the file that contains whatever command you want to put on the DM.
-* `path_to_dm_ex`: The path to the directory that houses the DM_Control.exe file
+* `path_to_dm_exe`: The path to the directory that houses the DM_Control.exe file
 
 If using segmented_dm_command.PoppySegmentedCommand or segmented_dm_command.DisplayCommand, you will need to include the following parameters:
 * `flat_to_flat_mm`: The flat side to flat side diameter of each segment in units of mm
