@@ -62,7 +62,7 @@ def create_zero_list(number_of_segments):
     """
     return [(0., 0., 0.)] * number_of_segments
 
-def write_ini(data, path, dm_config_id='iris_ao', mirror_serial=None, driver_serial=None):
+def write_ini(data, path, dm_config_id, mirror_serial=None, driver_serial=None):
     """
     Write a new .ini file containing a command for the Iris AO.
 
@@ -85,7 +85,7 @@ def write_ini(data, path, dm_config_id='iris_ao', mirror_serial=None, driver_ser
     config.set('SerialNb', 'mirrorSerial', mirror_serial)
     config.set('SerialNb', 'driverSerial', driver_serial)
 
-    for i in iris_pupil_naming(dm_config_id):
+    for i in range(1, iris_num_segments(dm_config_id)+1):
         section = 'Segment{}'.format(i)
         config.add_section(section)
         # If the segment number is present in the dictionary
@@ -238,7 +238,7 @@ def read_segments(path):
         else:
             return None
 
-def read_ptt111(path):
+def read_ptt111(path, number_of_segments):
     """
     Read the entirety of a PTT111 file
 
@@ -253,7 +253,7 @@ def read_ptt111(path):
 
         # Create a dictionary and apply global commands to all segments.
         command_dict = {}
-        for i in range(iris_num_segments()):
+        for i in range(number_of_segments):
             command_dict[i + 1] = global_command
         return command_dict
 
@@ -270,7 +270,7 @@ def read_ptt111(path):
     # No command found in file.
     return None
 
-def read_ini(path):
+def read_ini(path, number_of_segments):
     """
     Read the Iris AO segment PTT parameters from an .ini file into Iris AO style
     dictionary {segnum: (piston, tip, tilt)}.
@@ -286,7 +286,7 @@ def read_ini(path):
     config.read(path)
 
     command_dict = {}
-    for i in range(iris_num_segments()):
+    for i in range(number_of_segments):
         section = 'Segment{}'.format(i+1)
         piston = float(config.get(section, 'z'))
         tip = float(config.get(section, 'xrad'))
@@ -295,7 +295,7 @@ def read_ini(path):
 
     return command_dict
 
-def read_segment_values(segment_values=None):
+def read_segment_values(segment_values=None, dm_config_id=None):
     """
     Each of the following formats can be read in. This function takes in
     any of these three formats and converts it to a list of tuples of the form:
@@ -318,20 +318,24 @@ def read_segment_values(segment_values=None):
              the center or top of the innermost ring of the pupil, and subsequent elements
              continue up and/or clockwise around the pupil (see README for more information)
     """
+    if dm_config_id is None:
+        raise ValueError("A dm_config_id is necessary to determine the number of segments from the config file")
+    else:
+        number_of_segments = iris_num_segments(dm_config_id)
     # Read in file
     if segment_values is None:
-        ptt_list = create_zero_list(iris_num_segments())
+        ptt_list = create_zero_list(number_of_segments)
         segment_names = None
     elif isinstance(segment_values, str):
         if segment_values.endswith("PTT111") or segment_values.endswith("PTT489"):
-            command_dict = read_segments(segment_values)
+            command_dict = read_segments(segment_values, number_of_segments)
         elif segment_values.endswith("ini"):
-            command_dict = read_ini(segment_values)
+            command_dict = read_ini(segment_values, number_of_segments)
         else:
             raise ValueError("The file given is not supported")
         ptt_list = list(command_dict.values())
         segment_names = list(command_dict.keys())
-    elif isinstance(segment_values, (np.ndarray, list)):
+    elif isinstance(segment_values, list):
         ptt_list = segment_values
         segment_names = None
     else:
