@@ -4,14 +4,14 @@ If you have an Iris AO segmented DM, congratulations! You are one of only a few.
 
 
 ## Segment numbering and input formats
-IrisAO segmented DMs have a numbering system that puts segment 1 in the center and continues up and counterclockwise around the DM. See figures for examples of the PTT111 and PTT489 from IrisAO with their IrisAO numbering.
+IrisAO has a numeric naming system of the segments in their DMs that puts segment 1 in the center of the DM and continues counting in the "up" direction, and then counterclockwise around the DM, as described when looking in the entrance pupil at the DM. See figures for examples of the PTT111 and PTT489 from IrisAO with their IrisAO numbering.
 
 ![Figure 1: IrisAO PTT111/PTT111L](figures/iris_ao_ptt111.jpg)
 ![Figure 2: IrisAO PTT489](figures/iris_ao_ptt489.jpg)
 
-In creating a command for your aperture on a IrisAO segmented DM, you will need to specify the aperture and segments to be commanded in the config.ini file (see more on that below). That aperture, is what you will be commanding. When loading a custom command, the list of PTT values to be loaded will only be for the segments that you wish to move, however, in native Python numbering such that the first element in your list will be the first segment to be moved, either the center segment or the first segment (at the "top") in the innermost ring. In Python the segment numbering is clockwise. The only time the IrisAO numbering is used is in the native .PTT### files or .ini files.
+In creating a command for your aperture on a IrisAO segmented DM, you will need to specify the aperture and segments to be commanded in the config.ini file (see more on that below). That aperture is what you will be commanding. When loading a custom command, the list of PTT values to be loaded will only be for the segments that you wish to move, such that the first element in your list will be the first segment to be moved, either the center segment or the first segment (at the "top") in the innermost ring of the aperture. Poppy follows the same segment numbering convention as JWST, which numbers segments clockwise when looking at the entrance pupil and we use that orientation in the IrisAO code as well. The only time the IrisAO orientation is used is in the native .PTT### files or .ini files
 
-For example, if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L, you will only be using a subset of segments to build your aperture and will not include the center segment, when passing in a custom command, your command will be given in the order as seen in Figure 3.
+As an example: if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L, you will only be using a subset of segments to build your aperture and will not include the center segment, when passing in a custom command, your command will be given in the order as seen in Figure 3.
 
 ![Figure 3: JWST aperture on a PTT111/PTT111L](figures/jwst_on_iris_ao_ptt111.jpg)
 
@@ -19,7 +19,7 @@ For example, if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L, y
 
 The `catkit` module for the Iris AO expects that you will be passing in one of the following types:
 
-* *.PTT111* file: File format of the command coming out of the IrisAO GUI
+* *.PTT111* file: File format of the command coming out of the IrisAO GUI where the units of the piston, tip, tilt values for each segment are um, mrad, mrad respectively.
 
   Example:
 
@@ -33,7 +33,7 @@ The `catkit` module for the Iris AO expects that you will be passing in one of t
         ...
         [ZV: 37, 0, 0, 0]
 
-* *.ini* file: File format of command that gets sent to the IrisAO controls
+* *.ini* file: File format of command that gets sent to the IrisAO controls where the units of the piston, tip, tilt values for each segment are um, mrad, mrad respectively.
 * list: A list of tuples with three entries for each segment in the aperture in the following form: [(piston, tip, tilt), ...] (see figure 3 for numbering)
 
 Each of these types has to be handled slightly differently, but never fear, we figured that out for you!
