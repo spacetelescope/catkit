@@ -422,6 +422,6 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                 x scale: {s_x:0.5f} pixels/(cycles/DM)
                 y scale: {s_y:0.5f} pixels/(cycles/DM)
                   theta: {theta:0.5f} degrees
-                    S01: {S01:0.5f} degrees
-                    S10: {S10:0.5f} degrees
+                    S01: {S01:0.5f} pixels/(cycles/DM)
+                    S10: {S10:0.5f} pixels/(cycles/DM)
             """)
