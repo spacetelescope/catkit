@@ -134,60 +134,44 @@ def reconstruct_mapping_matrix(centroids, speckles):
     :param speckles: list of (fx, fy) spatial frequencies
     :return: 3x3 numpy array with transformation parameters
     """
-    X = np.zeros((3, len(speckles)), dtype=np.float64)  # Inputs
+    X = np.zeros((2, len(speckles)), dtype=np.float64)  # Inputs
     Y = np.zeros_like(X)  # Outputs
-    X[2, :] = 1
-    Y[2, :] = 1
 
     for n, (fx, fy) in enumerate(speckles):
-        X[:-1, n] = np.array([fx, fy])
-        Y[:-1, n] = centroids[:, n]
+        X[:, n] = np.array([fx, fy])
+        Y[:, n] = centroids[:, n]
 
     return Y @ np.linalg.pinv(X.T).T   # Compute the right-sided pseudoinverse
 
 
-def extract_rotation_and_scale(mapping_matrix, off_diagonal_tol=1e-2, theta_tol=10., log=None):
+def extract_parameters(mapping_matrix, off_diagonal_tol=1e-2, theta_tol=10., log=None):
     """
-    Estimate the rotation angle and horizontal/vertical scaling components of an affine
-    transformation of the form y = Ax + b using the polar decomposition.
+    Estimate the rotation angle and horizontal/vertical scaling components of a linear
+    transformation of the form y = Ax, where A is a real-valued 2x2 matrix.
 
-    An affine transformation in two dimensions can be represented by the matrix
+    We can decompose A using the polar decomposition into the form A = RS, where R is unitary (a
+    combination of rotations and reflections) and S is orthogonal.  In this application, R will be
+    a pure rotation matrix.  The R and S matrices can be written as
 
-                                                A00 A01 b0
-                                            C = A10 A11 b1          (1)
-                                                 0   0   1
-    where
-                                            A = A00 A01             (2)
-                                                A10 A11
-                                            b = b0                  (3)
-                                                b1
-
-    We can further decompose A using the polar decomposition into the form A = RS, where R is
-    unitary (a combination of rotations and reflections), and S is orthonormal.  Ideally,
-    in this application, R will be a pure rotation matrix and S will be diagonal:
-
-                                            R = cos(theta) sin(theta)       (4)
+                                            R = cos(theta) sin(theta)       (2)
                                                -sin(theta) cos(theta)
-                                            S = s_x  0                      (5)
-                                                 0  s_y
+                                            S = s_x  S01                    (4)
+                                                S10  s_y
 
     where s_x and s_y are the scaling factors along the horizontal and vertical directions in
-    units of (binned pixels) / (cycles/DM).
+    units of pixels / (cycles/DM), m is the shear coefficient, and S01 and S10 are off-diagonal
+    terms.  If the mapping consists PURELY of rotation, horizontal scaling, and vertical scaling,
+    then S01 and S10 will vanish and S will be purely diagonal.
 
-    :param mapping_matrix: 3x3 numpy array in the form described by Eq. (1)
-    :param off_diagonal_tol: float, how large the off-diagonal elements of S can be before we
-                             issue a warning.
+    :param mapping_matrix: 2x2 numpy array in the form described by Eq. (1)
     :param theta_tol: float, how large the estimated rotation angle can be (in degrees) before we
                       issue a warning, since the HiCAT DMs are known to be well-aligned and
                       should have a rotation angle close to zero.
     :param log: logger object, for displaying warnings
-    :return: (s_x, s_y, theta) with theta in degrees
+    :return: (s_x, s_y, theta, S01, S10) with theta in degrees.  S01 and S10 are the off-diagonal
+             elements of the scaling matrix, which should be small.
     """
-
-    A = mapping_matrix[:2, :2]  # 2x2 submatrix in top-left corner: contains rotation/scaling
-    b = mapping_matrix[:2, 2]  # First two elements of last column: contains translation
-
-    R, S = polar(A)
+    R, S = polar(mapping_matrix)
 
     # Average the angles from each of the four elements of the rotation matrix to estimate
     # rotation angle
@@ -207,7 +191,7 @@ def extract_rotation_and_scale(mapping_matrix, off_diagonal_tol=1e-2, theta_tol=
     # Scale along horizontal and vertical directions, in (binned pixels) / (cycles/DM)
     s_x, s_y = S[0, 0], S[1, 1]
 
-    return s_x, s_y, theta
+    return s_x, s_y, theta, S[0, 1], S[1, 0]
 
 
 class CalibrateSpatialFrequencyMapping(Experiment):
@@ -363,7 +347,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                 dm1_actuators=flat,
                 dm2_actuators=flat)
             reference_image = reference_image.shaped
-            results = np.zeros((2, 3), dtype=np.float64)  # 2 DMs x 3 parameters
+            results = np.zeros((2, 5), dtype=np.float64)  # 2 DMs x 5 parameters
 
             # Apply sines to one DM at a time
             for dm_num in [1, 2]:
@@ -429,13 +413,15 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                              pipeline_images)
 
                 results[dm_num - 1, :] = np.array(
-                    extract_rotation_and_scale(mapping_matrix, log=self.log))
+                    extract_parameters(mapping_matrix, log=self.log))
 
         for dm_num in [1, 2]:
             index = dm_num - 1
-            s_x, s_y, theta = results[index, :]
+            s_x, s_y, theta, S01, S10 = results[index, :]
             self.log.info(f"""Estimated mapping parameters for DM {dm_num}:
-                x scale: {s_x:0.3f} pixels/(cycles/DM)
-                y scale: {s_y:0.3f} pixels/(cycles/DM)
-                  theta: {theta:0.3f} degrees
+                x scale: {s_x:0.5f} pixels/(cycles/DM)
+                y scale: {s_y:0.5f} pixels/(cycles/DM)
+                  theta: {theta:0.5f} degrees
+                    S01: {S01:0.5f} degrees
+                    S10: {S10:0.5f} degrees
             """)
