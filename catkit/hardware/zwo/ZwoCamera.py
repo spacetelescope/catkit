@@ -175,7 +175,8 @@ class ZwoCamera(Camera):
                                     height=height, gain=gain, full_image=full_image, bins=bins)
 
         # Create metadata from testbed_state and add extra_metadata input.
-        meta_data = [MetaDataEntry("Exposure Time", "EXP_TIME", exposure_time.to(units.microseconds).m, "microseconds")]
+        exposure_time = self._strip_units(exposure_time)
+        meta_data = [MetaDataEntry("Exposure Time", "EXP_TIME", exposure_time.to(units.microseconds).magnitude, "microseconds")]
         meta_data.extend(testbed_state.create_metadata())
         meta_data.append(MetaDataEntry("Camera", "CAMERA", self.config_id, "Camera model, correlates to entry in ini"))
         meta_data.append(MetaDataEntry("Gain", "GAIN", self.gain, "Gain for camera"))
@@ -217,7 +218,7 @@ class ZwoCamera(Camera):
             stripped_quantity = nested_quantity
             while has_units and n < 10:
                 stripped_quantity = stripped_quantity.magnitude
-                has_units = 'magnitude' in dir(stripped_quantity)
+                has_units = 'magnitude' in dir(stripped_quantity.magnitude)
                 n += 1
         
         except AttributeError:
