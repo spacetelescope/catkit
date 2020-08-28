@@ -8,7 +8,7 @@ This module can be used to create a command in the following way:
     command = poppy_obj.to_dm_list()
     iris_command = segmented_dm_command.load_command(command, dm_config_id,
                                                      laser_config_id,
-                                                     testbed_config_id, 
+                                                     testbed_config_id,
                                                      apply_flat_map=True)
     iris_command.display()
 
@@ -75,7 +75,7 @@ class SegmentedAperture():
         self.number_segments_in_pupil = CONFIG_INI.getint(self.dm_config_id, 'active_number_of_segments')
 
         # Get the specific segments
-        self._num_rings = self.get_number_of_rings()
+        self._num_rings = self.get_number_of_rings_in_pupil()
         self._segment_list = self.get_segment_list()
 
         self.aperture = self.create_aperture()
@@ -94,6 +94,63 @@ class SegmentedAperture():
                                                           rotation=-90)
         return aperture
 
+    def get_number_of_rings_in_pupil(self):
+        """
+        Get the number of rings based on the number of active segments specified in the
+        config.ini file.
+
+        :return: num_rings: int, the number of full rings of hexagonal segments in the aperture
+        """
+        active_segs_per_ring = self.get_active_number_of_segments_per_ring()
+
+        try:
+            num_rings = active_segs_per_ring.index(self.number_segments_in_pupil)
+        except ValueError as error:
+            raise ValueError("Invalid number of segments. Please check your config.ini file.") from error
+
+        return num_rings
+
+    def get_active_number_of_segments_per_ring(self, max_number_of_rings=7):
+        """
+        Given pupil specifics, returns a list of length equal to the maximum
+        number of rings where each element is the total number of segments in a
+        pupil with that number of rings.
+
+        Given the use of the center segment or outer ring corner segments,
+        return a list of the number of total active segments in a pupil, of a variety
+        of number of rings that is indicated by its index in the list. For example,
+        the first element in the list, with index of 1, will give the total number of
+        active segments in a pupil with 1 ring which include the center segment if that
+        segment is active. Note: The maximum number of rings for the PTT489 from IrisAO is 7
+
+        return: list of total number of active segments in a pupil for pupils with
+                a number of rings as indicated by the index of in the list
+        """
+        max_number_segments_in_pupil_per_ring = self.get_max_number_segments_in_pupil_per_ring(max_number_of_rings)
+
+        # If no outer corners, you will have 6 fewer segments in that outer ring
+        if not self.outer_ring_corners:
+            active_segments_in_pupil_per_ring = [num-6 if num > 6 else num for num in max_number_segments_in_pupil_per_ring]
+        # If no center segment, you will have 1 fewer segment overall
+        if not self.center_segment:
+            active_segments_in_pupil_per_ring = [num-1 for num in max_number_segments_in_pupil_per_ring]
+
+        return active_segments_in_pupil_per_ring
+
+    def get_max_number_segments_in_pupil_per_ring(self, number_of_rings=7):
+        """Returns a list of length equal to the maximum number of rings in a pupil
+        with hexagonal segments where each element is the total number of segments in a
+        pupil with that number of rings.
+
+        :return: list, list of length equal to the total number of rings where each element
+        is the total number of segments in a pupil with that number of rings.
+        """
+        max_number_segments_in_pupil_per_ring = [1,] # number of segments in the pupil per ring
+        for i in np.arange(number_of_rings)+1:
+            max_number_segments_in_pupil_per_ring.append(max_number_segments_in_pupil_per_ring[i-1]+i*6)
+
+        return max_number_segments_in_pupil_per_ring
+
     def get_segment_list(self):
         """
         Grab the list of segments to be used in your pupil taking into account if your
@@ -103,9 +160,10 @@ class SegmentedAperture():
         :param num_rings: int, The number of rings in your pupil
         :return: list, the list of segments
         """
-        num_segs = SegmentedAperture.total_number_segments_in_aperture(self._num_rings)
+        num_segs = self.total_number_segments_in_aperture(self._num_rings)
         seglist = np.arange(num_segs)
 
+        # If no outer corners, you will have 6 fewer segments in that outer ring
         if not self.outer_ring_corners:
             inner_segs = seglist[:(num_segs-6*self._num_rings)]
             outer_segs = seglist[(num_segs-6*self._num_rings):]
@@ -117,24 +175,7 @@ class SegmentedAperture():
             seglist = seglist[1:]
         return seglist
 
-    def get_number_of_rings(self, max_rings=7):
-        """
-        Get the number of rings based on the number of active segments specified in the
-        config.ini file. Note: The maximum number of rings for the PTT489 from IrisAO, is 7
-
-        :return: num_rings: int, the number of full rings of hexagonal segments in the aperture
-        """
-        active_segs_per_ring = self.get_active_number_of_segments_per_ring()
-
-        try:
-            num_rings = active_segs_per_ring.index(self.number_segments_in_pupil)
-        except ValueError:
-            raise ValueError("Invalid number of segments. Please check your config.ini file.")
-
-        return num_rings
-
-    @staticmethod
-    def total_number_segments_in_aperture(number_of_rings=7):
+    def total_number_segments_in_aperture(self, number_of_rings=7):
         """
         For a segmented aperture of rings = number_of_rings, give the total number of
         segments in the aperture given an aperture of 1, 2, 3, etc. rings. Will return
@@ -146,37 +187,9 @@ class SegmentedAperture():
                  number of rings. For example: index 0 corresponds with the center
                  where there is one segment.
         """
-        number_segs_per_ring = SegmentedAperture.get_max_number_segments_per_ring(number_of_rings)
+        number_segments_in_pupil_per_ring = self.get_max_number_segments_in_pupil_per_ring(number_of_rings)
 
-        return number_segs_per_ring[number_of_rings]
-
-    def get_active_number_of_segments_per_ring(self):
-        """ Given the use of the center segment or outer ring corner segments,
-        return a list of the number of active segments per ring in the aperture.
-
-        return: list of total number of active segments in the aperture for each added ring
-
-        """
-        max_number_segments_per_ring = self.get_max_number_segments_per_ring()
-
-        # If no outer corners, you will have 6 fewer segments in that outer ring
-        if not self.outer_ring_corners:
-            active_segs_per_ring = [num-6 if num > 6 else num for num in max_number_segments_per_ring]
-        # If no center segment, you will have 1 fewer segment overall
-        if not self.center_segment:
-            active_segs_per_ring = [num-1 for num in max_number_segments_per_ring]
-
-        return active_segs_per_ring
-
-    def get_max_number_segments_per_ring(self, number_of_rings=7):
-        """ Given a number of rings, return a list of the number of segments per
-        ring in the aperture.
-        """
-        segs_per_ring = [1,] # number of segments per ring
-        for i in np.arange(number_of_rings)+1:
-            segs_per_ring.append(segs_per_ring[i-1]+i*6)
-
-        return segs_per_ring
+        return number_segments_in_pupil_per_ring[number_of_rings]
 
 
 class SegmentedDmCommand(SegmentedAperture):
@@ -243,9 +256,10 @@ class SegmentedDmCommand(SegmentedAperture):
 
         # Initalize command
         self.data = util.create_zero_list(self.number_segments_in_pupil)
+        self.input_data = None
         self.command = None
 
-    def read_new_command(self, segment_values):
+    def read_initial_command(self, segment_values):
         """
         Read a new command and assign to the attribute 'data'
 
@@ -253,7 +267,7 @@ class SegmentedDmCommand(SegmentedAperture):
                                tilt values in a tuple for each segment. See the load_command doc
                                string for more information.
         """
-        self.data = self._read_command(segment_values)
+        self.input_data = self.data = self._read_command(segment_values)
 
     def _read_command(self, segment_values):
         """
@@ -284,8 +298,10 @@ class SegmentedDmCommand(SegmentedAperture):
         on the for sending to the hardware driver. The flat map will be added only at this stage
         """
         if self.apply_flat_map:
-            self.add_map(self.filename_flat)
-        command_dict = dict(zip(self.segments_in_pupil, self.data))
+            command_data = self.add_map(self.filename_flat, return_new_map=True)
+        else:
+            command_data = self.data
+        command_dict = dict(zip(self.segments_in_pupil, command_data))
 
         return command_dict
 
@@ -307,17 +323,22 @@ class SegmentedDmCommand(SegmentedAperture):
         else:
             self.data[segment_ind] = ptt_tuple
 
-    def add_map(self, segment_values_to_add):
+    def add_map(self, segment_values_to_add, return_new_map=False):
         """
         Add a command to the one already loaded.
 
         :param new_command: str or list (.PTT111 or .ini file, or list, for example, from POPPY)
         """
         original_data = self.get_data()
-        new_data = self._read_command(segment_values_to_add)
+        data_to_add = self._read_command(segment_values_to_add)
 
-        self.data = [tuple(map(sum, zip(orig, new))) for orig,
-                     new in zip(original_data, new_data)]
+        new_map = [tuple(map(sum, zip(orig, addition))) for orig,
+                   addition in zip(original_data, data_to_add)]
+
+        if return_new_map:
+            return new_map
+        else:
+            self.data = new_map
 
     def to_ini(self, filename, out_dir=''):
         """
@@ -452,7 +473,7 @@ def load_command(segment_values, dm_config_id, laser_config_id, testbed_config_i
     dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, laser_config_id=laser_config_id,
                                         testbed_config_id=testbed_config_id,
                                         apply_flat_map=apply_flat_map)
-    dm_command_obj.read_new_command(segment_values)
+    dm_command_obj.read_initial_command(segment_values)
 
     return dm_command_obj
 
