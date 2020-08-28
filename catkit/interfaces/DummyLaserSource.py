@@ -9,9 +9,6 @@ from catkit.interfaces.LaserSource import LaserSource
 class DummyLaserSource(LaserSource):
     log = logging.getLogger(__name__)
 
-    def __init__(self, config_id, *args, **kwargs):
-        self.config_id = config_id
-
     def initialize(self, *args, **kwargs):
         return None
 
