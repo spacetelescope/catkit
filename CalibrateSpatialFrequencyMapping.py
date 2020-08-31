@@ -1,6 +1,7 @@
 # flake8: noqa: E402
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import ascii
 from astropy.io import fits
@@ -192,6 +193,24 @@ def extract_parameters(mapping_matrix, off_diagonal_tol=1e-2, theta_tol=10., log
     s_x, s_y = S[0, 0], S[1, 1]
 
     return s_x, s_y, theta, S[0, 1], S[1, 0]
+
+
+def plot_goodness_of_fit(mapping_matrix, inputs, outputs):
+    fig, ax = plt.subplots(figsize=(10, 10))
+    predicted_outputs = mapping_matrix @ inputs
+
+    # Mean-squared error between predicted and actual centroids
+    mse = np.mean(np.linalg.norm(predicted_outputs - outputs, axis=1) ** 2)
+
+    ax.scatter(predicted_outputs[0, :], predicted_outputs[1, :], label='predicted')
+    ax.scatter(outputs[0, :], outputs[1, :], label='Actual')
+    ax.grid(True)
+    ax.set_title('Predicted vs. actual centroids')
+    ax.legend(loc='best')
+    ax.set_xlabel('x [pix]')
+    ax.set_ylabel('y [pix]')
+
+    return fig, ax
 
 
 class CalibrateSpatialFrequencyMapping(Experiment):
@@ -414,6 +433,11 @@ class CalibrateSpatialFrequencyMapping(Experiment):
 
                 results[dm_num - 1, :] = np.array(
                     extract_parameters(mapping_matrix, log=self.log))
+
+                inputs = np.vstack([results_table['fx [cycles/DM]'],
+                                    results_table['fy [cycles/DM]']])
+                fig, ax = plot_goodness_of_fit(mapping_matrix, inputs, centroids)
+                plt.savefig(os.path.join(self.output_path, f'inputs_outputs_dm{dm_num}.png'))
 
         for dm_num in [1, 2]:
             index = dm_num - 1
