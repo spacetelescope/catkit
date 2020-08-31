@@ -4,7 +4,7 @@ segmented DM hardware as a command.
 
 
 This module can be used to create a command in the following way:
-    command_from_poppy = PoppySegmentedCommand(global_coefficients, dm_config_id, laser_config_id)
+    poppy_obj = PoppySegmentedCommand(global_coefficients, dm_config_id, laser_config_id)
     command = poppy_obj.to_dm_list()
     iris_command = segmented_dm_command.load_command(command, dm_config_id,
                                                      laser_config_id,
@@ -308,12 +308,12 @@ class SegmentedDmCommand(SegmentedAperture):
     def update_one_segment(self, segment_ind, ptt_tuple, add_to_current=True):
         """ Update the value of one segment by supplying the new command that will be added
         to or will replace the current PTT tuple. To identify the segment to be changed, give
-        the *index* of the segment to be changed in the active segment list. This will be added
+        the *index* of that segment in the active segment list. This will be added
         to the current value only if the add_to_current flag is set to True, otherwise, value
         given will replace the current value.
 
-        :param segment_ind: int, the index of the segment in the pupil to be updated
-                            (see README for relationship between index and segment)
+        :param segment_ind: int, for the segment in the pupil that is to be updated,
+                            provide the index of it's location in the active segment list
         :param ptt_tuple: tuple with three values for piston, tip, and tilt
         """
         if add_to_current:
