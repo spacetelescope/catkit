@@ -49,7 +49,7 @@ class IrisAoDmController(DeformableMirrorController):
         # Create class attributes for storing an individual command.
         self.command = None
 
-        self.configd_id = config_id
+        self.config_id = config_id
 
         self.mirror_serial = mirror_serial
         self.driver_serial = driver_serial
