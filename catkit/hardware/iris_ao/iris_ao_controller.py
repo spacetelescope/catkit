@@ -29,7 +29,7 @@ class IrisAoDmController(DeformableMirrorController):
 
     instrument_lib = subprocess
 
-    def initialize(self, config_id, mirror_serial, driver_serial, disable_hardware, path_to_dm_exe,
+    def initialize(self, mirror_serial, driver_serial, disable_hardware, path_to_dm_exe,
                    filename_ptt_dm):
         """
         Initialize dm manufacturer specific object - this does not, nor should it, open a
@@ -48,8 +48,6 @@ class IrisAoDmController(DeformableMirrorController):
         self.log.info("Opening IrisAO connection")
         # Create class attributes for storing an individual command.
         self.command = None
-
-        self.config_id = config_id
 
         self.mirror_serial = mirror_serial
         self.driver_serial = driver_serial
