@@ -69,7 +69,8 @@ class IrisAoDmController(DeformableMirrorController):
         """
         # Write to ConfigPTT.ini
         self.log.info("Creating config file: %s", self.filename_ptt_dm)
-        util.write_ini(data, path=self.filename_ptt_dm, mirror_serial=self.mirror_serial,
+        util.write_ini(data, path=self.filename_ptt_dm, dm_config_id=self.config_id,
+                       mirror_serial=self.mirror_serial,
                        driver_serial=self.driver_serial)
 
         # Apply the written .ini file to DM
@@ -96,8 +97,8 @@ class IrisAoDmController(DeformableMirrorController):
 
         :return: If return_zeros=True, return a dictionary of zeros
         """
-        zero_list = util.create_zero_list(util.iris_num_segments())
-        zeros = util.create_dict_from_list(zero_list, util.iris_pupil_naming())
+        zero_list = util.create_zero_list(util.iris_num_segments(self.config_id))
+        zeros = util.create_dict_from_list(zero_list, util.iris_pupil_naming(self.config_id))
         self.send_data(zeros)
 
         # Update the testbed state
