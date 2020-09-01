@@ -10,176 +10,98 @@ import numpy as np
 from catkit.config import CONFIG_INI
 
 
-
-def iris_num_segments():
-    """Number of segments in your Iris AO"""
-    return CONFIG_INI.getint('iris_ao', 'total_number_of_segments')
-
-
-def iris_pupil_numbering():
-    """Numbering of the Iris AO pupil """
-    return np.arange(iris_num_segments())+1
-
-
-def map_to_new_center(new_pupil, old_pupil):
+def iris_num_segments(dm_config_id):
     """
-    Create a zipped dictionary of the pupil you are moving to and the one you are
-    moving from
+    Returns the total number of segments in your Iris AO
 
-    :param new_pupil: list, the segment numbers of the pupil you are mapping to
-    :param old_pupil: list, the segment numbers of the pupil you are mapping from
-
-    :return: dictionary of the mapping between the two pupils
+    :param dm_config_id: str, name of the section in the config_ini file where information
+                         regarding the segmented DM can be found.
+    :return: int, total number of segments in your deformable mirror
     """
-    return dict(zip(new_pupil, old_pupil))
+    return CONFIG_INI.getint(dm_config_id, 'total_number_of_segments')
 
-
-def match_lengths(list_a, list_b):
-    """Match the lengths of two arrays
-    This assumes they are in the correct order.
-
-    :param list_a: list
-    :param list_b: list
-
-    :return: lists of equal length
+def iris_pupil_naming(dm_config_id):
     """
-    if len(list_a) > len(list_b):
-        list_a = list_a[:len(list_b)]
-    elif len(list_a) < len(list_b):
-        list_b = list_b[:len(list_a)]
+    Returns the maming of the Iris AO pupil starting at the center of the pupil and working
+    outward in a clockwise direction. This is dependent on your IRISAO and the number of
+    segments it has. This module has not yet been tested for the PTT489 IrisAO model but
+    it supports up to 163 segments.
 
-    return list_a, list_b
+    :param dm_config_id: str, name of the section in the config_ini file where information
+                         regarding the segmented DM can be found.
+    :return: list, numerical segment names assigned by IrisAO re-ordered so that they
+             are listed in order of traveling clockwise when looking in the entrance pupil
+             at the DM
 
-
-def remap_dictionary(ptt_dictionary, mapping_dict):
     """
-    Update the PTT dictionary segment numbers based on the mapping dictionary created
-    by _map_to_new_center
+    num_segs = iris_num_segments(dm_config_id)
+    seg_names = np.concatenate((np.array([1, 2]), np.arange(7, 2, -1),
+                                np.array([8]), np.arange(19, 8, -1),
+                                np.array([20]), np.arange(37, 20, -1),
+                                np.array([38]), np.arange(61, 38, -1),
+                                np.array([62]), np.arange(91, 62, -1),
+                                np.array([92]), np.arange(127, 92, -1),
+                                np.array([128]), np.arange(163, 128, -1)))
+    return seg_names[:num_segs]
 
-    :param ptt_dictionary: dict, the starting dictionary of PTT commands
-    :param mapping_dict: dict, contains mapping between old pupil and the desired pupil
-
-    :return: dict, a new PTT dictionary mapped to a specific pupil on the Iris AO
+def create_dict_from_list(ptt_list, seglist=None):
     """
-    return {seg: ptt_dictionary.get(val, (0., 0., 0.)) for seg, val in list(mapping_dict.items())}
-
-
-def create_dict_from_array(array, seglist=None):
-    """
-    Take an array of len number of segments, with a tuple of piston, tip, tilt
+    Take an list of len number of segments, with a tuple of piston, tip, tilt
     and convert to a dictionary
 
     Seglist is a list of equal length with a single value equal to the segment number
-    for the index in the array. If seglist is None, will asssume Iris AO numbering
+    for the index in the list. If seglist is None, will assume Iris AO numbering
 
-    :param array: np.ndarry, array with length equal to number of segments in the pupil
+    :param ptt_list: list, list with length equal to number of segments in the pupil
                   with each entry a tuple of piston, tip, tilt values.
-    :param seglist: list, list of segment numbers to grab from the array where the segment
-                    number in the array is given by the index of the tuple
-
+    :param seglist: list, list of segment numbers to grab from the list where the segment
+                    number in the list is given by the index of the tuple
     :return: dict, command in the form of a dictionary of the form
              {seg: (piston, tip, tilt)}
     """
     if seglist is None:
-        seglist = np.arange(len(array))+1
+        seglist = np.arange(len(ptt_list))+1
 
     # Put surface information in dict
-    command_dict = {seg: tuple(ptt) for seg, ptt in zip(seglist, array)}
+    command_dict = {seg: tuple(ptt) for seg, ptt in zip(seglist, ptt_list)}
 
     return command_dict
 
-
-def create_zero_dictionary(number_of_segments, seglist=None):
+def create_zero_list(number_of_segments):
     """
-    Create a dictionary of zeros for the Iris AO
+    Create a list of zeros for the Iris AO
 
     :param number_of_segments: int, the number of segments in your pupil
-    :return: dictionary of zeros the length of the number of total segments in the DM
+    :return: list of tuples with three zeros, the length of the number of total segments in the DM
     """
-    array = np.zeros((number_of_segments), dtype=(float, 3))
-    zeros = create_dict_from_array(array, seglist)
+    return [(0., 0., 0.)] * number_of_segments
 
-    return zeros
-
-
-def update_one_segment(segment_num, ptt_tuple, number_of_segments):
+def write_ini(data, path, dm_config_id, mirror_serial=None, driver_serial=None):
     """
-    Create a dictionary that will change only specific segments
-
-    :param segment_num: int, or list of ints, segments to be commanded
-    :param ptt_tuple: tuple, or list of tuples, the piston-tip-tilt tuple to be applied
-                      to the corresponding segment_num.
-    :param number_of_segments: int, number of active segments
-
-    :return command_dict: the dictionary that will be the command on the DM:
-                          {seg:(piston, tip, tilt)}
-    """
-    if not isinstance(segment_num, (list, np.ndarray)):
-        segment_num = [segment_num]
-
-    if not isinstance(ptt_tuple, (list, np.ndarray)):
-        ptt_tuple = [ptt_tuple]
-
-    if len(segment_num) != len(ptt_tuple):
-        raise ValueError("segment_num and ptt_tuple must be the same length")
-
-    command_dict = create_zero_dictionary(number_of_segments)
-    for seg, ptt in zip(segment_num, ptt_tuple):
-        command_dict[seg] = ptt
-
-    return command_dict
-
-
-def convert_dict_from_si(command_dict):
-    """
-    Take a wf dict and convert from SI (meters and radians) to microns and millirads
-
-    :param command_dict: dict, command in the form of a dictionary of the form
-                         {seg: (piston, tip, tilt)}
-
-    :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
-    """
-    converted = {seg: (ptt[0]*(u.m).to(u.um), ptt[1]*(u.rad).to(u.mrad), ptt[2]*(u.rad).to(u.mrad)) for
-                 seg, ptt in list(command_dict.items())}
-
-    return converted
-
-
-def check_dictionary(dictionary):
-    """Check that the dictionary is in the correct format"""
-    # Check keys & values
-    allowed_keys = iris_pupil_numbering()
-    for k, v in dictionary.items():
-        if k not in allowed_keys:
-            raise TypeError("Dictionary keys must be segments numbers from 1 to the number of segments")
-        if len(v) != 3:
-            raise TypeError("Dictionary values must be tuples of length 3")
-
-
-def write_ini(data, path, mirror_serial=None, driver_serial=None):
-    """
-    Write a new ConfigPTT.ini file containing the command for the Iris AO.
+    Write a new .ini file containing a command for the Iris AO.
 
     :param data: dict, wavefront map in Iris AO format
-    :param path: full path incl. filename to save the configfile to
+    :param path: full path incl. filename where to save the config file
+    :param dm_config_id: str, name of the section in the config_ini file where information
+                         regarding the segmented DM can be found.
     :param mirror_serial: serial number of the Iris AO
     :param driver_serial: serial number of the driver used for the Iris AO
     """
     if not mirror_serial and not driver_serial:
-        mirror_serial = CONFIG_INI.get("iris_ao", "mirror_serial")
-        driver_serial = CONFIG_INI.get("iris_ao", "driver_serial")
+        mirror_serial = CONFIG_INI.get(dm_config_id, "mirror_serial")
+        driver_serial = CONFIG_INI.get(dm_config_id, "driver_serial")
 
     config = ConfigParser()
     config.optionxform = str   # keep capital letters
 
     config.add_section('Param')
-    config.set('Param', 'nbSegment', str(iris_num_segments()))
+    config.set('Param', 'nbSegment', str(iris_num_segments(dm_config_id)))
 
     config.add_section('SerialNb')
     config.set('SerialNb', 'mirrorSerial', mirror_serial)
     config.set('SerialNb', 'driverSerial', driver_serial)
 
-    for i in iris_pupil_numbering():
+    for i in range(1, iris_num_segments(dm_config_id)+1):
         section = 'Segment{}'.format(i)
         config.add_section(section)
         # If the segment number is present in the dictionary
@@ -198,21 +120,17 @@ def write_ini(data, path, mirror_serial=None, driver_serial=None):
     with open(path, 'w') as configfile:
         config.write(configfile)
 
-
 ## Read commands
 # Functions for reading the .PTT11 file
 def clean_string(line):#filename, raw_line=False):
-    """
-    Delete "\n", "\t", and "\s" from a given line
+    """Return a line without "\n", "\t", and "\s"
     """
     return re.sub(r"[\n\t\s]*", "", line)
-
 
 def convert_to_float(string):
     """Convert a string to a float, if possible
     """
     return float(string) if string else 0.0
-
 
 def read_global(path):
     """
@@ -223,7 +141,6 @@ def read_global(path):
     Example: [GV: 0, 0, 0]
 
     :param path: path to the PTT111 file
-
     :return: global commands if they exist
     """
     with open(path, "r") as irisao_file:
@@ -249,8 +166,7 @@ def read_global(path):
                 return None
 
         else:
-            raise Exception("Iris AO file formatting problem, can't process the global line:\n" + raw_line)
-
+            raise Exception(f"Iris AO file formatting problem, can't process the global line:\n{raw_line}")
 
 def read_zernikes(path):
     """
@@ -262,7 +178,6 @@ def read_zernikes(path):
     Example: [MV: 1, 0]
 
     :param path: path to the PTT111 file
-
     :return: zernike commands if they exist
     """
     with open(path, "r") as irisao_file:
@@ -293,7 +208,6 @@ def read_zernikes(path):
         else:
             return None
 
-
 def read_segments(path):
     """
     Read the zernike values for P T T for each segment
@@ -304,7 +218,6 @@ def read_segments(path):
     Example : [ZV: 1, 0, 0, 0]
 
     :param path: path to the PTT111 file
-
     :return: segment commands if they exist
     """
     with open(path, "r") as irisao_file:
@@ -337,13 +250,12 @@ def read_segments(path):
         else:
             return None
 
-
-def read_ptt111(path):
+def read_ptt111(path, number_of_segments):
     """
     Read the entirety of a PTT111 file
 
     :param path: path to the PTT111 file
-
+    :param number_of_segments: int, total number of segments on your deformable mirror
     :return: commands, if they exist
     """
 
@@ -353,7 +265,7 @@ def read_ptt111(path):
 
         # Create a dictionary and apply global commands to all segments.
         command_dict = {}
-        for i in range(iris_num_segments()):
+        for i in range(number_of_segments):
             command_dict[i + 1] = global_command
         return command_dict
 
@@ -370,8 +282,7 @@ def read_ptt111(path):
     # No command found in file.
     return None
 
-
-def read_ini(path):
+def read_ini(path, number_of_segments):
     """
     Read the Iris AO segment PTT parameters from an .ini file into Iris AO style
     dictionary {segnum: (piston, tip, tilt)}.
@@ -379,7 +290,7 @@ def read_ini(path):
     This expects 37 segments with centering such that it is in the center of the IrisAO
 
     :param path: path and filename of ini file to be read
-
+    :param number_of_segments: int, total number of segments on your deformable mirror
     :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
     """
     config = ConfigParser()
@@ -387,7 +298,7 @@ def read_ini(path):
     config.read(path)
 
     command_dict = {}
-    for i in range(iris_num_segments()):
+    for i in range(number_of_segments):
         section = 'Segment{}'.format(i+1)
         piston = float(config.get(section, 'z'))
         tip = float(config.get(section, 'xrad'))
@@ -396,37 +307,50 @@ def read_ini(path):
 
     return command_dict
 
-
-def read_segment_values(segments_values):
+def read_segment_values(segment_values=None, dm_config_id=None):
     """
     Each of the following formats can be read in. This function takes in
-    any of these three formats and converts it to a dictionary of the form:
-            {seg:(piston, tip, tilt)}
-    With units of : ([um], [mrad], [mrad])
+    any of these three formats and converts it to a list of tuples of the form:
+            [(piston, tip, tilt), ]
+    Where each tuple has units of : ([um], [mrad], [mrad])
 
-    - .PTT111 file: File format of the segments values coming out of the IrisAO GUI
+    See the README for the semented dm for more details.
+
+    - .PTT111/.PTT489 file: File format of the segments values coming out of the IrisAO GUI
     - .ini file: File format of segments values that gets sent to the IrisAO controls
-    - dictionary: Same format that gets returned: {seg: (piston, tip, tilt)}
+    - list of tuples: Same format that gets returned: [(piston, tip, tilt), ]
 
-    :param segments_values: str, list, np.ndarray. Can be .PTT111, .ini files or array
-
-    :return: dict, command in the form of a dictionary of the form {seg: (piston, tip, tilt)}
+    :param segment_values: str, list. Can be .PTT111, .ini files or a list with piston, tip,
+                           tilt values in a tuple for each segment. For the list, the first
+                           element is the center or top of the innermost ring of the pupil,
+                           and subsequent elements continue up and/or clockwise around the
+                           pupil (see README for more information)
+    :param dm_config_id: str,
+    :return: list, PTT tuples in list of the form (piston, tip, tilt) the first element is
+             the center or top of the innermost ring of the pupil, and subsequent elements
+             continue up and/or clockwise around the pupil (see README for more information)
     """
-    try:
-        if segments_values.endswith("PTT111"):
-            command_dict = read_segments(segments_values)
-        elif segments_values.endswith("ini"):
-            command_dict = read_ini(segments_values)
+    if dm_config_id is None:
+        raise ValueError("A dm_config_id is necessary to determine the number of segments from the config file")
+    else:
+        number_of_segments = iris_num_segments(dm_config_id)
+    # Read in file
+    if segment_values is None:
+        ptt_list = create_zero_list(number_of_segments)
+        segment_names = None
+    elif isinstance(segment_values, str):
+        if segment_values.endswith("PTT111") or segment_values.endswith("PTT489"):
+            command_dict = read_segments(segment_values)
+        elif segment_values.endswith("ini"):
+            command_dict = read_ini(segment_values, number_of_segments)
         else:
-            raise ValueError("The command input format is not supported")
-    except AttributeError:
-        if isinstance(segments_values, dict):
-            # Check that dictionary is in correct format
-            check_dictionary(segments_values)
-            command_dict = segments_values
-        elif segments_values is None:
-            command_dict = segments_values
-        else:
-            raise TypeError("The command input format is not supported")
+            raise ValueError("The file given is not supported")
+        ptt_list = list(command_dict.values())
+        segment_names = list(command_dict.keys())
+    elif isinstance(segment_values, list):
+        ptt_list = segment_values
+        segment_names = None
+    else:
+        raise TypeError("The segment values input format is not supported")
 
-    return command_dict
+    return ptt_list, segment_names
