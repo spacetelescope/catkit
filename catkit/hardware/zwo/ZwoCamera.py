@@ -1,4 +1,3 @@
-from astropy.io import fits
 import numpy as np
 import logging
 import zwoasi
@@ -85,7 +84,7 @@ class ZwoCamera(Camera):
         # Passing the initial_sleep and poll values prevent crashes. DO NOT REMOVE!!!
         poll = quantity(0.1, units.second)
         try:
-            initial_sleep = self._strip_units(initial_sleep)
+            initial_sleep = self._strip_redundant_units(initial_sleep)
             image = self.camera.capture(initial_sleep=int(initial_sleep.to(units.second).magnitude), poll=poll.magnitude)
         except zwoasi.ZWO_CaptureError as error:
             # Maps to:
@@ -175,7 +174,7 @@ class ZwoCamera(Camera):
                                     height=height, gain=gain, full_image=full_image, bins=bins)
 
         # Create metadata from testbed_state and add extra_metadata input.
-        exposure_time = self._strip_units(exposure_time)
+        exposure_time = self._strip_redundant_units(exposure_time)
         meta_data = [MetaDataEntry("Exposure Time", "EXP_TIME", exposure_time.to(units.microseconds).magnitude, "microseconds")]
         meta_data.extend(testbed_state.create_metadata())
         meta_data.append(MetaDataEntry("Camera", "CAMERA", self.config_id, "Camera model, correlates to entry in ini"))
@@ -196,38 +195,39 @@ class ZwoCamera(Camera):
 
         return img_list, meta_data
 
-    def _strip_units(self, nested_quantity):
+    def _strip_redundant_units(self, quantity_to_check):
         """ Sometimes we get compound quantities that look like :
         >>> 100 <Unit('microsecond')> <Unit('microsecond')>
         This function will strip off the extra layers of units and return :
-        >>> 109 <Unit('microsecond')> 
+        >>> 100 <Unit('microsecond')> 
 
         Parameters
         ----------
-        nested_quantity : catkit_types.quantity
+        quantity_to_check : catkit_types.quantity
             A potentially nested quantity.
         
         Returns
         -------
-        stripped_quantity : catkit_types.quantity
+        valid_quantity : catkit_types.quantity
             A quantity with only one unit and scalar magnitude.
         """
         try:
             n = 0
-            has_units = 'magnitude' in dir(nested_quantity.magnitude)
-            stripped_quantity = nested_quantity
+            has_units = 'magnitude' in dir(quantity_to_check.magnitude)
+            valid_quantity = quantity_to_check
             while has_units and n < 10:
-                stripped_quantity = stripped_quantity.magnitude
-                has_units = 'magnitude' in dir(stripped_quantity.magnitude)
+                valid_quantity = valid_quantity.magnitude
+                self.log.warning(f'Malformed redundant units in input {quantity_to_check}. Correcting to {valid_quantity}.')
+                has_units = 'magnitude' in dir(valid_quantity.magnitude)
                 n += 1
         
         except AttributeError:
-            if type(nested_quantity) in (int, np.int64, np.int32):
-                stripped_quantity = quantity(nested_quantity, units.microseconds)
+            if type(quantity_to_check) in (int, np.int64, np.int32):
+                valid_quantity = quantity(quantity_to_check, units.microseconds)
             else:
-                raise AttributeError(f'Given quantity to strip was not a catkit_types.quantity or int : {nested_quantity}')
+                raise AttributeError(f'Given quantity to strip was not a catkit_types.quantity or int : {quantity_to_check}')
         
-        return stripped_quantity
+        return valid_quantity
 
     def flash_id(self, new_id):
         """
@@ -268,7 +268,7 @@ class ZwoCamera(Camera):
 
         # Set up our custom control values.
         self.camera.set_control_value(zwoasi.ASI_GAIN, gain)
-        exposure_time = self._strip_units(exposure_time)
+        exposure_time = self._strip_redundant_units(exposure_time)
         self.camera.set_control_value(zwoasi.ASI_EXPOSURE, int(exposure_time.to(units.microsecond).magnitude))
 
         # Store the camera's detector shape.
