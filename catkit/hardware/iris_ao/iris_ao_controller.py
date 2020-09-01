@@ -3,15 +3,29 @@
 import os
 import subprocess
 
-import numpy as np
-
 from catkit.hardware import testbed_state
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 
-from catkit.hardware.iris_ao import util as iris_util
+from catkit.hardware.iris_ao import util
 
 
 class IrisAoDmController(DeformableMirrorController):
+    """
+    The low-level IrisAO API is written in C, and this class bridges to the compiled executable 'DM_Control.exe' stored
+    locally on the machine that controls the IrisAO mirror. The basic functionality is that the user creates a command
+    and stores it to an ini file called 'ConfigPTT.ini'. The executable then grabs that ini file and applies the piston,
+    tip, tilt (PTT) values in that file to the hardware.
+
+    The executable 'DM_Control.exe' is controlled by passing strings to it with stdin. E.g.:
+
+    dm.stdin.write('config\n')
+    dm.stdin.flush()
+
+    will load the PTT values in the file specified with the variable filename_ptt_dm.
+
+    Further details can be found in the linked PDF in this comment on GitHub:
+    https://github.com/spacetelescope/instrument-interface-library/pull/71#discussion_r466536405
+    """
 
     instrument_lib = subprocess
 
@@ -20,6 +34,15 @@ class IrisAoDmController(DeformableMirrorController):
         """
         Initialize dm manufacturer specific object - this does not, nor should it, open a
         connection.
+
+        :param mirror_serial: string, The mirror serial number. This corresponds to a .mcf file that MUST include the
+                              driver serial number under "Smart Driver". See README.
+        :param driver_serial: string, The driver serial number. This corresponds to a .dcf file. See README.
+        :param disable_hardware: bool, If False, will run on hardware (always used on JOST this way). If True,
+                                 probably (!) just runs the GUI? We never used it with True, so not sure.
+        :param path_to_dm_exe: string, The path to the local directory that houses the DM_Control.exe file.
+        :param filename_ptt_dm: string, Full path including filename of the ini file that provides the PTT values to be
+                                loaded onto the hardware, e.g. ".../ConfigPTT.ini".
         """
 
         self.log.info("Opening IrisAO connection")
@@ -30,13 +53,12 @@ class IrisAoDmController(DeformableMirrorController):
         self.driver_serial = driver_serial
 
         # For the suprocess call
-        self.disableHardware = disable_hardware
+        self.disable_hardware = disable_hardware
         self.path_to_dm_exe = path_to_dm_exe
         self.full_path_dm_exe = os.path.join(path_to_dm_exe, 'DM_Control.exe')
 
         # Where to write ConfigPTT.ini file that gets read by the C++ code
         self.filename_ptt_dm = filename_ptt_dm
-
 
     def send_data(self, data):
         """
@@ -47,17 +69,17 @@ class IrisAoDmController(DeformableMirrorController):
         """
         # Write to ConfigPTT.ini
         self.log.info("Creating config file: %s", self.filename_ptt_dm)
-        iris_util.write_ini(data, path=self.filename_ptt_dm, mirror_serial=self.mirror_serial,
+        util.write_ini(data, path=self.filename_ptt_dm, dm_config_id=self.config_id,
+                       mirror_serial=self.mirror_serial,
                        driver_serial=self.driver_serial)
 
         # Apply the written .ini file to DM
         self.instrument.stdin.write(b'config\n')
         self.instrument.stdin.flush()
 
-
     def _open(self):
         """Open a connection to the IrisAO"""
-        self.instrument = self.instrument_lib.Popen([self.full_path_dm_exe, self.disableHardware],
+        self.instrument = self.instrument_lib.Popen([self.full_path_dm_exe, self.disable_hardware],
                                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                                     stderr=subprocess.PIPE,
                                                     cwd=self.path_to_dm_exe, bufsize=1)
@@ -70,13 +92,13 @@ class IrisAoDmController(DeformableMirrorController):
 
         return self.instrument
 
-
     def zero(self, return_zeros=False):
-        """Put zeros on the DM
+        """Put zeros on the DM. This does not correspond to a flattened DM.
 
         :return: If return_zeros=True, return a dictionary of zeros
         """
-        zeros = iris_util.create_zero_dictionary(iris_util.iris_num_segments())
+        zero_list = util.create_zero_list(util.iris_num_segments(self.config_id))
+        zeros = util.create_dict_from_list(zero_list, util.iris_pupil_naming(self.config_id))
         self.send_data(zeros)
 
         # Update the testbed state
@@ -84,7 +106,6 @@ class IrisAoDmController(DeformableMirrorController):
 
         if return_zeros:
             return zeros
-
 
     def _close(self):
         """Close connection safely."""
@@ -97,7 +118,6 @@ class IrisAoDmController(DeformableMirrorController):
         finally:
             self.instrument = None
             self._close_iris_controller_testbed_state()
-
 
     def apply_shape(self, dm_shape, dm_num=1):
         """
@@ -123,11 +143,9 @@ class IrisAoDmController(DeformableMirrorController):
         # Update the testbed_state.
         self._update_iris_state(dm_shape)
 
-
     def apply_shape_to_both(self, dm1_shape=None, dm2_shape=None):
-        """ Method only used by the BostomDmController"""
-        raise NotImplementedError("apply_shape_to_both is not implmented for the Iris AO")
-
+        """Method only used by the BostonDmController"""
+        raise NotImplementedError("apply_shape_to_both is not implemented for the Iris AO")
 
     @staticmethod
     def _update_iris_state(command_object):
