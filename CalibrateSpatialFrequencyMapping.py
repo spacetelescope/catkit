@@ -83,22 +83,23 @@ def postprocess_images(images, reference_image, speckles,
         ygrid = np.flipud(ygrid)
 
     centroids = np.zeros((2, len(speckles)))
-    pipeline_images = np.zeros((len(speckles), 6, *shape))
+    pipeline_images = np.zeros((len(speckles), 5, *shape))
 
     for n, (fx, fy) in enumerate(speckles):
         image = images[..., n]
 
-        # Postprocess image to extract speckle centroids
-        difference = image - reference_image
+        # # Postprocess image to extract speckle centroids
+        # difference = image - reference_image
+        divider = fx * xgrid + fy * ygrid
 
         # Split the image into halves, each containing one of the two injected speckles
-        pos = difference * (fx * xgrid + fy * ygrid > 0)
+        pos = image * (divider > 0)
         pos_max_ind = np.unravel_index(np.argmax(pos, axis=None), pos.shape)
         pos_masked = pos * ((xgrid - xgrid[pos_max_ind]) ** 2 +
                             (ygrid - ygrid[pos_max_ind]) ** 2 <
                             (window_radius ** 2))
 
-        neg = difference * (fx * xgrid + fy * ygrid < 0)
+        neg = image * (divider < 0)
         neg_max_ind = np.unravel_index(np.argmax(neg, axis=None), neg.shape)
         neg_masked = neg * ((xgrid - xgrid[neg_max_ind]) ** 2 +
                             (ygrid - ygrid[neg_max_ind]) ** 2 <
@@ -110,7 +111,6 @@ def postprocess_images(images, reference_image, speckles,
         pipeline_images[n, ...] = np.moveaxis(
             np.dstack([
                 image,
-                difference,
                 pos,
                 pos_masked,
                 neg,
