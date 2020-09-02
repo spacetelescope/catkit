@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import ascii
 from astropy.io import fits
-from scipy.linalg import polar
+from scipy.linalg import polar, logm
 from skimage.feature import register_translation  # WARNING! Deprecated in skimage v0.17
 
 from hicat import util
@@ -156,59 +156,101 @@ def extract_parameters(mapping_matrix, off_diagonal_tol=1e-2, theta_tol=10., log
 
                                             R = cos(theta) sin(theta)       (2)
                                                -sin(theta) cos(theta)
-                                            S = s_x  S01                    (4)
-                                                S10  s_y
+                                            S = s_x  s_yx                   (4)
+                                                s_xy  s_y
 
     where s_x and s_y are the scaling factors along the horizontal and vertical directions in
-    units of pixels / (cycles/DM), m is the shear coefficient, and S01 and S10 are off-diagonal
-    terms.  If the mapping consists PURELY of rotation, horizontal scaling, and vertical scaling,
-    then S01 and S10 will vanish and S will be purely diagonal.
+    units of pixels / (cycles/DM), m is the shear coefficient, and s_yx and s_xy are off-diagonal
+    terms that represent cross-coupling between the x- and y-axes.  If the mapping consists
+    PURELY of rotation, horizontal scaling, and vertical scaling, then s_yx and s_xy will vanish
+    and S will be purely diagonal.
 
     :param mapping_matrix: 2x2 numpy array in the form described by Eq. (1)
     :param theta_tol: float, how large the estimated rotation angle can be (in degrees) before we
                       issue a warning, since the HiCAT DMs are known to be well-aligned and
                       should have a rotation angle close to zero.
     :param log: logger object, for displaying warnings
-    :return: (s_x, s_y, theta, S01, S10) with theta in degrees.  S01 and S10 are the off-diagonal
+    :return: (s_x, s_y, theta, s_yx, s_xy) with theta in degrees.  S01 and S10 are the off-diagonal
              elements of the scaling matrix, which should be small.
     """
     R, S = polar(mapping_matrix)
-
-    # Average the angles from each of the four elements of the rotation matrix to estimate
-    # rotation angle
-    theta = np.mean([np.arccos(R[0, 0]), np.arcsin(R[0, 1]),
-                    -np.arcsin(R[1, 0]), np.arccos(R[1, 1])]) * 180 / np.pi
-
-    # Rotation should be small
-    if np.abs(theta) > theta_tol and log is not None:
-        log.warning(f'Estimated rotation is larger than {theta_tol}. Results may not be accurate.')
-
-    # Scaling matrix should be diagonal
-    if ((np.abs(S[0, 1]) > off_diagonal_tol or np.abs(S[1, 0]) > off_diagonal_tol)
-            and log is not None):
-        log.warning('Scaling matrix has significant off-diagonal components. Results may not be '
-                    'accurate.')
+    assert np.isclose(np.linalg.det(R), 1.)
+    theta = logm(R)[0, 1] * 180 / np.pi  # Matrix log is more numerically stable than inverse trig
 
     # Scale along horizontal and vertical directions, in (binned pixels) / (cycles/DM)
     s_x, s_y = S[0, 0], S[1, 1]
 
-    return s_x, s_y, theta, S[0, 1], S[1, 0]
+    # Cross-coupling terms, which we would like to be zero.
+    s_yx, s_xy = S[0, 1], S[1, 0]
+
+    return s_x, s_y, theta, s_yx, s_xy
+
+
+def jackknife_estimator(inputs, outputs):
+    num_samples = inputs.shape[1]
+    indices = np.arange(num_samples)
+
+    # Compute the parameters using the full set of samples
+    full_sample_matrix = outputs @ np.linalg.pinv(inputs)
+    full_sample_estimates = np.array(extract_parameters(full_sample_matrix))
+
+    # Jackknife replicates are parameter estimates obtained by leaving one sample out at a time.
+    # Therefore, if there are N total samples, there will be N replicates.
+    replicates = np.empty((num_samples, 5), dtype=np.float64)
+    for n in range(num_samples):
+        matrix = outputs[:, indices != n] @ np.linalg.pinv(inputs[:, indices != n])
+        replicates[n, :] = extract_parameters(matrix)
+
+    # Compute the empirical mean of each parameter
+    empirical_means = replicates.mean(axis=0)
+
+    # Compute standard error of each estimator
+    std_err = np.sqrt(((num_samples - 1) / (num_samples)) * np.sum(
+        (replicates - empirical_means) ** 2, axis=0))
+
+    # Compute bias of estimator.  This can be subtracted from the parameter estimates to yield
+    # unbiased estimates.
+    bias = (num_samples - 1) * (full_sample_estimates - empirical_means)
+
+    return full_sample_estimates - bias, std_err
+
+
+def bootstrap_estimator(inputs, outputs, num_trials, subset_size=None):
+    num_samples = inputs.shape[1]
+
+    if subset_size is None:
+        subset_size = num_samples
+
+    bootstrap_estimates = np.empty((num_trials, 5), dtype=np.float64)
+
+    for n in range(num_trials):
+        indices = np.random.choice(num_samples, replace=True, size=subset_size)
+        bootstrap_matrix = outputs[:, indices] @ np.linalg.pinv(inputs[:, indices])
+        bootstrap_estimates[n, :] = extract_parameters(bootstrap_matrix)
+
+    return bootstrap_estimates
 
 
 def plot_goodness_of_fit(mapping_matrix, inputs, outputs):
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(10, 10 * 140./240))
     predicted_outputs = mapping_matrix @ inputs
 
     # Mean-squared error between predicted and actual centroids
-    mse = np.mean(np.linalg.norm(predicted_outputs - outputs, axis=1) ** 2)
+    mse = np.mean(np.linalg.norm(predicted_outputs - outputs, axis=0) ** 2)
+    print(f'Mean-squared error: {mse:0.3f} pix')
 
     ax.scatter(predicted_outputs[0, :], predicted_outputs[1, :], label='predicted')
-    ax.scatter(outputs[0, :], outputs[1, :], label='Actual')
+    ax.scatter(outputs[0, :], outputs[1, :], label='actual')
     ax.grid(True)
+    ax.set_xlim([-120, 120])
+    ax.set_ylim([-20, 120])
+    ax.axhline(0, color='k', linewidth=1.5)
+    ax.axvline(0, color='k', linewidth=1.5)
     ax.set_title('Predicted vs. actual centroids')
     ax.legend(loc='best')
     ax.set_xlabel('x [pix]')
     ax.set_ylabel('y [pix]')
+    ax.annotate(f'MSE={mse:0.3f} pix', xy=(0.05, 0.05), xycoords='axes fraction')
 
     return fig, ax
 
@@ -366,7 +408,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                 dm1_actuators=flat,
                 dm2_actuators=flat)
             reference_image = reference_image.shaped
-            results = np.zeros((2, 5), dtype=np.float64)  # 2 DMs x 5 parameters
+            estimates = np.zeros((2, 5, 2), dtype=np.float64)  # 2 DMs x 5 parameters x (mean, err)
 
             # Apply sines to one DM at a time
             for dm_num in [1, 2]:
@@ -425,27 +467,35 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                 ascii.write(results_table,
                             os.path.join(self.output_path, f'results_table_dm{dm_num}.csv'),
                             format='csv')
-                mapping_matrix = reconstruct_mapping_matrix(centroids, speckles)
-                fits.writeto(os.path.join(self.output_path, f'mapping_matrix_dm{dm_num}.fits'),
-                             mapping_matrix)
+                raw_matrix = reconstruct_mapping_matrix(centroids, speckles)
+                fits.writeto(os.path.join(self.output_path, f'raw_matrix_dm{dm_num}.fits'),
+                             raw_matrix)
                 fits.writeto(os.path.join(self.output_path, f'pipeline_images_dm{dm_num}.fits'),
                              pipeline_images)
 
-                results[dm_num - 1, :] = np.array(
-                    extract_parameters(mapping_matrix, log=self.log))
-
                 inputs = np.vstack([results_table['fx [cycles/DM]'],
                                     results_table['fy [cycles/DM]']])
-                fig, ax = plot_goodness_of_fit(mapping_matrix, inputs, centroids)
+                outputs = np.vstack([results_table['cx [pix]'],
+                                     results_table['cy [pix]']])
+                bootstraps = bootstrap_estimator(inputs, outputs, int(1e4))
+                estimates[dm_num - 1, :, 0] = bootstraps.mean(axis=0)
+                estimates[dm_num - 1, :, 1] = bootstraps.std(axis=0)
+
+                s_x, s_y, theta = estimates[dm_num - 1, :3, 0]
+                c, s = np.cos(theta * np.pi / 180), np.sin(theta * np.pi / 180)
+                RS_matrix = np.array([[c, s], [-s, c]]) @ np.diag([s_x, s_y])
+                fits.writeto(os.path.join(self.output_path, f'RS_matrix_dm{dm_num}.fits'),
+                             RS_matrix)
+                fig, ax = plot_goodness_of_fit(RS_matrix, inputs, outputs)
                 plt.savefig(os.path.join(self.output_path, f'inputs_outputs_dm{dm_num}.png'))
 
         for dm_num in [1, 2]:
             index = dm_num - 1
-            s_x, s_y, theta, S01, S10 = results[index, :]
-            self.log.info(f"""Estimated mapping parameters for DM {dm_num}:
-                x scale: {s_x:0.5f} pixels/(cycles/DM)
-                y scale: {s_y:0.5f} pixels/(cycles/DM)
-                  theta: {theta:0.5f} degrees
-                    S01: {S01:0.5f} pixels/(cycles/DM)
-                    S10: {S10:0.5f} pixels/(cycles/DM)
+            s_x, s_y, theta, s_yx, s_xy = estimates[index, :, 0]
+            self.log.info(f"""Estimated mapping parameters for DM {dm_num} (+- 3 std. dev.):
+                x scale: {s_x:0.5f} +- {3 * estimates[index, 0, 1]:0.5f} pixels/(cycles/DM)
+                y scale: {s_y:0.5f} +- {3 * estimates[index, 1, 1]:0.5f} pixels/(cycles/DM)
+                  theta: {theta:0.5f} +- {3 * estimates[index, 2, 1]:0.5f} degrees
+                   s_yx: {s_yx:0.5f} +- {3 * estimates[index, 3, 1]:0.5f} pixels/(cycles/DM)
+                   s_xy: {s_xy:0.5f} +- {3 * estimates[index, 4, 1]:0.5f} pixels/(cycles/DM)
             """)
