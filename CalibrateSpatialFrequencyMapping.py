@@ -25,11 +25,11 @@ def compute_centroid(image):
     y = np.arange(-image.shape[0] // 2, image.shape[0] // 2)
     xg, yg = np.meshgrid(x, y)
     denom = image.sum()
-    return (xg * image).sum() / denom, (yg * image).sum() / denom,
+    return np.array([(xg * image).sum() / denom, (yg * image).sum() / denom])
 
 
 def postprocess_images(images, reference_image, speckles,
-                       reflect_x=False, reflect_y=False, log=None):
+                       reflect_x=False, reflect_y=False, log=None, window_radius=20):
     """
     Postprocess images to find the centroid of one of the two injected speckles.  This is done as
     follows:
@@ -83,7 +83,7 @@ def postprocess_images(images, reference_image, speckles,
         ygrid = np.flipud(ygrid)
 
     centroids = np.zeros((2, len(speckles)))
-    pipeline_images = np.zeros((len(speckles), 4, *shape))
+    pipeline_images = np.zeros((len(speckles), 6, *shape))
 
     for n, (fx, fy) in enumerate(speckles):
         image = images[..., n]
@@ -93,23 +93,29 @@ def postprocess_images(images, reference_image, speckles,
 
         # Split the image into halves, each containing one of the two injected speckles
         pos = difference * (fx * xgrid + fy * ygrid > 0)
-        neg = difference * (fx * xgrid + fy * ygrid < 0)
+        pos_max_ind = np.unravel_index(np.argmax(pos, axis=None), pos.shape)
+        pos_masked = pos * ((xgrid - xgrid[pos_max_ind]) ** 2 +
+                            (ygrid - ygrid[pos_max_ind]) ** 2 <
+                            (window_radius ** 2))
 
-        # Cross-correlate the two halves to find the separation distance and direction.  This is
-        # independent of the global centering of the image, so it is more robust to image jitter
-        # on hardware experiments.
-        shifts, _, _ = register_translation(pos, neg, upsample_factor=1)
+        neg = difference * (fx * xgrid + fy * ygrid < 0)
+        neg_max_ind = np.unravel_index(np.argmax(neg, axis=None), neg.shape)
+        neg_masked = neg * ((xgrid - xgrid[neg_max_ind]) ** 2 +
+                            (ygrid - ygrid[neg_max_ind]) ** 2 <
+                            (window_radius ** 2))
+        pos_centroid = compute_centroid(pos_masked)
+        neg_centroid = compute_centroid(neg_masked)
+        centroid = (pos_centroid - neg_centroid) / 2
+
         pipeline_images[n, ...] = np.moveaxis(
             np.dstack([
                 image,
                 difference,
                 pos,
-                neg
+                pos_masked,
+                neg,
+                neg_masked
             ]), 2, 0)
-
-        # Reverse order to get (col, row) ordering, which is the same as (x, y).
-        # Separation from origin is half the measured baseline between the two speckles
-        centroid = np.array(shifts[::-1]) / 2
 
         if reflect_x:
             centroid[0] *= -1
