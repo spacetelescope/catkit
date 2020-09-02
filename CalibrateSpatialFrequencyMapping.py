@@ -187,6 +187,17 @@ def extract_parameters(mapping_matrix, off_diagonal_tol=1e-2, theta_tol=10., log
 
 
 def jackknife_estimator(inputs, outputs):
+    """
+    Use statistical jackknifing to estimate parameters of interest, along with their standard
+    errors.  Given a set of N input vectors and N output vectors, the parameters of interest are
+    estimated N times, in each case leaving out exactly one input/output pair.  The resulting
+    parameter estimates are used to construct unbiased estimators for the mean and standard error of
+    the parameter estimators.
+
+    :param inputs: 2xN array of input vectors
+    :param outputs: 2xN array of measured outputs
+    :return: (means, standard errors).  Each is a 5-element array.
+    """
     num_samples = inputs.shape[1]
     indices = np.arange(num_samples)
 
@@ -216,6 +227,24 @@ def jackknife_estimator(inputs, outputs):
 
 
 def bootstrap_estimator(inputs, outputs, num_trials, subset_size=None):
+    """
+    Use statistical bootstrapping to estimate the probability distribution of each parameter
+    estimator.  The measured data is treated as the "population," and is resampled num_trials times
+    with replacement, and the parameters are computed for each resampled dataset.  The
+    distribution of the resulting parameter estimates can be shown to approximate the true
+    distribution under a wide range of conditions.
+
+    :param inputs: 2xN array of input vectors
+    :param outputs: 2xN array of measured outputs
+    :param num_trials: Number of resampled datasets.  Generally >1000 is suitable.
+    :param subset_size: Size of resampled datasets.  If None, will default to the size of the
+                        original dataset.  This is useful for estimating the precision of the
+                        parameter estimates as a function of the number of datapoints, for example
+                        if one wishes to approximate how many are necessary to achieve a desired
+                        level of precision.
+    :return: Nx5 array of bootstrapped parameter estimates.  Each column corresponds to an
+             individual parameter.
+    """
     num_samples = inputs.shape[1]
 
     if subset_size is None:
@@ -232,6 +261,18 @@ def bootstrap_estimator(inputs, outputs, num_trials, subset_size=None):
 
 
 def plot_goodness_of_fit(mapping_matrix, inputs, outputs):
+    """
+    Use the estimated mapping matrix to predict the outputs from the inputs and compare with the
+    measured output data to assess performance.
+
+    :param mapping_matrix: 2x2 matrix describing linear map from inputs to outputs
+    :param inputs: 2xN array consisting of N input vectors
+    :param outputs: 2xN array consisting of N measured output vectors
+    :return: figure and axis handle so that user can modify figure outside of this function if
+    needed
+    """
+    # Figure size is chosen so that equal data ranges correspond to equal distances along
+    # horizontal and vertical directions in plot
     fig, ax = plt.subplots(figsize=(10, 10 * 140./240))
     predicted_outputs = mapping_matrix @ inputs
 
@@ -473,22 +514,53 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                 fits.writeto(os.path.join(self.output_path, f'pipeline_images_dm{dm_num}.fits'),
                              pipeline_images)
 
+                # Reorganize data into form suitable for parameter estimation
                 inputs = np.vstack([results_table['fx [cycles/DM]'],
                                     results_table['fy [cycles/DM]']])
                 outputs = np.vstack([results_table['cx [pix]'],
                                      results_table['cy [pix]']])
+
+                # Obtain parameter estimates and their standard errors via statistical bootstrapping
                 bootstraps = bootstrap_estimator(inputs, outputs, int(1e4))
                 estimates[dm_num - 1, :, 0] = bootstraps.mean(axis=0)
                 estimates[dm_num - 1, :, 1] = bootstraps.std(axis=0)
 
+                # Use the x-scale, y-scale and theta to reconstruct a matrix consisting purely of
+                # rotation and scale
                 s_x, s_y, theta = estimates[dm_num - 1, :3, 0]
                 c, s = np.cos(theta * np.pi / 180), np.sin(theta * np.pi / 180)
                 RS_matrix = np.array([[c, s], [-s, c]]) @ np.diag([s_x, s_y])
                 fits.writeto(os.path.join(self.output_path, f'RS_matrix_dm{dm_num}.fits'),
                              RS_matrix)
-                fig, ax = plot_goodness_of_fit(RS_matrix, inputs, outputs)
+
+                # Compare the centroids predicted by the rotation-scale mapping to the measured
+                # centroids to assess algorithm performance
+                plot_goodness_of_fit(RS_matrix, inputs, outputs)
                 plt.savefig(os.path.join(self.output_path, f'inputs_outputs_dm{dm_num}.png'))
 
+                labels = {
+                    'tag': ['sx', 'sy', 'theta', 'syx', 'sxy'],
+                    'name': [r'$s_x$', r'$s_y$', r'$\theta$', r'$s_{yx}$', r'$s_{xy}$'],
+                    'unit': [r'$\mathrm{pix/(cyc/DM)}$', r'$\mathrm{pix/(cyc/DM)}$', '${}^{\circ}$',
+                             r'$\mathrm{pix/(cyc/DM)}$', r'$\mathrm{pix/(cyc/DM)}$'],
+}
+                # Show histograms of each parameter estimate for reference (in case distributions
+                # are noticably non-Gaussian)
+                for col in range(bootstraps.shape[1]):
+                    plt.figure(figsize=(10, 10*2/3))
+
+                    # Good rule of thumb for number of bins is sqrt(number of datapoints)
+                    plt.hist(bootstraps[:, col],
+                             bins=int(np.floor(np.sqrt(bootstraps.shape[0]))),
+                             weights=np.ones(bootstraps.shape[0]) / bootstraps.shape[0],
+                             histtype='stepfilled')
+                    plt.grid(True)
+                    plt.title(f'Distribution of {labels["name"][col]}')
+                    plt.xlabel(f'{labels["name"][col]} [{labels["unit"][col]}]')
+                    plt.ylabel(f'Probability')
+                    plt.savefig(os.path.join(self.output_path, f'histogram_{labels["tag"]}.png'))
+
+        # Print results
         for dm_num in [1, 2]:
             index = dm_num - 1
             s_x, s_y, theta, s_yx, s_xy = estimates[index, :, 0]
