@@ -558,7 +558,8 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                     plt.title(f'Distribution of {labels["name"][col]}')
                     plt.xlabel(f'{labels["name"][col]} [{labels["unit"][col]}]')
                     plt.ylabel(f'Probability')
-                    plt.savefig(os.path.join(self.output_path, f'histogram_{labels["tag"]}.png'))
+                    plt.savefig(os.path.join(self.output_path,
+                                             f'histogram_{labels["tag"][col]}_dm{dm_num}.png'))
 
         # Print results
         for dm_num in [1, 2]:
