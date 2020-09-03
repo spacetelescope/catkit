@@ -357,9 +357,6 @@ class CalibrateSpatialFrequencyMapping(Experiment):
         self.exposure_time = exposure_time
         self.raw_skip = raw_skip if raw_skip is not None else num_exposures+1
 
-        # Generate output directory
-        self.init_experiment_path()
-
         # These don't affect the imaging wavelength at all; they are just passed into the
         # take_exposure_hicat() function from stroke_min.py, which uses it to generate
         # directory names
