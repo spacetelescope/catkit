@@ -5,13 +5,14 @@ import pandas
 import os
 import logging
 import glob
+from scipy.optimize import curve_fit
 
 from hicat.plotting.plot_utils import careful_savefig
 import hicat.plotting.log_analysis_plots
 
 log = logging.getLogger(__name__)
 
-def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
+def calculate_iteration_of_convergence(filepath, slope_threshold=1E-11):
     """
     Calculate the iteration at which the contrast converges. Fits a 5th order polynomial and uses the first derivative
     to infer a slope estimate first. The absolute value of the slope must be below a set parameter, slope_threshold.
@@ -23,10 +24,11 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
 
     metrics_data = load_metrics_data(filepath)
 
-    contrast_fit = np.polyfit(metrics_data['iteration'], np.log(metrics_data['mean_image_contrast']), 5)
-    fit_1d = np.poly1d(contrast_fit)
-    derivative_1d = np.polyder(fit_1d)
-    metrics_data['derivatives'] = derivative_1d(metrics_data['iteration'])
+    def func(x, a, b, c):
+        return a * np.exp(-b * x) + c
+    popt, pcov = curve_fit(func, metrics_data['iteration'], metrics_data[' mean_image_contrast'])
+    metrics_data['fit'] = func(metrics_data['iteration'], *popt)
+    metrics_data['derivatives'] = metrics_data['fit'].diff()
     convergence_metrics = metrics_data[np.abs(metrics_data['derivatives']) < slope_threshold]
 
     # Warning fix this: selects last half of data if no convergence
