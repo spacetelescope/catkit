@@ -560,20 +560,46 @@ class CalibrateSpatialFrequencyMapping(Experiment):
 }
                 # Show histograms of each parameter estimate for reference (in case distributions
                 # are noticably non-Gaussian)
-                for col in range(bootstraps.shape[1]):
-                    plt.figure(figsize=(10, 10*2/3))
+                # Good rule of thumb for number of bins is sqrt(number of datapoints)
+                num_bins = int(np.floor(np.sqrt(bootstraps.shape[0])))
+                hist_kwargs = {'bins': num_bins,
+                               'weights': np.ones(bootstraps.shape[0]) / bootstraps.shape[0],
+                               'histtype': 'stepfilled'  # Fast with many datapoints
+                               }
 
-                    # Good rule of thumb for number of bins is sqrt(number of datapoints)
-                    plt.hist(bootstraps[:, col],
-                             bins=int(np.floor(np.sqrt(bootstraps.shape[0]))),
-                             weights=np.ones(bootstraps.shape[0]) / bootstraps.shape[0],
-                             histtype='stepfilled')
-                    plt.grid(True)
-                    plt.title(f'Distribution of {labels["name"][col]}')
-                    plt.xlabel(f'{labels["name"][col]} [{labels["unit"][col]}]')
-                    plt.ylabel(f'Probability')
-                    plt.savefig(os.path.join(self.output_path,
-                                             f'histogram_{labels["tag"][col]}_dm{dm_num}.png'))
+                # Plot distributions of x and y scale parameters
+                plt.figure(figsize=(10, 10*2/3))
+                plt.hist(bootstraps[:, 0], label='$s_x$', color='r', alpha=0.5, **hist_kwargs)
+                plt.hist(bootstraps[:, 1], label='$s_y$', color='b', alpha=0.5, **hist_kwargs)
+                plt.axvline(estimates[dm_num - 1, 0, 0], color='r', linestyle='--', linewidth=1.)
+                plt.axvline(estimates[dm_num - 1, 1, 0], color='b', linestyle='--', linewidth=1.)
+                plt.grid(True)
+                plt.legend(loc='best')
+                plt.title('Distributions of $s_{x}$ and $s_{y}$')
+                plt.xlabel(r'Scale [$\mathrm{pix/(cyc/DM)}$]')
+                plt.ylabel('Probability')
+                plt.savefig(os.path.join(self.output_path, f'histogram_sx_sy_dm{dm_num}.png'))
+
+                # Off-diagonal terms of scale matrix
+                plt.figure(figsize=(10, 10*2/3))
+                plt.hist(bootstraps[:, 3], color='g', alpha=0.5, **hist_kwargs)
+                plt.axvline(estimates[dm_num - 1, 3, 0], color='g', linestyle='--', linewidth=1.)
+                plt.grid(True)
+                plt.title('Distributions of $s_{yx}$ and $s_{xy}$')
+                plt.xlabel(r'Scale [$\mathrm{pix/(cyc/DM)}$]')
+                plt.ylabel(f'Probability')
+                plt.savefig(os.path.join(self.output_path, f'histogram_syx_sxy_dm{dm_num}.png'))
+
+                # Rotation angle
+                plt.figure(figsize=(10, 10*2/3))
+                plt.hist(bootstraps[:, 2], color='C1', alpha=0.5, **hist_kwargs)
+                plt.axvline(estimates[dm_num - 1, 2, 0], color='C1', linestyle='--',
+                            linewidth=1.)
+                plt.grid(True)
+                plt.title('Distributions of rotation angle')
+                plt.xlabel(r'Rotation angle [${}^{\circ}$]')
+                plt.ylabel(f'Probability')
+                plt.savefig(os.path.join(self.output_path, f'histogram_theta_dm{dm_num}.png'))
 
         # Print results
         for dm_num in [1, 2]:
