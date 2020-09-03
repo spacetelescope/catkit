@@ -303,7 +303,7 @@ def plot_goodness_of_fit(mapping_matrix, inputs, outputs):
 
 
 class CalibrateSpatialFrequencyMapping(Experiment):
-    name = 'Calibrate DM mapping'
+    name = 'DM spatial frequency calibration'
 
     def __init__(self, inner_radius, outer_radius, num_speckle, amplitude=None,
                  file_mode=True,
@@ -357,10 +357,9 @@ class CalibrateSpatialFrequencyMapping(Experiment):
         self.exposure_time = exposure_time
         self.raw_skip = raw_skip if raw_skip is not None else num_exposures+1
 
+        # Generate output directory
+        self.init_experiment_path()
 
-        # Additional setup items
-        self.suffix = 'dm_spatial_frequency_calibration'
-        self.output_path = util.create_data_path(suffix=self.suffix)
         # These don't affect the imaging wavelength at all; they are just passed into the
         # take_exposure_hicat() function from stroke_min.py, which uses it to generate
         # directory names
