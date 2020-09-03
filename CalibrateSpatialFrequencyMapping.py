@@ -378,6 +378,12 @@ class CalibrateSpatialFrequencyMapping(Experiment):
         """
         Take an exposure on HiCAT.
 
+        Note: for this particular experiment, image centering is disabled in the pipeline.  The
+        results of this experiment are relatively insensitive to small amounts of image jitter
+        (unlike a wavefront control experiment).  However, the bright speckles injected during
+        calibration are bright enough to throw off the image registration.  Mis-registered images,
+        unlike jitter, can and will negatively affect the calibration results.
+
         :param devices: handles to HiCAT hardware
         :param initial_path: root path on disk where raw data is saved
         :param suffix: string, appends this to the end of the timestamp, passed to take_exposure_hicat()
@@ -399,7 +405,9 @@ class CalibrateSpatialFrequencyMapping(Experiment):
             suffix=suffix,
             file_mode=self.file_mode,
             raw_skip=self.raw_skip,
-            return_binned_image=False)
+            return_binned_image=False,
+            centering=testbed.ImageCentering.off
+        )
 
         return image, header
 
