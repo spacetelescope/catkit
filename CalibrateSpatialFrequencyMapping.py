@@ -592,7 +592,7 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                 plt.axvline(estimates[dm_num - 1, 2, 0], color='C1', linestyle='--',
                             linewidth=1.)
                 plt.grid(True)
-                plt.title('Distributions of rotation angle')
+                plt.title('Distribution of rotation angle')
                 plt.xlabel(r'Rotation angle [${}^{\circ}$]')
                 plt.ylabel(f'Probability')
                 plt.savefig(os.path.join(self.output_path, f'histogram_theta_dm{dm_num}.png'))
