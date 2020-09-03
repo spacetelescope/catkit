@@ -282,9 +282,9 @@ def plot_goodness_of_fit(mapping_matrix, inputs, outputs):
     fig, ax = plt.subplots(figsize=(10, 10 * 140./240))
     predicted_outputs = mapping_matrix @ inputs
 
-    # Mean-squared error between predicted and actual centroids
-    mse = np.mean(np.linalg.norm(predicted_outputs - outputs, axis=0) ** 2)
-    print(f'Mean-squared error: {mse:0.3f} pix')
+    # RMS error between predicted and actual centroids
+    rmse = np.sqrt(np.mean(np.linalg.norm(predicted_outputs - outputs, axis=0) ** 2))
+    print(f'RMS error: {rmse:0.3f} pix')
 
     ax.scatter(predicted_outputs[0, :], predicted_outputs[1, :], label='predicted')
     ax.scatter(outputs[0, :], outputs[1, :], label='measured')
@@ -297,7 +297,7 @@ def plot_goodness_of_fit(mapping_matrix, inputs, outputs):
     ax.legend(loc='best')
     ax.set_xlabel('x [pix]')
     ax.set_ylabel('y [pix]')
-    ax.annotate(f'MSE={mse:0.3f} pix', xy=(0.05, 0.05), xycoords='axes fraction')
+    ax.annotate(f'RMSE={rmse:0.3f} pix', xy=(0.05, 0.05), xycoords='axes fraction')
 
     return fig, ax
 
