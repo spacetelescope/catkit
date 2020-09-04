@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 def calculate_iteration_of_convergence(filepath, slope_threshold=1E-11):
     """
-    Calculate the iteration at which the contrast converges. Fits a 5th order polynomial and uses the first derivative
+    Calculate the iteration at which the contrast converges. Fits an exponential decay function, and uses the change
     to infer a slope estimate first. The absolute value of the slope must be below a set parameter, slope_threshold.
     If this fails to converge, it simply returns n/2 (iteration at the halfway point) and throws a warning.
     :param filepath: The path to the csv or df of data including iteration number and mean contrast
