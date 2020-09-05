@@ -35,8 +35,7 @@ class Experiment(ABC):
         self.output_path = output_path
         self.suffix = suffix
 
-        #self.safety_tests = [] #
-        if self.safety_tests is []:
+        if self.safety_tests == []:
             for test in self.list_of_safety_tests:
                 self.safety_tests.append(test())
 
