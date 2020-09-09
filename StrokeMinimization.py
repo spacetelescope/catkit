@@ -15,14 +15,14 @@ import hcipy
 
 import hicat.plotting
 import hicat.plotting.animation
-from hicat.experiments.Experiment import Experiment
-from hicat.hardware import testbed
+from hicat.experiments.Experiment import HicatExperiment
+from hicat.hardware import testbed, testbed_state
 import hicat.util
 from hicat.wfc_algorithms import stroke_min
 from hicat.experiments.modules import contrast_statistics
 
 
-class StrokeMinimization(Experiment):
+class StrokeMinimization(HicatExperiment):
     """ Stroke Minimization experiment class
 
     :param jacobian_filename: Jacobian matrix file name path
@@ -216,190 +216,176 @@ class StrokeMinimization(Experiment):
         return dm1_actuators, dm2_actuators
 
     def experiment(self):
-        # Initialize the testbed devices once, to reduce overhead of opening/intializing
-        # each one for each exposure.
-        with testbed.laser_source() as laser, \
-                testbed.dm_controller() as dm, \
-                testbed.motor_controller() as motor_controller, \
-                testbed.beam_dump() as beam_dump, \
-                testbed.imaging_camera() as cam, \
-                testbed.pupil_camera() as pupilcam, \
-                testbed.temp_sensor(config_id="aux_temperature_sensor") as temp_sensor, \
-                testbed.color_wheel() as color_wheel:
-            devices = {'laser': laser,
-                       'dm': dm,
-                       'motor_controller': motor_controller,
-                       'beam_dump': beam_dump,
-                       'imaging_camera': cam,
-                       'pupil_camera': pupilcam,
-                       'temp_sensor': temp_sensor,
-                       'color_wheel': color_wheel}
 
-            out_path = os.path.join(self.output_path, 'before')
-            exposure_kwargs = {'initial_path': out_path,
-                               'num_exposures': self.num_exposures}
+        # Get cached devices, etc, that were instantiated (and connections opened) in HicatExperiment.pre_experiment().
+        devices = testbed_state.devices.copy()
+        ta_controller = devices["ta_controller"]
 
-            # Take starting reference images, in direct and coron
-            image_before, coron_header = self.take_coron_exposure(
-                self.dm1_actuators, self.dm2_actuators, devices,
-                output_err=True, dark_zone_mask=self.dark_zone, **exposure_kwargs)
-            direct, _header = self.take_direct_exposure(
-                self.dm1_actuators, self.dm2_actuators, devices, **exposure_kwargs)
-            image_before /= direct.max()
-            image_after = image_before
+        out_path = os.path.join(self.output_path, 'before')
+        exposure_kwargs = {'initial_path': out_path,
+                           'num_exposures': self.num_exposures}
 
-            # set up plot writing infrastructure
-            self.init_strokemin_plots()
+        # Take starting reference images, in direct and coron
+        image_before, coron_header = self.take_coron_exposure(
+            self.dm1_actuators, self.dm2_actuators, devices,
+            output_err=True, dark_zone_mask=self.dark_zone, **exposure_kwargs)
+        direct, _header = self.take_direct_exposure(
+            self.dm1_actuators, self.dm2_actuators, devices, **exposure_kwargs)
+        image_before /= direct.max()
+        image_after = image_before
 
-            self.mean_contrasts_image.append(np.mean(image_before[self.dark_zone]))
+        # set up plot writing infrastructure
+        self.init_strokemin_plots()
 
-            self.collect_metrics(devices)
-            est_snr = coron_header['SNR_DZ'] if coron_header['SNR_DZ'] > 0 else np.nan
-            self.estimated_darkzone_SNRs = [est_snr]
-            self.estimated_probe_SNRs = []
+        self.mean_contrasts_image.append(np.mean(image_before[self.dark_zone]))
 
-            for i in range(self.num_iterations):
-                self.log.info("Pairwise sensing and stroke minimization, iteration {}".format(i))
-                # Create a new output subfolder for each iteration
-                exposure_kwargs['initial_path'] = os.path.join(self.output_path, 'iter{:04d}'.format(i))
+        self.collect_metrics(devices)
+        est_snr = coron_header['SNR_DZ'] if coron_header['SNR_DZ'] > 0 else np.nan
+        self.estimated_darkzone_SNRs = [est_snr]
+        self.estimated_probe_SNRs = []
 
-                # and make a temporary function that's pre-set to write files into that folder, for
-                # passing into the pairwise function
-                take_exposure_func = functools.partial(self.take_coron_exposure, devices=devices,
-                                                       **exposure_kwargs)
+        for i in range(self.num_iterations):
+            self.log.info("Pairwise sensing and stroke minimization, iteration {}".format(i))
+            # Create a new output subfolder for each iteration
+            exposure_kwargs['initial_path'] = os.path.join(self.output_path, 'iter{:04d}'.format(i))
 
-                image_before = image_after
+            # and make a temporary function that's pre-set to write files into that folder, for
+            # passing into the pairwise function
+            take_exposure_func = functools.partial(self.take_coron_exposure, devices=devices,
+                                                   **exposure_kwargs)
 
-                self.log.info('Estimating electric fields using pairwise probes...')
-                E_estimated, probe_example, probe_snr = stroke_min.take_electric_field_pairwise(self.dm1_actuators,
-                                                                                     self.dm2_actuators,
-                                                                                     take_exposure_func,
-                                                                                     devices,
-                                                                                     self.H_inv,
-                                                                                     self.probes,
-                                                                                     self.dark_zone,
-                                                                                     direct,
-                                                                                     initial_path=exposure_kwargs['initial_path'],
-                                                                                     current_contrast=self.mean_contrasts_image[-1] if i>0 else None,
-                                                                                     probe_amplitude=self.probe_amp,
-                                                                                     file_mode=self.file_mode)
+            image_before = image_after
+
+            self.log.info('Estimating electric fields using pairwise probes...')
+            E_estimated, probe_example, probe_snr = stroke_min.take_electric_field_pairwise(self.dm1_actuators,
+                                                                                 self.dm2_actuators,
+                                                                                 take_exposure_func,
+                                                                                 devices,
+                                                                                 self.H_inv,
+                                                                                 self.probes,
+                                                                                 self.dark_zone,
+                                                                                 direct,
+                                                                                 initial_path=exposure_kwargs['initial_path'],
+                                                                                 current_contrast=self.mean_contrasts_image[-1] if i>0 else None,
+                                                                                 probe_amplitude=self.probe_amp,
+                                                                                 file_mode=self.file_mode)
+            # TODO: if self.file_mode: HICAT-817
+            hicat.util.save_complex("E_estimated_unscaled.fits", E_estimated, exposure_kwargs['initial_path'])
+            self.probe_example = probe_example  # Save for use in plots
+            self.estimated_probe_SNRs.append(probe_snr)
+
+            if self.autoscale_e_field:
+                # automatically scale the estimated E field to match the prior image contrast
+                expected_contrast = self.mean_contrasts_image[-1]
+                estimated_contrast = np.mean(np.abs(E_estimated[self.dark_zone]) ** 2)
+                contrast_ratio = expected_contrast/estimated_contrast
+                self.log.info("Scaling estimated e field by {} to match image contrast ".format(np.sqrt(contrast_ratio)))
+                self.e_field_scale_factors.append(np.sqrt(contrast_ratio))
+            else:
+                self.e_field_scale_factors.append(1.)
+
+            E_estimated *= self.e_field_scale_factors[-1]
+
+            if sim:
+                E_sim_actual, _header = stroke_min.take_electric_field_simulator(self.dm1_actuators,
+                                                                                 self.dm2_actuators,
+                                                                                 apply_pipeline_binning=False)  # E_actual is in sqrt(counts/sec)
+                direct_sim, _header = stroke_min.take_direct_exposure_simulator(self.dm1_actuators,
+                                                                                self.dm2_actuators)
+                E_sim_normalized = E_sim_actual / direct_sim.max()
                 # TODO: if self.file_mode: HICAT-817
-                hicat.util.save_complex("E_estimated_unscaled.fits", E_estimated, exposure_kwargs['initial_path'])
-                self.probe_example = probe_example  # Save for use in plots
-                self.estimated_probe_SNRs.append(probe_snr)
+                hicat.util.save_complex("E_actual.fits", E_sim_normalized, exposure_kwargs['initial_path'])
+                hicat.util.save_intensity("I_actual_from_sim_cal.fits", E_sim_normalized, exposure_kwargs['initial_path'])
+                E_sim_actual, _header = stroke_min.take_electric_field_simulator(self.dm1_actuators,
+                                                                                 self.dm2_actuators,
+                                                                                 apply_pipeline_binning=True)  # E_actual is in sqrt(counts/sec)
 
-                if self.autoscale_e_field:
-                    # automatically scale the estimated E field to match the prior image contrast
-                    expected_contrast = self.mean_contrasts_image[-1]
-                    estimated_contrast = np.mean(np.abs(E_estimated[self.dark_zone]) ** 2)
-                    contrast_ratio = expected_contrast/estimated_contrast
-                    self.log.info("Scaling estimated e field by {} to match image contrast ".format(np.sqrt(contrast_ratio)))
-                    self.e_field_scale_factors.append(np.sqrt(contrast_ratio))
-                else:
-                    self.e_field_scale_factors.append(1.)
+                E_sim_normalized = E_sim_actual / direct_sim.max()
+                # TODO: if self.file_mode: HICAT-817
+                hicat.util.save_intensity("I_actual_from_sim_bin.fits", E_sim_normalized, exposure_kwargs['initial_path'])
 
-                E_estimated *= self.e_field_scale_factors[-1]
+            # Save raw contrast from pairwise and probes, for use in plots
+            self.mean_contrasts_pairwise.append(np.mean(np.abs(E_estimated[self.dark_zone]) ** 2))
+            self.mean_contrasts_probe.append(np.mean(self.probe_example[self.dark_zone]))
 
-                if sim:
-                    E_sim_actual, _header = stroke_min.take_electric_field_simulator(self.dm1_actuators,
-                                                                                     self.dm2_actuators,
-                                                                                     apply_pipeline_binning=False)  # E_actual is in sqrt(counts/sec)
-                    direct_sim, _header = stroke_min.take_direct_exposure_simulator(self.dm1_actuators,
-                                                                                    self.dm2_actuators)
-                    E_sim_normalized = E_sim_actual / direct_sim.max()
-                    # TODO: if self.file_mode: HICAT-817
-                    hicat.util.save_complex("E_actual.fits", E_sim_normalized, exposure_kwargs['initial_path'])
-                    hicat.util.save_intensity("I_actual_from_sim_cal.fits", E_sim_normalized, exposure_kwargs['initial_path'])
-                    E_sim_actual, _header = stroke_min.take_electric_field_simulator(self.dm1_actuators,
-                                                                                     self.dm2_actuators,
-                                                                                     apply_pipeline_binning=True)  # E_actual is in sqrt(counts/sec)
+            self.log.info('Calculating stroke min correction, iteration {}...'.format(i))
 
-                    E_sim_normalized = E_sim_actual / direct_sim.max()
-                    # TODO: if self.file_mode: HICAT-817
-                    hicat.util.save_intensity("I_actual_from_sim_bin.fits", E_sim_normalized, exposure_kwargs['initial_path'])
+            gamma = self.adjust_gamma(i) if self.auto_adjust_gamma else self.gamma
 
-                # Save raw contrast from pairwise and probes, for use in plots
-                self.mean_contrasts_pairwise.append(np.mean(np.abs(E_estimated[self.dark_zone]) ** 2))
-                self.mean_contrasts_probe.append(np.mean(self.probe_example[self.dark_zone]))
+            # Find the required DM update here
+            correction, self.mu_start, predicted_contrast, predicted_contrast_drop = self.compute_correction(
+                E_estimated, gamma, devices, exposure_kwargs, direct)
 
-                self.log.info('Calculating stroke min correction, iteration {}...'.format(i))
+            # Adjust correction and predicted results for the control gain:
+            correction *= self.control_gain
+            predicted_contrast += (1 - self.control_gain) * np.abs(predicted_contrast_drop)
+            predicted_contrast_drop *= self.control_gain
 
-                gamma = self.adjust_gamma(i) if self.auto_adjust_gamma else self.gamma
+            self.prior_correction = self.correction     # save for use in plots
+            self.correction = correction                # save for use in plots
+            self.predicted_contrasts.append(predicted_contrast) # save for use in plots
+            self.predicted_contrast_deltas.append(predicted_contrast_drop) # save for use in plots
 
-                # Find the required DM update here
-                correction, self.mu_start, predicted_contrast, predicted_contrast_drop = self.compute_correction(
-                    E_estimated, gamma, devices, exposure_kwargs, direct)
+            self.log.info("Starting contrast from pairwise for iteration {}: {}".format(i, self.mean_contrasts_pairwise[-1]))
+            self.log.info("Iteration {} used mu = {}".format(i, self.mu_start))
+            self.log.info("Predicted contrast after this iteration: {}".format(self.predicted_contrasts[-1]))
+            self.log.info("Predicted contrast change this iteration: {}".format(self.predicted_contrast_deltas[-1]))
 
-                # Adjust correction and predicted results for the control gain:
-                correction *= self.control_gain
-                predicted_contrast += (1 - self.control_gain) * np.abs(predicted_contrast_drop)
-                predicted_contrast_drop *= self.control_gain
+            # Update DM actuators
+            self.sanity_check(correction)
+            dm1_correction, dm2_correction = stroke_min.split_command_vector(correction, self.use_dm2)
+            self.dm1_actuators -= dm1_correction
+            self.dm2_actuators -= dm2_correction
 
-                self.prior_correction = self.correction     # save for use in plots
-                self.correction = correction                # save for use in plots
-                self.predicted_contrasts.append(predicted_contrast) # save for use in plots
-                self.predicted_contrast_deltas.append(predicted_contrast_drop) # save for use in plots
+            # Track temp and humidity. Measure as close to image acquisition as possible.
+            self.collect_metrics(devices)
+            self.log.info('Taking post-correction coronagraphic image and pupil image...')
+            image_after, coron_header = self.take_coron_exposure(self.dm1_actuators, self.dm2_actuators, devices,
+                                                            output_err=True, dark_zone_mask=self.dark_zone, **exposure_kwargs)
+            try:
+                self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
+                                                                         num_exposures=1,
+                                                                         initial_path=exposure_kwargs['initial_path'],
+                                                                         file_mode=self.file_mode)[0]
+            except Exception:
+                # FIXME temporary workaround
+                self.log.warning("PUPIL CAM EXCEPTION ENCOUNTERED - IGNORING AND CONTINUING")
 
-                self.log.info("Starting contrast from pairwise for iteration {}: {}".format(i, self.mean_contrasts_pairwise[-1]))
-                self.log.info("Iteration {} used mu = {}".format(i, self.mu_start))
-                self.log.info("Predicted contrast after this iteration: {}".format(self.predicted_contrasts[-1]))
-                self.log.info("Predicted contrast change this iteration: {}".format(self.predicted_contrast_deltas[-1]))
+            if np.mod(i, self.direct_every) == 0:
+                self.log.info('Taking direct image for comparison...')
+                direct, _header = self.take_direct_exposure(self.dm1_actuators, self.dm2_actuators, devices,
+                                                            **exposure_kwargs)
 
-                # Update DM actuators
-                self.sanity_check(correction)
-                dm1_correction, dm2_correction = stroke_min.split_command_vector(correction, self.use_dm2)
-                self.dm1_actuators -= dm1_correction
-                self.dm2_actuators -= dm2_correction
+            image_after /= direct.max()
 
-                # Track temp and humidity. Measure as close to image acquisition as possible.
-                self.collect_metrics(devices)
-                self.log.info('Taking post-correction coronagraphic image and pupil image...')
-                image_after, coron_header = self.take_coron_exposure(self.dm1_actuators, self.dm2_actuators, devices,
-                                                                output_err=True, dark_zone_mask=self.dark_zone, **exposure_kwargs)
-                try:
-                    self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
-                                                                             num_exposures=1,
-                                                                             initial_path=exposure_kwargs['initial_path'],
-                                                                             file_mode=self.file_mode)[0]
-                except Exception:
-                    # FIXME temporary workaround
-                    self.log.warning("PUPIL CAM EXCEPTION ENCOUNTERED - IGNORING AND CONTINUING")
+            # Check SNR in dark zone image.
+            # Note, a value of -1 for this keyword indicates it can't be measured (typically for sim run with only 1 image),
+            # in which case don't adjust num exposures. ( Recall FITS doesn't support NaNs in header keywords, alas. Hence this kludge.).
+            est_snr = coron_header['SNR_DZ'] if coron_header['SNR_DZ'] > 0 else np.nan
+            self.estimated_darkzone_SNRs.append(est_snr)
+            # Save raw contrast from image
+            self.mean_contrasts_image.append(np.mean(image_after[self.dark_zone]))
 
-                if np.mod(i, self.direct_every) == 0:
-                    self.log.info('Taking direct image for comparison...')
-                    direct, _header = self.take_direct_exposure(self.dm1_actuators, self.dm2_actuators, devices,
-                                                                **exposure_kwargs)
+            self.measured_contrast_deltas.append(self.mean_contrasts_image[-1] - self.mean_contrasts_image[-2])
+            self.log.info("===> Measured contrast drop this iteration: {}".format(self.measured_contrast_deltas[-1]))
 
-                image_after /= direct.max()
+            est_incoherent = np.abs(image_before-np.abs(E_estimated)**2)
+            self.estimated_incoherent_backgrounds.append(np.mean(est_incoherent[self.dark_zone]))
 
-                # Check SNR in dark zone image.
-                # Note, a value of -1 for this keyword indicates it can't be measured (typically for sim run with only 1 image),
-                # in which case don't adjust num exposures. ( Recall FITS doesn't support NaNs in header keywords, alas. Hence this kludge.).
-                est_snr = coron_header['SNR_DZ'] if coron_header['SNR_DZ'] > 0 else np.nan
-                self.estimated_darkzone_SNRs.append(est_snr)
-                # Save raw contrast from image
-                self.mean_contrasts_image.append(np.mean(image_after[self.dark_zone]))
+            # make diagnostic plots
+            self.show_status_plots(image_before, image_after, self.dm1_actuators, self.dm2_actuators, E_estimated)
 
-                self.measured_contrast_deltas.append(self.mean_contrasts_image[-1] - self.mean_contrasts_image[-2])
-                self.log.info("===> Measured contrast drop this iteration: {}".format(self.measured_contrast_deltas[-1]))
-
-                est_incoherent = np.abs(image_before-np.abs(E_estimated)**2)
-                self.estimated_incoherent_backgrounds.append(np.mean(est_incoherent[self.dark_zone]))
-
-                # make diagnostic plots
-                self.show_status_plots(image_before, image_after, self.dm1_actuators, self.dm2_actuators, E_estimated)
-
-                # Before next iteration, check SNR in image. If it's too low, increase number of exposures.
-                # We should do this _after_ the plot, so the plot labels still reflect the values used
-                # in this iteration.
-                self.log.info("Estimated SNR in probe image is {:.2f} per pix, using {} exposures.".format(self.estimated_probe_SNRs[-1], self.num_exposures))
-                self.log.info("Estimated SNR in dark zone image is {:.2f} per pix, using {} exposures.".format(est_snr, self.num_exposures))
-                if self.auto_num_exposures and est_snr < self.target_snr_per_pix:
-                    self.num_exposures *= 2
-                    exposure_kwargs['num_exposures'] = self.num_exposures
-                    take_exposure_func = functools.partial(take_coron_exposure, **exposure_kwargs)
-                    self.log.warning(("SNR per pixel in dark zone has dropped below {}. Doubling number of exposures to compensate. "
-                                     "New num_exposures = {}").format(self.target_snr_per_pix, self.num_exposures))
+            # Before next iteration, check SNR in image. If it's too low, increase number of exposures.
+            # We should do this _after_ the plot, so the plot labels still reflect the values used
+            # in this iteration.
+            self.log.info("Estimated SNR in probe image is {:.2f} per pix, using {} exposures.".format(self.estimated_probe_SNRs[-1], self.num_exposures))
+            self.log.info("Estimated SNR in dark zone image is {:.2f} per pix, using {} exposures.".format(est_snr, self.num_exposures))
+            if self.auto_num_exposures and est_snr < self.target_snr_per_pix:
+                self.num_exposures *= 2
+                exposure_kwargs['num_exposures'] = self.num_exposures
+                take_exposure_func = functools.partial(take_coron_exposure, **exposure_kwargs)
+                self.log.warning(("SNR per pixel in dark zone has dropped below {}. Doubling number of exposures to compensate. "
+                                 "New num_exposures = {}").format(self.target_snr_per_pix, self.num_exposures))
 
 
     def compute_correction(self, E_estimated, gamma, devices, exposure_kwargs, direct_image):

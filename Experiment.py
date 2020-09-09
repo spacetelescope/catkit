@@ -1,12 +1,17 @@
 from abc import ABC, abstractmethod
+import copy
+import logging
 from multiprocessing import Process
 import time
-import logging
+
+from catkit.hardware.boston.commands import flat_command
 
 from hicat.config import CONFIG_INI
 import hicat.util
 from hicat.experiments.SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
-from hicat.hardware import testbed_state
+from hicat.hardware import testbed, testbed_state
+from hicat.control.align_lyot import LyotStopAlignment
+from hicat.control.target_acq import MotorMount, TargetAcquisition, TargetCamera
 
 
 class Experiment(ABC):
@@ -41,19 +46,16 @@ class Experiment(ABC):
                 self.safety_tests.append(test())
 
     def pre_experiment(self, *args, **kwargs):
-        """ This is called immediately BEFORE self.experiment(). Anything returned is passed to self.experiment() """
-        pass
-
-    def post_experiment(self, *args, **kwargs):
-        """ This is called immediately AFTER self.experiment(). Anything returned from self.experiment() is passed to this. """
+        """ This is called immediately BEFORE self.experiment()."""
         pass
 
     @abstractmethod
     def experiment(self, *args, **kwargs):
-        """
-        This is where the experiment gets implemented. All child classes must implement this.
-        Anything returned is passed to self.post_experiment().
-        """
+        """ This is where the experiment gets implemented. All child classes must implement this. """
+
+    def post_experiment(self, *args, **kwargs):
+        """ This is called immediately AFTER self.experiment()."""
+        pass
 
     def start(self):
         """
@@ -137,13 +139,21 @@ class Experiment(ABC):
         try:
             self.init_experiment_log()
             testbed_state.pre_experiment_return = self.pre_experiment()
-            testbed_state.experiment_return = self.experiment(testbed_state.pre_experiment_return)
-            testbed_state.post_experiment_return = self.post_experiment(testbed_state.experiment_return)
+            testbed_state.experiment_return = self.experiment()
+            testbed_state.post_experiment_return = self.post_experiment()
         except KeyboardInterrupt:
-            self.log.warn("Child process: caught ctrl-c, raising exception.")
+            self.log.warning("Child process: caught ctrl-c, raising exception.")
             raise
         finally:
-            testbed_state.devices.exit_all_devices()
+            testbed_state.devices.delete_all_devices()
+            # Del testbed_state.cache
+            keys = list(testbed_state.cache.keys())
+            for key in keys:
+                item = testbed_state.cache.pop(key)
+                try:
+                    item.__exit__(None, None, None)
+                except Exception:
+                    self.log.exception(f"{item} failed to exit.")
 
     @staticmethod
     def __smart_sleep(interval, process):
@@ -186,3 +196,91 @@ class Experiment(ABC):
         """
 
         hicat.util.setup_hicat_logging(self.output_path, self.suffix)
+
+
+class HicatExperiment(Experiment, ABC):
+    def pre_experiment(self, *args, **kwargs):
+
+        # The device cache should be and needs to be empty.
+        if testbed_state.devices:
+            raise Exception(f"The device cache (testbed_state.devices) is NOT empty and contains the following keys: {testbed_state.devices.keys()}")
+
+        # Instantiate, open connections, and cache all required devices.
+        try:
+            with testbed.laser_source() as laser, \
+                    testbed.dm_controller() as dm, \
+                    testbed.motor_controller() as motor_controller, \
+                    testbed.apodizer_picomotor_mount() as apodizer_picomotor_mount, \
+                    testbed.quadcell_picomotor_mount() as quadcell_picomotor_mount, \
+                    testbed.beam_dump() as beam_dump, \
+                    testbed.imaging_camera() as cam, \
+                    testbed.pupil_camera() as pupilcam, \
+                    testbed.temp_sensor(config_id="aux_temperature_sensor") as temp_sensor, \
+                    testbed.target_acquisition_camera() as ta_cam, \
+                    testbed.color_wheel() as color_wheel, \
+                    testbed.nd_wheel() as nd_wheel:
+
+                devices = {'laser': laser,
+                           'dm': dm,
+                           'motor_controller': motor_controller,
+                           'beam_dump': beam_dump,
+                           'imaging_camera': cam,
+                           'pupil_camera': pupilcam,
+                           'temp_sensor': temp_sensor,
+                           'color_wheel': color_wheel,
+                           'nd_wheel': nd_wheel}
+
+                # Cache Lyot stop alignment devices in testbed_state.
+                ls_align_devices = {'motor_controller': motor_controller, 'pupil_camera': pupilcam}
+
+                # Cache target-acquisition devices in testbed_state.
+                ta_devices = {"picomotors": {MotorMount.APODIZER: apodizer_picomotor_mount,
+                                             MotorMount.QUAD_CELL: quadcell_picomotor_mount},
+                              "beam_dump": beam_dump,
+                              "cameras": {TargetCamera.SCI: cam,
+                                          TargetCamera.TA: ta_cam}}
+
+                # Add devices to cache.
+                testbed_state.devices.update(ls_align_devices, namespace="ls_align_devices")
+                testbed_state.devices.update(ta_devices, namespace="ta_devices")
+                testbed_state.devices.update(devices)
+                # -----------------
+                # CODE FREE ZONE
+                # -----------------
+        except Exception:
+            # WARNING!!! Adding devices to the cache will persist them beyond the with block thus any exception raised
+            # between the cache set and the end of the with block will result in devices NOT safely closing!
+            # Explicitly close all devices in this eventuality.
+            testbed_state.devices.delete_all_devices()
+            raise
+        # Exit the with block early so as to test persistence sooner rather than later.
+
+        # Flatten DMs before attempting initial target acquisition or Lyot alignment.
+        dm_flat = flat_command(bias=False, flat_map=True)
+        devices["dm"].apply_shape_to_both(dm_flat, copy.deepcopy(dm_flat))
+
+        # Align the Lyot Stop
+        if self.align_lyot_stop:
+            lyot_stop_controller = LyotStopAlignment(ls_align_devices,
+                                                     output_path_root=self.output_path,
+                                                     calculate_pixel_scale=True)
+            lyot_stop_controller.iterative_align_lyot_stop()
+
+        # Run Target Acquisition.
+        with TargetAcquisition(ta_devices,
+                               self.output_path,
+                               use_closed_loop=False,
+                               n_exposures=20,
+                               exposure_period=5,
+                               target_pixel_tolerance={TargetCamera.TA: 2, TargetCamera.SCI: 25}) as ta_controller:
+            testbed_state.cache["ta_controller"] = ta_controller
+
+            # Now setup filter wheels.
+            testbed.move_filter(wavelength=640,
+                                nd="clear_1",
+                                devices={"color_wheel": devices["color_wheel"], "nd_wheel": devices["nd_wheel"]})
+            if self.run_ta:
+                ta_controller.acquire_target(recover_from_coarse_misalignment=True)
+            else:
+                # Plot position of PSF centroid on TA camera.
+                ta_controller.distance_to_target(TargetCamera.TA, check_threshold=False)
