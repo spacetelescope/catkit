@@ -1,10 +1,12 @@
-import numpy as np
 import logging
+import os
+import sys
+
+import numpy as np
 
 from catkit.config import CONFIG_INI
 from catkit.hardware import testbed_state
 from catkit.interfaces.MotorController import MotorController
-from catkit.hardware.newport.lib import XPS_Q8_drivers
 
 """Implementation of the Newport motor controller interface."""
 
@@ -13,9 +15,14 @@ class NewportMotorController(MotorController):
 
     log = logging.getLogger(__name__)
 
-    def initialize(self, initialize_to_nominal=True, use_testbed_state=True):
+    def initialize(self, initialize_to_nominal=True, use_testbed_state=True, library_path=None):
         """Creates an instance of the controller library and opens a connection."""
         self.use_testbed_state = use_testbed_state
+
+        # Import XPS Q8 driver
+        self._library_path = os.environ.get('CATKIT_NEWPORT_LIB_PATH') if library_path is None else library_path
+        sys.path.append(self._library_path)
+        import XPS_Q8_drivers
 
         # Create an instance of the XPS controller.
         myxps = XPS_Q8_drivers.XPS()
