@@ -1,3 +1,6 @@
+import os
+import sys
+
 import numpy as np
 
 from catkit.hardware import testbed_state
@@ -5,7 +8,9 @@ from catkit.interfaces.DeformableMirrorController import DeformableMirrorControl
 
 # BMC is Boston's library and it only works on windows.
 try:
-    from catkit.hardware.boston.sdk.python3.v3_5_1 import bmc
+    sdk_path = os.environ.get('CATKIT_BOSTON_SDK_PATH')
+    sys.path.append(sdk_path)
+    import bmc
 except ImportError:
     bmc = None
 
