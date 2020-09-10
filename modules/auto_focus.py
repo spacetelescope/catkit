@@ -169,4 +169,3 @@ def auto_focus_mtf(filePath, threshold):
     plt.ylabel('MTF sum [counts]')
     plt.legend()
     plt.savefig(os.path.join(filePath, 'autofocus_results.pdf'))
-    plt.show()

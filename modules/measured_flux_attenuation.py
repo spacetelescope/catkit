@@ -16,7 +16,7 @@ import hicat.util
 log = logging.getLogger(__name__)
 
 
-def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True, zoom_in=False):
+def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True, zoom_in=False, ax=None):
     """
     Performs source detection and extraction on 'data' within spatial limits.
     :param data: array, image to analyze
@@ -66,22 +66,28 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
         apertures = CircularAperture(positions, r=radius)
 
     if save_fig:
-        fig = plt.figure(figsize=(5, 5))
+        if ax is None:
+            fig = plt.figure(figsize=(5, 5))
+            ax = plt.gca()
+        else:
+            fig = None
 
         if zoom_in:
             plt.ylim(sources['ycentroid'] - fwhm * 2, sources['ycentroid'] + fwhm * 2)
             plt.xlim(sources['xcentroid'] - fwhm * 2, sources['xcentroid'] + fwhm * 2)
 
-        im = plt.imshow(data, norm=LogNorm(vmax=data.max(), vmin=data.max()/1e5))
-        apertures.plot(color='red', lw=1.5, alpha=1)
-
-        cbar_ax = fig.add_axes([0.9, 0.125, 0.05, 0.755])
-        fig.colorbar(im, cax=cbar_ax)
+        cmap =  plt.cm.get_cmap('viridis')
+        cmap.set_bad(cmap(0))    # any negative / NaN pixels should be shown as the bottom color, not as white
+        im = ax.imshow(data, norm=LogNorm(vmax=data.max(), vmin=data.max()/1e5))
+        apertures.plot(color='red', lw=1.5, alpha=1, ax=ax)
+        ax.text(sources['xcentroid'][0]+10, sources['ycentroid'][0], f"{phot_table['aperture_sum'][0]:.4g} counts/$\mu$s", color='pink')
+        plt.colorbar(im, ax=ax, fraction=0.1, pad=0.01)
 
         if output_path:
             os.makedirs(output_path, exist_ok=True)
-        fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_type)), dpi=100, bbox_inches='tight')
-        plt.close(fig)
+        if fig is not None:
+            fig.savefig(os.path.join(output_path, 'photometry-{}.pdf'.format(im_type)), dpi=100, bbox_inches='tight')
+            plt.close(fig)
 
     return phot_table
 
@@ -133,7 +139,7 @@ def rectangle_photometry(data, im_type, output_path='', save_fig=True):
     return region_table
 
 
-def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apodizer'):
+def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apodizer', unsaturated_data=None):
     """
     Calculate flux attenuation factor for direct and coron data.
 
@@ -165,12 +171,27 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
     color_filter_coron, nd_filter_coron = coron_header['FILTERS'].split(',')
     color_filter_direct, nd_filter_direct = direct_header['FILTERS'].split(',')
 
+    if unsaturated_data is not None:
+        unsat_direct_img, unsat_direct_header = hicat.util.unpack_image_data(unsaturated_data)
+        ncols=3
+    else:
+        ncols=2
+
+    # Set up output file
+    fig, axes = plt.subplots(figsize=(7*ncols, 6), ncols=ncols, gridspec_kw={'wspace':0.07})
+
     # Get photometry
     photometry_func = satellite_photometry if apodizer == 'no_apodizer' else rectangle_photometry
     coron_table = photometry_func(data=coron_img, im_type=f'coron-{nd_filter_coron}-{color_filter_coron}',
-                                  output_path=out_path)
+                                  output_path=out_path, ax=axes[0])
     direct_table = photometry_func(data=direct_img, im_type=f'direct-{nd_filter_direct}-{color_filter_direct}',
-                                   output_path=out_path)
+                                   output_path=out_path, ax=axes[1])
+    axes[0].text(0.05, 0.05, f"exp_time = {coron_header['EXP_TIME']:.1f} $\mu$s", color='white', transform=axes[0].transAxes)
+    axes[1].text(0.05, 0.05, f"exp_time = {direct_header['EXP_TIME']:.1f} $\mu$s", color='white', transform=axes[1].transAxes)
+    axes[0].set_title(f"Coron, with {nd_filter_coron}")
+    axes[1].set_title(f"Direct, with {nd_filter_direct}")
+
+
     if len(coron_table) != 1:
         log.warning('Likely Problem with coronagraphic img satellite photometry')
 
@@ -189,5 +210,34 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
 
     # Calculate flux attenuation factor
     attenuation_factor = coron_countrate / direct_countrate  # type: float
+
+    hicat.calibration_util.record_calibration_measurement(f"Flux attenuation factor {wvln} nm", attenuate[wvln],
+                                                          'dimensionless', datapath=out_path,
+                                                          comment=apodizer)
+
+
+    # Calculate total flux of the laser source, in direct mode without ND filter
+    if unsaturated_data is not None:
+        # Also plot the unsaturated data as a third panel, and use it to work out the brightness of the laser source.
+        _ = photometry_func(data=unsat_direct_img, im_type=f'unsat-direct-{nd_filter_direct}-{color_filter_direct}',
+                            output_path=out_path, ax=axes[2])
+        axes[2].set_title(f"Direct, short exposure unsaturated")
+        axes[2].text(0.05, 0.05, f"exp_time = {unsat_direct_header['EXP_TIME']:.1f} $\mu$s", color='white',
+                     transform=axes[2].transAxes)
+        axes[2].text(0.05, 0.15, f"Total count rate:\t\t\t\t{unsat_direct_img.sum():.4g} counts/$\mu$s",
+                     color='white', transform=axes[2].transAxes)
+
+        totalcounts =unsat_direct_img.sum() *attenuation_factor
+        axes[2].text(0.05, 0.1, f"Inferred count rate without ND:\t{totalcounts:.4g} counts/$\mu$s", color='white',
+                     transform=axes[2].transAxes)
+        hicat.calibration_util.record_calibration_measurement(f"Total direct photometry {wvln} nm", attenuate[wvln],
+                                                              'counts/microsec', datapath=out_path,
+                                                              comment=apodizer)
+    for ax in axes:
+        ax.xaxis.set_visible(False)
+        ax.yaxis.set_visible(False)
+    fig.suptitle(f"Flux calibration for {color_filter_coron}:\nAttenuation factor = {attenuation_factor:.3f} / ND throughput = {1/attenuation_factor:.4f}", fontweight='bold')
+
+    fig.savefig(os.path.join(out_path, f'photometry-{color_filter_coron}.pdf'), dpi=100, bbox_inches='tight')
 
     return direct_table, coron_table, attenuation_factor
