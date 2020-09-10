@@ -25,17 +25,19 @@ class ThorlabsMCLS1(LaserSource):
         self.port = None
         self.power_off_on_exit = power_off_on_exit
         self.device_id = device_id if device_id else CONFIG_INI.get(config_id, "device_id")
+        self._library_path = None
         super(ThorlabsMCLS1, self).__init__(config_id, *args, **kwargs)
 
 
-    def initialize(self, *args, **kwargs):
+    def initialize(self, *args, library_path=None, **kwargs):
         """Starts laser at the nominal_current value from config.ini."""
         self.channel = CONFIG_INI.getint(self.config_id, "channel")
         self.nominal_current = CONFIG_INI.getint(self.config_id, "nominal_current")
-        path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "lib", "uart_library_win64.dll")
 
+        # Load Thorlabs uart lib, e.g., uart_library_win64.dll.
+        self._library_path = os.environ.get('CATKIT_THORLABS_UART_LIB_PATH') if library_path is None else library_path
         # noinspection PyArgumentList
-        self.laser = cdll.LoadLibrary(path)
+        self.laser = cdll.LoadLibrary(self._library_path)
         self.port = self.find_com_port()
         self.handle = self.laser.fnUART_LIBRARY_open(self.port.encode(), 115200, 3)
         if self.handle < 0:
