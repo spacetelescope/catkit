@@ -157,7 +157,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax4.axvline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
         ax4.grid(True, which='both', alpha=0.3)
         ax4.set_xlabel('Contrast')
-        ax4.set_ylabel('Liklihood of occurance')
+        ax4.set_ylabel('Likelihood of occurance')
         ax4.set_title('Cumulative Distribution: Contrast')
         plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
         ax4.legend()
