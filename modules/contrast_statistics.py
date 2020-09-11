@@ -23,7 +23,7 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=0.00008):
 
     metrics_data = load_metrics_data(filepath)
 
-    contrast_fit = np.polyfit(metrics_data['iteration'], np.log(metrics_data[' mean image contrast']), 5)
+    contrast_fit = np.polyfit(metrics_data['iteration'], np.log(metrics_data['mean image contrast']), 5)
     fit_1d = np.poly1d(contrast_fit)
     derivative_1d = np.polyder(fit_1d)
     metrics_data['derivatives'] = derivative_1d(metrics_data['iteration'])
@@ -92,12 +92,12 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         log.info(f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
 
     converged_metrics = metrics_data[metrics_data['iteration'] >= iteration_of_convergence]
-    mean = np.mean(converged_metrics[' mean image contrast'])
-    std = np.std(converged_metrics[' mean image contrast'])
+    mean = np.mean(converged_metrics['mean image contrast'])
+    std = np.std(converged_metrics['mean image contrast'])
     n_samples = len(converged_metrics)
     confidence_interval = mean + 1.28 * std
     line_of_90 = int(.9 * n_samples - 1)
-    sorted_contrast = converged_metrics[' mean image contrast'].tolist()
+    sorted_contrast = converged_metrics['mean image contrast'].tolist()
     sorted_contrast.sort()
     empirical_confidence_interval = sorted_contrast[line_of_90]
 
@@ -110,8 +110,8 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax1.axvline(iteration_of_convergence, label='Point of Convergence', c='g')
 
         ax1.set_yscale('log')
-        ax1.plot(metrics_data['iteration'], metrics_data[' mean image contrast'],c='b', marker='o', alpha = 0.6)
-        ax1.plot(converged_metrics['iteration'], converged_metrics[' mean image contrast'], c='g', marker='o',
+        ax1.plot(metrics_data['iteration'], metrics_data['mean image contrast'],c='b', marker='o', alpha = 0.6)
+        ax1.plot(converged_metrics['iteration'], converged_metrics['mean image contrast'], c='g', marker='o',
                  alpha=0.6)
         ax1.axhline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
         ax1.set_xlabel('Iteration')
@@ -122,7 +122,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax1.legend()
 
         plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-        ax2.plot(converged_metrics['iteration'], converged_metrics[' mean image contrast'], c='g', marker='o',
+        ax2.plot(converged_metrics['iteration'], converged_metrics['mean image contrast'], c='g', marker='o',
                  alpha=0.6)
         ax2.axhline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.',
                     linewidth=1.0)
@@ -135,7 +135,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax2.grid(True, which='both', alpha=0.3)
         ax2.legend()
 
-        ax3.hist(converged_metrics[' mean image contrast'], ec='black', zorder=3)
+        ax3.hist(converged_metrics['mean image contrast'], ec='black', zorder=3)
         ax3.axvline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.',
                     linewidth=1.2, zorder=4)
         ax3.axvline(empirical_confidence_interval, label=f'90% Emp: {empirical_confidence_interval:.3}', c='orange',
@@ -148,7 +148,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
         ax3.legend()
 
-        ecdf_x, ecdf_y = ecdf(converged_metrics[' mean image contrast'])
+        ecdf_x, ecdf_y = ecdf(converged_metrics['mean image contrast'])
         ax4.plot(ecdf_x,ecdf_y,alpha=0.8)
         ax4.axvline(confidence_interval, label=f'90% CI: {confidence_interval:.3}', c='k', alpha=0.7, linestyle='-.',
                     linewidth=1.0)
@@ -157,7 +157,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         ax4.axvline(mean, label=f'Mean: {mean:.3}', c='k', linestyle='-')
         ax4.grid(True, which='both', alpha=0.3)
         ax4.set_xlabel('Contrast')
-        ax4.set_ylabel('Liklihood of occurance ')
+        ax4.set_ylabel('Liklihood of occurance')
         ax4.set_title('Cumulative Distribution: Contrast')
         plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
         ax4.legend()
@@ -182,15 +182,15 @@ def plot_environment_and_contrast(filepath):
                  label='Aux Temperature Sensor')
     axes[0].set_ylabel('Temperature (C)')
 
-    axes[1].plot(datetimes, metrics_data[' humidity (%)'], c='blue', marker='+',
+    axes[1].plot(datetimes, metrics_data['humidity (%)'], c='blue', marker='+',
                  label='Aux Humidity Sensor')
     axes[1].set_ylabel('Humidity (%)')
 
-    for i, values in enumerate([metrics_data[' temp (C)'], metrics_data[' humidity (%)']]):
+    for i, values in enumerate([metrics_data['temp (C)'], metrics_data['humidity (%)']]):
         axes[i].text(0.05, 0.15, f"Mean: {np.mean(values):.2f}       Range: {np.min(values):.2f} - {np.max(values):.2f}       Std dev: {np.std(values):.2f}",
                      color = 'darkred' if i==0 else 'darkblue', transform=axes[i].transAxes)
 
-    axes[2].semilogy(datetimes, metrics_data[' mean image contrast'], c='purple', marker='o',
+    axes[2].semilogy(datetimes, metrics_data['mean image contrast'], c='purple', marker='o',
                      label='Broadband contrast')
     axes[2].set_ylabel('Contrast')
 
