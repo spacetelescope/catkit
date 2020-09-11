@@ -55,7 +55,7 @@ def load_metrics_data(filepath):
         metrics_data = filepath
 
     if 'iteration' not in metrics_data.columns:
-        metrics_data.sort_values(by='time stamp')
+        metrics_data.sort_values(by='time_stamp')
         metrics_data['iteration'] = np.arange(0,len(metrics_data),1)
 
     return metrics_data
