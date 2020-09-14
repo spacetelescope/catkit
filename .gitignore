@@ -5,3 +5,6 @@ __pycache__
 *.fits
 *.log*
 .idea/
+catkit/hardware/boston/sdk/
+catkit/hardware/newport/lib/
+catkit/hardware/thorlabs/lib/
