@@ -469,7 +469,6 @@ class StrokeMinimization(HicatExperiment):
         except OSError:
             self.log.warning("Failed to copy '{}' to '{}'".format(probe_pdf_src, probe_pdf_destination))
 
-
     def init_strokemin_plots(self, output_path=None):
         """ Set up the infrastructure for writing out plots
         in particular the GifWriter object and output directory
@@ -506,209 +505,47 @@ class StrokeMinimization(HicatExperiment):
             self.log.warning("Exception encountered in producing log analysis plot. Ignoring so experiment can continue.")
 
     def show_strokemin_plot(self, image_before, image_after, dm1_actuators, dm2_actuators, E_estimated):
-        """ Make a nice diagnostic plot after each iteration of stroke minimization
-        and save it to the movie in progress.
-
-        Note, only call this after calling init_strokemin_plots.
-        """
-
-        # Show results
-        # Log plots; avoid floating underflow or divide by zero
-        log_img_before = np.log10(image_before)
-        log_img_before[image_before <= 0] = -20
-        log_img_after = np.log10(image_after)
-        log_img_after[image_after <= 0] = -20
-
-        log_i_estimated = np.log10(np.clip(np.abs(E_estimated)**2, a_min=1e-12, a_max=1.0))
-
-        est_incoherent = np.abs(image_before-np.abs(E_estimated)**2)
-        log_est_incoherent = np.log10(est_incoherent)
-
-        contrast_to_inc_bg_ratio = float(np.mean(image_before[self.dark_zone]) / np.mean(est_incoherent[self.dark_zone]))
-
-        # define some other quantities for use in labeling plots
-        iteration = len(self.mean_contrasts_pairwise)
+        iteration = len(self.mean_contrasts_image)
         gamma = self.adjust_gamma(iteration) if self.auto_adjust_gamma else self.gamma
-        contrast_yaxis_min = min(10**(np.floor(np.log10(np.nanmin(self.mean_contrasts_image)))-1), 1e-8)
-        control_zone = np.abs(E_estimated) != 0
+        num_probe_pairs = len(self.probes)
 
-        fig, axes = plt.subplots(figsize=(20, 13), nrows=3, ncols=5,
-                                 gridspec_kw={'right': 0.95, 'left':0.03,
-                                              'top': 0.93, 'bottom': 0.10,
-                                              'wspace': 0.25, 'hspace': 0.25,
-                                              'width_ratios': [1,1,1,1,1.1]})
-
-        #Estimation and Sensing
-        ax = axes[0,0]
-        im = hcipy.imshow_field(E_estimated, ax=ax)
-        hicat.plotting.image_axis_setup(ax, im, title = "Estimated $E$ field", colorbar=False)
-
-        ax = axes[1,0]
-        im = hcipy.imshow_field(log_i_estimated, vmin=-8, vmax=-4, cmap='inferno', ax=ax)
-        hicat.plotting.image_axis_setup(ax, im, title="Estimated $I$ (from $E$)")
-        ax.text(-15, -15, "$E$ scaled by {:.3f}".format(self.e_field_scale_factors[-1]), color='lightblue',
-                fontsize='x-small')
-        snr = self.estimated_probe_SNRs[-1]
-        ax.text(15, -15, "SNR in probe = {:.1f}".format(snr),
-                              color='yellow' if snr > 10 else 'red', horizontalalignment='right',
-                              fontsize='x-small')
-
-
-
-        # Display images, before and after
-        # mask the before image to just show the dark zone
-        ax = axes[2,0]
-        log_img_before_masked = log_img_before.copy()
-        log_img_before_masked[self.dark_zone == False] = -8
-        im = hcipy.imshow_field(log_img_before_masked, vmin=-8, vmax=-4, cmap='inferno', ax=ax)
-        hicat.plotting.image_axis_setup(ax, im, title="Image before iteration {} (Masked)".format(iteration), control_zone=control_zone)
-        snr = self.estimated_darkzone_SNRs[-2]
-        ax.text(15, -15, "SNR in dark zone = {:.1f}".format(snr),
-                              color='yellow' if snr > 10 else 'red', horizontalalignment='right',
-                              fontsize='x-small')
-        ax = axes[0,4]
-        im = hcipy.imshow_field(log_img_after, vmin=-8, vmax=-4, cmap='inferno', ax=ax)
-        hicat.plotting.image_axis_setup(ax, im, title="Image after iteration {}".format(iteration), control_zone=control_zone)
-
-        # Contrast plot: contrast vs iteration
-        ax = axes[0,1]
-        ax.plot(self.mean_contrasts_image, 'o-', c='blue', label='Measured from image')
-        ax.plot(self.mean_contrasts_pairwise, 'o:', c='green', label='Measured from pairwise')
-        ax.plot(self.mean_contrasts_probe, 'o:', c='orange', label='In probe image')
-
-        if gamma is not None:
-            ax.plot(iteration, self.mean_contrasts_image[-2]*gamma, '*', markersize=10, c='red', label='Control target contrast')
-
-        ax.plot(np.arange(iteration)+1, self.predicted_contrasts, '*--', linewidth=1,  c='purple', label='Predicted new contrast')
-        ax.set_yscale('log')
-        ax.set_title("Contrast vs Iteration")
-        ax.set_xlabel("Iteration")
-        ax.grid(True, alpha=0.1)
-        ax.legend(loc='upper right', fontsize='x-small')
-
-        # Contrast plot: radial contrast profiles
-        ax = axes[0,2]
-        r, p, std, n = hcipy.metrics.radial_profile(image_after, bin_size=0.25)
-        r2, p2, std2, n2 = hcipy.metrics.radial_profile(image_before, bin_size=0.25)
-        r_probe, p_probe, std_probe, n_probe = hcipy.metrics.radial_profile(self.probe_example, bin_size=0.25)
-        ax.semilogy(r2, p2, color='C0', alpha=0.4, label='before', zorder=10)
-        ax.semilogy(r, p, color='C0', label='after', zorder=9)
-        ax.semilogy(r_probe, p_probe,  label='probe', color='orange', ls='--', zorder=3)
-        ax.set_xlim(0, 20)
-        ax.set_ylim(contrast_yaxis_min, 1e-3)
-        ax.legend(loc='upper left', fontsize='x-small', framealpha=1.0)
-        ax.grid(True, alpha=0.1)
-        try:
-            ax.axvline(self.dz_rin, color='C2', ls='--', alpha=0.3)
-            ax.axvline(self.dz_rout, color='C2', ls='--', alpha=0.3)
-        except Exception:
-            pass # gracefully ignore older probe files that don't have these headers
-        ax.set_xlabel("Separation ($\lambda/D_{LS}$)")
-        ax.set_title('Contrast vs radius')
-
-        # Plot additional quantities vs iteration
-        ax = axes[0,3]
-        ax.plot(self.e_field_scale_factors, label='$E$ field scale factor', marker='o', color='lightblue')
-        ax.plot(np.asarray(self.estimated_darkzone_SNRs)/10, label='Avg. SNR/pix in dark zone, / 10', marker='^', color='blue')
-        ax.plot(np.asarray(self.estimated_probe_SNRs)/10, label='Avg. SNR/pix in probe, / 10', marker='^', color='orange')
-        ax.set_ylim(0, 2*np.max(self.e_field_scale_factors))
-        ax.legend(loc='upper left', fontsize='x-small', framealpha=1.0)
-        ax.set_xlabel("Iteration")
-        ax.set_title("Additional diagnostics")
-
-        ax.plot(np.arange(iteration)+1, np.abs(self.measured_contrast_deltas)/np.abs(self.predicted_contrast_deltas),
-                     color='purple', marker='*', label='Ratio of Measured/Predicted contrast deltas')
-        ax.plot(np.asarray(self.estimated_incoherent_backgrounds)/np.asarray(self.mean_contrasts_image[:-1]),
-                     'o-', color='gray', label='Ratio of Est. Incoherent background/Contrast')
-        ax.legend(loc='upper left', fontsize='x-small', framealpha=1.0)
-        ax.axhline(1, ls=":", color='black', alpha=0.5)
-
-        # Display DMs, and changes. Note, the correction is subtracted off so the change sign is negative.
-        dm1_surf = wfsc_utils.dm_actuators_to_surface(dm1_actuators)
-        if self.use_dm2:
-            dm1_delta = -wfsc_utils.dm_actuators_to_surface(self.correction[:wfsc_utils.num_actuators])
-            dm1_delta_2 = -wfsc_utils.dm_actuators_to_surface((self.correction + self.prior_correction)[:wfsc_utils.num_actuators]) / 2
-
-            dm2_surf = wfsc_utils.dm_actuators_to_surface(dm2_actuators)
-            dm2_delta = -wfsc_utils.dm_actuators_to_surface(self.correction[
-                                                            wfsc_utils
-                                                            .num_actuators:])
-            dm2_delta_2 = -wfsc_utils.dm_actuators_to_surface((self.correction + self.prior_correction)[wfsc_utils.num_actuators:]) / 2
-
-            vmax = max([np.abs(dm1_surf).max(), np.abs(dm2_surf).max()])
-            dvmax = max([np.abs(dm1_delta).max(), np.abs(dm2_delta).max()])
-
-        else:
-            dm1_delta = -wfsc_utils.dm_actuators_to_surface(self.correction)
-            dm1_delta_2 = -wfsc_utils.dm_actuators_to_surface((self.correction + self.prior_correction)) / 2
-
-            vmax = max([np.abs(dm1_surf).max(), np.abs(dm1_surf).max()])
-            dvmax = max([np.abs(dm1_delta).max(), np.abs(dm1_delta).max()])
-
-        # DM1 plots
-        hicat.plotting.dm_surface_display(axes[1,1], dm1_surf, vmax=vmax, title='DM1 surface')
-        hicat.plotting.dm_surface_display(axes[1,2], dm1_delta, vmax=dvmax, title='DM1 change this iteration')
-        hicat.plotting.dm_surface_display(axes[1,3], dm1_delta_2, vmax=dvmax, title='DM1 average change last 2 iters')
-
-        # DM2 plots
-        if self.use_dm2:
-            hicat.plotting.dm_surface_display(axes[2,1], dm2_surf, vmax=vmax, title='DM2 surface')
-            hicat.plotting.dm_surface_display(axes[2,2], dm2_delta, vmax=dvmax, title='DM2 change this iteration')
-            hicat.plotting.dm_surface_display(axes[2,3], dm2_delta_2, vmax=dvmax, title='DM2 average change last 2 iters')
-
-        # Pupil image
-        ax = axes[1,4]
-        ax.imshow(self.latest_pupil_image)
-        ax.set_title("Pupil image")
-        ax.yaxis.set_visible(False)
-        ax.xaxis.set_visible(False)
-
-        # Estimated electric field, and residual
-        ax = axes[2,4]
-        im = hcipy.imshow_field(log_est_incoherent, vmin=-8, vmax=-4, cmap='inferno', ax=ax)
-        hicat.plotting.image_axis_setup(ax, im, title="Estimated Incoherent Background", control_zone=control_zone)
-        ax.text(-15, -15, "Contrast/(backgrd estimate): {:.3f}".format(contrast_to_inc_bg_ratio), color='k',
-                fontsize='x-small', fontweight='black')
-
-        # Aesthetic tweaks and labeling
-        for ax in axes.ravel():
-            ax.xaxis.label.set_size('x-small')
-            ax.tick_params(axis='both', which='major', labelsize='x-small')
-            ax.tick_params(axis='both', which='minor', labelsize='xx-small')
-
-        labely = 0.04
-        plt.text(0.03, labely, "Contrast image: {:.3e} pairwise: {:.3e}\nDark zone from {} - {} $\lambda/D_{{LS}}$\nProbes: {}, amplitude {} nm".format(
-            float(self.mean_contrasts_image[-1]), float(self.mean_contrasts_pairwise[-1]), self.dz_rin, self.dz_rout, len(self.probes), self.probe_amp),
-                 transform=fig.transFigure,
-                 color='gray', horizontalalignment='left', verticalalignment='center')
-
-        plt.text(0.3, labely, "Coron. Exp: {} ms $\\times$ {}\nDirect Exp: {} ms $\\times$ {}\nS.M. $\gamma$: {}\t gain: {}".format(
-            self.exposure_time_coron//1000, self.num_exposures, float(self.exposure_time_direct)/1000,
-            self.num_exposures, gamma if gamma is not None else 'None', self.control_gain),
-                 transform=fig.transFigure,
-                 color='gray', horizontalalignment='left', verticalalignment='center')
-
-        plt.text(0.5, labely, "{}\n{}\n{}".format(
-                 os.path.basename(self.jacobian_filename), os.path.basename(self.probe_filename),
-                 self.git_label),
-                 transform=fig.transFigure,
-                 color='gray', horizontalalignment='left', verticalalignment='center')
-
-        plt.text(0.14, 0.98, datetime.datetime.now().isoformat().split('.')[0],
-                 transform=fig.transFigure,
-                 color='gray', horizontalalignment='right', verticalalignment='center')
-
-        plt.text(0.24, 0.96, os.path.split(self.output_path)[-1],
-                 transform=fig.transFigure,
-                 color='gray', horizontalalignment='right', verticalalignment='center')
-
-        if testbed.testbed_state.simulation:
-            plt.text(0.92, 0.97, "SIMULATED DATA!", transform=fig.transFigure,
-                     color='red', fontsize='large', weight='bold',
-                     horizontalalignment='right')
-
+        wfsc_utils.make_control_loop_status_plot(
+            image_before,
+            image_after,
+            E_estimated,
+            self.latest_pupil_image,
+            self.probe_example,
+            self.dark_zone,
+            self.dz_rin,
+            self.dz_rout,
+            gamma,
+            self.control_gain,
+            self.use_dm2,
+            self.jacobian_filename,
+            self.probe_filename,
+            num_probe_pairs,
+            self.probe_amp,
+            self.num_exposures,
+            self.exposure_time_coron,
+            self.exposure_time_direct,
+            self.mean_contrasts_image,
+            self.mean_contrasts_probe,
+            self.mean_contrasts_pairwise,
+            self.predicted_contrasts,
+            self.e_field_scale_factors,
+            self.measured_contrast_deltas,
+            self.predicted_contrast_deltas,
+            self.estimated_incoherent_backgrounds,
+            self.estimated_probe_SNRs,
+            self.estimated_darkzone_SNRs,
+            dm1_actuators,
+            dm2_actuators,
+            self.correction,
+            self.prior_correction,
+            self.git_label,
+            self.output_path
+        )
         self.movie_writer.add_frame()
-
         plt.close()
 
     def show_convergence_plot(self):
