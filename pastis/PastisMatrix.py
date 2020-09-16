@@ -17,9 +17,11 @@ class PastisMatrix(PastisExperiment):
     name = "PASTIS Matrix"
 
     def __init__(self, zernike, calibration_aberration, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
-                 num_exposures, file_mode, raw_skip, align_lyot_stop=True, run_ta=True):
-        super().__init__(probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
-                 num_exposures, file_mode, raw_skip, align_lyot_stop, run_ta)
+                 num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
+                 align_lyot_stop=True, run_ta=True):
+        super().__init__(probe_filename, dm_map_path, color_filter, nd_direct, nd_coron, num_exposures,
+                         exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
+                         align_lyot_stop, run_ta)
 
         self.zernike = zernike   # Can only be piston, tip or tilt on hardware. Will determine calibartion aberration position in list of IrisAO command
         self.calib_aberration = calibration_aberration   # in METERS
