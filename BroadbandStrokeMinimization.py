@@ -223,11 +223,22 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         # TODO: if self.file_mode: HICAT-817
         #self.save_probes()
 
-    def take_exposure(self, devices, exposure_type, wavelength, initial_path, flux_attenuation_factor=1., suffix=None,
-                      dm1_actuators=None, dm2_actuators=None, exposure_time=None, auto_expose=None, **kwargs):
+    def take_exposure(self,
+                      devices,
+                      exposure_type,
+                      wavelength,
+                      initial_path,
+                      flux_attenuation_factor=1.,
+                      suffix=None,
+                      dm1_actuators=None,
+                      dm2_actuators=None,
+                      exposure_time=None,
+                      auto_expose=None,
+                      **kwargs):
 
         """
-        Take an exposure on HiCAT.
+        Take an exposure on HiCAT.  This function binds some parameters to the general-purpose
+        wfsc_utils.take_exposure_hicat_broadband() using object attributes.
 
         :param devices: handles to HiCAT hardware
         :param exposure_type: 'coron' or 'direct'
@@ -252,42 +263,28 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
         auto_expose = self.auto_expose if auto_expose is None else auto_expose
 
-        # Only move filter wheel if we are using a broadband source. The MCLS1 is monochromatic.
-        # This is done here rather than inside take_exposure_hicat because not every script that uses
-        # take_exposure_hicat needs broadband functionality.
-        if CONFIG_INI['testbed']['laser_source'] == 'light_source_assembly':
+        if exposure_type == 'coron':
+            nd_filter = self.nd_coron[wavelength]
+        else:
+            nd_filter = self.nd_direct[wavelength]
 
-            if exposure_type == 'coron':
-                nd_filter_set = self.nd_coron
-            else:
-                nd_filter_set = self.nd_direct
-
-            move_filter(wavelength=int(np.rint(wavelength)), nd=nd_filter_set[wavelength], devices=devices)
-
-        image, header = wfsc_utils.take_exposure_hicat(
-            dm1_actuators, dm2_actuators, devices, wavelength=wavelength,
-            exposure_type=exposure_type, exposure_time=exposure_time, auto_expose=auto_expose,
-            initial_path=initial_path, num_exposures=self.num_exposures, suffix=suffix,
-            file_mode=self.file_mode, raw_skip=self.raw_skip,
-            **kwargs)
-
-        # For coronagraphic images, this factor is 1 by definition
-        if exposure_type == 'direct':
-            image *= flux_attenuation_factor
-
-        # Add flux factor to header, both on disk as well as in local variable
-        # Find latest subdir - latest modified, not necessarily created, but should suffice for this application
-        header['ATTENFAC'] = flux_attenuation_factor
-        if self.file_mode:
-            latest_dir = os.path.dirname(header["PATH"])
-            for processed_im in ['*cal.fits', '*bin.fits']:
-                search_str = os.path.join(latest_dir, processed_im)
-                file_path = glob.glob(search_str)
-                if not file_path:
-                    raise FileNotFoundError("Failed: glob.glob('{search_str}')")
-                fits.setval(filename=file_path[0], keyword='ATTENFAC', value=flux_attenuation_factor)
-
-        return image, header
+        return wfsc_utils.take_exposure_hicat_broadband(
+            dm1_actuators,
+            dm2_actuators,
+            devices,
+            nd_filter,
+            flux_attenuation_factor,
+            exposure_type,
+            self.num_exposures,
+            exposure_time,
+            auto_expose,
+            self.file_mode,
+            self.raw_skip,
+            initial_path,
+            suffix,
+            wavelength=wavelength,
+            **kwargs
+        )
 
     def compute_broadband_weighted_mean(self, quantity, weights):
         """
