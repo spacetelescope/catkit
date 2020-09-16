@@ -8,7 +8,7 @@ from catkit.catkit_types import units, quantity, LyotStopPosition
 from hicat.experiments.Experiment import Experiment
 from hicat.experiments.ApplyActuatorPattern import ApplyCenterPokePlus, ApplyApodizerStrutsPoke, ApplyAsymmetricTestPattern
 import hicat.util
-from hicat.wfc_algorithms.stroke_min import take_pupilcam_hicat
+from hicat.wfc_algorithms.wfsc_utils import take_pupilcam_hicat
 from hicat.hardware.testbed import move_lyot_stop
 from hicat.config import CONFIG_INI
 

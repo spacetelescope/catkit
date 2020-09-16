@@ -18,7 +18,7 @@ from hicat.hardware import testbed
 import hicat.plotting.animation
 import hicat.plotting
 from hicat import util
-from hicat.wfc_algorithms import stroke_min
+from hicat.wfc_algorithms import wfsc_utils
 
 
 class ContrastStability(Experiment):
@@ -53,22 +53,22 @@ class ContrastStability(Experiment):
         self.temp = []
         self.humidity = []
 
-        self.take_coron_exposure = functools.partial(stroke_min.take_exposure_hicat, exposure_time=self.exposure_time_coron,
+        self.take_coron_exposure = functools.partial(wfsc_utils.take_exposure_hicat, exposure_time=self.exposure_time_coron,
                                                      exposure_type='coron', auto_expose=self.auto_expose)
-        self.take_direct_exposure = functools.partial(stroke_min.take_exposure_hicat, exposure_time=self.exposure_time_direct,
+        self.take_direct_exposure = functools.partial(wfsc_utils.take_exposure_hicat, exposure_time=self.exposure_time_direct,
                                                       exposure_type='direct', auto_expose=self.auto_expose)
 
         # Read dark zone
         with fits.open(dh_filename) as probe_info:
 
             self.log.info("Loading Dark Zone geometry from {}".format(dh_filename))
-            self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(), stroke_min.focal_grid)
+            self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(), wfsc_utils.focal_grid)
 
         # Load DM shape you want to use for test
         dm1_start = fits.getdata(os.path.join(dm_command_path, 'dm1_command_2d_noflat.fits')).ravel()
         dm2_start = fits.getdata(os.path.join(dm_command_path, 'dm2_command_2d_noflat.fits')).ravel()
-        self.dm1_hold = dm1_start[stroke_min.dm_mask] * 1e9   # The file saves the DM maps in meters, while the
-        self.dm2_hold = dm2_start[stroke_min.dm_mask] * 1e9   # take exposure function needs them in nanometers.
+        self.dm1_hold = dm1_start[wfsc_utils.dm_mask] * 1e9   # The file saves the DM maps in meters, while the
+        self.dm2_hold = dm2_start[wfsc_utils.dm_mask] * 1e9   # take exposure function needs them in nanometers.
 
     def collect_metrics(self, devices):
         """
@@ -113,11 +113,11 @@ class ContrastStability(Experiment):
                        'temp_sensor': temp_sensor}
 
             # Take direct exposure for normalization
-            direct, _header = self.take_direct_exposure(np.zeros(stroke_min.num_actuators),
-                                                   np.zeros(stroke_min.num_actuators),
-                                                   devices,
-                                                   initial_path=self.output_path,
-                                                   num_exposures=self.num_exposures)
+            direct, _header = self.take_direct_exposure(np.zeros(wfsc_utils.num_actuators),
+                                                        np.zeros(wfsc_utils.num_actuators),
+                                                        devices,
+                                                        initial_path=self.output_path,
+                                                        num_exposures=self.num_exposures)
 
             for i in range(self.iter):
 
@@ -169,8 +169,8 @@ class ContrastStability(Experiment):
         ax2.legend(loc='upper right', fontsize='x-small')
 
         # The two DMs
-        dm1_surf = stroke_min.dm_actuators_to_surface(self.dm1_hold)
-        dm2_surf = stroke_min.dm_actuators_to_surface(self.dm2_hold)
+        dm1_surf = wfsc_utils.dm_actuators_to_surface(self.dm1_hold)
+        dm2_surf = wfsc_utils.dm_actuators_to_surface(self.dm2_hold)
         vmax = max([np.abs(dm1_surf).max(), np.abs(dm2_surf).max()])
 
         hicat.plotting.dm_surface_display(axes[1, 0], dm1_surf, vmax=vmax, title='DM1 surface')

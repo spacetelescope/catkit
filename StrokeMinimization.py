@@ -18,7 +18,7 @@ import hicat.plotting.animation
 from hicat.experiments.Experiment import HicatExperiment
 from hicat.hardware import testbed, testbed_state
 import hicat.util
-from hicat.wfc_algorithms import stroke_min
+from hicat.wfc_algorithms import wfsc_utils
 from hicat.experiments.modules import contrast_statistics
 
 
@@ -89,8 +89,8 @@ class StrokeMinimization(HicatExperiment):
         with fits.open(probe_filename) as probe_info:
 
             self.log.info("Loading Dark Zone geometry from {}".format(probe_filename))
-            self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(), stroke_min.focal_grid)
-            self.dark_zone_probe = hcipy.Field(np.asarray(probe_info['DARK_ZONE_PROBE'].data, bool).ravel(), stroke_min.focal_grid)
+            self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(), wfsc_utils.focal_grid)
+            self.dark_zone_probe = hcipy.Field(np.asarray(probe_info['DARK_ZONE_PROBE'].data, bool).ravel(), wfsc_utils.focal_grid)
 
             self.log.info("Loading probe DM shapes from {}".format(probe_filename))
             self.probes = probe_info['PROBES'].data
@@ -110,7 +110,7 @@ class StrokeMinimization(HicatExperiment):
 
         # Cut Jacobian in half if using only DM1
         if not self.use_dm2:
-            self.jacobian = self.jacobian[:stroke_min.num_actuators, :]
+            self.jacobian = self.jacobian[:wfsc_utils.num_actuators, :]
 
         self.gamma = gamma
         self.control_gain = control_gain
@@ -122,8 +122,8 @@ class StrokeMinimization(HicatExperiment):
         self.auto_num_exposures = auto_num_exposures
         self.target_snr_per_pix = target_snr_per_pix
         self.dm_calibration_fudge = dm_calibration_fudge
-        self.correction = np.zeros(stroke_min.num_actuators*2, float)
-        self.prior_correction = np.zeros(stroke_min.num_actuators*2, float)
+        self.correction = np.zeros(wfsc_utils.num_actuators * 2, float)
+        self.prior_correction = np.zeros(wfsc_utils.num_actuators * 2, float)
         self.e_field_scale_factors = []
         self.git_label = hicat.util.git_description()
 
@@ -149,13 +149,13 @@ class StrokeMinimization(HicatExperiment):
         self.estimated_incoherent_backgrounds = []
 
         # Bind exposure time to exposure functions to ensure consistency throughout experiment
-        self.take_coron_exposure = functools.partial(stroke_min.take_exposure_hicat,
+        self.take_coron_exposure = functools.partial(wfsc_utils.take_exposure_hicat,
                                                      exposure_time=self.exposure_time_coron,
                                                      exposure_type='coron',
                                                      file_mode=self.file_mode,
                                                      raw_skip=self.raw_skip)
 
-        self.take_direct_exposure = functools.partial(stroke_min.take_exposure_hicat,
+        self.take_direct_exposure = functools.partial(wfsc_utils.take_exposure_hicat,
                                                       exposure_time=self.exposure_time_direct,
                                                       exposure_type='direct',
                                                       file_mode=self.file_mode,
@@ -210,8 +210,8 @@ class StrokeMinimization(HicatExperiment):
                 dm2_actuators = dm_settings[1]
             except KeyError:
                 # no DM settings saved, therefore start with flat DMs
-                dm1_actuators = np.zeros(stroke_min.num_actuators)
-                dm2_actuators = np.zeros(stroke_min.num_actuators)
+                dm1_actuators = np.zeros(wfsc_utils.num_actuators)
+                dm2_actuators = np.zeros(wfsc_utils.num_actuators)
 
         return dm1_actuators, dm2_actuators
 
@@ -257,18 +257,18 @@ class StrokeMinimization(HicatExperiment):
             image_before = image_after
 
             self.log.info('Estimating electric fields using pairwise probes...')
-            E_estimated, probe_example, probe_snr = stroke_min.take_electric_field_pairwise(self.dm1_actuators,
-                                                                                 self.dm2_actuators,
-                                                                                 take_exposure_func,
-                                                                                 devices,
-                                                                                 self.H_inv,
-                                                                                 self.probes,
-                                                                                 self.dark_zone,
-                                                                                 direct,
-                                                                                 initial_path=exposure_kwargs['initial_path'],
-                                                                                 current_contrast=self.mean_contrasts_image[-1] if i>0 else None,
-                                                                                 probe_amplitude=self.probe_amp,
-                                                                                 file_mode=self.file_mode)
+            E_estimated, probe_example, probe_snr = wfsc_utils.take_electric_field_pairwise(self.dm1_actuators,
+                                                                                            self.dm2_actuators,
+                                                                                            take_exposure_func,
+                                                                                            devices,
+                                                                                            self.H_inv,
+                                                                                            self.probes,
+                                                                                            self.dark_zone,
+                                                                                            direct,
+                                                                                            initial_path=exposure_kwargs['initial_path'],
+                                                                                            current_contrast=self.mean_contrasts_image[-1] if i>0 else None,
+                                                                                            probe_amplitude=self.probe_amp,
+                                                                                            file_mode=self.file_mode)
             # TODO: if self.file_mode: HICAT-817
             hicat.util.save_complex("E_estimated_unscaled.fits", E_estimated, exposure_kwargs['initial_path'])
             self.probe_example = probe_example  # Save for use in plots
@@ -280,6 +280,7 @@ class StrokeMinimization(HicatExperiment):
                 estimated_contrast = np.mean(np.abs(E_estimated[self.dark_zone]) ** 2)
                 contrast_ratio = expected_contrast/estimated_contrast
                 self.log.info("Scaling estimated e field by {} to match image contrast ".format(np.sqrt(contrast_ratio)))
+
                 self.e_field_scale_factors.append(np.sqrt(contrast_ratio))
             else:
                 self.e_field_scale_factors.append(1.)
@@ -287,16 +288,16 @@ class StrokeMinimization(HicatExperiment):
             E_estimated *= self.e_field_scale_factors[-1]
 
             if sim:
-                E_sim_actual, _header = stroke_min.take_electric_field_simulator(self.dm1_actuators,
+                E_sim_actual, _header = wfsc_utils.take_electric_field_simulator(self.dm1_actuators,
                                                                                  self.dm2_actuators,
                                                                                  apply_pipeline_binning=False)  # E_actual is in sqrt(counts/sec)
-                direct_sim, _header = stroke_min.take_direct_exposure_simulator(self.dm1_actuators,
+                direct_sim, _header = wfsc_utils.take_direct_exposure_simulator(self.dm1_actuators,
                                                                                 self.dm2_actuators)
                 E_sim_normalized = E_sim_actual / direct_sim.max()
                 # TODO: if self.file_mode: HICAT-817
                 hicat.util.save_complex("E_actual.fits", E_sim_normalized, exposure_kwargs['initial_path'])
                 hicat.util.save_intensity("I_actual_from_sim_cal.fits", E_sim_normalized, exposure_kwargs['initial_path'])
-                E_sim_actual, _header = stroke_min.take_electric_field_simulator(self.dm1_actuators,
+                E_sim_actual, _header = wfsc_utils.take_electric_field_simulator(self.dm1_actuators,
                                                                                  self.dm2_actuators,
                                                                                  apply_pipeline_binning=True)  # E_actual is in sqrt(counts/sec)
 
@@ -333,7 +334,7 @@ class StrokeMinimization(HicatExperiment):
 
             # Update DM actuators
             self.sanity_check(correction)
-            dm1_correction, dm2_correction = stroke_min.split_command_vector(correction, self.use_dm2)
+            dm1_correction, dm2_correction = wfsc_utils.split_command_vector(correction, self.use_dm2)
             self.dm1_actuators -= dm1_correction
             self.dm2_actuators -= dm2_correction
 
@@ -343,7 +344,7 @@ class StrokeMinimization(HicatExperiment):
             image_after, coron_header = self.take_coron_exposure(self.dm1_actuators, self.dm2_actuators, devices,
                                                             output_err=True, dark_zone_mask=self.dark_zone, **exposure_kwargs)
             try:
-                self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
+                self.latest_pupil_image = wfsc_utils.take_pupilcam_hicat(devices,
                                                                          num_exposures=1,
                                                                          initial_path=exposure_kwargs['initial_path'],
                                                                          file_mode=self.file_mode)[0]
@@ -392,7 +393,7 @@ class StrokeMinimization(HicatExperiment):
         """
         Calculate the DM actuator correction for a given field estimate and contrast decrease factor.
         """
-        correction, mu_start, predicted_contrast, predicted_contrast_drop = stroke_min.stroke_minimization(
+        correction, mu_start, predicted_contrast, predicted_contrast_drop = wfsc_utils.stroke_minimization(
             self.jacobian, E_estimated, self.dark_zone, gamma, self.mu_start)
 
         return correction, mu_start, predicted_contrast, predicted_contrast_drop
@@ -428,9 +429,9 @@ class StrokeMinimization(HicatExperiment):
         # TODO also save the dark_zone mask here too, and dark_zone_probe.
 
         for i, p in enumerate(self.probes):
-            p1, p2 = stroke_min.split_command_vector(p, self.use_dm2)
-            acts1 = stroke_min.dm_actuators_to_surface(p1)
-            acts2 = stroke_min.dm_actuators_to_surface(p2)
+            p1, p2 = wfsc_utils.split_command_vector(p, self.use_dm2)
+            acts1 = wfsc_utils.dm_actuators_to_surface(p1)
+            acts2 = wfsc_utils.dm_actuators_to_surface(p2)
 
             hcipy.write_fits(acts1, os.path.join(output_path, 'probe_%d_dm1.fits' % i))
             hcipy.write_fits(acts2, os.path.join(output_path, 'probe_%d_dm2.fits' % i))
@@ -619,21 +620,23 @@ class StrokeMinimization(HicatExperiment):
         ax.axhline(1, ls=":", color='black', alpha=0.5)
 
         # Display DMs, and changes. Note, the correction is subtracted off so the change sign is negative.
-        dm1_surf = stroke_min.dm_actuators_to_surface(dm1_actuators)
+        dm1_surf = wfsc_utils.dm_actuators_to_surface(dm1_actuators)
         if self.use_dm2:
-            dm1_delta = -stroke_min.dm_actuators_to_surface(self.correction[:stroke_min.num_actuators])
-            dm1_delta_2 = -stroke_min.dm_actuators_to_surface((self.correction+self.prior_correction)[:stroke_min.num_actuators])/2
+            dm1_delta = -wfsc_utils.dm_actuators_to_surface(self.correction[:wfsc_utils.num_actuators])
+            dm1_delta_2 = -wfsc_utils.dm_actuators_to_surface((self.correction + self.prior_correction)[:wfsc_utils.num_actuators]) / 2
 
-            dm2_surf = stroke_min.dm_actuators_to_surface(dm2_actuators)
-            dm2_delta = -stroke_min.dm_actuators_to_surface(self.correction[stroke_min.num_actuators:])
-            dm2_delta_2 = -stroke_min.dm_actuators_to_surface((self.correction+self.prior_correction)[stroke_min.num_actuators:])/2
+            dm2_surf = wfsc_utils.dm_actuators_to_surface(dm2_actuators)
+            dm2_delta = -wfsc_utils.dm_actuators_to_surface(self.correction[
+                                                            wfsc_utils
+                                                            .num_actuators:])
+            dm2_delta_2 = -wfsc_utils.dm_actuators_to_surface((self.correction + self.prior_correction)[wfsc_utils.num_actuators:]) / 2
 
             vmax = max([np.abs(dm1_surf).max(), np.abs(dm2_surf).max()])
             dvmax = max([np.abs(dm1_delta).max(), np.abs(dm2_delta).max()])
 
         else:
-            dm1_delta = -stroke_min.dm_actuators_to_surface(self.correction)
-            dm1_delta_2 = -stroke_min.dm_actuators_to_surface((self.correction+self.prior_correction))/2
+            dm1_delta = -wfsc_utils.dm_actuators_to_surface(self.correction)
+            dm1_delta_2 = -wfsc_utils.dm_actuators_to_surface((self.correction + self.prior_correction)) / 2
 
             vmax = max([np.abs(dm1_surf).max(), np.abs(dm1_surf).max()])
             dvmax = max([np.abs(dm1_delta).max(), np.abs(dm1_delta).max()])
@@ -743,7 +746,7 @@ class StrokeMinimization(HicatExperiment):
 
             if len(stroke_min_runs) == 0:
                 self.log.info("Could not find any stroke min directories to resume from.")
-                return np.zeros(stroke_min.num_actuators), np.zeros(stroke_min.num_actuators)
+                return np.zeros(wfsc_utils.num_actuators), np.zeros(wfsc_utils.num_actuators)
 
             for prior_dir in stroke_min_runs:
                 self.log.info("Checking dir: " + prior_dir)
@@ -771,7 +774,7 @@ class StrokeMinimization(HicatExperiment):
         surfaces = []
         for dmnum in [1, 2]:
             actuators_2d = fits.getdata(os.path.join(dir_to_restore, 'dm{}_command_2d_noflat.fits'.format(dmnum)))
-            actuators_1d = actuators_2d.ravel()[stroke_min.dm_mask]
+            actuators_1d = actuators_2d.ravel()[wfsc_utils.dm_mask]
             actuators_1d *= 1e9  # convert from meters to nanometers # FIXME this is because of historical discrepancies, need to unify everything at some point
             surfaces.append(actuators_1d)
         return surfaces

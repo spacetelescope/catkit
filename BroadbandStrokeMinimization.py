@@ -21,7 +21,7 @@ from hicat.control.align_lyot import LyotStopAlignment
 from hicat.hardware import testbed, testbed_state
 import hicat.plotting.animation
 from hicat import util
-from hicat.wfc_algorithms import stroke_min
+from hicat.wfc_algorithms import wfsc_utils
 from hicat.experiments.StrokeMinimization import StrokeMinimization
 
 from hicat.hardware.testbed import move_filter
@@ -134,9 +134,9 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
                 jac_hdr = fits.getheader((self.jacobian_filenames[wavelength]))
                 if 'CRN_MODE' in jac_hdr:
-                    if jac_hdr['CRN_MODE'] != stroke_min.current_mode:
+                    if jac_hdr['CRN_MODE'] != wfsc_utils.current_mode:
                         raise RuntimeError(f"This jacobian file is for mode={jac_hdr['CRN_MODE']} but the system is"
-                                           f" configured for mode {stroke_min.current_mode}: "
+                                           f" configured for mode {wfsc_utils.current_mode}: "
                                            f"filename {self.jacobian_filenames[wavelength]}")
             except Exception as e:
                 raise RuntimeError("Can't read Jacobian from {}.".format(self.jacobian_filenames[wavelength])) from e
@@ -147,8 +147,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
                 # Assume the dark zone regions are the same independent of wavelength. The code reads them in anyway redundantly at
                 # each wavelength for now - ugly but easy and it works.
-                self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(), stroke_min.focal_grid)
-                self.dark_zone_probe = hcipy.Field(np.asarray(probe_info['DARK_ZONE_PROBE'].data, bool).ravel(), stroke_min.focal_grid)
+                self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(), wfsc_utils.focal_grid)
+                self.dark_zone_probe = hcipy.Field(np.asarray(probe_info['DARK_ZONE_PROBE'].data, bool).ravel(), wfsc_utils.focal_grid)
 
                 self.log.info("Loading probe DM shapes from {}".format(self.probe_filenames[wavelength]))
                 self.probes[wavelength] = probe_info['PROBES'].data
@@ -174,7 +174,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         # Cut Jacobian in half if using only DM1
         if not self.use_dm2:
             for wavelength in self.jacobians:
-                self.jacobians[wavelength] = self.jacobians[wavelength][:stroke_min.num_actuators, :]
+                self.jacobians[wavelength] = self.jacobians[wavelength][:wfsc_utils.num_actuators, :]
 
         self.gamma = gamma
         self.control_gain = control_gain
@@ -184,8 +184,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         self.dm_command_dir_to_restore = dm_command_dir_to_restore
         self.autoscale_e_field = autoscale_e_field
         self.dm_calibration_fudge = dm_calibration_fudge
-        self.correction = np.zeros(stroke_min.num_actuators*2, float)
-        self.prior_correction = np.zeros(stroke_min.num_actuators*2, float)
+        self.correction = np.zeros(wfsc_utils.num_actuators * 2, float)
+        self.prior_correction = np.zeros(wfsc_utils.num_actuators * 2, float)
         self.git_label = util.git_description()
         self.perfect_knowledge_mode = perfect_knowledge_mode
         self.align_lyot_stop = align_lyot_stop
@@ -264,7 +264,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
             move_filter(wavelength=int(np.rint(wavelength)), nd=nd_filter_set[wavelength], devices=devices)
 
-        image, header = stroke_min.take_exposure_hicat(
+        image, header = wfsc_utils.take_exposure_hicat(
             dm1_actuators, dm2_actuators, devices, wavelength=wavelength,
             exposure_type=exposure_type, exposure_time=exposure_time, auto_expose=auto_expose,
             initial_path=initial_path, num_exposures=self.num_exposures, suffix=suffix,
@@ -299,14 +299,14 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         return sum(quantity[wavelength] * weights[wavelength] for wavelength in self.wavelengths) / len(self.wavelengths)
 
     def experiment(self):
-        self.H_invs = {key: hcipy.Field(self.H_invs[key], stroke_min.focal_grid) for key in self.H_invs}
+        self.H_invs = {key: hcipy.Field(self.H_invs[key], wfsc_utils.focal_grid) for key in self.H_invs}
 
         # Get cached devices, etc, that were instantiated (and connections opened) in HicatExperiment.pre_experiment().
         devices = testbed_state.devices.copy()
         ta_controller = testbed_state.cache["ta_controller"]
 
         # Calculate flux attenuation factor between direct+ND and coronagraphic images
-        flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=self.wavelengths,
+        flux_norm_dir = wfsc_utils.capture_flux_attenuation_data(wavelengths=self.wavelengths,
                                                                  out_path=self.output_path,
                                                                  nd_direct=self.nd_direct,
                                                                  nd_coron=self.nd_coron,
@@ -400,12 +400,14 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                     self.compute_true_e_fields(E_estimateds, exposure_kwargs, initial_path, wavelength)
                 else:
                     if self.control_weights[wavelength] == 0:
-                        E_estimateds[wavelength] = hcipy.Field(np.zeros(stroke_min.focal_grid.size, dtype='complex'), stroke_min.focal_grid)
-                        mean_contrast_probe[wavelength] = np.mean(np.abs(E_estimateds[wavelength][self.dark_zone]) ** 2)
+                        E_estimateds[wavelength] = hcipy.Field(np.zeros(wfsc_utils.focal_grid.size, dtype='complex'), wfsc_utils.focal_grid)
+                        mean_contrast_probe[wavelength] = np.mean(np.abs(E_estimateds[wavelength
+                                                                         ][self.dark_zone]) ** 2)
                         probe_examples[wavelength] = self.images_before[wavelength]
                     else:
-                        self.log.info(f'Estimating electric fields using pairwise probes at {wavelength} nm...')
-                        E_estimateds[wavelength], probe_examples[wavelength], probe_snr = stroke_min.take_electric_field_pairwise(
+                        self.log.info(f'Estimating electric fields using pairwise probes at '
+                                      f'{wavelength} nm...')
+                        E_estimateds[wavelength], probe_examples[wavelength], probe_snr = wfsc_utils.take_electric_field_pairwise(
                             self.dm1_actuators,
                             self.dm2_actuators,
                             take_exposure_pairwise,
@@ -470,13 +472,13 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
             # Update DM actuators
             self.sanity_check(correction)
-            dm1_correction, dm2_correction = stroke_min.split_command_vector(correction, self.use_dm2)
+            dm1_correction, dm2_correction = wfsc_utils.split_command_vector(correction, self.use_dm2)
             self.dm1_actuators -= dm1_correction
             self.dm2_actuators -= dm2_correction
 
             self.log.info('Taking post-correction pupil image...')
 
-            self.latest_pupil_image = stroke_min.take_pupilcam_hicat(devices,
+            self.latest_pupil_image = wfsc_utils.take_pupilcam_hicat(devices,
                                                                      num_exposures=1,
                                                                      initial_path=exposure_kwargs['initial_path'],
                                                                      file_mode=self.file_mode)[0]
@@ -519,13 +521,13 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         """ Compute and save the true E-fields.  Only usable in simulation. """
         for apply_pipeline_binning, suffix in zip([False, True], ['cal', 'bin']):
             # Not binned
-            E_sim_actual, _header = stroke_min.take_exposure_hicat_simulator(self.dm1_actuators,
+            E_sim_actual, _header = wfsc_utils.take_exposure_hicat_simulator(self.dm1_actuators,
                                                                              self.dm2_actuators,
                                                                              apply_pipeline_binning=apply_pipeline_binning,
                                                                              wavelength=wavelength,
                                                                              exposure_type='coronEfield',
                                                                              output_path=initial_path)  # E_actual is in sqrt(counts/sec)
-            direct_sim, _header = stroke_min.take_exposure_hicat_simulator(self.dm1_actuators,
+            direct_sim, _header = wfsc_utils.take_exposure_hicat_simulator(self.dm1_actuators,
                                                                            self.dm2_actuators,
                                                                            apply_pipeline_binning=apply_pipeline_binning,
                                                                            wavelength=wavelength,
@@ -534,11 +536,12 @@ class BroadbandStrokeMinimization(StrokeMinimization):
             E_sim_normalized = E_sim_actual / np.sqrt(direct_sim.max())
             # TODO: if self.file_mode: HICAT-817
             hicat.util.save_complex(f"E_actual_{suffix}_{wavelength}nm.fits", E_sim_normalized, exposure_kwargs['initial_path'])
-            hicat.util.save_intensity(f"I_actual_from_sim_{suffix}_{wavelength}nm.fits", E_sim_normalized, exposure_kwargs['initial_path'])
+            hicat.util.save_intensity(f"I_actual_from_sim_{suffix}_{wavelength}nm.fits",
+                                      E_sim_normalized, exposure_kwargs['initial_path'])
 
             # Replace the pairwise estimate with the simulated binned E-field
             # Note that this relies on the binned E-field being computed last in the above loop
-            estimate = hcipy.Field(np.zeros(stroke_min.focal_grid.size, dtype='complex'), stroke_min.focal_grid)
+            estimate = hcipy.Field(np.zeros(wfsc_utils.focal_grid.size, dtype='complex'), wfsc_utils.focal_grid)
             estimate[self.dark_zone] = E_sim_normalized[self.dark_zone]
             E_estimateds[wavelength] = estimate
 
@@ -557,8 +560,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 dm2_actuators = dm_settings[1]
             except KeyError:
                 # no DM settings saved, therefore start with flat DMs
-                dm1_actuators = np.zeros(stroke_min.num_actuators)
-                dm2_actuators = np.zeros(stroke_min.num_actuators)
+                dm1_actuators = np.zeros(wfsc_utils.num_actuators)
+                dm2_actuators = np.zeros(wfsc_utils.num_actuators)
 
         return dm1_actuators, dm2_actuators
 
@@ -593,7 +596,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         Calculate the DM actuator correction for a given field estimate and contrast decrease factor.
         """
 
-        correction, mu_start, predicted_contrast, predicted_contrast_drop = stroke_min.broadband_stroke_minimization(
+        correction, mu_start, predicted_contrast, predicted_contrast_drop = wfsc_utils.broadband_stroke_minimization(
             self.jacobians, E_estimateds, self.dark_zone, gamma, self.spectral_weights, self.control_weights,
             self.mu_start)
 
