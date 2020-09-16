@@ -47,15 +47,10 @@ class SnmpUps(BackupPower):
             else:
                 return result
 
-        except Exception as err:
-            # Most, but not all, exception subclasses have a message attribute. Handle either case.
-            if hasattr(err, 'message'):
-                self.log.exception(err.message)
-            else:
-                self.log.exception(err)
+        except Exception:
+            error_message = f"{self.config_id} SNMP interface request failed."
+            self.log.exception(error_message)
             if return_status_msg:
-                error_message = f"{self.config_id} failed safety test: SNMP interface request failed."
-                self.log.error(error_message)
                 return False, error_message
             else:
                 return False
