@@ -18,17 +18,11 @@ class PastisMatrix(PastisExperiment):
 
     def __init__(self, zernike, calibration_aberration, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
                  num_exposures, file_mode, raw_skip, align_lyot_stop=True, run_ta=True):
-        super().__init__(probe_filename, dm_map_path, align_lyot_stop, run_ta)
+        super().__init__(probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
+                 num_exposures, file_mode, raw_skip, align_lyot_stop, run_ta)
 
         self.zernike = zernike   # Can only be piston, tip or tilt on hardware. Will determine calibartion aberration position in list of IrisAO command
         self.calib_aberration = calibration_aberration   # in METERS
-
-        self.color_filter = color_filter
-        self.nd_direct = nd_direct
-        self.nd_coron = nd_coron
-        self.num_exposures = num_exposures
-        self.file_mode = file_mode
-        self.raw_skip = raw_skip
 
         self.log.info(f'wfe_aber: {self.calib_aberration} m')
         self.log.info(f'Total number of segment pairs in HiCAT pupil: {len(list(pastis.util_pastis.segment_pairs_all(self.nb_seg)))}')
@@ -40,7 +34,8 @@ class PastisMatrix(PastisExperiment):
         self.aberrated_segment_pairs = []
 
     def experiment(self):
-        pass
+        # Run flux normalization
+        self.run_flux_normalization()
 
         # Save used DM maps into self.output_path
 
