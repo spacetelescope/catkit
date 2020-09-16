@@ -201,7 +201,11 @@ class StrokeMinimization(HicatExperiment):
     def get_initial_dm_commands(self):
         """ Initialize the DM actuator commands.  This is called in __init__()."""
         if self.resume:
-            dm1_actuators, dm2_actuators = self.restore_last_strokemin_dm_shapes(self.dm_command_dir_to_restore)
+            dm1_actuators, dm2_actuators = wfsc_utils.load_dm_commands(
+                self.dm_command_dir_to_restore,
+                self.suffix,
+                min_iterations_to_resume=10
+            )
         else:
             # Check if Jacobian includes information on which DM state it is linearized around
             try:
@@ -723,61 +727,6 @@ class StrokeMinimization(HicatExperiment):
 
         contrast_statistics.plot_environment_and_contrast(metrics_filename)
 
-    def restore_last_strokemin_dm_shapes(self, dm_command_dir_to_restore=None):
-        """ Find most recent prior DM shapes and re-use them, if possible.
-
-        Method: Look at all available stroke min directories.
-        Sort these in reverse to find the most recent deep stroke min run.
-        Ignore any that have fewer than ten iterations (assume these were for script
-        debugging, or are just not that dark, etc.).
-        Get the DM settings from the penultimate iteration folder (since the last
-        iteration probably did not complete.)
-
-        """
-        if dm_command_dir_to_restore is None:
-            min_iterations_to_resume = 10
-
-            self.log.info("Resuming DM settings from prior dark zone.")
-            initial_path = hicat.util.map_data_path()
-            pattern = os.path.join(initial_path, '*_' + self.suffix)
-            self.log.info("Looking for " + pattern)
-            stroke_min_runs = glob.glob(pattern)
-            stroke_min_runs.sort(reverse=True)
-
-            if len(stroke_min_runs) == 0:
-                self.log.info("Could not find any stroke min directories to resume from.")
-                return np.zeros(wfsc_utils.num_actuators), np.zeros(wfsc_utils.num_actuators)
-
-            for prior_dir in stroke_min_runs:
-                self.log.info("Checking dir: " + prior_dir)
-                iter_dirs = glob.glob(os.path.join(prior_dir, 'iter*'))
-                if len(iter_dirs) < min_iterations_to_resume:
-                    self.log.info(
-                        "  That dir has < {} iterations, so we are skipping it.".format(min_iterations_to_resume))
-                    continue
-
-                iter_dirs.sort()
-                # Get the penultimate iteration; the last one may not have completed yet.
-                iter_to_restore = iter_dirs[-2]
-                dir_to_restore = glob.glob(os.path.join(iter_to_restore, 'coron_*', 'dm_command'))[0]
-                self.log.info("Retrieving DM settings from " + dir_to_restore)
-                break
-
-                self.log.info("Could not find any stroke min directories with > {} iterations.".format(min_iterations_to_resume))
-                return np.zeros(num_actuators), np.zeros(num_actuators)
-        else:
-            self.log.info("Resuming DM setting from directory: " + dm_command_dir_to_restore)
-            dir_to_restore = dm_command_dir_to_restore
-            # Load DM surfaces from the so-called noflat files, i.e. the requested surface
-            # displacements prior to adding in the DM flat map calibration
-
-        surfaces = []
-        for dmnum in [1, 2]:
-            actuators_2d = fits.getdata(os.path.join(dir_to_restore, 'dm{}_command_2d_noflat.fits'.format(dmnum)))
-            actuators_1d = actuators_2d.ravel()[wfsc_utils.dm_mask]
-            actuators_1d *= 1e9  # convert from meters to nanometers # FIXME this is because of historical discrepancies, need to unify everything at some point
-            surfaces.append(actuators_1d)
-        return surfaces
 
     def sanity_check(self, correction):
         """ Perform simple test for basic plausibility of results """
