@@ -38,10 +38,10 @@ class PastisMatrix(PastisExperiment):
     def experiment(self):
         # Run flux normalization
         self.run_flux_normalization()
+        # TODO: Save used DM maps into self.output_path
 
-        # Save used DM maps into self.output_path
-
-        #coro_floor, norm = self.measure_coronagraph_floor()
+        # Take unaberrated direct and coro images, save normalization factor and coro_floor as attributes
+        self.measure_coronagraph_floor()
 
         ### Measure contrast matrix
         # for loop over all segment pairs

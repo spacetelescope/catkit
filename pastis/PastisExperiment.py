@@ -118,9 +118,9 @@ class PastisExperiment(HicatExperiment):
         if CONFIG_INI['testbed']['laser_source'] == 'light_source_assembly':
 
             if exposure_type == 'coron':
-                nd_filter_set = self.nd_coron
+                nd_filter_set = {self.wvln: self.nd_coron}
             else:
-                nd_filter_set = self.nd_direct
+                nd_filter_set = {self.wvln: self.nd_direct}
 
             move_filter(wavelength=int(np.rint(wavelength)), nd=nd_filter_set[wavelength], devices=devices)
 
@@ -150,18 +150,28 @@ class PastisExperiment(HicatExperiment):
         return image, header
 
     def measure_coronagraph_floor(self):
-        pass
 
-        ### Flux calibration?
-        # take direct image
-        # norm = normalization factor for coro images
+        # Access devices for reference images
+        devices = testbed_state.devices.copy()
 
-        ### Contrast floor
-        # apply DM map from strokemin
-        # take coro image, normalize, measure contrast in DH
-        # Save coronagraph floor to file
+        # Take starting reference images, in direct and coron
+        initial_path = os.path.join(self.output_path, 'unaberrated_reference')
 
-        # return contrast_floor, norm
+        # Need flat DM without SM solution for direct reference images
+        dm_acts_zeros = np.zeros(952)
+
+        image_direct, _ = self.take_exposure(devices, 'direct', self.wvln, initial_path, self.flux_norm_dir[self.wvln],
+                                             dm1_actuators=dm_acts_zeros, dm2_actuators=dm_acts_zeros)
+        self.direct_max = image_direct.max()
+
+        self.image_unaberrated, header = self.take_exposure(devices, 'coron', self.wvln, initial_path,
+                                                            dark_zone_mask=self.dark_zone)
+        self.image_unaberrated /= self.direct_max
+
+        # Measure coronagraph floor
+        self.coronagraph_floor = np.mean(self.image_unaberrated[self.dark_zone])
+        with open(os.path.join(initial_path, 'coronagraph_floor.txt'), 'w') as file:
+            file.write(f'Coronagraph floor: {self.coronagraph_floor}')
 
     def experiment(self):
         raise NotImplementedError("The main PASTIS experiment class does not implement an actual experiment.")
