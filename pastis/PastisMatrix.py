@@ -94,7 +94,7 @@ class PastisMatrix(PastisExperiment):
             self.contrast_contribution_matrix[pair[0], pair[1]] = self.contrast_contribution_per_pair[-1]
 
         # Save out contrast matrix as fits and pdf
-        self.log.info('Save measured contrast matrix')
+        self.log.info(f"Save measured contrast matrix to {os.path.join(self.output_path, 'pair-wise_contrasts.fits')}")
         hicat.util.write_fits(self.contrast_contribution_matrix, os.path.join(self.output_path, 'pair-wise_contrasts.fits'))
         plt.figure(figsize=(10, 10))
         plt.imshow(self.contrast_contribution_matrix)
