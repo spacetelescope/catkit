@@ -15,7 +15,8 @@ import pastis.util_pastis
 
 
 def read_dm_commands(dm_command_directory):
-    """Hijacked partially from StrokeMinimization.restore_last_strokemin_dm_shapes()"""
+    """Hijacked partially from StrokeMinimization.restore_last_strokemin_dm_shapes()
+    Loads a DM command from disk and returns the surface as a list."""
     surfaces = []
     for dmnum in [1, 2]:
         actuators_2d = fits.getdata(os.path.join(dm_command_directory, 'dm{}_command_2d_noflat.fits'.format(dmnum)))
@@ -26,12 +27,33 @@ def read_dm_commands(dm_command_directory):
 
 
 class PastisExperiment(HicatExperiment):
+    """
+    Top-level PASTIS experiment class, inheriting from HicatExperiment.
+
+    This adds a method to do the flux normalizatoin, and a method that measures the reference PSF, as well as the
+    unaberrated coronagraph PSF that has a DH solution applied on the DMs.
+    """
 
     name = 'PASTIS Experiment'
 
     def __init__(self, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
                  num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                  align_lyot_stop=True, run_ta=True):
+        """
+        :param probe_filename: str, path to probe file, used only to get DH geometry
+        :param dm_map_path: str, path to folder that contains DH solution
+        :param color_filter: str, wavelength for color flipmount
+        :param nd_direct: str, ND filter choice for direct images
+        :param nd_coron: str, ND filter choice for coronagraphic images
+        :param num_exposures: int, number of exposures for each image acquisition
+        :param exposure_time_coron: float, exposure time for coron mode in microseconds
+        :param exposure_time_direct: float, exposure time for direct mode in microseconds
+        :param auto_expose: bool or {catkit.catkit_types.FpmPosition: bool}, flag to enable auto exposure time correction
+        :param file_mode: bool, If true files will be written to disk otherwise only final results are saved
+        :param raw_skip: int, Skips x writing-files for every one taken. raw_skip=math.inf will skip all and save no raw image files.
+        :param align_lyot_stop: bool, whether to automatically align the Lyot stop before the experiment or not
+        :param run_ta: bool, whether to run target acquisition. Will still just measure TA if False.
+        """
         super().__init__()
         self.probe_filename = probe_filename  # needed for DH geometry only
         self.dm_map_path = dm_map_path  # will need to load these DM maps to get to low contrast (take from good PW+SM run)
@@ -150,6 +172,11 @@ class PastisExperiment(HicatExperiment):
         return image, header
 
     def measure_coronagraph_floor(self):
+        """
+        Take a direct image to save its peak as the normalization factor - with flat Boston DMs.
+        Take an unaberrated coronagraphic image to save its mean contrast as coronagraph floor - with stroke min DM
+        solution applied to the Boston DMs.
+        """
 
         # Access devices for reference images
         devices = testbed_state.devices.copy()

@@ -23,6 +23,25 @@ class PastisMatrix(PastisExperiment):
     def __init__(self, zernike, calibration_aberration, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
                  num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                  align_lyot_stop=True, run_ta=True):
+        """
+        Measure a PASTIS matrix on hardware.
+        
+        :param zernike: str, which local Zernike to apply to IrisAO, has to be 'piston', 'tip' or 'tilt'
+        :param calibration_aberration: float, calibration aberration for PASTIS matrix in meters
+        :param probe_filename: str, path to probe file, used only to get DH geometry
+        :param dm_map_path: str, path to folder that contains DH solution
+        :param color_filter: str, wavelength for color flipmount
+        :param nd_direct: str, ND filter choice for direct images
+        :param nd_coron: str, ND filter choice for coronagraphic images
+        :param num_exposures: int, number of exposures for each image acquisition
+        :param exposure_time_coron: float, exposure time for coron mode in microseconds
+        :param exposure_time_direct: float, exposure time for direct mode in microseconds
+        :param auto_expose: bool or {catkit.catkit_types.FpmPosition: bool}, flag to enable auto exposure time correction
+        :param file_mode: bool, If true files will be written to disk otherwise only final results are saved
+        :param raw_skip: int, Skips x writing-files for every one taken. raw_skip=math.inf will skip all and save no raw image files
+        :param align_lyot_stop: bool, whether to automatically align the Lyot stop before the experiment or not
+        :param run_ta: bool, whether to run target acquisition. Will still just measure TA if False.
+        """
         super().__init__(probe_filename, dm_map_path, color_filter, nd_direct, nd_coron, num_exposures,
                          exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                          align_lyot_stop, run_ta)
