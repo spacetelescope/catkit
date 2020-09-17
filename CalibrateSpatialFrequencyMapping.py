@@ -8,10 +8,9 @@ from astropy.io import fits
 from scipy.linalg import polar, logm
 from skimage.feature import register_translation  # WARNING! Deprecated in skimage v0.17
 
-from hicat import util
 from hicat.config import CONFIG_INI
-from hicat.experiments.Experiment import Experiment  # noqa: E402
-from hicat.hardware import testbed  # noqa: E402
+from hicat.experiments.Experiment import HicatExperiment  # noqa: E402
+from hicat.hardware import testbed, testbed_state  # noqa: E402
 from hicat.wfc_algorithms import stroke_min
 
 
@@ -302,7 +301,7 @@ def plot_goodness_of_fit(mapping_matrix, inputs, outputs):
     return fig, ax
 
 
-class CalibrateSpatialFrequencyMapping(Experiment):
+class CalibrateSpatialFrequencyMapping(HicatExperiment):
     name = 'DM spatial frequency calibration'
 
     def __init__(self, inner_radius, outer_radius, num_speckle, amplitude=None,
@@ -310,7 +309,9 @@ class CalibrateSpatialFrequencyMapping(Experiment):
                  auto_expose=True,
                  num_exposures=40,
                  exposure_time=140000,  # microseconds
-                 raw_skip=None
+                 raw_skip=None,
+                 align_lyot_stop=True,
+                 run_ta=False,
                 ):
         """
         Measure the matrix that maps spatial frequencies on each DM to pixel locations at the
@@ -356,6 +357,8 @@ class CalibrateSpatialFrequencyMapping(Experiment):
         self.num_exposures = num_exposures
         self.exposure_time = exposure_time
         self.raw_skip = raw_skip if raw_skip is not None else num_exposures+1
+        self.align_lyot_stop = align_lyot_stop
+        self.run_ta = run_ta
 
         # These don't affect the imaging wavelength at all; they are just passed into the
         # take_exposure_hicat() function from stroke_min.py, which uses it to generate
@@ -426,176 +429,156 @@ class CalibrateSpatialFrequencyMapping(Experiment):
         # Generate (fx, fy) spatial frequency pairs
         speckles = [(R * np.cos(theta), R * np.sin(theta)) for R, theta in zip(radii, thetas)]
 
-        with testbed.laser_source() as laser, \
-                testbed.dm_controller() as dm, \
-                testbed.motor_controller() as motor_controller, \
-                testbed.apodizer_picomotor_mount() as apodizer_picomotor_mount, \
-                testbed.quadcell_picomotor_mount() as quadcell_picomotor_mount, \
-                testbed.beam_dump() as beam_dump, \
-                testbed.imaging_camera() as cam, \
-                testbed.pupil_camera() as pupilcam, \
-                testbed.temp_sensor(config_id="aux_temperature_sensor") as temp_sensor, \
-                testbed.target_acquisition_camera() as ta_cam, \
-                testbed.color_wheel() as color_wheel, \
-                testbed.nd_wheel() as nd_wheel:
+        # Get cached devices, etc, that were instantiated (and connections opened) in HicatExperiment.pre_experiment().
+        devices = testbed_state.devices.copy()
 
-            devices = {'laser': laser,
-                       'dm': dm,
-                       'motor_controller': motor_controller,
-                       'beam_dump': beam_dump,
-                       'imaging_camera': cam,
-                       'pupil_camera': pupilcam,
-                       'temp_sensor': temp_sensor,
-                       'color_wheel': color_wheel,
-                       'nd_wheel': nd_wheel}
+        num_actuators = stroke_min.dm_mask.sum()
+        flat = np.zeros(num_actuators)  # Flat DM command
 
-            num_actuators = stroke_min.dm_mask.sum()
-            flat = np.zeros(num_actuators)  # Flat DM command
+        # Reference image with no injected speckles
+        reference_image, _ = self.take_exposure(
+            devices,
+            initial_path=os.path.join(self.output_path, 'reference'),
+            dm1_actuators=flat,
+            dm2_actuators=flat)
+        reference_image = reference_image.shaped
+        estimates = np.zeros((2, 5, 2), dtype=np.float64)  # 2 DMs x 5 parameters x (mean, err)
 
-            # Reference image with no injected speckles
-            reference_image, _ = self.take_exposure(
-                devices,
-                initial_path=os.path.join(self.output_path, 'reference'),
-                dm1_actuators=flat,
-                dm2_actuators=flat)
-            reference_image = reference_image.shaped
-            estimates = np.zeros((2, 5, 2), dtype=np.float64)  # 2 DMs x 5 parameters x (mean, err)
+        # Apply sines to one DM at a time
+        for dm_num in [1, 2]:
+            # Account for the mirror-image effect from DM2
+            reflect_x = (dm_num == 2)
+            reflect_y = False
 
-            # Apply sines to one DM at a time
-            for dm_num in [1, 2]:
-                # Account for the mirror-image effect from DM2
-                reflect_x = (dm_num == 2)
-                reflect_y = False
+            images = np.zeros((*reference_image.shape, len(speckles)))
 
-                images = np.zeros((*reference_image.shape, len(speckles)))
+            if self.amplitude is not None:
+                amplitude = self.amplitude
+            else:
+                amplitude = CONFIG_INI.getfloat('boston_kilo952', f'dm{dm_num}_ideal_poke')
 
-                if self.amplitude is not None:
-                    amplitude = self.amplitude
-                else:
-                    amplitude = CONFIG_INI.getfloat('boston_kilo952', f'dm{dm_num}_ideal_poke')
+            for n, (R, theta) in enumerate(zip(radii, thetas)):
+                total_image = 0.
+                # Note: in a previous version of this script, I injected both a positive and
+                # a negative speckle and then averaged the two images.  This helps to reject
+                # some of the coherent interference between the injected speckle and the
+                # background speckles, and improves the accuracy of the eventual centroid
+                # estimate.  However, this requires that the two images are globally
+                # registered to each other which is hard to guarantee on hardware; if they
+                # aren't, we lose even more accuracy than we gain by averaging.  Therefore,
+                # I have removed this for now, but could return to it in the future.
+                for sign in [1]:
+                    self.log.info(f"Applying sine wave on DM{dm_num} at angle {theta} with "
+                                  f"{R} cycles/DM.")
+                    sine = sign * amplitude * np.sin(2 * np.pi * R * (
+                            np.cos(theta) * stroke_min.actuator_grid.x +
+                            np.sin(theta) * stroke_min.actuator_grid.y))[stroke_min.dm_mask]
 
-                for n, (R, theta) in enumerate(zip(radii, thetas)):
-                    total_image = 0.
-                    # Note: in a previous version of this script, I injected both a positive and
-                    # a negative speckle and then averaged the two images.  This helps to reject
-                    # some of the coherent interference between the injected speckle and the
-                    # background speckles, and improves the accuracy of the eventual centroid
-                    # estimate.  However, this requires that the two images are globally
-                    # registered to each other which is hard to guarantee on hardware; if they
-                    # aren't, we lose even more accuracy than we gain by averaging.  Therefore,
-                    # I have removed this for now, but could return to it in the future.
-                    for sign in [1]:
-                        self.log.info(f"Applying sine wave on DM{dm_num} at angle {theta} with "
-                                      f"{R} cycles/DM.")
-                        sine = sign * amplitude * np.sin(2 * np.pi * R * (
-                                np.cos(theta) * stroke_min.actuator_grid.x +
-                                np.sin(theta) * stroke_min.actuator_grid.y))[stroke_min.dm_mask]
+                    initial_path = os.path.join(self.output_path,
+                                                f"dm{dm_num}_cycle_{R:0.3f}_ang_{theta:0.3f}")
+                    image, _ = self.take_exposure(devices, initial_path=initial_path,
+                                                  dm1_actuators=sine if dm_num == 1 else flat,
+                                                  dm2_actuators=sine if dm_num == 2 else flat)
+                    total_image += image.shaped
+                images[..., n] = total_image
 
-                        initial_path = os.path.join(self.output_path,
-                                                    f"dm{dm_num}_cycle_{R:0.3f}_ang_{theta:0.3f}")
-                        image, _ = self.take_exposure(devices, initial_path=initial_path,
-                                                      dm1_actuators=sine if dm_num == 1 else flat,
-                                                      dm2_actuators=sine if dm_num == 2 else flat)
-                        total_image += image.shaped
-                    images[..., n] = total_image
+            centroids, pipeline_images = postprocess_images(images,
+                                                            reference_image,
+                                                            speckles,
+                                                            reflect_x,
+                                                            reflect_y,
+                                                            self.log)
 
-                centroids, pipeline_images = postprocess_images(images,
-                                                                reference_image,
-                                                                speckles,
-                                                                reflect_x,
-                                                                reflect_y,
-                                                                self.log)
+            results_table = {
+                'R [cycles/DM]': radii,
+                'theta [rad]': thetas,
+                'fx [cycles/DM]': radii * np.cos(thetas),
+                'fy [cycles/DM]': radii * np.sin(thetas),
+                'cx [pix]': centroids[0, :],
+                'cy [pix]': centroids[1, :]
+            }
 
-                results_table = {
-                    'R [cycles/DM]': radii,
-                    'theta [rad]': thetas,
-                    'fx [cycles/DM]': radii * np.cos(thetas),
-                    'fy [cycles/DM]': radii * np.sin(thetas),
-                    'cx [pix]': centroids[0, :],
-                    'cy [pix]': centroids[1, :]
-                }
+            ascii.write(results_table,
+                        os.path.join(self.output_path, f'results_table_dm{dm_num}.csv'),
+                        format='csv')
+            raw_matrix = reconstruct_mapping_matrix(centroids, speckles)
+            fits.writeto(os.path.join(self.output_path, f'raw_matrix_dm{dm_num}.fits'),
+                         raw_matrix)
+            fits.writeto(os.path.join(self.output_path, f'pipeline_images_dm{dm_num}.fits'),
+                         pipeline_images)
 
-                ascii.write(results_table,
-                            os.path.join(self.output_path, f'results_table_dm{dm_num}.csv'),
-                            format='csv')
-                raw_matrix = reconstruct_mapping_matrix(centroids, speckles)
-                fits.writeto(os.path.join(self.output_path, f'raw_matrix_dm{dm_num}.fits'),
-                             raw_matrix)
-                fits.writeto(os.path.join(self.output_path, f'pipeline_images_dm{dm_num}.fits'),
-                             pipeline_images)
+            # Reorganize data into form suitable for parameter estimation
+            inputs = np.vstack([results_table['fx [cycles/DM]'],
+                                results_table['fy [cycles/DM]']])
+            outputs = np.vstack([results_table['cx [pix]'],
+                                 results_table['cy [pix]']])
 
-                # Reorganize data into form suitable for parameter estimation
-                inputs = np.vstack([results_table['fx [cycles/DM]'],
-                                    results_table['fy [cycles/DM]']])
-                outputs = np.vstack([results_table['cx [pix]'],
-                                     results_table['cy [pix]']])
+            # Obtain parameter estimates and their standard errors via statistical bootstrapping
+            bootstraps = bootstrap_estimator(inputs, outputs, int(1e4))
+            estimates[dm_num - 1, :, 0] = bootstraps.mean(axis=0)
+            estimates[dm_num - 1, :, 1] = bootstraps.std(axis=0)
 
-                # Obtain parameter estimates and their standard errors via statistical bootstrapping
-                bootstraps = bootstrap_estimator(inputs, outputs, int(1e4))
-                estimates[dm_num - 1, :, 0] = bootstraps.mean(axis=0)
-                estimates[dm_num - 1, :, 1] = bootstraps.std(axis=0)
+            # Use the x-scale, y-scale and theta to reconstruct a matrix consisting purely of
+            # rotation and scale
+            s_x, s_y, theta = estimates[dm_num - 1, :3, 0]
+            c, s = np.cos(theta * np.pi / 180), np.sin(theta * np.pi / 180)
+            RS_matrix = np.array([[c, s], [-s, c]]) @ np.diag([s_x, s_y])
+            fits.writeto(os.path.join(self.output_path, f'RS_matrix_dm{dm_num}.fits'),
+                         RS_matrix)
 
-                # Use the x-scale, y-scale and theta to reconstruct a matrix consisting purely of
-                # rotation and scale
-                s_x, s_y, theta = estimates[dm_num - 1, :3, 0]
-                c, s = np.cos(theta * np.pi / 180), np.sin(theta * np.pi / 180)
-                RS_matrix = np.array([[c, s], [-s, c]]) @ np.diag([s_x, s_y])
-                fits.writeto(os.path.join(self.output_path, f'RS_matrix_dm{dm_num}.fits'),
-                             RS_matrix)
+            # Compare the centroids predicted by the rotation-scale mapping to the measured
+            # centroids to assess algorithm performance
+            plot_goodness_of_fit(RS_matrix, inputs, outputs)
+            plt.savefig(os.path.join(self.output_path, f'inputs_outputs_dm{dm_num}.png'))
 
-                # Compare the centroids predicted by the rotation-scale mapping to the measured
-                # centroids to assess algorithm performance
-                plot_goodness_of_fit(RS_matrix, inputs, outputs)
-                plt.savefig(os.path.join(self.output_path, f'inputs_outputs_dm{dm_num}.png'))
-
-                labels = {
-                    'tag': ['sx', 'sy', 'theta', 'syx', 'sxy'],
-                    'name': [r'$s_x$', r'$s_y$', r'$\theta$', r'$s_{yx}$', r'$s_{xy}$'],
-                    'unit': [r'$\mathrm{pix/(cyc/DM)}$', r'$\mathrm{pix/(cyc/DM)}$', '${}^{\circ}$',
-                             r'$\mathrm{pix/(cyc/DM)}$', r'$\mathrm{pix/(cyc/DM)}$'],
+            labels = {
+                'tag': ['sx', 'sy', 'theta', 'syx', 'sxy'],
+                'name': [r'$s_x$', r'$s_y$', r'$\theta$', r'$s_{yx}$', r'$s_{xy}$'],
+                'unit': [r'$\mathrm{pix/(cyc/DM)}$', r'$\mathrm{pix/(cyc/DM)}$', '${}^{\circ}$',
+                         r'$\mathrm{pix/(cyc/DM)}$', r'$\mathrm{pix/(cyc/DM)}$'],
 }
-                # Show histograms of each parameter estimate for reference (in case distributions
-                # are noticably non-Gaussian)
-                # Good rule of thumb for number of bins is sqrt(number of datapoints)
-                num_bins = int(np.floor(np.sqrt(bootstraps.shape[0])))
-                hist_kwargs = {'bins': num_bins,
-                               'weights': np.ones(bootstraps.shape[0]) / bootstraps.shape[0],
-                               'histtype': 'stepfilled'  # Fast with many datapoints
-                               }
+            # Show histograms of each parameter estimate for reference (in case distributions
+            # are noticably non-Gaussian)
+            # Good rule of thumb for number of bins is sqrt(number of datapoints)
+            num_bins = int(np.floor(np.sqrt(bootstraps.shape[0])))
+            hist_kwargs = {'bins': num_bins,
+                           'weights': np.ones(bootstraps.shape[0]) / bootstraps.shape[0],
+                           'histtype': 'stepfilled'  # Fast with many datapoints
+                           }
 
-                # Plot distributions of x and y scale parameters
-                plt.figure(figsize=(10, 10*2/3))
-                plt.hist(bootstraps[:, 0], label='$s_x$', color='r', alpha=0.5, **hist_kwargs)
-                plt.hist(bootstraps[:, 1], label='$s_y$', color='b', alpha=0.5, **hist_kwargs)
-                plt.axvline(estimates[dm_num - 1, 0, 0], color='r', linestyle='--', linewidth=1.)
-                plt.axvline(estimates[dm_num - 1, 1, 0], color='b', linestyle='--', linewidth=1.)
-                plt.grid(True)
-                plt.legend(loc='best')
-                plt.title('Distributions of $s_{x}$ and $s_{y}$')
-                plt.xlabel(r'Scale [$\mathrm{pix/(cyc/DM)}$]')
-                plt.ylabel('Probability')
-                plt.savefig(os.path.join(self.output_path, f'histogram_sx_sy_dm{dm_num}.png'))
+            # Plot distributions of x and y scale parameters
+            plt.figure(figsize=(10, 10*2/3))
+            plt.hist(bootstraps[:, 0], label='$s_x$', color='r', alpha=0.5, **hist_kwargs)
+            plt.hist(bootstraps[:, 1], label='$s_y$', color='b', alpha=0.5, **hist_kwargs)
+            plt.axvline(estimates[dm_num - 1, 0, 0], color='r', linestyle='--', linewidth=1.)
+            plt.axvline(estimates[dm_num - 1, 1, 0], color='b', linestyle='--', linewidth=1.)
+            plt.grid(True)
+            plt.legend(loc='best')
+            plt.title('Distributions of $s_{x}$ and $s_{y}$')
+            plt.xlabel(r'Scale [$\mathrm{pix/(cyc/DM)}$]')
+            plt.ylabel('Probability')
+            plt.savefig(os.path.join(self.output_path, f'histogram_sx_sy_dm{dm_num}.png'))
 
-                # Off-diagonal terms of scale matrix
-                plt.figure(figsize=(10, 10*2/3))
-                plt.hist(bootstraps[:, 3], color='g', alpha=0.5, **hist_kwargs)
-                plt.axvline(estimates[dm_num - 1, 3, 0], color='g', linestyle='--', linewidth=1.)
-                plt.grid(True)
-                plt.title('Distributions of $s_{yx}$ and $s_{xy}$')
-                plt.xlabel(r'Scale [$\mathrm{pix/(cyc/DM)}$]')
-                plt.ylabel(f'Probability')
-                plt.savefig(os.path.join(self.output_path, f'histogram_syx_sxy_dm{dm_num}.png'))
+            # Off-diagonal terms of scale matrix
+            plt.figure(figsize=(10, 10*2/3))
+            plt.hist(bootstraps[:, 3], color='g', alpha=0.5, **hist_kwargs)
+            plt.axvline(estimates[dm_num - 1, 3, 0], color='g', linestyle='--', linewidth=1.)
+            plt.grid(True)
+            plt.title('Distributions of $s_{yx}$ and $s_{xy}$')
+            plt.xlabel(r'Scale [$\mathrm{pix/(cyc/DM)}$]')
+            plt.ylabel(f'Probability')
+            plt.savefig(os.path.join(self.output_path, f'histogram_syx_sxy_dm{dm_num}.png'))
 
-                # Rotation angle
-                plt.figure(figsize=(10, 10*2/3))
-                plt.hist(bootstraps[:, 2], color='C1', alpha=0.5, **hist_kwargs)
-                plt.axvline(estimates[dm_num - 1, 2, 0], color='C1', linestyle='--',
-                            linewidth=1.)
-                plt.grid(True)
-                plt.title('Distribution of rotation angle')
-                plt.xlabel(r'Rotation angle [${}^{\circ}$]')
-                plt.ylabel(f'Probability')
-                plt.savefig(os.path.join(self.output_path, f'histogram_theta_dm{dm_num}.png'))
+            # Rotation angle
+            plt.figure(figsize=(10, 10*2/3))
+            plt.hist(bootstraps[:, 2], color='C1', alpha=0.5, **hist_kwargs)
+            plt.axvline(estimates[dm_num - 1, 2, 0], color='C1', linestyle='--',
+                        linewidth=1.)
+            plt.grid(True)
+            plt.title('Distribution of rotation angle')
+            plt.xlabel(r'Rotation angle [${}^{\circ}$]')
+            plt.ylabel(f'Probability')
+            plt.savefig(os.path.join(self.output_path, f'histogram_theta_dm{dm_num}.png'))
 
         # Print results
         for dm_num in [1, 2]:
