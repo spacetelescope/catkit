@@ -29,6 +29,8 @@ class PastisMatrix(PastisExperiment):
 
         self.zernike = zernike   # Can only be piston, tip or tilt on hardware. Will determine calibartion aberration position in list of IrisAO command
         self.calib_aberration = calibration_aberration   # in METERS
+        if self.zernike not in ('piston', 'tip', 'tilt'):
+            raise AttributeError("The local aberration set with self.zernike can only be 'piston', 'tip' or 'tilt'.")
 
         self.log.info(f'wfe_aber: {self.calib_aberration} m')
         self.log.info(f'Total number of segment pairs in HiCAT pupil: {len(list(pastis.util_pastis.segment_pairs_all(self.nb_seg)))}')
