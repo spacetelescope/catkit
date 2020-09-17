@@ -26,7 +26,7 @@ def calculate_iteration_of_convergence(filepath, slope_threshold=1E-11):
 
     def func(x, a, b, c):
         return a * np.exp(-b * x) + c
-    popt, pcov = curve_fit(func, metrics_data['iteration'], metrics_data[' mean_image_contrast'])
+    popt, pcov = curve_fit(func, metrics_data['iteration'], metrics_data['mean_image_contrast'])
     metrics_data['fit'] = func(metrics_data['iteration'], *popt)
     metrics_data['derivatives'] = metrics_data['fit'].diff()
     convergence_metrics = metrics_data[np.abs(metrics_data['derivatives']) < slope_threshold]
