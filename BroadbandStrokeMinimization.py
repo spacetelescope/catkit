@@ -156,7 +156,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 self.log.info("Loading observation matrix from {}".format(self.probe_filenames[wavelength]))
                 self.H_invs[wavelength] = probe_info['OBS_MATRIX'].data
                 # # Turn observation matrix into Field so that we can use field_dot later when estimating electric field
-                # self.H_invs[wavelen] = hcipy.Field(self.H_invs[wavelen], stroke_min.focal_grid)
+                # self.H_invs[wavelen] = hcipy.Field(self.H_invs[wavelen], wfsc_utils.focal_grid)
 
                 self.dz_rin = probe_info[0].header.get('DZ_RIN', '?')
                 self.dz_rout = probe_info[0].header.get('DZ_ROUT', '?')
