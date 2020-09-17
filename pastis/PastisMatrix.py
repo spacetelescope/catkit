@@ -2,10 +2,14 @@ import hicat.simulators
 
 from astropy.io import fits
 import hcipy
+import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 from hicat.config import CONFIG_INI
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
+from hicat.hardware import testbed_state
+import hicat.util
 
 import pastis.util_pastis
 from pastis.matrix_building_numerical import pastis_from_contrast_matrix
@@ -33,24 +37,73 @@ class PastisMatrix(PastisExperiment):
 
         # Values for calculation of PASTIS matrix
         self.mean_contrasts_image = []
+        self.contrast_contribution_per_pair = []    # this is for mean contrast minus the coronagraph floor
         self.aberrated_segment_pairs = []
+
+        self.contrast_contribution_matrix = np.zeros([self.nb_seg, self.nb_seg])
 
     def experiment(self):
         # Run flux normalization
+        self.log.info('Starting flux normalization')
         self.run_flux_normalization()
-        # TODO: Save used DM maps into self.output_path
 
         # Take unaberrated direct and coro images, save normalization factor and coro_floor as attributes
+        self.log.info('Measuring reference PSF (direct) and coronagraph floor')
         self.measure_coronagraph_floor()
 
+        # Access testbed devices and set experiment path
+        devices = testbed_state.devices.copy()
+        matrix_data_path = os.path.join(self.output_path, 'pastis_matrix')
+
         ### Measure contrast matrix
+
+        # Instantiate a connection to the IrisAO
+        iris_dm = IrisAO()
+
         # for loop over all segment pairs
-        # aberrate IrisAO
-        # take image
-        # measure average contrast in DH
-        #self.mean_contrasts_image.append(np.mean(image_before[self.dark_zone]))
-        # subtract contrast floor
-        # save out contrast matrix
+        self.log.info('Start measuring contrast matrix')
+        for pair in pastis.util_pastis.segment_pairs_non_repeating(self.nb_seg):
+
+            # Set iteration path
+            self.log.info(f'Measuring aberrated pair {pair[0]}-{pair[1]}')
+            initial_path = os.path.join(matrix_data_path, f'pair_{pair[0]}-{pair[1]}')
+
+            # Make sure the IrisAO is flat
+            iris_dm.flatten()
+
+            # TODO: make it such that we can pick between piston, tip and tilt
+            # Aberrate pair of segments on IrisAO, piston only for now
+            iris_dm.set_actuator(pair[0], self.calib_aberration, 0, 0)    # TODO: ATTENTION WITH UNITS!!!!!
+            if pair[0] != pair[1]:    # if we are on the matrix diagonal, aberrate the segment only once
+                iris_dm.set_actuator(pair[1], self.calib_aberration, 0, 0)    # TODO: ATTENTION WITH UNITS!!!!!
+
+            # TODO: save IrisAO WFE maps
+
+            # Take coro image
+            pair_image, header = self.take_exposure(devices, 'coron', self.wvln, initial_path, dark_zone_mask=self.dark_zone)
+            pair_image /= self.direct_max
+
+            # Measure average contrast in DH
+            mean_contrast_this_iteration = np.mean(pair_image[self.dark_zone])
+            self.mean_contrasts_image.append(mean_contrast_this_iteration)
+            self.contrast_contribution_per_pair.append(mean_contrast_this_iteration - self.coronagraph_floor)
+            # Append tuple of the aberrated segment pair
+            self.aberrated_segment_pairs.append((pair[0], pair[1]))
+
+            # Fill according entry in the contrast matrix
+            self.contrast_contribution_matrix[pair[0], pair[1]] = self.contrast_contribution_per_pair[-1]
+
+        # Save out contrast matrix as fits and pdf
+        self.log.info('Save measured contrast matrix')
+        hicat.util.write_fits(self.contrast_contribution_matrix, os.path.join(self.output_path, 'pair-wise_contrasts.fits'))
+        plt.figure(figsize=(10, 10))
+        plt.imshow(self.contrast_contribution_matrix)
+        plt.colorbar()
+        plt.savefig(os.path.join(self.output_path, 'contrast_matrix.pdf'))
+        # TODO: format this figure a little better; decide where I want to have the origin
+
+    def post_experiment(self, *args, **kwargs):
+        pass
 
         ### Calculate PASTIS matrix
         # Calculate the PASTIS matrix from the contrast matrix: off-axis elements and normalization
