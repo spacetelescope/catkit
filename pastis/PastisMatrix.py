@@ -61,3 +61,17 @@ class PastisMatrix(PastisExperiment):
 
         # Plot and save PASTIS matrix as figure
         #plot_pastis_matrix(matrix_pastis, wvln=self.wvln, out_dir=self.output_path, save=True)
+
+
+class IrisAO():
+
+    def __init__(self):
+        self.name = 'I am a fake'
+
+    def set_actuator(self, segnum, piston, tip, tilt):
+        # This will set the segment "segnum" with a piston, tip and tilt.
+        pass
+
+    def flatten(self):
+        # This will flatten the IrisAO with only the flatmap on.
+        pass
