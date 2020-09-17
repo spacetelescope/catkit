@@ -103,17 +103,17 @@ class PastisMatrix(PastisExperiment):
         # TODO: format this figure a little better; decide where I want to have the origin
 
     def post_experiment(self, *args, **kwargs):
-        pass
 
-        ### Calculate PASTIS matrix
-        # Calculate the PASTIS matrix from the contrast matrix: off-axis elements and normalization
-        #matrix_pastis = pastis_from_contrast_matrix(contrast_matrix, self.seglist, self.calib_aberration)
+        # Calculate the PASTIS matrix from the contrast matrix: off-axis elements, symmetrize and normalization
+        self.log.info('Calculate PASTIS matrix from measured contrast matrix')
+        # TODO: ATTENTION WITH UNITS!!!!!
+        self.pastis_matrix = pastis_from_contrast_matrix(self.contrast_contribution_matrix, self.seglist, self.calib_aberration)
 
-        # Save matrix to fits file
-        # This is in units of c/nm^2
-
+        # Save matrix to fits file - this is in units of contrast/nm^2 ??
+        hicat.util.write_fits(self.pastis_matrix, os.path.join(self.output_path, 'pastis_matrix.fits'))
         # Plot and save PASTIS matrix as figure
-        #plot_pastis_matrix(matrix_pastis, wvln=self.wvln, out_dir=self.output_path, save=True)
+        plot_pastis_matrix(self.pastis_matrix, wvln=self.wvln, out_dir=self.output_path, save=True)
+        self.log.info(f'PASTIS matrix saved to: {os.path.join(self.output_path, "pastis_matrix.fits/pdf")}')
 
 
 class IrisAO():
