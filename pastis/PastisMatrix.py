@@ -73,9 +73,9 @@ class PastisMatrix(PastisExperiment):
 
             # TODO: make it such that we can pick between piston, tip and tilt
             # Aberrate pair of segments on IrisAO, piston only for now
-            iris_dm.set_actuator(pair[0], self.calib_aberration, 0, 0)    # TODO: ATTENTION WITH UNITS!!!!!
+            iris_dm.set_actuator(pair[0], self.calib_aberration, 0, 0)    # calibration aberration needed in meters
             if pair[0] != pair[1]:    # if we are on the matrix diagonal, aberrate the segment only once
-                iris_dm.set_actuator(pair[1], self.calib_aberration, 0, 0)    # TODO: ATTENTION WITH UNITS!!!!!
+                iris_dm.set_actuator(pair[1], self.calib_aberration, 0, 0)
 
             # TODO: save IrisAO WFE maps
 
@@ -106,10 +106,10 @@ class PastisMatrix(PastisExperiment):
 
         # Calculate the PASTIS matrix from the contrast matrix: off-axis elements, symmetrize and normalization
         self.log.info('Calculate PASTIS matrix from measured contrast matrix')
-        # TODO: ATTENTION WITH UNITS!!!!!
+        # calibration aberration needed in meters
         self.pastis_matrix = pastis_from_contrast_matrix(self.contrast_contribution_matrix, self.seglist, self.calib_aberration)
 
-        # Save matrix to fits file - this is in units of contrast/nm^2 ??
+        # Save matrix to fits file - this is in units of contrast/nm^2
         hicat.util.write_fits(self.pastis_matrix, os.path.join(self.output_path, 'pastis_matrix.fits'))
         # Plot and save PASTIS matrix as figure
         plot_pastis_matrix(self.pastis_matrix, wvln=self.wvln, out_dir=self.output_path, save=True)
