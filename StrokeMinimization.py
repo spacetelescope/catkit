@@ -14,6 +14,7 @@ from shutil import copyfile
 import hcipy
 
 import hicat.plotting
+from hicat.plotting import wfsc_plots
 import hicat.plotting.animation
 from hicat.experiments.Experiment import HicatExperiment
 from hicat.hardware import testbed, testbed_state
@@ -509,7 +510,7 @@ class StrokeMinimization(HicatExperiment):
         gamma = self.adjust_gamma(iteration) if self.auto_adjust_gamma else self.gamma
         num_probe_pairs = len(self.probes)
 
-        wfsc_utils.make_control_loop_status_plot(
+        wfsc_plots.make_control_loop_status_plot(
             image_before,
             image_after,
             E_estimated,
