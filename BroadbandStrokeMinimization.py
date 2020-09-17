@@ -20,6 +20,7 @@ from hicat.control.target_acq import MotorMount, TargetCamera, TargetAcquisition
 from hicat.control.align_lyot import LyotStopAlignment
 from hicat.hardware import testbed, testbed_state
 import hicat.plotting.animation
+from hicat.plotting import wfsc_plots
 from hicat import util
 from hicat.wfc_algorithms import wfsc_utils
 from hicat.experiments.StrokeMinimization import StrokeMinimization
@@ -642,201 +643,41 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
         Note, only call this after calling init_strokemin_plots.
         """
-
-        wl0 = self.wavelengths[0]
-        wavelengths = sorted(self.wavelengths)  # because self.wavelengths has center wavelength first
-        wl_sort = np.argsort(self.wavelengths)
-
-        # define some quantities for use in labeling plots
-        iteration = len(self.mean_contrasts_pairwise)
+        iteration = len(self.mean_contrasts_image)
         gamma = self.adjust_gamma(iteration) if self.auto_adjust_gamma else self.gamma
-        contrast_yaxis_min = min(10**(np.floor(np.log10(np.min(self.mean_contrasts_image)))-1), 1e-8)
-        control_zone = np.abs(E_estimateds[wl0]) != 0
-
-        fig, axes = plt.subplots(figsize=(20, 13), nrows=len(self.wavelengths)+1, ncols=5,
-                                 gridspec_kw={'right': 0.97, 'left':0.07,
-                                              'top': 0.93, 'bottom': 0.10,
-                                              'wspace': 0.25, 'hspace': 0.25,
-                                              'width_ratios': [1,1,1,1,1.1]})
-
-        fig.suptitle("Broadband Multiwavelength Diagnostics", fontsize=18, weight='bold')
-
-        def _show_one_contrast_image(field, ax, mask=False, title=None, image_crop=17):
-            """ Convenience function for image display"""
-
-            # Log plots; avoid floating underflow or divide by zero
-            log_image = np.log10(field.clip(min=1e-20))
-            if mask:
-                tmp = log_image.copy()
-                tmp[self.dark_zone==False] = -8
-            else:
-                tmp = log_image
-            im = hcipy.imshow_field(tmp, vmin=-8, vmax=-4, cmap='inferno', ax=ax)
-            hicat.plotting.image_axis_setup(ax, im, title=title, image_crop=image_crop)
-            return im
-
-        # Iterate over wavelength and plot: Estimated E field, Estimated I field, observed I field before, observed I field after, estimated incoherent
-
-        for iwl, wl in enumerate(wavelengths):
-
-            # Compute quantities to be used in plots
-            i_estimated = np.abs(E_estimateds[wl])**2
-            est_incoherent = np.abs(self.images_before[wl]-i_estimated)
-            contrast_to_inc_bg_ratio = float(np.mean(self.images_before[wl][self.dark_zone]) / np.mean(est_incoherent[self.dark_zone]))
-
-            # 0. Label with wavelength
-            axmeany = axes[iwl+1, 0].get_position().intervaly.mean()
-            fig.text(0.01, axmeany, f"{int(wl)} nm", weight='bold', fontsize='large', color='navy')
-
-            # 1. Plot estimated E field
-            im = hcipy.imshow_field(E_estimateds[wl], ax=axes[iwl+1,0])
-            hicat.plotting.image_axis_setup(axes[iwl+1,0], im, title = f"Estimated $E$ field: {int(wl)} nm", colorbar=False)
-            # 2. Plot estimated I from E
-            _show_one_contrast_image(i_estimated, mask=True, title=f"Estimated $I$ (from $E$): {int(wl)} nm", ax=axes[iwl+1,1])
-            axes[iwl+1, 1].text(-15, -15, "$E$ scaled by {:.3f}".format(self.e_field_scale_factors[wl][-1]), color='lightblue',
-                    fontsize='x-small')
-            snr = self.estimated_probe_SNRs[wl][-1]
-            axes[iwl + 1, 1].text(15, -15, "SNR in probe = {:.1f}".format(snr),
-                                  color='yellow' if snr > 10 else 'red', horizontalalignment='right',
-                                  fontsize='x-small')
-
-            # 3. Plot observed I field before
-            #    mask the before image to just show the dark zone
-            _show_one_contrast_image(self.images_before[wl], mask=True, title=f"$I$ before iteration {iteration} (masked)", ax=axes[iwl+1,2])
-            snr = self.estimated_darkzone_SNRs[wl][-2]
-            axes[iwl + 1, 2].text(15, -15, "SNR in dark zone = {:.1f}".format(snr),
-                                  color='yellow' if snr > 10 else 'red', horizontalalignment='right',
-                                  fontsize='x-small')
-            # 4. Plot estimated incoherent background (unmodulated light)
-            # Estimated electric field, and residual
-            im = _show_one_contrast_image(est_incoherent, mask=False, ax=axes[iwl+1,3])
-            hicat.plotting.image_axis_setup(axes[iwl+1,3], im, title="Estimated Incoherent Background", control_zone=control_zone)
-            axes[iwl+1,3].text(-15, -15, "Contrast/(backgrd estimate): {:.3f}".format(contrast_to_inc_bg_ratio), color='white',
-                    fontsize='x-small', fontweight='black')
-
-            # 4. Plot observed I field after, full frame
-            _show_one_contrast_image(self.images_after[wl], mask=False, title=f"$I$ after iteration {iteration} (full frame)", ax=axes[iwl+1,4], image_crop=None)
-
-
-        # Contrast plot: Contrast vs wavelength
-        ax = axes[0,0]
-
-        monochromatic_contrasts = np.asarray([self.images_after[wl][self.dark_zone].mean() for wl in self.wavelengths])
-        ax.semilogy(wavelengths, monochromatic_contrasts[wl_sort], marker='o', color='C0')
-        ax.plot(np.mean(self.wavelengths), self.mean_contrasts_image[-1], marker='s', color='black')
-        ax.set_xlim(600, 680)
-        ax.set_xlabel("Wavelength [nm]")
-        ax.set_ylabel("Contrast")
-        for i, prev_contrasts in enumerate(reversed(self._bb_plot_history)):
-            ax.plot(wavelengths, prev_contrasts[wl_sort], alpha=0.8**(i+1), marker='+', color='C0')
-        self._bb_plot_history.append(monochromatic_contrasts)
-        ax.set_title("Contrast vs Wavelength")
-
-
-        # Contrast plot: contrast vs iteration
-        ax = axes[0,1]
-        ax.plot(self.mean_contrasts_image, 'o-', c='blue', label='Measured from image')
-        ax.plot(self.mean_contrasts_pairwise, 'o:', c='green', label='Measured from pairwise')
-        ax.plot(self.mean_contrasts_probe, 'o:', c='orange', label='In probe image')
-
-        if gamma is not None:
-            ax.plot(iteration, self.mean_contrasts_image[-2]*gamma, '*', markersize=10, c='red', label='Control target contrast (from $\gamma$)')
-
-        ax.plot(np.arange(iteration)+1, self.predicted_contrasts, '*--', linewidth=1,  c='purple', label='Predicted new contrast')
-        ax.set_yscale('log')
-        ax.set_title("Contrast vs Iteration")
-        ax.set_xlabel("Iteration")
-        ax.grid(True, alpha=0.1)
-        ax.legend(loc='upper right', fontsize='x-small')
-
-        # first two plots should have identical y axis scales
-        axes[0,0].set_ylim(axes[0,1].get_ylim())
-
-        # Contrast plot: radial contrast profiles
-        ax = axes[0,2]
-        r_bb, p_bb, std_bb, n_bb = hcipy.metrics.radial_profile(self.broadband_images[-2], bin_size=0.25)
-        r_ba, p_ba, std_ba, n_ba = hcipy.metrics.radial_profile(self.broadband_images[-1], bin_size=0.25)
-        r_probe, p_probe, std_probe, n_probe = hcipy.metrics.radial_profile(self.probe_example, bin_size=0.25)
-        ax.semilogy(r_bb, p_bb, color='black', alpha=0.5, label='Broadband, before', zorder=10)
-        ax.semilogy(r_ba, p_ba, color='black', alpha=1, label='Broadband, after', zorder=10)
-        ax.semilogy(r_probe, p_probe,  label='probe', color='orange', ls='--', zorder=3)
-
-        colors_vs_nwavelengths = {1: ['darkmagenta'],
-                                  2: ['royalblue', 'darkmagenta'],
-                                  3: ['royalblue', 'darkmagenta', 'firebrick'],
-                                  5: ['royalblue', 'indigo', 'darkmagenta', 'mediumvioletred', 'firebrick']}
-        colors = colors_vs_nwavelengths[len(wavelengths)]
-        for iwl, wl in enumerate(wavelengths):
-            r2, p2, std2, n2 = hcipy.metrics.radial_profile(self.images_after[wl], bin_size=0.25)
-            ax.semilogy(r2, p2, color=colors[iwl], alpha=0.8, label=f'{int(wl)} nm, after', zorder=9)
-        ax.set_xlim(0, 20)
-        ax.set_ylim(contrast_yaxis_min, 1e-3)
-        ax.legend(loc='upper right', fontsize='x-small', framealpha=1.0)
-        ax.grid(True, alpha=0.1)
-        try:
-            ax.axvline(self.dz_rin, color='C2', ls='--', alpha=0.3)
-            ax.axvline(self.dz_rout, color='C2', ls='--', alpha=0.3)
-        except Exception:
-            pass # gracefully ignore older probe files that don't have these headers
-        ax.set_xlabel("Separation ($\lambda/D_{LS}$)")
-        ax.set_title('Contrast vs radius')
-
-        # Plot additional quantities vs iteration
-        ax = axes[0,3]
-        ax.plot(self.e_field_scale_factors[wl0], label='$E$ field scale factor', marker='o', color='lightblue')
-        ax.set_ylim(0, 1.5*np.max(self.e_field_scale_factors[wl0]))
-        ax.legend(loc='upper left', fontsize='x-small', framealpha=1.0)
-        ax.set_xlabel("Iteration")
-        ax.set_title("Additional diagnostics")
-
-        ax.plot(np.arange(iteration)+1, np.abs(self.measured_contrast_deltas)/np.abs(self.predicted_contrast_deltas),
-                     color='purple', marker='*', label='Ratio of Measured/Predicted contrast deltas')
-        ax.plot(np.asarray(self.estimated_incoherent_backgrounds)/np.asarray(self.mean_contrasts_image[:-1]),
-                     'o-', color='gray', label='Ratio of Est. Incoherent background/Contrast')
-        ax.legend(loc='upper left', fontsize='x-small', framealpha=1.0)
-        ax.axhline(1, ls=":", color='black', alpha=0.5)
-
-
-        _show_one_contrast_image(self.broadband_images[-1], mask=False, title=f"$I$ after iteration {iteration}, broadband",
-                                 ax=axes[0, 4], image_crop=None)
-
-        # Aesthetic tweaks and labeling
-        for ax in axes.ravel():
-            ax.xaxis.label.set_size('x-small')
-            ax.tick_params(axis='both', which='major', labelsize='x-small')
-            ax.tick_params(axis='both', which='minor', labelsize='xx-small')
-
-        labely = 0.04
-        plt.text(0.03, labely, "Contrast image: {:.3e} pairwise: {:.3e}\nDark zone from {} - {} $\lambda/D_{{LS}}$\nProbes: {}, amplitude {} nm".format(
-            float(self.mean_contrasts_image[-1]), float(self.mean_contrasts_pairwise[-1]), self.dz_rin, self.dz_rout, len(self.probes), self.probe_amp),
-                 transform=fig.transFigure,
-                 color='gray', horizontalalignment='left', verticalalignment='center')
-
-        plt.text(0.3, labely, "Coron. Exp: {} ms $\\times$ {}\nDirect Exp: {} ms $\\times$ {}\nS.M. $\gamma$: {}\t gain: {}".format(
-            self.exposure_time_coron//1000, self.num_exposures, float(self.exposure_time_direct)/1000,
-            self.num_exposures, gamma if gamma is not None else 'None', self.control_gain),
-                 transform=fig.transFigure,
-                 color='gray', horizontalalignment='left', verticalalignment='center')
-
-        plt.text(0.5, labely, "{}\n{}\n{}".format(
-                 os.path.basename(self.jacobian_filename), os.path.basename(self.probe_filename),
-                 self.git_label),
-                 transform=fig.transFigure,
-                 color='gray', horizontalalignment='left', verticalalignment='center')
-
-        plt.text(0.14, 0.98, datetime.datetime.now().isoformat().split('.')[0],
-                 transform=fig.transFigure,
-                 color='gray', horizontalalignment='right', verticalalignment='center')
-
-        plt.text(0.24, 0.96, os.path.split(self.output_path)[-1],
-                 transform=fig.transFigure,
-                 color='gray', horizontalalignment='right', verticalalignment='center')
-
-        if testbed.testbed_state.simulation:
-            plt.text(0.92, 0.97, "SIMULATED DATA!", transform=fig.transFigure,
-                     color='red', fontsize='large', weight='bold',
-                     horizontalalignment='right')
-
+        wfsc_plots.make_broadband_control_loop_status_plot(
+            self.wavelengths,
+            self.images_before,
+            self.images_after,
+            self.broadband_images,
+            E_estimateds,
+            self._bb_plot_history,
+            self.probe_example,
+            self.dark_zone,
+            self.dz_rin,
+            self.dz_rout,
+            gamma,
+            self.control_gain,
+            self.jacobian_filenames[self.wavelengths[0]],
+            self.probe_filenames[self.wavelengths[0]],
+            len(self.probes),
+            self.probe_amp,
+            self.num_exposures,
+            self.exposure_time_coron,
+            self.exposure_time_direct,
+            self.mean_contrasts_image,
+            self.mean_contrasts_probe,
+            self.mean_contrasts_pairwise,
+            self.predicted_contrasts,
+            self.e_field_scale_factors,
+            self.measured_contrast_deltas,
+            self.predicted_contrast_deltas,
+            self.estimated_incoherent_backgrounds,
+            self.estimated_probe_SNRs,
+            self.estimated_darkzone_SNRs,
+            self.git_label,
+            self.output_path
+        )
         self.movie_writer_broadband.add_frame()
 
         plt.close()
