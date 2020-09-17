@@ -54,7 +54,8 @@ class PastisMatrix(PastisExperiment):
         self.measure_coronagraph_floor()
 
         # Access testbed devices and set experiment path
-        devices = testbed_state.devices.copy()
+        devices = testbed_state.devices.copy()    # TODO: Is this how I will access the IrisDM?
+        #iris_dm = devices['iris_dm']
         matrix_data_path = os.path.join(self.output_path, 'pastis_matrix')
 
         ### Measure contrast matrix
