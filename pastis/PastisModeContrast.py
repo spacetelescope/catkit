@@ -93,6 +93,8 @@ class PastisModeContrast(PastisExperiment):
         # Calculate contrast from PASTIS propagation
         self.pastis_contrast = cumulative_contrast_matrix(self.pastis_modes, self.mode_weights, self.pastis_matrix,
                                                           self.coronagraph_floor, self.individual)
+        np.savetxt(os.path.join(self.output_path, f'cumul_contrast_accuracy_pastis_{self.c_target}.txt'),
+                   self.pastis_contrast)
 
         # Plot the results
         if self.individual:
