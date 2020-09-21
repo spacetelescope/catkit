@@ -30,9 +30,9 @@ class PastisModeContrast(PastisExperiment):
         self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
         self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
         try:
-            self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path, 'PASTISmatrix_num_piston_Noll1.fits'))    # TODO: drop in correct file name for PASTIS matrix
+            self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path))
         except FileNotFoundError:
-            self.warning('PASTIS matrix not found. Will only perform empirical measurements.')
+            self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')
 
         self.measured_contrast = []
 
