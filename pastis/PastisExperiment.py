@@ -7,23 +7,12 @@ import numpy as np
 
 from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import HicatExperiment
+from hicat.experiments.modules import pastis_functions
 from hicat.hardware import testbed_state
 from hicat.hardware.testbed import move_filter
 from hicat.wfc_algorithms import stroke_min
 
 import pastis.util
-
-
-def read_dm_commands(dm_command_directory):
-    """Hijacked partially from StrokeMinimization.restore_last_strokemin_dm_shapes()
-    Loads a DM command from disk and returns the surface as a list."""
-    surfaces = []
-    for dmnum in [1, 2]:
-        actuators_2d = fits.getdata(os.path.join(dm_command_directory, 'dm{}_command_2d_noflat.fits'.format(dmnum)))
-        actuators_1d = actuators_2d.ravel()[stroke_min.dm_mask]
-        actuators_1d *= 1e9  # convert from meters to nanometers # FIXME this is because of historical discrepancies, need to unify everything at some point
-        surfaces.append(actuators_1d)
-    return surfaces
 
 
 class PastisExperiment(HicatExperiment):
@@ -78,7 +67,7 @@ class PastisExperiment(HicatExperiment):
         self.log.info(f'Segment list: {self.seglist}')
 
         # Read DM commands, treated as part of the coronagraph
-        self.dm1_actuators, self.dm2_actuators = read_dm_commands(self.dm_map_path)
+        self.dm1_actuators, self.dm2_actuators = pastis_functions.read_dm_commands(self.dm_map_path)
 
         # Read dark zone geometry
         with fits.open(probe_filename) as probe_info:
