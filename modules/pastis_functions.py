@@ -28,3 +28,7 @@ class IrisAO():
     def flatten(self):
         # This will flatten the IrisAO with only the flatmap on.
         pass
+
+    def apply_shape(self, segmented_dm_command):
+        # This will apply a full segmented DM command at once.
+        pass
