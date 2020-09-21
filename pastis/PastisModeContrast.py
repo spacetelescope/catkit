@@ -29,7 +29,10 @@ class PastisModeContrast(PastisExperiment):
         # Read PASTIS matrix, modes and mode weights from file
         self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
         self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
-        self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path, 'PASTISmatrix_num_piston_Noll1.fits'))    # TODO: drop in correct file name for PASTIS matrix
+        try:
+            self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path, 'PASTISmatrix_num_piston_Noll1.fits'))    # TODO: drop in correct file name for PASTIS matrix
+        except FileNotFoundError:
+            self.warning('PASTIS matrix not found. Will only perform empirical measurements.')
 
         self.measured_contrast = []
 
@@ -91,10 +94,11 @@ class PastisModeContrast(PastisExperiment):
     def post_experiment(self, *args, **kwargs):
 
         # Calculate contrast from PASTIS propagation
-        self.pastis_contrast = cumulative_contrast_matrix(self.pastis_modes, self.mode_weights, self.pastis_matrix,
-                                                          self.coronagraph_floor, self.individual)
-        np.savetxt(os.path.join(self.output_path, f'cumul_contrast_accuracy_pastis_{self.c_target}.txt'),
-                   self.pastis_contrast)
+        if self.pastis_matrix is not None:
+            self.pastis_contrast = cumulative_contrast_matrix(self.pastis_modes, self.mode_weights, self.pastis_matrix,
+                                                              self.coronagraph_floor, self.individual)
+            np.savetxt(os.path.join(self.output_path, f'cumul_contrast_accuracy_pastis_{self.c_target}.txt'),
+                       self.pastis_contrast)
 
         # Plot the results
         if self.individual:
