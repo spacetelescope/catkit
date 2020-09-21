@@ -33,6 +33,7 @@ class PastisModeContrast(PastisExperiment):
             self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path))
         except FileNotFoundError:
             self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')
+            self.pastis_matrix = None
 
         self.measured_contrast = []
 
@@ -99,11 +100,13 @@ class PastisModeContrast(PastisExperiment):
                                                               self.coronagraph_floor, self.individual)
             np.savetxt(os.path.join(self.output_path, f'cumul_contrast_accuracy_pastis_{self.c_target}.txt'),
                        self.pastis_contrast)
+        else:
+            self.pastis_contrast = np.empty_like(self.measured_contrast)
 
         # Plot the results
         if self.individual:
             plot_contrast_per_mode(self.measured_contrast, self.coronagraph_floor, self.c_target,
-                                   nmodes=len(self.pastis_contrast), out_dir=self.output_path, save=True)
+                                   nmodes=len(self.measured_contrast), out_dir=self.output_path, save=True)
         else:
             plot_cumulative_contrast_compare_accuracy(self.pastis_contrast, self.measured_contrast,
                                                       out_dir=self.output_path, c_target=self.c_target, save=True)
