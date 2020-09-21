@@ -14,3 +14,17 @@ def read_dm_commands(dm_command_directory):
         actuators_1d *= 1e9  # convert from meters to nanometers # FIXME this is because of historical discrepancies, need to unify everything at some point
         surfaces.append(actuators_1d)
     return surfaces
+
+
+class IrisAO():
+
+    def __init__(self):
+        self.name = 'I am a fake'
+
+    def set_actuator(self, segnum, piston, tip, tilt):
+        # This will set the segment "segnum" with a piston, tip and tilt.
+        pass
+
+    def flatten(self):
+        # This will flatten the IrisAO with only the flatmap on.
+        pass

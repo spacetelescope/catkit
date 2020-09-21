@@ -7,6 +7,7 @@ import numpy as np
 import os
 
 from hicat.config import CONFIG_INI
+from hicat.experiments.modules import pastis_functions
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
 import hicat.util
@@ -80,7 +81,7 @@ class PastisMatrix(PastisExperiment):
         ### Measure contrast matrix
 
         # Instantiate a connection to the IrisAO
-        iris_dm = IrisAO()
+        iris_dm = pastis_functions.IrisAO()
 
         # for loop over all segment pairs
         self.log.info('Start measuring contrast matrix')
@@ -136,17 +137,3 @@ class PastisMatrix(PastisExperiment):
         # Plot and save PASTIS matrix as figure
         plot_pastis_matrix(self.pastis_matrix, wvln=self.wvln, out_dir=self.output_path, save=True)
         self.log.info(f'PASTIS matrix saved to: {os.path.join(self.output_path, "pastis_matrix.fits/pdf")}')
-
-
-class IrisAO():
-
-    def __init__(self):
-        self.name = 'I am a fake'
-
-    def set_actuator(self, segnum, piston, tip, tilt):
-        # This will set the segment "segnum" with a piston, tip and tilt.
-        pass
-
-    def flatten(self):
-        # This will flatten the IrisAO with only the flatmap on.
-        pass
