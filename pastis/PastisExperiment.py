@@ -11,7 +11,7 @@ from hicat.hardware import testbed_state
 from hicat.hardware.testbed import move_filter
 from hicat.wfc_algorithms import stroke_min
 
-import pastis.util_pastis
+import pastis.util
 
 
 def read_dm_commands(dm_command_directory):
@@ -72,7 +72,7 @@ class PastisExperiment(HicatExperiment):
 
         # General telescope parameters
         self.nb_seg = 37
-        self.seglist = pastis.util_pastis.get_segment_list('HiCAT')
+        self.seglist = pastis.util.get_segment_list('HiCAT')
         self.wvln = 640    # nm
         self.log.info(f'Number of segments: {self.nb_seg}')
         self.log.info(f'Segment list: {self.seglist}')

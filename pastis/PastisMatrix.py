@@ -11,7 +11,7 @@ from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
 import hicat.util
 
-import pastis.util_pastis
+import pastis.util
 from pastis.matrix_building_numerical import pastis_from_contrast_matrix
 from pastis.plotting import plot_pastis_matrix
 
@@ -52,9 +52,9 @@ class PastisMatrix(PastisExperiment):
             raise AttributeError("The local aberration set with self.zernike can only be 'piston', 'tip' or 'tilt'.")
 
         self.log.info(f'wfe_aber: {self.calib_aberration} m')
-        self.log.info(f'Total number of segment pairs in HiCAT pupil: {len(list(pastis.util_pastis.segment_pairs_all(self.nb_seg)))}')
+        self.log.info(f'Total number of segment pairs in HiCAT pupil: {len(list(pastis.util.segment_pairs_all(self.nb_seg)))}')
         self.log.info(
-            f'Non-repeating pairs in HiCAT pupil calculated here: {len(list(pastis.util_pastis.segment_pairs_non_repeating(self.nb_seg)))}')
+            f'Non-repeating pairs in HiCAT pupil calculated here: {len(list(pastis.util.segment_pairs_non_repeating(self.nb_seg)))}')
 
         # Values for calculation of PASTIS matrix
         self.mean_contrasts_image = []
@@ -84,7 +84,7 @@ class PastisMatrix(PastisExperiment):
 
         # for loop over all segment pairs
         self.log.info('Start measuring contrast matrix')
-        for pair in pastis.util_pastis.segment_pairs_non_repeating(self.nb_seg):
+        for pair in pastis.util.segment_pairs_non_repeating(self.nb_seg):
 
             # Set iteration path
             self.log.info(f'Measuring aberrated pair {pair[0]}-{pair[1]}')
