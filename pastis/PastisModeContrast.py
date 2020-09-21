@@ -29,7 +29,7 @@ class PastisModeContrast(PastisExperiment):
         # Read PASTIS matrix, modes and mode weights from file
         self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
         self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
-        self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path, 'pastis_matrix.fits'))
+        self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path, 'PASTISmatrix_num_piston_Noll1.fits'))    # TODO: drop in correct file name for PASTIS matrix
 
         self.measured_contrast = []
 
