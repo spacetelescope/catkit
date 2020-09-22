@@ -1,5 +1,7 @@
 import os
 import astropy.units as u
+import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
 import numpy as np
 
 from catkit.hardware.iris_ao import segmented_dm_command
@@ -113,5 +115,13 @@ class PastisModeAmplitudes(PastisExperiment):
     def post_experiment(self, *args, **kwargs):
 
         # Plot the results
-        plot_contrast_per_mode(self.measured_contrast, self.coronagraph_floor, self.c_target,
-                               nmodes=len(self.measured_contrast), out_dir=self.output_path, save=True)
+        fig, ax = plt.subplots(figsize=(11, 8))
+        plt.plot(np.array(self.measured_contrast) - self.coronagraph_floor, linewidth=3)  # SUBTRACTING THE BASELINE CONTRAST!!
+        plt.title(f'Scaled mode, $c_t = {self.c_target}$', size=29)
+        plt.tick_params(axis='both', which='both', length=6, width=2, labelsize=30)
+        plt.xlabel('WFE rms (nm)', size=30)
+        plt.ylabel('Contrast', size=30)
+        plt.gca().yaxis.set_major_formatter(ScalarFormatter(useMathText=True))  # set y-axis formatter to x10^{-10}
+        plt.gca().yaxis.offsetText.set_fontsize(30)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_path, '.'.join([f'scaled_mode_{self.c_target}', 'pdf'])))
