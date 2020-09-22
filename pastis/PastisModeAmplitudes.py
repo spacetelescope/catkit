@@ -18,6 +18,27 @@ class PastisModeAmplitudes(PastisExperiment):
     def __init__(self, pastis_results_path, mode_number, c_target, wfe_amplitudes, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
                  num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                  align_lyot_stop=True, run_ta=True):
+        """
+        Pick one mode, scale it by different WFE amplitudes, apply to IrisAO and measure resulting average contrast in DH.
+
+        :param pastis_results_path: str, path to the overall PASTIS data directory, without the 'results' at the end
+        :param mode_number: int, mode index of the mode to work on
+        :param c_target: float, target contrast for which the mode weights have been calculated
+        :param wfe_amplitudes: array of WFE rms in nm to scale the mode by
+        :param probe_filename: str, path to probe file, used only to get DH geometry
+        :param dm_map_path: str, path to folder that contains DH solution
+        :param color_filter: str, wavelength for color flipmount
+        :param nd_direct: str, ND filter choice for direct images
+        :param nd_coron: str, ND filter choice for coronagraphic images
+        :param num_exposures: int, number of exposures for each image acquisition
+        :param exposure_time_coron: float, exposure time for coron mode in microseconds
+        :param exposure_time_direct: float, exposure time for direct mode in microseconds
+        :param auto_expose: bool or {catkit.catkit_types.FpmPosition: bool}, flag to enable auto exposure time correction
+        :param file_mode: bool, If true files will be written to disk otherwise only final results are saved
+        :param raw_skip: int, Skips x writing-files for every one taken. raw_skip=math.inf will skip all and save no raw image files.
+        :param align_lyot_stop: bool, whether to automatically align the Lyot stop before the experiment or not
+        :param run_ta: bool, whether to run target acquisition. Will still just measure TA if False.
+        """
         super().__init__(probe_filename, dm_map_path, color_filter, nd_direct, nd_coron, num_exposures,
                          exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                          align_lyot_stop, run_ta)
