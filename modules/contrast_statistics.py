@@ -56,6 +56,10 @@ def load_metrics_data(filepath):
     elif isinstance(filepath,pandas.DataFrame):
         metrics_data = filepath
 
+    colnames = metrics_data.columns
+    updated_colnames = [name.strip().replace(" ","_") for name in colnames]
+    metrics_data.columns = updated_colnames
+
     if 'iteration' not in metrics_data.columns:
         metrics_data.sort_values(by='time_stamp')
         metrics_data['iteration'] = np.arange(0,len(metrics_data),1)
