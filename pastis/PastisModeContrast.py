@@ -93,7 +93,7 @@ class PastisModeContrast(PastisExperiment):
             # TODO: make it such that we can pick between piston, tip and tilt (will require extra keyword "zernike")
             command_list = []
             for seg in range(self.nb_seg):
-                command_list.append((opd[seg], 0, 0))   # TODO: make sure opd.shape == 1
+                command_list.append((opd[seg], 0, 0))
             #opd_command = segmented_dm_command.load_command(command_list, apply_flat_map=True, dm_config_id='iris_ao')
             opd_command = None
 
