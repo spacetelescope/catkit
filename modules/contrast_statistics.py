@@ -97,7 +97,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         outname = 'contrast_metrics'
     elif isinstance(iteration_of_convergence, int):
         log.info(f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
-        outname = f'contrast_metrics_manual_iteration{iteration_of_convergence}'
+        outname = f'contrast_metrics_user_specified_iteration_{iteration_of_convergence}'
         warning_flag = False
 
     converged_metrics = metrics_data[metrics_data['iteration'] >= iteration_of_convergence]
