@@ -9,6 +9,6 @@ iteration_of_convergence, type=int, the iteration after which the contrast appea
 
 runfolder = ""
 iteration_of_convergence = 15
-if len(runfolder) > 0:
-    filepath = str("C:/Users/HICAT/hicat_data/"+str(runfolder)+"/metrics.csv")
+if runfolder:
+    filepath = f"C:/Users/HICAT/hicat_data/"{runfolder}"/metrics.csv"
     contrast_statistics.calculate_confidence_interval(filepath, iteration_of_convergence=iteration_of_convergence)
