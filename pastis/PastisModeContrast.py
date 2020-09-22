@@ -46,12 +46,19 @@ class PastisModeContrast(PastisExperiment):
 
         self.individual = individual
         self.c_target = c_target
+        if individual:
+            self.log.info('Working on contrast of individual modes.')
+        else:
+            self.log.info('Working on cumulative contrast from modes.')
+        self.log.info(f'Target contrast: {c_target}')
 
         # Read PASTIS matrix, modes and mode weights from file
         self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
         self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
+        self.log.info(f'PASTIS modes and mode weights read from {pastis_results_path}')
         try:
             self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path))
+            self.log.info(f'PASTIS matrix read from {pastis_matrix_path}')
         except FileNotFoundError:
             self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')
             self.pastis_matrix = None
@@ -80,6 +87,7 @@ class PastisModeContrast(PastisExperiment):
 
         # Loop over all modes
         for maxmode in range(self.pastis_modes.shape[0]):
+            self.log.info(f'Working on mode {maxmode}/{self.pastis_modes.shape[0]}')
             initial_path = os.path.join(self.output_path, f'mode_{maxmode}')
 
             # Apply each mode individually or cumulatively?
@@ -118,6 +126,7 @@ class PastisModeContrast(PastisExperiment):
 
         # Calculate contrast from PASTIS propagation
         if self.pastis_matrix is not None:
+            self.log.info('Calculating same thing with PASTIS propagation')
             self.pastis_contrast = cumulative_contrast_matrix(self.pastis_modes, self.mode_weights, self.pastis_matrix,
                                                               self.coronagraph_floor, self.individual)
             np.savetxt(os.path.join(self.output_path, f'cumul_contrast_accuracy_pastis_{self.c_target}.txt'),
