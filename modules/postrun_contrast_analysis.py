@@ -7,8 +7,8 @@ runfolder: type=str, the name of the run's folder eg. 2020-07-15T17-27-04_broadb
 iteration_of_convergence, type=int, the iteration after which the contrast appears to have converged.
 '''
 
-runfolder = "2020-07-15T17-27-04_broadband_stroke_minimization"
+runfolder = ""
 iteration_of_convergence = 15
-
-filepath = str("C:/Users/HICAT/hicat_data/"+str(runfolder)+"/metrics.csv")
-contrast_statistics.calculate_confidence_interval(filepath, iteration_of_convergence=iteration_of_convergence)
+if len(runfolder) > 0:
+    filepath = str("C:/Users/HICAT/hicat_data/"+str(runfolder)+"/metrics.csv")
+    contrast_statistics.calculate_confidence_interval(filepath, iteration_of_convergence=iteration_of_convergence)
