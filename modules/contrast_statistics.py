@@ -90,8 +90,10 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
 
     if iteration_of_convergence is None:
         iteration_of_convergence, warning_flag = calculate_iteration_of_convergence(filepath)
+        outname = 'contrast_metrics'
     elif isinstance(iteration_of_convergence, int):
         log.info(f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
+        outname = f'contrast_metrics_manual_{iteration_of_convergence}'
 
     converged_metrics = metrics_data[metrics_data['iteration'] >= iteration_of_convergence]
     mean = np.mean(converged_metrics['mean_image_contrast'])
@@ -164,7 +166,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
         plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
         ax4.legend()
 
-        output_fn = os.path.join(os.path.split(filepath)[-2],'contrast_metrics.pdf')
+        output_fn = os.path.join(os.path.split(filepath)[-2],str(outname)+'.pdf')
         careful_savefig(fig, output_fn)
     return confidence_interval
 
