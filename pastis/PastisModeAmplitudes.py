@@ -25,10 +25,14 @@ class PastisModeAmplitudes(PastisExperiment):
         self.mode_number = mode_number
         self.c_target = c_target
         self.wfe_amplitudes = wfe_amplitudes
+        self.log.info(f'Will be scaling mode number {mode_number}')
+        self.log.info(f'Target contrast: {c_target}')
+        self.log.info(f'WFE amplitudes used for scaling: {wfe_amplitudes}')
 
         # Read PASTIS matrix, modes and mode weights from file
         self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
         self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
+        self.log.info(f'PASTIS modes and mode weights read from {pastis_results_path}')
 
         self.measured_contrast = []
 
@@ -56,9 +60,10 @@ class PastisModeAmplitudes(PastisExperiment):
 
         # Loop over all WFE amplitudes
         for i in range(self.wfe_amplitudes.shape[0]):
+            self.log.info(f'Applying scaling of {i}nm rms')
             initial_path = os.path.join(self.output_path, f'wfe_{i}nm')
 
-            # Multiply mode by its mode weighth (according to target contrast), and scale by extra WFE amplitude
+            # Multiply mode by its mode weight (according to target contrast), and scale by extra WFE amplitude
             opd = self.pastis_modes[:, self.mode_number] * self.mode_weights[self.mode_number] * self.wfe_amplitudes[i]
             opd *= u.nm  # the PASTIS package is currently set up to spit out the modes in units of nm
 
