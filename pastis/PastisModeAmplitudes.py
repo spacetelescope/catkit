@@ -15,13 +15,14 @@ class PastisModeAmplitudes(PastisExperiment):
 
     name = 'PASTIS Mode Amplitudes'
 
-    def __init__(self, pastis_results_path, c_target, wfe_amplitudes, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
+    def __init__(self, pastis_results_path, mode_number, c_target, wfe_amplitudes, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
                  num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                  align_lyot_stop=True, run_ta=True):
         super().__init__(probe_filename, dm_map_path, color_filter, nd_direct, nd_coron, num_exposures,
                          exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                          align_lyot_stop, run_ta)
 
+        self.mode_number = mode_number
         self.c_target = c_target
         self.wfe_amplitudes = wfe_amplitudes
 
@@ -51,12 +52,12 @@ class PastisModeAmplitudes(PastisExperiment):
         # Instantiate a connection to the IrisAO
         iris_dm = pastis_functions.IrisAO()
 
-        # Loop over all modes
-        for maxmode in range(self.pastis_modes.shape[0]):
-            initial_path = os.path.join(self.output_path, f'mode_{maxmode}')
+        # Loop over all WFE amplitudes
+        for i in range(self.wfe_amplitudes.shape[0]):
+            initial_path = os.path.join(self.output_path, f'wfe_{i}nm')
 
-            # Apply each mode individually or cumulatively?
-            opd = self.pastis_modes[:, maxmode] * self.mode_weights[maxmode] * self.wfe_amplitudes[maxmode]
+            # Multiply mode by its mode weighth (according to target contrast), and scale by extra WFE amplitude
+            opd = self.pastis_modes[:, self.mode_number] * self.mode_weights[self.mode_number] * self.wfe_amplitudes[i]
             opd *= u.nm  # the PASTIS package is currently set up to spit out the modes in units of nm
 
             # Convert this to IrisAO command - a list of 37 tuples of 3 (PTT)
