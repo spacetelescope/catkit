@@ -87,7 +87,7 @@ class PastisModeContrast(PastisExperiment):
                 opd = self.pastis_modes[:, maxmode] * self.mode_weights[maxmode]
             else:
                 opd = np.nansum(self.pastis_modes[:, :maxmode + 1] * self.mode_weights[:maxmode + 1], axis=1)
-            opd *= u.nm  # the package is currently set up to spit out the modes in units of nm
+            opd *= u.nm  # the PASTIS package is currently set up to spit out the modes in units of nm
 
             # Convert this to IrisAO command - a list of 37 tuples of 3 (PTT)
             # TODO: make it such that we can pick between piston, tip and tilt (will require extra keyword "zernike")
