@@ -186,8 +186,12 @@ class PastisExperiment(HicatExperiment):
 
         # Measure coronagraph floor
         self.coronagraph_floor = np.mean(self.image_unaberrated[self.dark_zone])
-        with open(os.path.join(initial_path, 'coronagraph_floor.txt'), 'w') as file:
-            file.write(f'Coronagraph floor: {self.coronagraph_floor}')
+        try:
+            with open(os.path.join(initial_path, 'coronagraph_floor.txt'), 'w') as file:
+                file.write(f'Coronagraph floor: {self.coronagraph_floor}')
+        except FileNotFoundError:
+            with open(os.path.join(self.output_path, 'coronagraph_floor.txt'), 'w') as file:
+                file.write(f'Coronagraph floor: {self.coronagraph_floor}')
 
     def experiment(self):
         raise NotImplementedError("The main PASTIS experiment class does not implement an actual experiment.")
