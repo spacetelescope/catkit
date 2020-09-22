@@ -46,6 +46,8 @@ class PastisModeAmplitudes(PastisExperiment):
         if self.c_target <= self.coronagraph_floor:
             raise ValueError(f"Coronagraph floor ({self.coronagraph_floor}) cannot be above target contrast ({self.c_target}).")
 
+        # TODO: save used mode to output folder (txt file or plot of its WFE map, or both)
+
         # Access testbed devices and set experiment path
         devices = testbed_state.devices.copy()    # TODO: Is this how I will access the IrisDM?
         # iris_dm = devices['iris_dm']
