@@ -52,7 +52,7 @@ class PastisModeAmplitudes(PastisExperiment):
         self.log.info(f'Target contrast: {c_target}')
         self.log.info(f'WFE amplitudes used for scaling: {wfe_amplitudes}')
 
-        # Read PASTIS matrix, modes and mode weights from file
+        # Read PASTIS modes and mode weights from file
         self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
         self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
         self.log.info(f'PASTIS modes and mode weights read from {pastis_results_path}')
