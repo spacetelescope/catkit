@@ -62,6 +62,7 @@ class PastisHockeyStick(PastisExperiment):
         # Loop over all WFE amplitudes
         for i, rms in enumerate(self.rms_range):
             initial_path = os.path.join(self.output_path, f'rms_{rms}nm')
+            rms *= u.nm  # Making sure this has the correct units
 
             for j in range(self.no_realizations):
 
