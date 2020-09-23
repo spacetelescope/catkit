@@ -87,7 +87,7 @@ class PastisHockeyStick(PastisExperiment):
 
                 # Take coro images
                 pair_image, header = self.take_exposure(devices, 'coron', self.wvln, initial_path,
-                                                        dark_zone_mask=self.dark_zone, suffix=f'realiz{j}')
+                                                        dark_zone_mask=self.dark_zone, suffix=f'realization_{j}')
                 pair_image /= self.direct_max
 
                 # Measure mean contrast
