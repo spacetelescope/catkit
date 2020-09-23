@@ -37,7 +37,7 @@ class PastisHockeyStick(PastisExperiment):
             self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')
             self.pastis_matrix = None
 
-        self.measured_contrast = np.array([self.rms_range.shape[0], self.no_realizations])
+        self.measured_contrast = np.zeros((self.rms_range.shape[0], self.no_realizations))
         self.pastis_contrast = np.copy(self.measured_contrast)
 
         self.measured_mean_over_realizations = []
