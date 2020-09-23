@@ -12,7 +12,7 @@ class TakeSingleZWFSAcquisition(HicatExperiment):
                  wave=640e-9,
                  filename='ZWFS',
                  align_lyot_stop=False,
-                 run_ta=False):
+                 run_ta=True):
 
         """
         Performs a calibration and a phase measurement with the ZWFS.
