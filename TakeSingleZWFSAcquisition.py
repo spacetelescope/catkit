@@ -12,7 +12,7 @@ class TakeSingleZWFSAcquisition(HicatExperiment):
                  wave=640e-9,
                  filename='ZWFS',
                  align_lyot_stop=False,
-                 run_ta=True):
+                 run_ta=False):
 
         """
         Performs a calibration and a phase measurement with the ZWFS.
@@ -34,7 +34,7 @@ class TakeSingleZWFSAcquisition(HicatExperiment):
         zernike_sensor = zwfs.ZWFS(self.instrument)
 
 
-        if 1:
+        if 0:
             prefix = 'take_exposure'
             zernike_sensor._nbframes = 1
             out, _ = zernike_sensor.take_exposure()
@@ -68,10 +68,10 @@ class TakeSingleZWFSAcquisition(HicatExperiment):
             zernike_sensor.calibrate(dark)
             out = zernike_sensor._clear_pupil
 
-        zernike_sensor.save_list(out, prefix, self.output_path)
+        #zernike_sensor.save_list(out, prefix, self.output_path)
 
         # Final boss
-        if 0:
+        if 1:
             zernike_sensor.calibrate_and_measure(self.wave,
                                                        self.filename,
                                                        self.output_path)
