@@ -111,6 +111,7 @@ class PastisHockeyStick(PastisExperiment):
     def post_experiment(self, *args, **kwargs):
 
         # Plot the results
-        plot_hockey_stick_curve(self.rms_range, self.pastis_mean_over_realizations, self.measured_mean_over_realizations,
-                                wvln=CONFIG_PASTIS.getfloat('HiCAT', 'lambda'), out_dir=self.output_path,
-                                fname_suffix=f'{self.no_realizations}_realizations_each', save=True)
+        plot_hockey_stick_curve(self.rms_range, self.pastis_mean_over_realizations[0],
+                                self.measured_mean_over_realizations[0], wvln=CONFIG_PASTIS.getfloat('HiCAT', 'lambda'),
+                                out_dir=self.output_path, fname_suffix=f'{self.no_realizations}_realizations_each',
+                                save=True)
