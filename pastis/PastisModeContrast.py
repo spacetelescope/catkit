@@ -14,8 +14,6 @@ from pastis.plotting import plot_contrast_per_mode, plot_cumulative_contrast_com
 
 class PastisModeContrast(PastisExperiment):
 
-    name = 'PASTIS Mode Contrast'
-
     def __init__(self, pastis_results_path, pastis_matrix_path, individual, c_target, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
                  num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                  align_lyot_stop=True, run_ta=True):
@@ -40,6 +38,11 @@ class PastisModeContrast(PastisExperiment):
         :param align_lyot_stop: bool, whether to automatically align the Lyot stop before the experiment or not
         :param run_ta: bool, whether to run target acquisition. Will still just measure TA if False.
         """
+        if individual:
+            self.name = 'PASTIS Mode Contrast Individual'
+        else:
+            self.name = 'PASTIS Mode Contrast Cumulative'
+
         super().__init__(probe_filename, dm_map_path, color_filter, nd_direct, nd_coron, num_exposures,
                          exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                          align_lyot_stop, run_ta)
