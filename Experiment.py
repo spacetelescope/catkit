@@ -215,6 +215,7 @@ class HicatExperiment(Experiment, ABC):
                     testbed.beam_dump() as beam_dump, \
                     testbed.imaging_camera() as cam, \
                     testbed.pupil_camera() as pupilcam, \
+                    testbed.zwfs_camera() as zwfscam, \
                     testbed.temp_sensor(config_id="aux_temperature_sensor") as temp_sensor, \
                     testbed.target_acquisition_camera() as ta_cam, \
                     testbed.color_wheel() as color_wheel, \
@@ -226,6 +227,7 @@ class HicatExperiment(Experiment, ABC):
                            'beam_dump': beam_dump,
                            'imaging_camera': cam,
                            'pupil_camera': pupilcam,
+                           'zwfs_camera': zwfscam,
                            'temp_sensor': temp_sensor,
                            'color_wheel': color_wheel,
                            'nd_wheel': nd_wheel}
