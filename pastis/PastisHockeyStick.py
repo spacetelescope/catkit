@@ -65,17 +65,18 @@ class PastisHockeyStick(PastisExperiment):
 
     def experiment(self):
 
+        # Access devices for reference images
+        devices = testbed_state.devices.copy()
+
         # Run flux normalization
         self.log.info('Starting flux normalization')
-        self.run_flux_normalization()
+        self.run_flux_normalization(devices)
 
         # Take unaberrated direct and coro images, save normalization factor and coro_floor as attributes
         self.log.info('Measuring reference PSF (direct) and coronagraph floor')
-        self.measure_coronagraph_floor()
+        self.measure_coronagraph_floor(devices)
 
-        # Access testbed devices and set experiment path
-        devices = testbed_state.devices.copy()    # TODO: Is this how I will access the IrisDM?
-        # iris_dm = devices['iris_dm']
+        # iris_dm = devices['iris_dm']    # TODO: Is this how I will access the IrisDM?
         # Instantiate a connection to the IrisAO
         iris_dm = pastis_functions.IrisAO()
 
