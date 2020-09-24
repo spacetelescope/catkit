@@ -98,6 +98,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
     elif isinstance(iteration_of_convergence, int):
         log.info(f"Implementing user-specified convergence point at iteration {iteration_of_convergence}")
         outname = f'contrast_metrics_user_specified_iteration_{iteration_of_convergence}'
+        manual_flag = True
         warning_flag = False
 
     converged_metrics = metrics_data[metrics_data['iteration'] >= iteration_of_convergence]
@@ -112,11 +113,14 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
 
     if generate_plots:
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 4))
-        fig.suptitle(f"Iteration of convergence specified or found to be: {iteration_of_convergence}.   " +
+        fig.suptitle(f"Iteration of convergence found to be: {iteration_of_convergence}.   " +
                      os.path.split(os.path.dirname(filepath))[-1])
         if warning_flag:
             fig.suptitle("WARNING: CONVERGENCE CRITERIA QUESTIONABLE    " + os.path.split(os.path.dirname(filepath))[-1]
                          + "    WARNING: CONVERGENCE CRITERIA QUESTIONABLE", c='r')
+        if manual_flag:
+            fig.suptitle(f"Iteration of convergence manually specified to be: {iteration_of_convergence}.   " +
+                         os.path.split(os.path.dirname(filepath))[-1], c='g')
         ax1.axvline(iteration_of_convergence, label='Point of Convergence', c='g')
 
         ax1.set_yscale('log')
