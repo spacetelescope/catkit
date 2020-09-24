@@ -65,17 +65,19 @@ class PastisMatrix(PastisExperiment):
         self.contrast_contribution_matrix = np.zeros([self.nb_seg, self.nb_seg])
 
     def experiment(self):
+
+        # Access devices for reference images
+        devices = testbed_state.devices.copy()
+
         # Run flux normalization
         self.log.info('Starting flux normalization')
-        self.run_flux_normalization()
+        self.run_flux_normalization(devices)
 
         # Take unaberrated direct and coro images, save normalization factor and coro_floor as attributes
         self.log.info('Measuring reference PSF (direct) and coronagraph floor')
-        self.measure_coronagraph_floor()
+        self.measure_coronagraph_floor(devices)
 
-        # Access testbed devices and set experiment path
-        devices = testbed_state.devices.copy()    # TODO: Is this how I will access the IrisDM?
-        #iris_dm = devices['iris_dm']
+        #iris_dm = devices['iris_dm']    # TODO: Is this how I will access the IrisDM?
         matrix_data_path = os.path.join(self.output_path, 'pastis_matrix')
 
         ### Measure contrast matrix

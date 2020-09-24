@@ -77,10 +77,7 @@ class PastisExperiment(HicatExperiment):
             self.dz_rin = probe_info[0].header.get('DZ_RIN', '?')
             self.dz_rout = probe_info[0].header.get('DZ_ROUT', '?')
 
-    def run_flux_normalization(self):
-
-        # Access devices for flux normalization
-        devices = testbed_state.devices.copy()
+    def run_flux_normalization(self, devices):
 
         # Calculate flux attenuation factor between direct+ND and coronagraphic images
         self.flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=[self.wvln],
@@ -160,15 +157,12 @@ class PastisExperiment(HicatExperiment):
 
         return image, header
 
-    def measure_coronagraph_floor(self):
+    def measure_coronagraph_floor(self, devices):
         """
         Take a direct image to save its peak as the normalization factor - with flat Boston DMs.
         Take an unaberrated coronagraphic image to save its mean contrast as coronagraph floor - with stroke min DM
         solution applied to the Boston DMs.
         """
-
-        # Access devices for reference images
-        devices = testbed_state.devices.copy()
 
         # Take starting reference images, in direct and coron
         initial_path = os.path.join(self.output_path, 'unaberrated_reference')
