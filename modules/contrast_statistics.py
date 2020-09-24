@@ -114,14 +114,15 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
 
     if generate_plots:
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 4))
-        fig.suptitle(f"Iteration of convergence automatically found to be: {iteration_of_convergence}.   " +
-                     os.path.split(os.path.dirname(filepath))[-1])
-        if warning_flag:
-            fig.suptitle("WARNING: CONVERGENCE CRITERIA QUESTIONABLE    " + os.path.split(os.path.dirname(filepath))[-1]
-                         + "    WARNING: CONVERGENCE CRITERIA QUESTIONABLE", c='r')
+        fig.suptitle(os.path.split(os.path.dirname(filepath))[-1])
         if manual_flag:
-            fig.suptitle(f"Iteration of convergence manually specified to be: {iteration_of_convergence}.   " +
-                         os.path.split(os.path.dirname(filepath))[-1], c='g')
+            plt.figtext(0.1,1,f"Convergence iteration: {iteration_of_convergence}, manual", c='g', fontweight='bold')
+        elif warning_flag:
+            plt.figtext(0.1,1,f"Convergence iteration: {iteration_of_convergence}, WARNING: NO CONVERGENCE. "
+                            f"Selecting last half of data. ", c='r', fontweight='bold')
+        else:
+            plt.figtext(0.1,1,f"Convergence iteration: {iteration_of_convergence}, automatic", c='g', fontweight='bold')
+
         ax1.axvline(iteration_of_convergence, label='Point of Convergence', c='g')
 
         ax1.set_yscale('log')
