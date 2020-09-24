@@ -113,7 +113,7 @@ def calculate_confidence_interval(filepath, iteration_of_convergence=None, gener
 
     if generate_plots:
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 4))
-        fig.suptitle(f"Iteration of convergence found to be: {iteration_of_convergence}.   " +
+        fig.suptitle(f"Iteration of convergence automatically found to be: {iteration_of_convergence}.   " +
                      os.path.split(os.path.dirname(filepath))[-1])
         if warning_flag:
             fig.suptitle("WARNING: CONVERGENCE CRITERIA QUESTIONABLE    " + os.path.split(os.path.dirname(filepath))[-1]
