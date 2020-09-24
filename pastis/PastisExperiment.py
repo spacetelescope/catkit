@@ -19,7 +19,7 @@ class PastisExperiment(HicatExperiment):
     """
     Top-level PASTIS experiment class, inheriting from HicatExperiment.
 
-    This adds a method to do the flux normalizatoin, and a method that measures the reference PSF, as well as the
+    This adds a method to do the flux normalization, and a method that measures the reference PSF, as well as the
     unaberrated coronagraph PSF that has a DH solution applied on the DMs.
     """
 
