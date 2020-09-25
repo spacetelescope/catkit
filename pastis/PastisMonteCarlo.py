@@ -18,9 +18,9 @@ class PastisMonteCarlo(PastisExperiment):
                  raw_skip, align_lyot_stop=True, run_ta=True):
 
         if segments:
-            self.name = 'PASTIS Monte Carlo Modes'
-        else:
             self.name = 'PASTIS Monte Carlo Segments'
+        else:
+            self.name = 'PASTIS Monte Carlo Modes'
 
         super().__init__(probe_filename, dm_map_path, color_filter, nd_direct, nd_coron, num_exposures,
                          exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
@@ -38,13 +38,13 @@ class PastisMonteCarlo(PastisExperiment):
 
         # Read PASTIS matrix, modes and mode/segment weights from file
         if self.segments:
-            self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
-            self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
-            self.log.info(f'PASTIS modes and mode weights read from {pastis_results_path}')
-        else:
             self.segment_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'segment_requirements_{c_target}.txt'))
             self.segment_weights *= u.nm
             self.log.info(f'Segment weights read from {pastis_results_path}')
+        else:
+            self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
+            self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
+            self.log.info(f'PASTIS modes and mode weights read from {pastis_results_path}')
 
         self.measured_contrast = []
         self.random_weights = []
