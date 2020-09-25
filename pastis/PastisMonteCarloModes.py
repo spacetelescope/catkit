@@ -65,7 +65,7 @@ class PastisMonteCarloModes(PastisExperiment):
 
             # Create a random set of mode weights
             modes_random_state = np.random.RandomState()
-            rand = modes_random_state.normal(0, 1, self.nb_seg.shape[0])
+            rand = modes_random_state.normal(0, 1, self.nb_seg)
             random_weights = self.mode_weights * rand
             self.random_mode_weight_sets.append(random_weights)
 
