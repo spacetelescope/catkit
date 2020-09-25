@@ -160,5 +160,5 @@ class PastisMonteCarlo(PastisExperiment):
             file.write(f'\nEmpirical variance: {stddev_empirical**2}')
 
         # Plot histogram
-        plot_monte_carlo_simulation(self.measured_contrast, out_dir=self.output_path, c_target=self.c_target,
+        plot_monte_carlo_simulation(np.array(self.measured_contrast), out_dir=self.output_path, c_target=self.c_target,
                                     segments=self.segments, stddev=stddev_empirical, save=True)
