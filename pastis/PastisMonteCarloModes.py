@@ -11,11 +11,11 @@ from pastis.pastis_analysis import modes_from_file
 from pastis.plotting import plot_monte_carlo_simulation
 
 
-class PastisMonteCarloModes(PastisExperiment):
+class PastisMonteCarlo(PastisExperiment):
 
-    def __init__(self, segments, pastis_results_path, n_repeat, c_target, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
-                 num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
-                 align_lyot_stop=True, run_ta=True):
+    def __init__(self, segments, pastis_results_path, n_repeat, c_target, probe_filename, dm_map_path, color_filter,
+                 nd_direct, nd_coron, num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode,
+                 raw_skip, align_lyot_stop=True, run_ta=True):
 
         if segments:
             self.name = 'PASTIS Monte Carlo Modes'
