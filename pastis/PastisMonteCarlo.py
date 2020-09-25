@@ -42,7 +42,7 @@ class PastisMonteCarlo(PastisExperiment):
             self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
             self.log.info(f'PASTIS modes and mode weights read from {pastis_results_path}')
         else:
-            self.segment_weights = np.loadtxt(os.path.join(pastis_results_path, f'segment_requirements_{c_target}.txt'))
+            self.segment_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'segment_requirements_{c_target}.txt'))
             self.segment_weights *= u.nm
             self.log.info(f'Segment weights read from {pastis_results_path}')
 
