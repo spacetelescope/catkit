@@ -33,45 +33,7 @@ class TakeSingleZWFSAcquisition(HicatExperiment):
 
         zernike_sensor = zwfs.ZWFS(self.instrument)
 
-
-        if 0:
-            prefix = 'take_exposure'
-            zernike_sensor._nbframes = 1
-            out, _ = zernike_sensor.take_exposure()
-
-        if 0:
-            prefix = 'take_multiple_exposures'
-            zernike_sensor._nbframes = 10
-            out, _ = zernike_sensor.take_exposure()
-
-        if 0:
-            prefix = 'move_mask_nominal'
-            zernike_sensor.xpos = 'nominal'
-            out, _ = zernike_sensor.take_exposure()
-
-        if 0:
-            prefix = 'move_mask_ofb'
-            zernike_sensor.xpos = 'out_of_beam'
-            out, _ = zernike_sensor.take_exposure()
-
-        if 0:
-            prefix = 'take_dark'
-            out = zernike_sensor.take_dark()
-
-        if 0:
-            prefix = 'dm_control'
-            out = zernike_sensor.take_exposure_dm(dm1_shape=zernike_sensor.sin_shape)
-
-        if 0:
-            prefix = 'calibrate'
-            dark = zernike_sensor.take_dark()
-            zernike_sensor.calibrate(dark)
-            out = zernike_sensor._clear_pupil
-
-        #zernike_sensor.save_list(out, prefix, self.output_path)
-
         # Final boss
-        if 1:
-            zernike_sensor.calibrate_and_measure(self.wave,
-                                                       self.filename,
-                                                       self.output_path)
+        zernike_sensor.calibrate_and_measure(self.wave,
+                                             self.filename,
+                                             self.output_path)
