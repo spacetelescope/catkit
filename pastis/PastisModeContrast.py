@@ -14,7 +14,7 @@ from pastis.plotting import plot_contrast_per_mode, plot_cumulative_contrast_com
 
 class PastisModeContrast(PastisExperiment):
 
-    def __init__(self, pastis_results_path, pastis_matrix_path, individual, c_target, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
+    def __init__(self, pastis_results_path, pastis_matrix_path, use_uniform_weights, individual, c_target, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
                  num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                  align_lyot_stop=True, run_ta=True):
         """
@@ -22,6 +22,7 @@ class PastisModeContrast(PastisExperiment):
 
         :param pastis_results_path: str, path to the overall PASTIS data directory, without the 'results' at the end
         :param pastis_matrix_path: str, full path to PASTIS matrix, including filename
+        :param use_uniform_weights: bool, if True, will use uniform mode weights, if False, will use segment-based mode weights
         :param individual: bool, if True, will measure contrast for each mode individually, if False will do it cumulatively
         :param c_target: float, target contrast for which the mode weights have been calculated
         :param probe_filename: str, path to probe file, used only to get DH geometry
@@ -47,18 +48,32 @@ class PastisModeContrast(PastisExperiment):
                          exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                          align_lyot_stop, run_ta)
 
+        self.use_uniform_weights = use_uniform_weights
         self.individual = individual
         self.c_target = c_target
+
+        if use_uniform_weights:
+            self.log.info('Using uniform mode weights')
+        else:
+            self.log.info('Using segment-based mode weights.')
         if individual:
             self.log.info('Working on contrast of individual modes.')
         else:
             self.log.info('Working on cumulative contrast from modes.')
         self.log.info(f'Target contrast: {c_target}')
 
-        # Read PASTIS matrix, modes and mode weights from file
+        # Read PASTIS modes from file
         self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
-        self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
+
+        # Read PASTIS mode weights from file
+        if use_uniform_weights:
+            filename_modes_weights = f'mode_requirements_{c_target}_uniform.txt'
+        else:
+            filename_modes_weights = f'mode_requirements_{c_target}_segment-based.txt'
+        self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', filename_modes_weights))
         self.log.info(f'PASTIS modes and mode weights read from {pastis_results_path}')
+
+        # Read PASTIS matrix from file
         try:
             self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path))
             self.log.info(f'PASTIS matrix read from {pastis_matrix_path}')
