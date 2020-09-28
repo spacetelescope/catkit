@@ -3,7 +3,6 @@ import logging
 import os
 from glob import glob
 import numpy as np
-from photutils.centroids.core import centroid_1dg, centroid_2dg
 
 from photutils.detection.core import find_peaks
 
