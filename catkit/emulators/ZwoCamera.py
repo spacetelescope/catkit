@@ -1,3 +1,6 @@
+import copy
+import logging
+
 import numpy as np
 
 import zwoasi
@@ -35,6 +38,7 @@ class PoppyZwoEmulator(ZwoASI):
         return camera_mappings
 
     def __init__(self, config_id):
+        self.log = logging.getLogger(__name__)
 
         self.config_id = config_id
         self.image_type = None
@@ -46,6 +50,43 @@ class PoppyZwoEmulator(ZwoASI):
             raise ValueError(f"Unknown camera for simulations: {self.config_id}")
 
         self.camera_purpose = self.camera_mappings[self.config_id]["purpose"]
+
+        # helper function for repetitive config flag retrieval:
+        def get_camera_config_flag(label):
+            return CONFIG_INI.getboolean('data_simulator',
+                                         f'simulate_{self.camera_purpose}_{label}',
+                                         fallback=False)
+
+        self.simulate_background = get_camera_config_flag('background')
+        self.simulate_photon_noise = get_camera_config_flag('photon_noise')
+        self.simulate_read_noise = get_camera_config_flag('read_noise')
+        self.simulate_image_jitter = get_camera_config_flag('image_jitter')
+        self.simulate_readout_quantization = get_camera_config_flag('readout_quantization')
+
+        self.simulate_background_rate = CONFIG_INI.getfloat('data_simulator',
+                                                            f'simulate_{self.camera_purpose}_background_counts_per_microsec',
+                                                            fallback=0.0)
+        self.simulate_jitter_sigma = CONFIG_INI.getfloat('data_simulator',
+                                                         f'simulate_{self.camera_purpose}_jitter_sigma_pixels',
+                                                         fallback=0.0)
+        if self.simulate_photon_noise or self.simulate_read_noise:
+            gain_db = CONFIG_INI.getint(self.config_id, 'gain')
+            if gain_db != 0:
+                raise NotImplementedError(
+                    "SimZwoCamera noise model does not yet support camera gain settings other than 0 db")
+            else:
+                # Values from https://astronomy-imaging-camera.com/manuals/ASI178%20Manual%20EN.pdf section 5 plots
+                self.gain_e_per_count = 0.9 / 4  # electrons/ADU, from ZWO documentation for ASI178.
+                self.readnoise_counts = 2.2 * 4  # readnoise in ADU
+                # Note, factor of 4 is for 14 bit readout into 16 bits, skipping lowest 2 bits
+        else:
+            self.gain_e_per_count = self.readnoise_counts = 0
+
+        self.log.info(f"Simulated {self.camera_purpose} noise model: Background {self.simulate_background}; "
+                      f"photon noise {self.simulate_photon_noise}, gain {self.gain_e_per_count} e-/count; "
+                      f"read noise {self.simulate_read_noise}, {self.readnoise_counts} counts; "
+                      f"jitter {self.simulate_image_jitter}, {self.simulate_jitter_sigma} pixels")
+        self._reuse_cached_psf_prior_to_adding_noise = False
 
     def init(self, library_file=None):
         pass
@@ -106,8 +147,14 @@ class PoppyZwoEmulator(ZwoASI):
 
         # Here's the actual PSF calculation! Retrieve the simulated image from the optical system mode. This will do a
         # propagation up to the detector plane.
-        image_hdulist = hicat.simulators.optics_simulator.calc_psf(apply_pipeline_binning=False)
-        testbed_state._simulation_latest_image = image_hdulist # Save so we can later copy some of the FITS header keywords
+        if self._reuse_cached_psf_prior_to_adding_noise:
+            self.log.info("HICAT_SIM: Reusing cached prior sim; adding independent noise realization.")
+            image_hdulist = copy.deepcopy(testbed_state._simulation_latest_image)
+        else:
+            image_hdulist = hicat.simulators.optics_simulator.calc_psf(apply_pipeline_binning=False)
+            self.log.info("HICAT_SIM: Simulation complete for image.")
+            testbed_state._simulation_latest_image = image_hdulist  # Save so we can later copy some of the FITS header keywords
+            # or reuse, for efficient simulation of multiple exposures
 
         counts_per_microsec = CONFIG_INI.getfloat('photometry', self.photometry_config_key, fallback=90000)
 
@@ -119,7 +166,32 @@ class PoppyZwoEmulator(ZwoASI):
         exposure_time = self.control_values[self.ASI_EXPOSURE]
         image = image_hdulist[0].data * counts_per_microsec * exposure_time
 
-        return image
+        ### Noise Simulations (Optional)
+        # Noise terms may be turned on or off individually using config settings.
+
+        if self.simulate_background:
+            image += self.simulate_background_rate * exposure_time
+        if self.simulate_photon_noise:
+            image = np.random.poisson(image * self.gain_e_per_count) / self.gain_e_per_count
+        if self.simulate_read_noise:
+            image += np.random.randn(*image.shape) * self.readnoise_counts
+        if self.simulate_image_jitter:
+            # Simulate image jitter. For now just with integer pixel shifts so this is fast.
+            # FIXME get actual statistics on what the jitter is. This is a complete handwave!
+            shift_vec = np.random.normal(self.simulate_jitter_sigma, size=2).round().astype(int)
+
+        image = hicat.cross_correlation.roll_image(image, shift_vec)
+
+        if self.simulate_readout_quantization:
+            # Note, this camera writes 14 bits readout into 16, leaving the lowest two bits always 0, such that the minimum step is 4 counts
+            # Simulate camera saturation: clip maximum value to the largest possible 16 bit unsigned number
+            image = np.clip(image.astype(np.int32), a_min=0, a_max=(2 ** 16 - 1))
+
+            # Simulate quantization. i.e. the last two bits are always 0. Simulate this by bitwise masking out last two bits here
+            image = image.astype(np.int32) & ~np.int32(1) & ~np.int32(2)
+
+        # cast return to float32, consistent with cast for ZwoCamera
+        return image.astype(np.float32)
 
     def close(self):
         pass
