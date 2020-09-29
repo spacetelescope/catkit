@@ -5,7 +5,7 @@ import numpy as np
 
 import zwoasi
 
-from hicat.config import CONFIG_INI
+from hicat.config import CONFIG_INI, CONFIG_MODES
 from hicat.hardware import testbed_state
 import hicat.simulators
 
@@ -158,7 +158,8 @@ class PoppyZwoEmulator(ZwoASI):
         counts_per_microsec = CONFIG_INI.getfloat('photometry', self.photometry_config_key, fallback=90000)
 
         # Adjust count rate to compensate for poppy normalizing to 1.0 in entrance pupil by default.
-        exit_pupil_flux_correction_factor =  CONFIG_INI.getfloat('data_simulator', 'simulator_direct_exit_vs_entrance_pupil_flux')
+        exit_pupil_flux_correction_factor = CONFIG_MODES.getfloat(
+            testbed_state.current_mode, 'simulator_direct_exit_vs_entrance_pupil_flux')
         counts_per_microsec /= exit_pupil_flux_correction_factor
 
         # Apply flux normalization and exposure time scaling to the output image
