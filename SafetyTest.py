@@ -79,22 +79,22 @@ class HumidityTemperatureTest(SafetyTest):
         temp_ok = self.min_temp <= temp <= self.max_temp
 
         if temp_ok:
-            status_msg = "Temperature test passed: {} falls between {} and {}.".format(
+            status_msg = "Temperature test passed: {}°C falls between {} and {} degrees Celsius.".format(
                 temp, self.min_temp, self.max_temp)
             safety_log.debug(status_msg)
         else:
-            status_msg = "Temperature test failed: {} is outside of {} and {}.".format(
+            status_msg = "Temperature test failed: {}°C is outside of {} and {} degrees Celsius.".format(
                 temp, self.min_temp, self.max_temp)
             safety_log.warning(status_msg)
 
         humidity_ok = self.min_humidity <= humidity <= self.max_humidity
 
         if humidity_ok:
-            status_msg += "\nHumidity test passed: {} falls between {} and {}.".format(
+            status_msg += "\nHumidity test passed: {}% falls between {}% and {}%.".format(
                 humidity, self.min_humidity, self.max_humidity)
             safety_log.debug(status_msg)
         else:
-            status_msg += "\nHumidity test failed: {} is outside of {} and {}.".format(
+            status_msg += "\nHumidity test failed: {}% is outside of {}% and {}%.".format(
                 humidity, self.min_humidity, self.max_humidity)
             safety_log.warning(status_msg)
 
