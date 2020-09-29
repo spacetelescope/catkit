@@ -130,8 +130,7 @@ class PoppyZwoEmulator(ZwoASI):
             hicat.simulators.optics_simulator.detector = 'imager'
             self.photometry_config_key = 'total_direct_photometry_cts_per_microsec'
         elif self.camera_purpose == 'target_acquisition_camera':
-            # TODO: Simulate the actual TA camera rather than using imaging camera.
-            hicat.simulators.optics_simulator.detector = 'imager'
+            hicat.simulators.optics_simulator.detector = 'target_acquisition_camera'
             self.photometry_config_key = 'total_direct_photometry_cts_per_microsec'
         elif self.camera_purpose == 'pupil_camera':
             hicat.simulators.optics_simulator.detector = 'pupil_camera'
