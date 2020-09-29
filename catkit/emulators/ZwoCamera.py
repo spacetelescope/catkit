@@ -168,17 +168,18 @@ class PoppyZwoEmulator(ZwoASI):
 
         ### Noise Simulations (Optional)
         # Noise terms may be turned on or off individually using config settings.
+        sim_zwo_random_state = np.random.RandomState()
 
         if self.simulate_background:
             image += self.simulate_background_rate * exposure_time
         if self.simulate_photon_noise:
-            image = np.random.poisson(image * self.gain_e_per_count) / self.gain_e_per_count
+            image = sim_zwo_random_state.poisson(image * self.gain_e_per_count) / self.gain_e_per_count
         if self.simulate_read_noise:
-            image += np.random.randn(*image.shape) * self.readnoise_counts
+            image += sim_zwo_random_state.randn(*image.shape) * self.readnoise_counts
         if self.simulate_image_jitter:
             # Simulate image jitter. For now just with integer pixel shifts so this is fast.
             # FIXME get actual statistics on what the jitter is. This is a complete handwave!
-            shift_vec = np.random.normal(self.simulate_jitter_sigma, size=2).round().astype(int)
+            shift_vec = sim_zwo_random_state.normal(self.simulate_jitter_sigma, size=2).round().astype(int)
 
         image = hicat.cross_correlation.roll_image(image, shift_vec)
 
