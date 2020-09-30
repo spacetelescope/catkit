@@ -117,7 +117,7 @@ class PastisMonteCarlo(PastisExperiment):
                 self.random_weights.append(random_weights)
 
                 # Sum up all modes with randomly scaled weights to make total random OPD
-                random_opd = np.nansum(self.pastis_modes[:, :] * random_weights, axis=1)
+                random_opd = np.nansum(self.pastis_modes * random_weights, axis=1)
                 random_opd *= u.nm
 
             # Convert this to IrisAO command - a list of 37 tuples of 3 (PTT)
