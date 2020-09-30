@@ -58,7 +58,7 @@ class PastisMonteCarlo(PastisExperiment):
             self.segment_weights *= u.nm
         else:
             self.pastis_modes, self.eigenvalues = modes_from_file(self.pastis_results_path)
-            self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{self.c_target}_uniform.txt'))
+            self.mode_weights = np.loadtxt(os.path.join(self.pastis_results_path, 'results', f'mode_requirements_{self.c_target}_uniform.txt'))
 
         self.measured_contrast = []
         self.random_weights = []

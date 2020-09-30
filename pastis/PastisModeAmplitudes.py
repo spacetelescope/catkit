@@ -50,6 +50,7 @@ class PastisModeAmplitudes(PastisExperiment):
         self.wfe_amplitudes = wfe_amplitudes
 
         # Read PASTIS modes and mode weights from file
+        self.pastis_results_path = pastis_results_path
         self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
         self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
 
@@ -61,7 +62,7 @@ class PastisModeAmplitudes(PastisExperiment):
         self.log.info(f'Will be scaling mode number {self.mode_number}')
         self.log.info(f'Target contrast: {self.c_target}')
         self.log.info(f'WFE amplitudes used for scaling: {self.wfe_amplitudes}')
-        self.log.info(f'PASTIS modes and mode weights read from {pastis_results_path}')
+        self.log.info(f'PASTIS modes and mode weights read from {self.pastis_results_path}')
 
         # Access devices for reference images
         devices = testbed_state.devices.copy()
