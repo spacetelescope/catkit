@@ -52,11 +52,6 @@ class PastisMatrix(PastisExperiment):
         if self.zernike not in ('piston', 'tip', 'tilt'):
             raise AttributeError("The local aberration set with self.zernike can only be 'piston', 'tip' or 'tilt'.")
 
-        self.log.info(f'wfe_aber: {self.calib_aberration} m')
-        self.log.info(f'Total number of segment pairs in HiCAT pupil: {len(list(pastis.util.segment_pairs_all(self.nb_seg)))}')
-        self.log.info(
-            f'Non-repeating pairs in HiCAT pupil calculated here: {len(list(pastis.util.segment_pairs_non_repeating(self.nb_seg)))}')
-
         # Values for calculation of PASTIS matrix
         self.mean_contrasts_image = []
         self.contrast_contribution_per_pair = []    # this is for mean contrast minus the coronagraph floor
@@ -65,6 +60,12 @@ class PastisMatrix(PastisExperiment):
         self.contrast_contribution_matrix = np.zeros([self.nb_seg, self.nb_seg])
 
     def experiment(self):
+
+        # A couple of initial log messages
+        self.log.info(f'wfe_aber: {self.calib_aberration} m')
+        self.log.info(f'Total number of segment pairs in HiCAT pupil: {len(list(pastis.util.segment_pairs_all(self.nb_seg)))}')
+        self.log.info(
+            f'Non-repeating pairs in HiCAT pupil calculated here: {len(list(pastis.util.segment_pairs_non_repeating(self.nb_seg)))}')
 
         # Access devices for reference images
         devices = testbed_state.devices.copy()

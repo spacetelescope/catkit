@@ -52,38 +52,43 @@ class PastisModeContrast(PastisExperiment):
         self.individual = individual
         self.c_target = c_target
 
-        if use_uniform_weights:
-            self.log.info('Using uniform mode weights')
-        else:
-            self.log.info('Using segment-based mode weights.')
-        if individual:
-            self.log.info('Working on contrast of individual modes.')
-        else:
-            self.log.info('Working on cumulative contrast from modes.')
-        self.log.info(f'Target contrast: {c_target}')
-
         # Read PASTIS modes from file
-        self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
+        self.pastis_results_path = pastis_results_path
+        self.pastis_modes, self.eigenvalues = modes_from_file(self.pastis_results_path)
 
         # Read PASTIS mode weights from file
         if use_uniform_weights:
-            filename_modes_weights = f'mode_requirements_{c_target}_uniform.txt'
+            filename_modes_weights = f'mode_requirements_{self.c_target}_uniform.txt'
         else:
-            filename_modes_weights = f'mode_requirements_{c_target}_segment-based.txt'
-        self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', filename_modes_weights))
-        self.log.info(f'PASTIS modes and mode weights read from {pastis_results_path}')
+            filename_modes_weights = f'mode_requirements_{self.c_target}_segment-based.txt'
+        self.mode_weights = np.loadtxt(os.path.join(self.pastis_results_path, 'results', filename_modes_weights))
 
         # Read PASTIS matrix from file
+        self.pastis_matrix_path = pastis_matrix_path
         try:
-            self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path))
-            self.log.info(f'PASTIS matrix read from {pastis_matrix_path}')
+            self.pastis_matrix = fits.getdata(os.path.join(self.pastis_matrix_path))
         except FileNotFoundError:
-            self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')
             self.pastis_matrix = None
 
         self.measured_contrast = []
 
     def experiment(self):
+
+        # A couple of initial log messages
+        if self.use_uniform_weights:
+            self.log.info('Using uniform mode weights')
+        else:
+            self.log.info('Using segment-based mode weights.')
+        if self.individual:
+            self.log.info('Working on contrast of individual modes.')
+        else:
+            self.log.info('Working on cumulative contrast from modes.')
+        self.log.info(f'Target contrast: {self.c_target}')
+        self.log.info(f'PASTIS modes and mode weights read from {self.pastis_results_path}')
+        if self.pastis_matrix:
+            self.log.info(f'PASTIS matrix read from {self.pastis_matrix_path}')
+        else:
+            self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')
 
         # Access devices for reference images
         devices = testbed_state.devices.copy()

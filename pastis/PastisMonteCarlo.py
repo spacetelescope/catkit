@@ -48,29 +48,32 @@ class PastisMonteCarlo(PastisExperiment):
                          align_lyot_stop, run_ta)
 
         self.segments = segments
-        if segments:
-            self.log.info('Working on MC for SEGMENTS.')
-        else:
-            self.log.info('Working on MC for MODES.')
         self.n_repeat = n_repeat
         self.c_target = c_target
-        self.log.info(f'Target contrast: {c_target}')
-        self.log.info(f'Will run {n_repeat} iterations.')
 
         # Read PASTIS matrix, modes and mode/segment weights from file
+        self.pastis_results_path = pastis_results_path
         if self.segments:
-            self.segment_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'segment_requirements_{c_target}.txt'))
+            self.segment_weights = np.loadtxt(os.path.join(self.pastis_results_path, 'results', f'segment_requirements_{self.c_target}.txt'))
             self.segment_weights *= u.nm
-            self.log.info(f'Segment weights read from {pastis_results_path}')
         else:
-            self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
-            self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
-            self.log.info(f'PASTIS modes and mode weights read from {pastis_results_path}')
+            self.pastis_modes, self.eigenvalues = modes_from_file(self.pastis_results_path)
+            self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{self.c_target}_uniform.txt'))
 
         self.measured_contrast = []
         self.random_weights = []
 
     def experiment(self):
+
+        # A couple of initial log messages
+        if self.segments:
+            self.log.info('Working on MC for SEGMENTS.')
+            self.log.info(f'Segment weights read from {self.pastis_results_path}')
+        else:
+            self.log.info('Working on MC for MODES.')
+            self.log.info(f'PASTIS modes and mode weights read from {self.pastis_results_path}')
+        self.log.info(f'Target contrast: {self.c_target}')
+        self.log.info(f'Will run {self.n_repeat} iterations.')
 
         # Access devices for reference images
         devices = testbed_state.devices.copy()

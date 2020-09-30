@@ -46,15 +46,12 @@ class PastisHockeyStick(PastisExperiment):
 
         self.rms_range = rms_range
         self.no_realizations = no_realizations
-        self.log.info(f'Number of rms values tested: {rms_range.shape[0]}')
-        self.log.info(f'Number of realizations per rms value: {no_realizations}')
+        self.pastis_matrix_path = pastis_matrix_path
 
         # Read PASTIS matrix from file
         try:
-            self.pastis_matrix = fits.getdata(os.path.join(pastis_matrix_path))
-            self.log.info(f'PASTIS matrix read from {pastis_matrix_path}')
+            self.pastis_matrix = fits.getdata(os.path.join(self.pastis_matrix_path))
         except FileNotFoundError:
-            self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')
             self.pastis_matrix = None
 
         self.measured_contrast = np.zeros((self.rms_range.shape[0], self.no_realizations))
@@ -64,6 +61,14 @@ class PastisHockeyStick(PastisExperiment):
         self.pastis_mean_over_realizations = []
 
     def experiment(self):
+
+        # A couple of initial log messages
+        self.log.info(f'Number of rms values tested: {self.rms_range.shape[0]}')
+        self.log.info(f'Number of realizations per rms value: {self.no_realizations}')
+        if self.pastis_matrix:
+            self.log.info(f'PASTIS matrix read from {self.pastis_matrix_path}')
+        else:
+            self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')
 
         # Access devices for reference images
         devices = testbed_state.devices.copy()

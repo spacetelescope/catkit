@@ -63,15 +63,15 @@ class PastisExperiment(HicatExperiment):
         self.nb_seg = 37
         self.seglist = pastis.util.get_segment_list('HiCAT')
         self.wvln = 640    # nm
-        self.log.info(f'Number of segments: {self.nb_seg}')
-        self.log.info(f'Segment list: {self.seglist}')
+        self.log.info(f'Number of segments: {self.nb_seg}')    # TODO: this is not being saved to .log file, because we're in the __init__()
+        self.log.info(f'Segment list: {self.seglist}')    # TODO: this is not being saved to .log file, because we're in the __init__()
 
         # Read DM commands, treated as part of the coronagraph
         self.dm1_actuators, self.dm2_actuators = pastis_functions.read_dm_commands(self.dm_map_path)
 
         # Read dark zone geometry
         with fits.open(probe_filename) as probe_info:
-            self.log.info("Loading Dark Zone geometry from {}".format(probe_filename))
+            self.log.info("Loading Dark Zone geometry from {}".format(probe_filename))    # TODO: this is not being saved to .log file, because we're in the __init__()
             self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(), stroke_min.focal_grid)
 
             self.dz_rin = probe_info[0].header.get('DZ_RIN', '?')
