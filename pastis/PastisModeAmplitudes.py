@@ -83,12 +83,12 @@ class PastisModeAmplitudes(PastisExperiment):
         iris_dm = pastis_functions.IrisAO()
 
         # Loop over all WFE amplitudes
-        for i in range(self.wfe_amplitudes.shape[0]):
-            self.log.info(f'Applying scaling of {i}nm rms')
-            initial_path = os.path.join(self.output_path, f'wfe_{i}nm')
+        for i, wfe in enumerate(self.wfe_amplitudes):
+            self.log.info(f'Applying scaling of {wfe}nm rms')
+            initial_path = os.path.join(self.output_path, f'wfe_{wfe}nm')
 
             # Multiply mode by its mode weight (according to target contrast), and scale by extra WFE amplitude
-            opd = self.pastis_modes[:, self.mode_number] * self.mode_weights[self.mode_number] * self.wfe_amplitudes[i]
+            opd = self.pastis_modes[:, self.mode_number] * self.mode_weights[self.mode_number] * wfe
             opd *= u.nm  # the PASTIS package is currently set up to spit out the modes in units of nm
 
             # Convert this to IrisAO command - a list of 37 tuples of 3 (PTT)
