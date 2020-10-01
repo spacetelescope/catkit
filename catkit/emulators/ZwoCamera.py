@@ -25,7 +25,8 @@ class PoppyZwoEmulator(ZwoASI):
     implemented_camera_purposes = ("imaging_camera",
                                    "phase_retrieval_camera",
                                    "pupil_camera",
-                                   "target_acquisition_camera")
+                                   "target_acquisition_camera",
+                                   "zernike_wfs_camera")
 
     @classmethod
     def get_camera_mappings(cls):
@@ -158,7 +159,7 @@ class PoppyZwoEmulator(ZwoASI):
         elif self.camera_purpose == 'phase_retrieval_camera':
             hicat.simulators.optics_simulator.detector = 'pr_camera'
             self.photometry_config_key = 'total_prcam_direct_photometry_cts_per_microsec'
-        elif self.camera_purpose == 'zernike_camera':
+        elif self.camera_purpose == 'zernike_wfs_camera':
             hicat.simulators.optics_simulator.detector = 'zernike_wfs_camera'
             self.photometry_config_key = 'total_zernike_direct_photometry_cts_per_microsec'
         else:
