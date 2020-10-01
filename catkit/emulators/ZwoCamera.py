@@ -124,6 +124,26 @@ class PoppyZwoEmulator(ZwoASI):
     def set_image_type(self, image_type):
         self.image_type = image_type
 
+    @staticmethod
+    def reuse_psf(pre_call_reuse, post_call_reuse):
+        def decorator(func):
+            def wrapper(self, *args, **kwargs):
+                # Simulation of multiple noisy exposures can take a shortcut, only performing the optical
+                # propagation sim once, and then just adding different noise realizations each subsequent time.
+                # To have this work properly, we have to flag here that the images after the first should
+                # reuse the prior fourier optics sim.
+
+                if pre_call_reuse is not None:
+                    self._reuse_cached_psf_prior_to_adding_noise = pre_call_reuse
+                ret = func(self, *args, **kwargs)
+                if post_call_reuse is not None:
+                    self._reuse_cached_psf_prior_to_adding_noise = post_call_reuse
+
+                return ret
+            return wrapper
+        return decorator
+
+    @reuse_psf.__func__(pre_call_reuse=None, post_call_reuse=True)
     def capture(self, initial_sleep=0.01, poll=0.01, buffer=None, filename=None):
         """ Get a simulated image capture from the simulator """
         if self.camera_purpose == 'imaging_camera':
@@ -228,3 +248,17 @@ class ZwoCamera(SimInstrument,  catkit.hardware.zwo.ZwoCamera.ZwoCamera):
     @classmethod
     def load_asi_lib(cls):
         pass
+
+    @PoppyZwoEmulator.reuse_psf(pre_call_reuse=False, post_call_reuse=False)
+    def just_take_exposures(self, exposure_time, num_exposures,
+                            extra_metadata=None,
+                            subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
+                            bins=None):
+        return super().just_take_exposures(exposure_time=exposure_time,
+                                           num_exposures=num_exposures,
+                                           extra_metadata=extra_metadata,
+                                           subarray_x=subarray_x, subarray_y=subarray_y,
+                                           width=width, height=height,
+                                           gain=gain,
+                                           full_image=full_image,
+                                           bins=bins)
