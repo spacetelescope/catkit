@@ -549,7 +549,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         """ Initialize the DM actuator commands.  This is called in __init__()."""
         # Same as regular function except expected jacobian filenames in a list and only checks the first one
         if self.resume:
-            dm1_actuators, dm2_actuators = wfsc_utils.load_dm_commands(
+            dm1_actuators, dm2_actuators = wfsc_utils.load_dm_commands_from_experiment(
                 self.dm_command_dir_to_restore,
                 self.suffix,
                 min_iterations_to_resume=10

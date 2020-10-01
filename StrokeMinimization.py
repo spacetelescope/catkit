@@ -202,7 +202,7 @@ class StrokeMinimization(HicatExperiment):
     def get_initial_dm_commands(self):
         """ Initialize the DM actuator commands.  This is called in __init__()."""
         if self.resume:
-            dm1_actuators, dm2_actuators = wfsc_utils.load_dm_commands(
+            dm1_actuators, dm2_actuators = wfsc_utils.load_dm_commands_from_experiment(
                 self.dm_command_dir_to_restore,
                 self.suffix,
                 min_iterations_to_resume=10
