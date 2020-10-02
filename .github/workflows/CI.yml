@@ -93,7 +93,7 @@ jobs:
         conda env update --name ci-env --file environment2.yml
         conda activate ci-env
         python setup.py develop
-        cd ../instrument-interface-library
+        cd ../catkit
         python setup.py develop
       shell: bash -l {0}
     - name: Test with pytest
@@ -135,7 +135,7 @@ jobs:
         conda env update --name ci-env --file environment2.yml
         conda activate ci-env
         python setup.py develop
-        cd ../instrument-interface-library
+        cd ../catkit
         python setup.py develop
       shell: bash -l {0}
     - name: Test with pytest

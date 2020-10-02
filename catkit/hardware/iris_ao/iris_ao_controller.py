@@ -24,7 +24,7 @@ class IrisAoDmController(DeformableMirrorController):
     will load the PTT values in the file specified with the variable filename_ptt_dm.
 
     Further details can be found in the linked PDF in this comment on GitHub:
-    https://github.com/spacetelescope/instrument-interface-library/pull/71#discussion_r466536405
+    https://github.com/spacetelescope/catkit/pull/71#discussion_r466536405
     """
 
     instrument_lib = subprocess
