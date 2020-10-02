@@ -47,4 +47,3 @@ class ZWFSStaticTest(HicatExperiment):
                                                        differential=True, dm1_shape=f_shape)
 
         zernike_sensor.save_list(zopd, 'ZWFS_F_opd_differential', self.output_path)
-
