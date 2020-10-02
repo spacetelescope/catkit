@@ -8,7 +8,7 @@ from hicat.hardware import testbed_state
 from hicat.hardware.testbed import move_filter
 
 
-class TakeReferenceImages(Experiment):
+class TakeCenteringReferenceImages(Experiment):
     name = 'Take Reference Images'
 
     def __init__(self,
