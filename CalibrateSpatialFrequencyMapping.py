@@ -11,7 +11,7 @@ from skimage.feature import register_translation  # WARNING! Deprecated in skima
 from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import HicatExperiment  # noqa: E402
 from hicat.hardware import testbed, testbed_state  # noqa: E402
-from hicat.wfc_algorithms import stroke_min
+from hicat.wfc_algorithms import wfsc_utils
 
 
 def compute_centroid(image):
@@ -361,7 +361,7 @@ class CalibrateSpatialFrequencyMapping(HicatExperiment):
         self.run_ta = run_ta
 
         # These don't affect the imaging wavelength at all; they are just passed into the
-        # take_exposure_hicat() function from stroke_min.py, which uses it to generate
+        # take_exposure_hicat() function from wfsc_utils.py, which uses it to generate
         # directory names
         if CONFIG_INI['testbed']['laser_source'] == 'light_source_assembly':
             self.wavelength = 640  # center wavelength of LSA source, nm
@@ -391,7 +391,7 @@ class CalibrateSpatialFrequencyMapping(HicatExperiment):
         :return: numpy array and header
         """
 
-        image, header = stroke_min.take_exposure_hicat(
+        image, header = wfsc_utils.take_exposure_hicat(
             dm1_actuators,
             dm2_actuators,
             devices,
@@ -432,7 +432,7 @@ class CalibrateSpatialFrequencyMapping(HicatExperiment):
         # Get cached devices, etc, that were instantiated (and connections opened) in HicatExperiment.pre_experiment().
         devices = testbed_state.devices.copy()
 
-        num_actuators = stroke_min.dm_mask.sum()
+        num_actuators = wfsc_utils.dm_mask.sum()
         flat = np.zeros(num_actuators)  # Flat DM command
 
         # Reference image with no injected speckles
@@ -471,8 +471,8 @@ class CalibrateSpatialFrequencyMapping(HicatExperiment):
                     self.log.info(f"Applying sine wave on DM{dm_num} at angle {theta} with "
                                   f"{R} cycles/DM.")
                     sine = sign * amplitude * np.sin(2 * np.pi * R * (
-                            np.cos(theta) * stroke_min.actuator_grid.x +
-                            np.sin(theta) * stroke_min.actuator_grid.y))[stroke_min.dm_mask]
+                            np.cos(theta) * wfsc_utils.actuator_grid.x +
+                            np.sin(theta) * wfsc_utils.actuator_grid.y))[wfsc_utils.dm_mask]
 
                     initial_path = os.path.join(self.output_path,
                                                 f"dm{dm_num}_cycle_{R:0.3f}_ang_{theta:0.3f}")
