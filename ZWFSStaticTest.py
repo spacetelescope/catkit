@@ -3,7 +3,7 @@ from hicat.control import zwfs
 import logging
 
 
-class TakeSingleZWFSAcquisition(HicatExperiment):
+class ZWFSStaticTest(HicatExperiment):
     name = "Take ZWFS single measurement"
     log = logging.getLogger(__name__)
 
@@ -22,10 +22,12 @@ class TakeSingleZWFSAcquisition(HicatExperiment):
         :param filename: (str) name of the file saved on disk
         """
 
-        super().__init__(run_ta=run_ta, align_lyot_stop=align_lyot_stop)
+        super().__init__()
         self.filename = filename
         self.wave = wave
         self.instrument = instrument
+        self.align_lyot_stop = align_lyot_stop
+        self.run_ta = run_ta
 
     def experiment(self):
 
