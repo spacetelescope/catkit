@@ -79,7 +79,7 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
         cmap =  plt.cm.get_cmap('viridis')
         cmap.set_bad(cmap(0))    # any negative / NaN pixels should be shown as the bottom color, not as white
         im = ax.imshow(data, norm=LogNorm(vmax=data.max(), vmin=data.max()/1e5), origin='lower')
-        apertures.plot(color='red', lw=1.5, alpha=1, ax=ax)
+        apertures.plot(color='red', lw=1.5, alpha=1, axes=ax)
         ax.text(sources['xcentroid'][0]+10, sources['ycentroid'][0], f"{phot_table['aperture_sum'][0]:.4g} counts/$\mu$s", color='pink')
         plt.colorbar(im, ax=ax, fraction=0.1, pad=0.01)
 
