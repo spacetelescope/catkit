@@ -239,7 +239,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
         """
         Take an exposure on HiCAT.  This function binds some parameters to the general-purpose
-        wfsc_utils.take_exposure_hicat_broadband() using object attributes.
+        wfsc_utils.take_exposure_hicat_with_filters() using object attributes.
 
         :param devices: handles to HiCAT hardware
         :param exposure_type: 'coron' or 'direct'
@@ -269,7 +269,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         else:
             nd_filter = self.nd_direct[wavelength]
 
-        return wfsc_utils.take_exposure_hicat_broadband(
+        return wfsc_utils.take_exposure_hicat_with_filters(
             dm1_actuators,
             dm2_actuators,
             devices,
