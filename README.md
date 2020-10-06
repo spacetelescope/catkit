@@ -11,8 +11,8 @@ for the HiCAT testbed and make something less specific to our experiments.
 
 ### Install catkit dependencies
  * cd catkit
- * conda env update --name <env-name> --file environment.yml
- * conda activate <env-name>
+ * conda env update --name \<env-name\> --file environment.yml
+ * conda activate \<env-name\>
 
 ### Install catkit in editable mode
  * python setup.py develop
