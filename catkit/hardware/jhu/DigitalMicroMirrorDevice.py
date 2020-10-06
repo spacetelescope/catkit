@@ -66,7 +66,11 @@ class DigitalMicroMirrorDevice(DeformableMirrorController):
         # Connection is reset every ~10 seconds
         instrument = self.instrument_lib.socket(self.instrument_lib.AF_INET, self.instrument_lib.SOCK_STREAM)
         instrument.connect((self.address, self.port))
-        
+
+        # If we get this far, a connection has been successfully opened.
+        # Set self.instrument so that we can close if anything here subsequently fails.
+        self.instrument = instrument
+
         # Send a test message to make sure this worked 
         instrument.sendall(':TEST\n')
         response = instrument.recv(20)
@@ -78,8 +82,8 @@ class DigitalMicroMirrorDevice(DeformableMirrorController):
             self.apply_whiteout()
      
     def _close(self):
-        pass
-    
+        self.instrument.close()
+
     @property
     def shapes(self):
         """ Make a property so our core shapes are indeditable."""
