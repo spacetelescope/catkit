@@ -12,13 +12,15 @@ class FluxCalibration(Experiment):
                  wavelengths=(620, 640, 660)):
         """Flux Calibration Experiment
 
-        This runs the flux calibration / flux attenuation measurement, and nothing else.
+        This runs the flux calibration / flux attenuation measurement, to determine:
+            1. The attenuation factor (product of ND filter transmission and fiber coupling efficiency) in each
+               wavelength of interest.
+            2. The total flux of the laser in each wavelength of interest, in an unocculted direct image.
 
-        :param num_exp:
-        :param wavelengths:
+        :param num_exp: number of exposures to use at each wavelength.
+        :param wavelengths: iterable of wavelengths in nm for which to perform this measurement.
         """
         super().__init__()
-        wavelengths = (640,)
 
         self.file_mode = True
         self.num_exposures = num_exp

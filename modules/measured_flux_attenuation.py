@@ -170,6 +170,10 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
     # Read filter info
     color_filter_coron, nd_filter_coron = coron_header['FILTERS'].split(',')
     color_filter_direct, nd_filter_direct = direct_header['FILTERS'].split(',')
+    if color_filter_coron.endswith('nm'):
+        wavelen = int(color_filter_coron.split('_')[1][0:3])  # wavelen in nanometers
+    else:
+        raise ValueError(f"Don't know how to infer wavelength for filter name {color_filter_coron}.")
 
     if unsaturated_data is not None:
         unsat_direct_img, unsat_direct_header = hicat.util.unpack_image_data(unsaturated_data)
@@ -211,7 +215,7 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
     # Calculate flux attenuation factor
     attenuation_factor = coron_countrate / direct_countrate  # type: float
 
-    hicat.calibration_util.record_calibration_measurement(f"Flux attenuation factor {wvln} nm", attenuate[wvln],
+    hicat.calibration_util.record_calibration_measurement(f"Flux attenuation factor {wavelen} nm", attenuation_factor,
                                                           'dimensionless', datapath=out_path,
                                                           comment=apodizer)
 
@@ -230,7 +234,7 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
         totalcounts =unsat_direct_img.sum() *attenuation_factor
         axes[2].text(0.05, 0.1, f"Inferred count rate without ND:\t{totalcounts:.4g} counts/$\mu$s", color='white',
                      transform=axes[2].transAxes)
-        hicat.calibration_util.record_calibration_measurement(f"Total direct photometry {wvln} nm", attenuate[wvln],
+        hicat.calibration_util.record_calibration_measurement(f"Total direct photometry {wavelen} nm", totalcounts,
                                                               'counts/microsec', datapath=out_path,
                                                               comment=apodizer)
     for ax in axes:
