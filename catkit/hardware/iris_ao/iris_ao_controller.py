@@ -29,8 +29,13 @@ class IrisAoDmController(DeformableMirrorController):
 
     instrument_lib = subprocess
 
-    def initialize(self, mirror_serial, driver_serial, disable_hardware, path_to_dm_exe,
-                   filename_ptt_dm):
+    def initialize(self,
+                   mirror_serial,
+                   driver_serial,
+                   disable_hardware,
+                   path_to_dm_exe,
+                   filename_ptt_dm,
+                   path_to_ini_files=None):
         """
         Initialize dm manufacturer specific object - this does not, nor should it, open a
         connection.
@@ -43,6 +48,7 @@ class IrisAoDmController(DeformableMirrorController):
         :param path_to_dm_exe: string, The path to the local directory that houses the DM_Control.exe file.
         :param filename_ptt_dm: string, Full path including filename of the ini file that provides the PTT values to be
                                 loaded onto the hardware, e.g. ".../ConfigPTT.ini".
+        :param path_to_ini_files: string, Full path to mirror .ini files.
         """
 
         self.log.info("Opening IrisAO connection")
@@ -56,6 +62,7 @@ class IrisAoDmController(DeformableMirrorController):
         self.disable_hardware = disable_hardware
         self.path_to_dm_exe = path_to_dm_exe
         self.full_path_dm_exe = os.path.join(path_to_dm_exe, 'DM_Control.exe')
+        self.path_to_ini_files = path_to_ini_files
 
         # Where to write ConfigPTT.ini file that gets read by the C++ code
         self.filename_ptt_dm = filename_ptt_dm
@@ -79,7 +86,11 @@ class IrisAoDmController(DeformableMirrorController):
 
     def _open(self):
         """Open a connection to the IrisAO"""
-        self.instrument = self.instrument_lib.Popen([self.full_path_dm_exe, self.disable_hardware],
+        cmd = [self.full_path_dm_exe, self.disable_hardware]
+        if self.path_to_ini_files:
+            cmd.append(self.path_to_ini_files)
+
+        self.instrument = self.instrument_lib.Popen(cmd,
                                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                                     stderr=subprocess.PIPE,
                                                     cwd=self.path_to_dm_exe, bufsize=1)
