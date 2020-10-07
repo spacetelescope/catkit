@@ -9,7 +9,8 @@ class FluxCalibration(Experiment):
     name = 'Flux Calibration'
 
     def __init__(self, num_exp=20,
-                 wavelengths=(620, 640, 660)):
+                 wavelengths=(620, 640, 660,),
+                 short_exposure_time=2000):
         """Flux Calibration Experiment
 
         This runs the flux calibration / flux attenuation measurement, to determine:
@@ -19,6 +20,7 @@ class FluxCalibration(Experiment):
 
         :param num_exp: number of exposures to use at each wavelength.
         :param wavelengths: iterable of wavelengths in nm for which to perform this measurement.
+        :param short_exposure_time: float, exp time in microset to use for the short unsaturated direct exposures
         """
         super().__init__()
 
@@ -36,6 +38,7 @@ class FluxCalibration(Experiment):
         self.dm1_actuators = np.zeros(wfsc_utils.num_actuators)
         self.dm2_actuators = np.zeros(wfsc_utils.num_actuators)
 
+        self.short_exposure_time = short_exposure_time
 
 
     def experiment(self):
@@ -67,7 +70,8 @@ class FluxCalibration(Experiment):
                                                                      dm2_act=self.dm2_actuators,
                                                                      num_exp=self.num_exposures,
                                                                      file_mode=self.file_mode,
-                                                                     raw_skip=self.raw_skip)
+                                                                     raw_skip=self.raw_skip,
+                                                                     exp_time_unsaturated=self.short_exposure_time)
 
             self.log.info(f"Flux calibration measurement complete.")
 

@@ -13,6 +13,7 @@ from photutils import CircularAperture
 from photutils import DAOStarFinder
 
 import hicat.util
+from hicat.hardware import testbed_state
 log = logging.getLogger(__name__)
 
 
