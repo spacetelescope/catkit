@@ -2,7 +2,7 @@ import numpy as np
 
 from hicat.experiments.Experiment import Experiment
 import hicat.hardware.testbed as testbed
-from hicat.wfc_algorithms import stroke_min
+from hicat.wfc_algorithms import wfsc_utils
 
 
 class FluxCalibration(Experiment):
@@ -33,8 +33,8 @@ class FluxCalibration(Experiment):
         self.nd_coron = {wavelength: 'clear_1' for wavelength in wavelengths}
 
         # Flat DMs suffice for this
-        self.dm1_actuators = np.zeros(stroke_min.num_actuators)
-        self.dm2_actuators = np.zeros(stroke_min.num_actuators)
+        self.dm1_actuators = np.zeros(wfsc_utils.num_actuators)
+        self.dm2_actuators = np.zeros(wfsc_utils.num_actuators)
 
 
 
@@ -58,7 +58,7 @@ class FluxCalibration(Experiment):
 
             self.log.info(f"Measuring flux calibration for wavelengths: {self.wavelengths}")
             # Calculate flux attenuation factor between direct+ND and coronagraphic images
-            flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=self.wavelengths,
+            flux_norm_dir = wfsc_utils.capture_flux_attenuation_data(wavelengths=self.wavelengths,
                                                                      out_path=self.output_path,
                                                                      nd_direct=self.nd_direct,
                                                                      nd_coron=self.nd_coron,

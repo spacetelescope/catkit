@@ -193,7 +193,7 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
     axes[0].text(0.05, 0.05, f"exp_time = {coron_header['EXP_TIME']:.1f} $\mu$s", color='white', transform=axes[0].transAxes)
     axes[1].text(0.05, 0.05, f"exp_time = {direct_header['EXP_TIME']:.1f} $\mu$s", color='white', transform=axes[1].transAxes)
     axes[0].set_title(f"Coron, with {nd_filter_coron}")
-    axes[1].set_title(f"Direct, with {nd_filter_direct}")
+    axes[1].set_title(f"Coron, with {nd_filter_direct}")
 
 
     if len(coron_table) != 1:
@@ -225,7 +225,7 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
         # Also plot the unsaturated data as a third panel, and use it to work out the brightness of the laser source.
         _ = photometry_func(data=unsat_direct_img, im_type=f'unsat-direct-{nd_filter_direct}-{color_filter_direct}',
                             output_path=out_path, ax=axes[2])
-        axes[2].set_title(f"Direct, short exposure unsaturated")
+        axes[2].set_title(f"Direct, with {nd_filter_direct}, short exposure unsaturated")
         axes[2].text(0.05, 0.05, f"exp_time = {unsat_direct_header['EXP_TIME']:.1f} $\mu$s", color='white',
                      transform=axes[2].transAxes)
         axes[2].text(0.05, 0.15, f"Total count rate:\t\t\t\t{unsat_direct_img.sum():.4g} counts/$\mu$s",
@@ -241,6 +241,10 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
         ax.xaxis.set_visible(False)
         ax.yaxis.set_visible(False)
     fig.suptitle(f"Flux calibration for {color_filter_coron}:\nAttenuation factor = {attenuation_factor:.3f} / ND throughput = {1/attenuation_factor:.4f}", fontweight='bold')
+
+    if testbed_state.simulation:
+        sim_nd = int(nd_filter_direct.split('_')[1])/100
+        fig.text(0.90, 0.95, f"SIMULATION; sim ND throughput = {sim_nd:.4f}", fontweight='bold', color='red', horizontalalignment='right')
 
     fig.savefig(os.path.join(out_path, f'photometry-{color_filter_coron}.pdf'), dpi=100, bbox_inches='tight')
 
