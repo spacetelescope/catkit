@@ -10,7 +10,7 @@ from hicat.experiments.Experiment import HicatExperiment
 from hicat.experiments.modules import pastis_functions
 from hicat.hardware import testbed_state
 from hicat.hardware.testbed import move_filter
-from hicat.wfc_algorithms import stroke_min
+from hicat.wfc_algorithms import wfsc_utils
 
 import pastis.util
 
@@ -72,7 +72,7 @@ class PastisExperiment(HicatExperiment):
         # Read dark zone geometry
         with fits.open(probe_filename) as probe_info:
             self.log.info("Loading Dark Zone geometry from {}".format(probe_filename))    # TODO: this is not being saved to .log file, because we're in the __init__()
-            self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(), stroke_min.focal_grid)
+            self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(), wfsc_utils.focal_grid)
 
             self.dz_rin = probe_info[0].header.get('DZ_RIN', '?')
             self.dz_rout = probe_info[0].header.get('DZ_ROUT', '?')
@@ -80,7 +80,7 @@ class PastisExperiment(HicatExperiment):
     def run_flux_normalization(self, devices):
 
         # Calculate flux attenuation factor between direct+ND and coronagraphic images
-        self.flux_norm_dir = stroke_min.capture_flux_attenuation_data(wavelengths=[self.wvln],
+        self.flux_norm_dir = wfsc_utils.capture_flux_attenuation_data(wavelengths=[self.wvln],
                                                                       out_path=self.output_path,
                                                                       nd_direct={self.wvln: self.nd_direct},
                                                                       nd_coron={self.wvln: self.nd_coron},
@@ -132,7 +132,7 @@ class PastisExperiment(HicatExperiment):
 
             move_filter(wavelength=int(np.rint(wavelength)), nd=nd_filter_set[wavelength], devices=devices)
 
-        image, header = stroke_min.take_exposure_hicat(
+        image, header = wfsc_utils.take_exposure_hicat(
             dm1_actuators, dm2_actuators, devices, wavelength=wavelength,
             exposure_type=exposure_type, exposure_time=exposure_time, auto_expose=auto_expose,
             initial_path=initial_path, num_exposures=self.num_exposures, suffix=suffix,
