@@ -67,7 +67,7 @@ class PastisExperiment(HicatExperiment):
         self.log.info(f'Segment list: {self.seglist}')    # TODO: this is not being saved to .log file, because we're in the __init__()
 
         # Read DM commands, treated as part of the coronagraph
-        self.dm1_actuators, self.dm2_actuators = pastis_functions.read_dm_commands(self.dm_map_path)
+        self.dm1_actuators, self.dm2_actuators = wfsc_utils.load_dm_commands(self.dm_map_path)
 
         # Read dark zone geometry
         with fits.open(probe_filename) as probe_info:
