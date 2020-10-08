@@ -304,7 +304,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         ta_controller = testbed_state.cache["ta_controller"]
 
         # Calculate flux attenuation factor between direct+ND and coronagraphic images
-        flux_norm_dir = wfsc_utils.capture_flux_attenuation_data(wavelengths=self.wavelengths,
+        flux_calibration = wfsc_utils.capture_flux_attenuation_data(wavelengths=self.wavelengths,
                                                                  out_path=self.output_path,
                                                                  nd_direct=self.nd_direct,
                                                                  nd_coron=self.nd_coron,
@@ -334,7 +334,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         # Note, switching direct<->coron is much slower than filter wheel changes, so
         # for efficiency we should change the FPM position the minimum number of times
         for wavelength in self.wavelengths:
-            images_direct[wavelength], _ = self.take_exposure(devices, 'direct', wavelength, initial_path, flux_norm_dir[wavelength])
+            images_direct[wavelength], _ = self.take_exposure(devices, 'direct', wavelength, initial_path, flux_calibration[wavelength])
             direct_maxes[wavelength] = images_direct[wavelength].max()
 
         for wavelength in self.wavelengths:
@@ -486,7 +486,7 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 self.log.info('Taking direct images for comparison...')
 
                 for wavelength in self.wavelengths:
-                    images_direct[wavelength], _ = self.take_exposure(devices, 'direct', wavelength, initial_path, flux_norm_dir[wavelength])
+                    images_direct[wavelength], _ = self.take_exposure(devices, 'direct', wavelength, initial_path, flux_calibration[wavelength])
                     direct_maxes[wavelength] = images_direct[wavelength].max()
 
             self.log.info('Taking post-correction coronagraphic images...')

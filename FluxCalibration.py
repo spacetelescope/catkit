@@ -61,7 +61,7 @@ class FluxCalibration(Experiment):
 
             self.log.info(f"Measuring flux calibration for wavelengths: {self.wavelengths}")
             # Calculate flux attenuation factor between direct+ND and coronagraphic images
-            flux_norm_dir = wfsc_utils.capture_flux_attenuation_data(wavelengths=self.wavelengths,
+            flux_calibration = wfsc_utils.capture_flux_attenuation_data(wavelengths=self.wavelengths,
                                                                      out_path=self.output_path,
                                                                      nd_direct=self.nd_direct,
                                                                      nd_coron=self.nd_coron,
