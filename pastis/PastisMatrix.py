@@ -67,7 +67,7 @@ class PastisMatrix(PastisExperiment):
         self.log.info(
             f'Non-repeating pairs in HiCAT pupil calculated here: {len(list(pastis.util.segment_pairs_non_repeating(self.nb_seg)))}')
 
-        # Access devices for reference images
+        # Access testbed devices
         devices = testbed_state.devices.copy()
 
         # Run flux normalization

@@ -64,7 +64,7 @@ class PastisModeAmplitudes(PastisExperiment):
         self.log.info(f'WFE amplitudes used for scaling: {self.wfe_amplitudes}')
         self.log.info(f'PASTIS modes and mode weights read from {self.pastis_results_path}')
 
-        # Access devices for reference images
+        # Access testbed devices
         devices = testbed_state.devices.copy()
 
         # Run flux normalization

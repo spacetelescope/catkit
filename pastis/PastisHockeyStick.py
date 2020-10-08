@@ -70,7 +70,7 @@ class PastisHockeyStick(PastisExperiment):
         else:
             self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')
 
-        # Access devices for reference images
+        # Access testbed devices
         devices = testbed_state.devices.copy()
 
         # Run flux normalization

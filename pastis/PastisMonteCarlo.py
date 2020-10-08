@@ -75,7 +75,7 @@ class PastisMonteCarlo(PastisExperiment):
         self.log.info(f'Target contrast: {self.c_target}')
         self.log.info(f'Will run {self.n_repeat} iterations.')
 
-        # Access devices for reference images
+        # Access testbed devices
         devices = testbed_state.devices.copy()
 
         # Run flux normalization
