@@ -1,6 +1,7 @@
 """Interface for IrisAO segmented deformable mirror controller."""
 
 import os
+import signal
 import subprocess
 import  time
 
@@ -97,7 +98,7 @@ class IrisAoDmController(DeformableMirrorController):
                                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                                     stderr=subprocess.PIPE,
                                                     cwd=self.path_to_dm_exe, bufsize=1)
-        time.sleep(2)
+        time.sleep(1)
 
         # Initialize the Iris to zeros.
         zeros = self.zero(return_zeros=True)
@@ -127,13 +128,12 @@ class IrisAoDmController(DeformableMirrorController):
         """Close connection safely."""
         try:
             self.log.info('Closing Iris AO.')
-            # Set IrisAO to zero
-            self.zero()
-            self.instrument.stdin.write(b'quit\n')
-            self.instrument.stdin.close()
-        except Exception:
-            self.log.exception(f"{self.config_id}: Error occurred during close.")
-            self.instrument.terminate()
+            # Since sending "quit" kills the proc a race condition exits between it quiting and a close() as it may
+            # exit before close() is called and thus cause close() to raise. This can even be true for an explicit call
+            # to stdin.flush() if the write buffer auto flushes.
+            # The above can leave the device hanging and unreachable. The safest option is to send the following signal
+            # which is gracefully handled on the C++ side.
+            self.instrument.send_signal(signal.CTRL_C_EVENT)
         finally:
             self.instrument = None
             self._close_iris_controller_testbed_state()
