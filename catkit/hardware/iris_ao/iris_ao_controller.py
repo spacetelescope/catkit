@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import  time
 
 from catkit.hardware import testbed_state
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
@@ -94,6 +95,8 @@ class IrisAoDmController(DeformableMirrorController):
                                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                                     stderr=subprocess.PIPE,
                                                     cwd=self.path_to_dm_exe, bufsize=1)
+        time.sleep(2)
+
         # Initialize the Iris to zeros.
         zeros = self.zero(return_zeros=True)
 
@@ -126,6 +129,9 @@ class IrisAoDmController(DeformableMirrorController):
             self.zero()
             self.instrument.stdin.write(b'quit\n')
             self.instrument.stdin.close()
+        except Exception:
+            self.log.exception(f"{self.config_id}: Error occurred during close.")
+            self.instrument.terminate()
         finally:
             self.instrument = None
             self._close_iris_controller_testbed_state()
