@@ -90,6 +90,8 @@ class IrisAoDmController(DeformableMirrorController):
         cmd = [self.full_path_dm_exe, self.disable_hardware]
         if self.path_to_ini_files:
             cmd.append(self.path_to_ini_files)
+        if self.filename_ptt_dm:
+            cmd.append(self.filename_ptt_dm)
 
         self.instrument = self.instrument_lib.Popen(cmd,
                                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
