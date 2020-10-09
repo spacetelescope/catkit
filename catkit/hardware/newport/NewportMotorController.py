@@ -35,7 +35,7 @@ class NewportMotorController(MotorController):
         # Connect to a socket on the controller server.
         socket_id = myxps.TCP_ConnectToServer(ip_address, port, timeout)
 
-        if self.socket_id == -1:
+        if socket_id == -1:
             self.log.error("Invalid socket")
             raise Exception("Connection to XPS failed, check IP & Port")
 
