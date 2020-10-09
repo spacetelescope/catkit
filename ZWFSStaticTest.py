@@ -3,7 +3,6 @@ from hicat.control import zwfs
 import logging
 
 import numpy as np
-from astropy.io import fits
 
 class ZWFSStaticTest(HicatExperiment):
     name = "Take ZWFS static test"
