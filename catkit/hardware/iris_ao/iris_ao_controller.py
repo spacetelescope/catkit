@@ -1,7 +1,9 @@
 """Interface for IrisAO segmented deformable mirror controller."""
 
 import os
+import signal
 import subprocess
+import  time
 
 from catkit.hardware import testbed_state
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
@@ -29,8 +31,13 @@ class IrisAoDmController(DeformableMirrorController):
 
     instrument_lib = subprocess
 
-    def initialize(self, mirror_serial, driver_serial, disable_hardware, path_to_dm_exe,
-                   filename_ptt_dm):
+    def initialize(self,
+                   mirror_serial,
+                   driver_serial,
+                   disable_hardware,
+                   path_to_dm_exe,
+                   filename_ptt_dm,
+                   path_to_ini_files=None):
         """
         Initialize dm manufacturer specific object - this does not, nor should it, open a
         connection.
@@ -43,6 +50,7 @@ class IrisAoDmController(DeformableMirrorController):
         :param path_to_dm_exe: string, The path to the local directory that houses the DM_Control.exe file.
         :param filename_ptt_dm: string, Full path including filename of the ini file that provides the PTT values to be
                                 loaded onto the hardware, e.g. ".../ConfigPTT.ini".
+        :param path_to_ini_files: string, Full path to mirror .ini files.
         """
 
         self.log.info("Opening IrisAO connection")
@@ -56,6 +64,7 @@ class IrisAoDmController(DeformableMirrorController):
         self.disable_hardware = disable_hardware
         self.path_to_dm_exe = path_to_dm_exe
         self.full_path_dm_exe = os.path.join(path_to_dm_exe, 'DM_Control.exe')
+        self.path_to_ini_files = path_to_ini_files
 
         # Where to write ConfigPTT.ini file that gets read by the C++ code
         self.filename_ptt_dm = filename_ptt_dm
@@ -79,10 +88,18 @@ class IrisAoDmController(DeformableMirrorController):
 
     def _open(self):
         """Open a connection to the IrisAO"""
-        self.instrument = self.instrument_lib.Popen([self.full_path_dm_exe, self.disable_hardware],
+        cmd = [self.full_path_dm_exe, self.disable_hardware]
+        if self.path_to_ini_files:
+            cmd.append(self.path_to_ini_files)
+        if self.filename_ptt_dm:
+            cmd.append(self.filename_ptt_dm)
+
+        self.instrument = self.instrument_lib.Popen(cmd,
                                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                                     stderr=subprocess.PIPE,
                                                     cwd=self.path_to_dm_exe, bufsize=1)
+        time.sleep(1)
+
         # Initialize the Iris to zeros.
         zeros = self.zero(return_zeros=True)
 
@@ -111,10 +128,12 @@ class IrisAoDmController(DeformableMirrorController):
         """Close connection safely."""
         try:
             self.log.info('Closing Iris AO.')
-            # Set IrisAO to zero
-            self.zero()
-            self.instrument.stdin.write(b'quit\n')
-            self.instrument.stdin.close()
+            # Since sending "quit" kills the proc a race condition exits between it quiting and a close() as it may
+            # exit before close() is called and thus cause close() to raise. This can even be true for an explicit call
+            # to stdin.flush() if the write buffer auto flushes.
+            # The above can leave the device hanging and unreachable. The safest option is to send the following signal
+            # which is gracefully handled on the C++ side.
+            self.instrument.send_signal(signal.CTRL_C_EVENT)
         finally:
             self.instrument = None
             self._close_iris_controller_testbed_state()
