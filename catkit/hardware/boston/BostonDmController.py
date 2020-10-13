@@ -9,8 +9,11 @@ from catkit.interfaces.DeformableMirrorController import DeformableMirrorControl
 # BMC is Boston's library and it only works on windows.
 try:
     sdk_path = os.environ.get('CATKIT_BOSTON_SDK_PATH')
-    sys.path.append(sdk_path)
-    import bmc
+    if sdk_path is not None:
+        sys.path.append(sdk_path)
+        import bmc
+    else:
+        bmc = None
 except ImportError:
     bmc = None
 
