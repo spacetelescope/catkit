@@ -83,4 +83,5 @@ class TakeCenteringReferenceImages(Experiment):
                        exposure_set_name=self.exposure_set_name,
                        suffix=self.suffix,
                        auto_expose=self.auto_expose,
+                       centering=centering_method,
                        **self.kwargs)
