@@ -60,16 +60,16 @@ class ZWFSStaticTest(HicatExperiment):
 
        #  defocus map
 
-        diversity_focus_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/focus/"
-        diversity_focus_command_paths = glob(diversity_focus_data_path + self.diversity + "/*p2v/*.fits")
-        dm2_command_objects = []
-        for command in diversity_focus_command_paths:
-            dm2_command_objects.append = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2,as_volts=True)
+        #diversity_focus_data_path = "Z:/Testbeds/hicat_dev/data_vault/coffee/coffee_commands/dm2_commands/focus/"
+        #diversity_focus_command_paths = glob(diversity_focus_data_path + self.diversity + "/*p2v/*.fits")
+        #dm2_command_objects = []
+        #for command in diversity_focus_command_paths:
+        #    dm2_command_objects.append = DmCommand.load_dm_command(command, bias=False, flat_map=False, dm_num=2,as_volts=True)
 
         zernike_sensor.calibrate(output_path=self.output_path, filename='dm2_focus')
-        zopd_focus = zernike_sensor.perform_zwfs_measurement(self.wave, output_path=self.output_path,
-                                                             differential=False, dm2_shape=dm2_command_objects[0],
-                                                             dm_command=True)
+        #zopd_focus = zernike_sensor.perform_zwfs_measurement(self.wave, output_path=self.output_path,
+                                                             #differential=False, dm2_shape=dm2_command_objects[0],
+                                                             #dm_command=True)
 
-        zernike_sensor.save_list(zopd_focus, 'ZWFS_focus_opd', self.output_path)
+        #zernike_sensor.save_list(zopd_focus, 'ZWFS_focus_opd', self.output_path)
         zernike_sensor.save_list(zernike_sensor._clear_pupil, 'ZWFS_clear_pupil_defoc_dm2', self.output_path)
