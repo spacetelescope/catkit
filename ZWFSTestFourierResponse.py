@@ -50,9 +50,9 @@ class ZWFSTestFourierResponse(HicatExperiment):
 
         zernike_sensor = zwfs.ZWFS(self.instrument)
 
-        nb_freq = 20
-        freq_max = 20
-        freq_min = 0
+        nb_freq = 10
+        freq_max = 6
+        freq_min = 4
         freqx = np.linspace(freq_min, freq_max, nb_freq)
         freqy = np.linspace(freq_min, freq_max ,nb_freq)
         aamp = 1e-8
@@ -67,7 +67,7 @@ class ZWFSTestFourierResponse(HicatExperiment):
 
         for i, fx in enumerate(freqx):
             for j, fy in enumerate(freqy):
-                fourier_fun = fourier_ab(i, j)
+                fourier_fun = fourier_ab(fx, fy)
                 dm_shape = fourier_fun(dm_pup, aamp, bamp).reshape((34,34))
                 zopd = zernike_sensor.perform_zwfs_measurement(self.wave,
                                                                output_path=self.output_path,
@@ -87,7 +87,7 @@ class ZWFSTestFourierResponse(HicatExperiment):
 
         plt.figure(figsize=(20,10))
         plt.semilogy(freqx, ab_stack[0, :, 0])
-        plt.semilogy(freqy, ab_stack[:, 0, 1])
+        plt.semilogy(freqy, ab_stack[:, 0, 0])
         plt.xlabel('Spatial frequency (c/p)')
         plt.ylabel('Fitted coefficient')
         plt.legend(['x frequencies', 'y frequencies'])
