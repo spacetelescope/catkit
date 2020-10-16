@@ -50,7 +50,8 @@ class UpsSafetyTest(SafetyTest):
 
 class HumidityTemperatureTest(SafetyTest):
 
-    name = "Thorlabs Humidity and Temperature Sensor Safety Test"
+    temperature_humidity_sensor = CONFIG_INI.get("testbed", "safety_temperature_sensor")
+    name = f"{temperature_humidity_sensor} Humidity and Temperature Sensor Safety Test"
 
     min_humidity = CONFIG_INI.getfloat("safety", "min_humidity")
     max_humidity = CONFIG_INI.getfloat("safety", "max_humidity")
