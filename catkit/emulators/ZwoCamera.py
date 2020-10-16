@@ -13,8 +13,6 @@ from catkit.interfaces.Instrument import SimInstrument
 import catkit.hardware.zwo.ZwoCamera
 
 
-"""SIMULATED Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
-
 # Convert zwoasi module to a class such that it can be inherited.
 ZwoASI = type("ZwoASI", (), zwoasi.__dict__)
 
@@ -88,6 +86,7 @@ class PoppyZwoEmulator(ZwoASI):
                       f"read noise {self.simulate_read_noise}, {self.readnoise_counts} counts; "
                       f"jitter {self.simulate_image_jitter}, {self.simulate_jitter_sigma} pixels")
         self._reuse_cached_psf_prior_to_adding_noise = False
+        self._force_reuse_cached_psf_prior_to_adding_noise = False  # external override option, used for TA camera efficient sims path
 
     def init(self, library_file=None):
         pass
@@ -135,10 +134,22 @@ class PoppyZwoEmulator(ZwoASI):
                 # reuse the prior fourier optics sim.
 
                 if pre_call_reuse is not None:
-                    self._reuse_cached_psf_prior_to_adding_noise = pre_call_reuse
+                    if isinstance(self, PoppyZwoEmulator):
+                        self._reuse_cached_psf_prior_to_adding_noise = pre_call_reuse
+                    elif isinstance(self, ZwoCamera):
+                        self.instrument_lib._reuse_cached_psf_prior_to_adding_noise = pre_call_reuse
+                    else:
+                        raise NotImplementedError
+
                 ret = func(self, *args, **kwargs)
+
                 if post_call_reuse is not None:
-                    self._reuse_cached_psf_prior_to_adding_noise = post_call_reuse
+                    if isinstance(self, PoppyZwoEmulator):
+                        self._reuse_cached_psf_prior_to_adding_noise = post_call_reuse
+                    elif isinstance(self, ZwoCamera):
+                        self.instrument_lib._reuse_cached_psf_prior_to_adding_noise = post_call_reuse
+                    else:
+                        raise NotImplementedError
 
                 return ret
             return wrapper
@@ -167,7 +178,7 @@ class PoppyZwoEmulator(ZwoASI):
 
         # Here's the actual PSF calculation! Retrieve the simulated image from the optical system mode. This will do a
         # propagation up to the detector plane.
-        if self._reuse_cached_psf_prior_to_adding_noise:
+        if self._reuse_cached_psf_prior_to_adding_noise or self._force_reuse_cached_psf_prior_to_adding_noise:
             self.log.info("HICAT_SIM: Reusing cached prior sim; adding independent noise realization.")
             image_hdulist = copy.deepcopy(testbed_state._simulation_latest_image)
         else:
@@ -201,8 +212,7 @@ class PoppyZwoEmulator(ZwoASI):
             # Simulate image jitter. For now just with integer pixel shifts so this is fast.
             # FIXME get actual statistics on what the jitter is. This is a complete handwave!
             shift_vec = sim_zwo_random_state.normal(self.simulate_jitter_sigma, size=2).round().astype(int)
-
-        image = hicat.cross_correlation.roll_image(image, shift_vec)
+            image = hicat.cross_correlation.roll_image(image, shift_vec)
 
         if self.simulate_readout_quantization:
             # Note, this camera writes 14 bits readout into 16, leaving the lowest two bits always 0, such that the minimum step is 4 counts
@@ -242,7 +252,6 @@ class PoppyZwoEmulator(ZwoASI):
 
 
 class ZwoCamera(SimInstrument,  catkit.hardware.zwo.ZwoCamera.ZwoCamera):
-    """ Now we use poppy to take images."""
 
     instrument_lib = PoppyZwoEmulator
 
