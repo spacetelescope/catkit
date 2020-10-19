@@ -1,71 +1,109 @@
-from astropy.io import fits
-import numpy as np
-import logging
 import os
-import zwoasi
 import sys
+
+import numpy as np
+import zwoasi
+
+from hicat.config import CONFIG_INI
+from hicat.hardware import testbed_state
+
 
 from catkit.catkit_types import MetaDataEntry, units, quantity
 from catkit.interfaces.Camera import Camera
-from catkit.config import CONFIG_INI
 import catkit.util
-from catkit.hardware import testbed_state
 
 
 """Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
 
 
 class ZwoCamera(Camera):
+    
+    instrument_lib = zwoasi
+    __ZWO_ASI_LIB = 'ZWO_ASI_LIB'
 
-    log = logging.getLogger(__name__)
+    @classmethod
+    def load_asi_lib(cls):
+        # Importing zwoasi doesn't hook it up to the backend driver, we have to unfortunately do this.
+        # This is achieved by zwoasi.init(<file to ASI SDK lib>)
 
-    def initialize(self, *args, **kwargs):
-        """Opens connection with camera and returns the camera manufacturer specific object.
-           Uses the config_id to look up parameters in the config.ini."""
-        # noinspection PyBroadException
-        
+        # NOTE: The ZWO ASI SDK can be downloaded from https://astronomy-imaging-camera.com/software-drivers
+        # Windows requires additional drivers also from https://astronomy-imaging-camera.com/software-drivers
+
+        try:
+            __env_filename = os.getenv(cls.__ZWO_ASI_LIB)
+
+            if not __env_filename:
+                raise OSError("Environment variable '{}' doesn't exist. Create and point to ASICamera2 lib".format(cls.__ZWO_ASI_LIB))
+            if not os.path.exists(__env_filename):
+                raise OSError("File not found: '{}' -> '{}'".format(cls.__ZWO_ASI_LIB, __env_filename))
+
+            try:
+                cls.instrument_lib.init(__env_filename)
+            except cls.instrument_lib.ZWO_Error as error:
+                if str(error) == 'Library already initialized':  # weak but better than nothing...
+                    # Library already initialized, continuing...
+                    pass
+                else:
+                    raise
+        except Exception as error:
+            raise ImportError(f"Failed to load {cls.__ZWO_ASI_LIB} library backend to {cls.instrument_lib.__qualname__}") from error
+
+    def initialize(self):
+        """Uses the config_id to look up parameters in the config.ini."""
+
+        # Importing zwoasi doesn't hook it up to the backend driver, we have to unfortunately do this.
+        self.load_asi_lib()
+
         # Pull flip parameters
         self.theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
         self.fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
 
+    def _open(self):
 
         # Attempt to find USB camera.
-        num_cameras = zwoasi.get_num_cameras()
+        num_cameras = self.instrument_lib.get_num_cameras()
         if num_cameras == 0:
             self.log.error('No cameras found')
             sys.exit(0)
 
-        cameras_found = zwoasi.list_cameras()  # Model names of the connected cameras.
-
         # Get camera id and name.
         camera_name = CONFIG_INI.get(self.config_id, 'camera_name')
+        cameras_found = self.instrument_lib.list_cameras()  # Model names of the connected cameras.
         camera_index = cameras_found.index(camera_name)
 
         # Create a camera object using the zwoasi library.
-        camera = zwoasi.Camera(camera_index)
+        camera = self.instrument_lib.Camera(camera_index)
+        self.log.info("Opened connection to camera: " + self.config_id)
 
+        # Assign this here and now since we touch within this func and may trigger an exception.
+        # Assigning this here will facilitate in correct closure.
+        self.instrument = camera
+        # Alias for backward compatibility.
+        self.camera = self.instrument
+        
         # Get all of the camera controls.
-        controls = camera.get_controls()
+        controls = self.instrument.get_controls()
 
         # Restore all controls to default values, in case any other application modified them.
         for c in controls:
-            camera.set_control_value(controls[c]['ControlType'], controls[c]['DefaultValue'])
+            self.instrument.set_control_value(controls[c]['ControlType'], controls[c]['DefaultValue'])
 
         # Set bandwidth overload control to minvalue.
-        camera.set_control_value(zwoasi.ASI_BANDWIDTHOVERLOAD, camera.get_controls()['BandWidth']['MinValue'])
+        self.instrument.set_control_value(self.instrument_lib.ASI_BANDWIDTHOVERLOAD, camera.get_controls()['BandWidth']['MinValue'])
 
         # noinspection PyBroadException
         try:
             # Force any single exposure to be halted
-            camera.stop_video_capture()
-            camera.stop_exposure()
+            self.instrument.stop_video_capture()
+            self.instrument.stop_exposure()
         except Exception:
             # Catch and hide exceptions that get thrown if the camera rejects the stop commands.
             pass
 
         # Set image format to be RAW16, although camera is only 12-bit.
-        camera.set_image_type(zwoasi.ASI_IMG_RAW16)
-        return camera
+        self.instrument.set_image_type(self.instrument_lib.ASI_IMG_RAW16)
+        
+        return self.instrument
 
     def __capture(self, initial_sleep):
         """ Takes an image.
@@ -86,10 +124,12 @@ class ZwoCamera(Camera):
         # Passing the initial_sleep and poll values prevent crashes. DO NOT REMOVE!!!
         poll = quantity(0.1, units.second)
         try:
-            image = self.camera.capture(initial_sleep=initial_sleep.to(units.second).magnitude, poll=poll.magnitude)
-        except zwoasi.ZWO_CaptureError as error:
+            image = self.instrument.capture(initial_sleep=initial_sleep.to(units.second).magnitude, poll=poll.magnitude)
+        except self.instrument_lib.ZWO_CaptureError as error:
             # Maps to:
             # https://github.com/stevemarple/python-zwoasi/blob/1aadf7924dd1cb3b8587d97689d82cd5f1a0b5f6/zwoasi/__init__.py#L889-L893
+            if error.exposure_status == 3:
+                raise RuntimeError("Exposure error: camera already in use, please close all other uses, e.g., SharpCap.") from error
             raise RuntimeError(f"Exposure status: {error.exposure_status}") from error
         return image.astype(np.dtype(np.float32))
 
@@ -117,9 +157,10 @@ class ZwoCamera(Camera):
         image = catkit.util.rotate_and_flip_image(unflipped_image, theta, fliplr)
         return image
     
-    def close(self):
+    def _close(self):
         """Close camera connection"""
-        self.camera.close()
+        self.log.info("Closing camera connection.")
+        self.instrument.close()
 
     def take_exposures(self, exposure_time, num_exposures,
                        file_mode=False, raw_skip=0, path=None, filename=None,
@@ -167,11 +208,12 @@ class ZwoCamera(Camera):
         """
 
         # Convert exposure time to contain units if not already a Pint quantity.
+        # if not isintance(quantity):
         if type(exposure_time) is int or type(exposure_time) is float:
             exposure_time = quantity(exposure_time, units.microsecond)
 
         # Set control values on the ZWO camera.
-        # WARNING! This is the only time that the exposure time is set.
+        # WARNING! This is the only place that the exposure time is set.
         self.__setup_control_values(exposure_time, subarray_x=subarray_x, subarray_y=subarray_y, width=width,
                                     height=height, gain=gain, full_image=full_image, bins=bins)
 
@@ -205,12 +247,12 @@ class ZwoCamera(Camera):
         Passing the value 50 will append (2) to the name.
         """
 
-        camera_info_before = self.camera.get_camera_property()
+        camera_info_before = self.instrument.get_camera_property()
         self.log.info("Before Flash:")
         self.log.info(camera_info_before["Name"])
-        self.camera.set_id(0, new_id)
+        self.instrument.set_id(0, new_id)
         self.log.info("After Flash:")
-        camera_info_after = self.camera.get_camera_property()
+        camera_info_after = self.instrument.get_camera_property()
         self.log.info(camera_info_after["Name"])
 
     def __setup_control_values(self, exposure_time, subarray_x=None, subarray_y=None, width=None, height=None,
@@ -231,11 +273,11 @@ class ZwoCamera(Camera):
         self.bins = bins
 
         # Set up our custom control values.
-        self.camera.set_control_value(zwoasi.ASI_GAIN, gain)
-        self.camera.set_control_value(zwoasi.ASI_EXPOSURE, int(exposure_time.to(units.microsecond).magnitude))
+        self.instrument.set_control_value(self.instrument_lib.ASI_GAIN, gain)
+        self.instrument.set_control_value(self.instrument_lib.ASI_EXPOSURE, int(exposure_time.to(units.microsecond).magnitude))
 
         # Store the camera's detector shape.
-        cam_info = self.camera.get_camera_property()
+        cam_info = self.instrument.get_camera_property()
         detector_max_x = cam_info['MaxWidth']
         detector_max_y = cam_info['MaxHeight']
 
@@ -295,10 +337,9 @@ class ZwoCamera(Camera):
 
         # Set Region of Interest.
         if not full_image:
-            self.camera.set_roi(start_x=derived_start_x,
+            self.instrument.set_roi(start_x=derived_start_x,
                                 start_y=derived_start_y,
                                 width=width,
                                 height=height,
-                                image_type=zwoasi.ASI_IMG_RAW16,
+                                image_type=self.instrument_lib.ASI_IMG_RAW16,
                                 bins=bins)
-
