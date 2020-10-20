@@ -97,7 +97,9 @@ class IrisAoDmController(DeformableMirrorController):
         self.instrument = self.instrument_lib.Popen(cmd,
                                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                                     stderr=subprocess.PIPE,
-                                                    cwd=self.path_to_dm_exe, bufsize=1)
+                                                    cwd=self.path_to_dm_exe,
+                                                    bufsize=1,
+                                                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
         time.sleep(1)
 
         # Initialize the Iris to zeros.
@@ -133,7 +135,15 @@ class IrisAoDmController(DeformableMirrorController):
             # to stdin.flush() if the write buffer auto flushes.
             # The above can leave the device hanging and unreachable. The safest option is to send the following signal
             # which is gracefully handled on the C++ side.
-            self.instrument.send_signal(signal.CTRL_C_EVENT)
+
+            #self.instrument.send_signal(signal.CTRL_C_EVENT)
+
+            # However, the above no longer seems to work, see HICAT-948 & HICAT-947.
+            self.instrument.stdin.write(b'quit\n')
+            try:
+                self.instrument.stdin.flush()
+            except Exception:
+                pass
         finally:
             self.instrument = None
             self._close_iris_controller_testbed_state()
