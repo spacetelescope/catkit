@@ -51,8 +51,8 @@ class ZWFSTestFourierResponse(HicatExperiment):
         zernike_sensor = zwfs.ZWFS(self.instrument)
 
         nb_freq = 20
-        freq_max = 10
-        freq_min = 2
+        freq_max = 7
+        freq_min = 3
         freqx = np.linspace(freq_min, freq_max, nb_freq)
         freqy = np.linspace(freq_min, freq_max ,nb_freq)
         aamp = 1e-8
@@ -82,8 +82,8 @@ class ZWFSTestFourierResponse(HicatExperiment):
                                (array_dim-pup_dim)//2:(array_dim+pup_dim)//2]
 
                 ab_fit, _ = so.curve_fit(fourier_fun, final_roi, cropped_zopd.reshape(zernike_sensor.pupil_diameter**2))
-
-                ab_stack[i,j] = ab_fit
+                reference_fit, _ = so.curve_fit(fourier_fun, dm_pup, dm_shape.reshape(34*34))
+                ab_stack[i,j] = ab_fit / reference_fit * 1e-9
 
         plt.figure(figsize=(20,10))
         plt.semilogy(freqx, abs(ab_stack[0, :, 0]))
@@ -95,3 +95,5 @@ class ZWFSTestFourierResponse(HicatExperiment):
         plt.savefig(self.output_path+'/frequency_plot.pdf')
         np.save(self.output_path+'numpy_ab_stack', ab_stack)
         zernike_sensor.save_list(zopd, 'ZWFS_res', self.output_path)
+
+
