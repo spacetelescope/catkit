@@ -4,10 +4,10 @@ segmented DM hardware as a command.
 
 
 This module can be used to create a command in the following way:
-    poppy_obj = PoppySegmentedCommand(global_coefficients, dm_config_id, laser_config_id)
+    poppy_obj = PoppySegmentedCommand(global_coefficients, dm_config_id, wavelength)
     command = poppy_obj.to_dm_list()
     iris_command = segmented_dm_command.load_command(command, dm_config_id,
-                                                     laser_config_id,
+                                                     wavelength,
                                                      testbed_config_id,
                                                      apply_flat_map=True)
     iris_command.display()
@@ -31,7 +31,7 @@ from catkit.config import CONFIG_INI
 from catkit.hardware.iris_ao import util
 
 
-class SegmentedAperture():
+class SegmentedAperture:
     """
     Create a segmented aperture with Poppy using the parameters for the testbed
     and segmented DM from the config.ini file.
@@ -42,9 +42,9 @@ class SegmentedAperture():
 
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
-    :param laser_config_id: str, name of the section in the config_ini file where information
-                         regarding the laser can be found.
-    :attribute wavelength: int, wavelength of the laser being used
+    :param wavelength: float, wavelength in nm of the poppy optical system used for
+                        (extremely oversimplified) focal plane simulations
+    :attribute wavelength: float, wavelength in nm of the poppy optical system
     :attribute outer_ring_corners: bool, whether or not the segmented aperture includes
                                    the corner segments on the outer-most ring. If True,
                                    corner segments are included. If False, they are not
@@ -59,13 +59,12 @@ class SegmentedAperture():
                                          parameter in the config file
     """
 
-    def __init__(self, dm_config_id, laser_config_id):
+    def __init__(self, dm_config_id, wavelength):
         # Set config sections
         self.dm_config_id = dm_config_id
-        self.laser_config_id = laser_config_id
 
         # Parameters specific to testbed setup being used
-        self.wavelength = CONFIG_INI.getint(self.laser_config_id, 'lambda_nm')*u.nm
+        self.wavelength = wavelength * u.nm
 
         # Parameters specifc to the aperture and segmented DM being used
         self.outer_ring_corners = CONFIG_INI.getboolean(self.dm_config_id, 'include_outer_ring_corners')
@@ -205,8 +204,8 @@ class SegmentedDmCommand(SegmentedAperture):
     :param apply_flat_map: If true, add flat map correction to the data before creating command
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
-    :param laser_config_id: str, name of the section in the config_ini file where information
-                            regarding the laser can be found.
+    :param wavelength: float, wavelength in nm of the poppy optical system used for
+                        (extremely oversimplified) focal plane simulations
     :param testbed_config_id: str, name of the section in the config_ini file where information
                            regarding the testbed can be found.
     :attribute data: list of tuples, input data that can then be updated. This attribute never
@@ -225,9 +224,9 @@ class SegmentedDmCommand(SegmentedAperture):
                          that you are defining
     """
 
-    def __init__(self, dm_config_id, laser_config_id, testbed_config_id, apply_flat_map=False):
+    def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False):
         # Initilize parent class used to create the aperture
-        super().__init__(dm_config_id=dm_config_id, laser_config_id=laser_config_id)
+        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength)
 
         # Determine if the flat map will be applied
         self.apply_flat_map = apply_flat_map
@@ -452,7 +451,7 @@ class SegmentedDmCommand(SegmentedAperture):
             plt.show()
 
 
-def load_command(segment_values, dm_config_id, laser_config_id, testbed_config_id,
+def load_command(segment_values, dm_config_id, wavelength, testbed_config_id,
                  apply_flat_map=True):
     """
     Loads the segment_values from a file or list and returns a SegmentedDmCommand object.
@@ -470,7 +469,7 @@ def load_command(segment_values, dm_config_id, laser_config_id, testbed_config_i
     :param apply_flat_map: Apply a flat map in addition to the data.
     :return: SegmentedDmCommand object representing the command dictionary.
     """
-    dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, laser_config_id=laser_config_id,
+    dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, wavelength=wavelength,
                                         testbed_config_id=testbed_config_id,
                                         apply_flat_map=apply_flat_map)
     dm_command_obj.read_initial_command(segment_values)
@@ -579,8 +578,8 @@ class PoppySegmentedCommand(SegmentedAperture):
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
-    :param laser_config_id: str, name of the section in the config_ini file where information
-                            regarding the laser can be found.
+    :param wavelength: wavelength: float, wavelength in nm of the poppy optical system used for
+                        (extremely oversimplified) focal plane simulations
     :attribute radius: float, half of the flat-to-flat distance of each segment
     :attribute num_terms: int, total number of PTT values on all segments (3 x number of segments)
     :attribute dm_command_units: list, the units of the piston, tip, tilt (respecitvely)
@@ -591,9 +590,9 @@ class PoppySegmentedCommand(SegmentedAperture):
                       of the segmented DM being used
     :attribute list of coefficients: list of piston, tip, tilt coefficients in units of u, rad, rad
     """
-    def __init__(self, global_coefficients, dm_config_id, laser_config_id):
+    def __init__(self, global_coefficients, dm_config_id, wavelength):
         # Initilize parent class
-        super().__init__(dm_config_id=dm_config_id, laser_config_id=laser_config_id)
+        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength)
 
         self.radius = (self.flat_to_flat/2).to(u.m)
         self.num_terms = (self.number_segments_in_pupil) * 3
