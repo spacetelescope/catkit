@@ -88,7 +88,7 @@ class IrisAoDmController(DeformableMirrorController):
 
     def _open(self):
         """Open a connection to the IrisAO"""
-        cmd = [self.full_path_dm_exe, self.disable_hardware]
+        cmd = [self.full_path_dm_exe, str(self.disable_hardware)]
         if self.path_to_ini_files:
             cmd.append(self.path_to_ini_files)
         if self.filename_ptt_dm:
