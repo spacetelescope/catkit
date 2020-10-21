@@ -3,7 +3,7 @@ from hicat.control import zwfs
 import logging
 
 import numpy as np
-import glob
+from catkit.hardware.boston.commands import flat_command
 from catkit.hardware.boston import DmCommand
 from astropy.io import fits
 
@@ -46,9 +46,11 @@ class ZWFSStaticTest(HicatExperiment):
         - spherical
         '''
 
-        dm1_shape = fits.getdata()
-        dm_path = 'Z:/Testbeds/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
+        dm1_command = flat_command(bias=False, flat_map=True, dm_num=1)
 
+
+        #dm_path = 'Z:/Testbeds/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
+        dm_path = '/home/rpourcelot/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
         aberration_path = ['2018-01-21T09-34-00_4d_zernike_loop_focus/',
                            '2018-01-21T12-07-16_4d_zernike_loop_astigmatism45/',
                            '2018-01-21T12-37-21_4d_zernike_loop_astigmatism0/',
@@ -62,40 +64,45 @@ class ZWFSStaticTest(HicatExperiment):
                              '40_nm_p2v/',
                              '80_nm_p2v/']
 
-        file_names = ['Focus_zernike_volts_dm2.fits',
-                      'Astigmatism_45_zernike_volts_dm2.fits',
-                      'Astigmatism_0_zernike_volts_dm2.fits',
-                      'Coma_Y_zernike_volts_dm2.fits',
-                      'Coma_X_zernike_volts_dm2.fits',
-                      'Trefoil_Y_zernike_volts_dm2.fits',
-                      'Trefoil_X_zernike_volts_dm2.fits',
-                      'Spherical_zernike_volts_dm2.fits']
+        suffix = 'iteration19/dm_command/dm_command_2d_noflat.fits'
+
+        file_names = ['Focus_zernike_volts_dm2',
+                      'Astigmatism_45_zernike_volts_dm2',
+                      'Astigmatism_0_zernike_volts_dm2',
+                      'Coma_Y_zernike_volts_dm2',
+                      'Coma_X_zernike_volts_dm2',
+                      'Trefoil_Y_zernike_volts_dm2',
+                      'Trefoil_X_zernike_volts_dm2',
+                      'Spherical_zernike_volts_dm2']
+
+        dm2_flat = flat_command(bias=False, flat_map=True, dm_num=2)
 
         zernike_sensor = zwfs.ZWFS(self.instrument)
-        zernike_sensor.calibrate(output_path=self.output_path)
-        zernike_sensor.save_list(zernike_sensor._clear_pupil, 'ZWFS_clear_pupil_flat_dms', self.output_path)
+        zernike_sensor.calibrate(output_path=self.output_path, dm1_shape=dm1_command, dm2_shape=dm2_flat)
+        zernike_sensor.save_list(zernike_sensor._clear_pupil, 'ZWFS_clear_pupil_dms', self.output_path)
+        
+        #basis = np.nan_to_num(zwfs.ztools.zernike.zernike_basis(nterms=nb_aberrations, npix=34)*1e-9)
 
-        dm1_calibrated = np.zeros((34,34)) # Read from calibrated folders
+        zopd_stacks = np.zeros((len(aberration_path), len(aberration_values), zernike_sensor._array_diameter, zernike_sensor._array_diameter))
 
-        dm2_flat = np.zeros((34,34))
-
-        basis = np.nan_to_num(zwfs.ztools.zernike.zernike_basis(nterms=nb_aberrations, npix=34)*1e-9)
-
-        zopd_stacks = []
-
-        zernike_sensor.make_reference_opd(self.wave, dm1_shape=dm1_calibrated, dm2_shape=dm2_flat)
+        zernike_sensor.make_reference_opd(self.wave, dm1_shape=dm1_command, dm2_shape=dm2_flat)
 
         for i, aberration in enumerate(aberration_path):
-            for p2v in aberration_values:
-                dm2_shape = fits.getdata(dm_path+aberration+p2v+file_names[i])
+            for j, p2v in enumerate(aberration_values):
+                dm2_shape = fits.getdata(dm_path+aberration+p2v+suffix)
+                dm2_command = DmCommand.DmCommand(dm2_shape, dm_num=2, flat_map=True, bias=False)
 
                 zopd = zernike_sensor.perform_zwfs_measurement(self.wave, output_path=self.output_path,
-                                                               differential=True, dm1_shape=dm1_calibrated,
-                                                               dm2_shape=dm2_shape, file_mode=True)
+                                                               differential=True, dm1_shape=dm1_command,
+                                                               dm2_shape=dm2_command, file_mode=True,
+                                                               filename=file_names[i]+p2v[:-1])
 
-        zopd_stacks.append(zopd)
+                zopd_stacks[i, j] = zopd.copy()
+                zernike_sensor.save_list(zopd, 'ZWFS_OPD'+file_names[i]+p2v[:-1], self.output_path+'/'+file_names[i])
+                #fits.writeto('/mnt/c/Users/rpourcelot/Documents/zopd.fits', zopd)
 
-        zopd_array = np.array(zopd_stacks)
+
+        # Save the files
+        np.save(self.output_path + '/' + 'zopd_stacks.npy', zopd_stacks)
+
         zernike_sensor.save_list(zernike_sensor._reference_opd, 'ZWFS_reference_opd', self.output_path)
-
-        zernike_sensor.save_list(zopd_array, 'ZWFS_aberration_opd', self.output_path)
