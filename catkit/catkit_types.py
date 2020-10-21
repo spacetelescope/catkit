@@ -1,6 +1,7 @@
 from collections import namedtuple
 from enum import Enum
-from pint import UnitRegistry
+
+import astropy.units
 
 
 class FlipMountPosition(Enum):
@@ -50,9 +51,31 @@ MetaDataEntry = namedtuple("MetaDataEntry", "name, name_8chars, value, comment")
 SinSpecification = namedtuple("SinSpecification", "angle, ncycles, peak_to_valley, phase")
 
 
-# Create shortcuts for using Pint globally.
-units = UnitRegistry()
-quantity = units.Quantity
+class Quantity(astropy.units.Quantity):
+    """ HICAT-466: Path of least resistance to using astropy.units instead of pint.
+        This class wraps astropy.units.Quantity as a pint.Quantity (for only hicat's function usage cross-section).
+    """
+    @property
+    def magnitude(self):
+        return self.value
+
+    @property
+    def m(self):
+        return self.magnitude
+
+    @property
+    def u(self):
+        return self.unit
+
+    def to_base_units(self):
+        return self.si
+
+    def __round__(self, n=None):
+        return self.round(decimals=n)
+
+
+units = astropy.units
+quantity = Quantity
 
 
 class Pointer:
