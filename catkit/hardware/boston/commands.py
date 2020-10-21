@@ -57,7 +57,7 @@ def poke_command(actuators, amplitude=quantity(700, units.nanometer), bias=False
     poke_array = np.zeros(total_actuators)
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
-    amplitude = amplitude.to(units.meters).m
+    amplitude = amplitude.to(units.meter).m
 
     # Bias.
     if flat_map:
@@ -89,7 +89,7 @@ def poke_letter_f_command(amplitude=quantity(250, units.nanometer), bias=False, 
     data = np.zeros((num_actuators_pupil, num_actuators_pupil))
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
-    amplitude = amplitude.to(units.meters).m
+    amplitude = amplitude.to(units.meter).m
 
     # Side
     data[10:24, 12] = amplitude
@@ -114,7 +114,7 @@ def checkerboard_command(amplitude=quantity(250, units.nanometer), bias=False, f
     data = np.zeros((num_actuators_pupil, num_actuators_pupil))
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
-    amplitude = amplitude.to(units.meters).m
+    amplitude = amplitude.to(units.meter).m
 
     data[offset_x::step, offset_y::step] = amplitude
 
