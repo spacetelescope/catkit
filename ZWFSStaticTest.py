@@ -49,8 +49,8 @@ class ZWFSStaticTest(HicatExperiment):
         dm1_command = flat_command(bias=False, flat_map=True, dm_num=1)
 
 
-        #dm_path = 'Z:/Testbeds/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
-        dm_path = '/home/rpourcelot/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
+        dm_path = 'Z:/Testbeds/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
+        #dm_path = '/home/rpourcelot/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
         aberration_path = ['2018-01-21T09-34-00_4d_zernike_loop_focus/',
                            '2018-01-21T12-07-16_4d_zernike_loop_astigmatism45/',
                            '2018-01-21T12-37-21_4d_zernike_loop_astigmatism0/',
