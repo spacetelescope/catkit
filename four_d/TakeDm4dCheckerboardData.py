@@ -79,7 +79,7 @@ class TakeDm4dCheckerboardData(Experiment):
                         for k in self.amplitude_range:
                             file_name = "checkerboard_{}_{}_{}nm".format(i, j, k)
                             command = checkerboard_command(dm_num=2, offset_x=i, offset_y=j,
-                                                           amplitude=quantity(k, units.nanometers),
+                                                           amplitude=quantity(k, units.nanometer),
                                                            bias=False, flat_map=True)
                             dm.apply_shape(command, self.dm_num)
                             image_path = four_d.take_measurement(path=os.path.join(self.output_path, file_name),

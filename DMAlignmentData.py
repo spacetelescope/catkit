@@ -40,7 +40,7 @@ class DMAlignmentData(Experiment):
         asymmetric_poke_actuators = ApplyAsymmetricTestPattern.actuators
         apodizer_struts_actuators = ApplyApodizerStrutsPoke.actuators
 
-        zeroamp = quantity(0, units.nanometers)
+        zeroamp = quantity(0, units.nanometer)
 
         with testbed.laser_source() as laser, \
                 testbed.dm_controller() as dm, \
@@ -68,7 +68,7 @@ class DMAlignmentData(Experiment):
 
             # Apply pattern to target DM, and zero to the other
             for amp in self.amplitudes:
-                amplitude = quantity(amp, units.nanometers)
+                amplitude = quantity(amp, units.nanometer)
                 for i, pattern in enumerate([centerpokeplus_actuators, asymmetric_poke_actuators, apodizer_struts_actuators]):
 
                     for dmnum in [1,2]:
@@ -104,7 +104,7 @@ class DMAlignmentData(Experiment):
 
 
             for amp in self.amplitudes:
-                amplitude = quantity(amp, units.nanometers)
+                amplitude = quantity(amp, units.nanometer)
                 for i, pattern in enumerate([centerpokeplus_actuators, apodizer_struts_actuators]):
 
                     for dmnum in [1]:

@@ -54,7 +54,7 @@ class CoffeeCenterPoke(Experiment):
 
         # DM1 Spaced Center 4 actuators for DM1.
         actuators = [564, 394, 389, 559]
-        center_command_dm1 = commands.poke_command(actuators, dm_num=1, amplitude=quantity(250, units.nanometers))
+        center_command_dm1 = commands.poke_command(actuators, dm_num=1, amplitude=quantity(250, units.nanometer))
         take_coffee_data_set(diversity_zernike_command_paths,
                              self.output_path,
                              "spaced_center_poke",

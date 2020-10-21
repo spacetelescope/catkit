@@ -90,7 +90,7 @@ class TakeDm4d952PokeData(Experiment):
                 num_actuators = CONFIG_INI.getint("boston_kilo952", "number_of_actuators")
                 for i in range(self.start_actuator, num_actuators):
                     file_name = "poke_actuator_{}".format(i)
-                    command = poke_command(i, amplitude=quantity(200, units.nanometers), dm_num=self.dm_num)
+                    command = poke_command(i, amplitude=quantity(200, units.nanometer), dm_num=self.dm_num)
 
                     dm.apply_shape(command, self.dm_num)
                     image_path = four_d.take_measurement(path=os.path.join(self.output_path, file_name),

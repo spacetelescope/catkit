@@ -40,10 +40,10 @@ class ApplyActuatorPattern(Experiment):
         if self.apply_to_both:
             dm_to_poke = 1
             poke_pattern = commands.poke_command(self.actuators, dm_num=dm_to_poke,
-                                                 amplitude=quantity(dm1_poke_amplitude, units.nanometers))
+                                                 amplitude=quantity(dm1_poke_amplitude, units.nanometer))
             dm_to_flat = 2
             flat_pattern = commands.poke_command(self.actuators, dm_num=dm_to_flat,
-                                                 amplitude=quantity(dm2_poke_amplitude, units.nanometers))
+                                                 amplitude=quantity(dm2_poke_amplitude, units.nanometer))
 
         else:
             dm_to_poke = self.dm_num
@@ -52,7 +52,7 @@ class ApplyActuatorPattern(Experiment):
             poke_amplitude = dm1_poke_amplitude if self.dm_num == 1 else dm2_poke_amplitude
 
             poke_pattern = commands.poke_command(self.actuators, dm_num=dm_to_poke,
-                                                 amplitude=quantity(poke_amplitude, units.nanometers))
+                                                 amplitude=quantity(poke_amplitude, units.nanometer))
             flat_pattern = commands.flat_command(False, True, dm_num=dm_to_flat)
 
         with testbed.dm_controller() as dm:
