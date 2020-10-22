@@ -73,6 +73,25 @@ class Quantity(astropy.units.Quantity):
     def __round__(self, n=None):
         return self.round(decimals=n)
 
+    # See https://docs.astropy.org/en/stable/units/quantity.html#subclassing-quantity
+    def __quantity_subclass__(self, unit):
+        """
+        Overridden by subclasses to change what kind of view is
+        created based on the output unit of an operation.
+
+        Parameters
+        ----------
+        unit : UnitBase
+            The unit for which the appropriate class should be returned
+
+        Returns
+        -------
+        tuple :
+            - `Quantity` subclass
+            - bool: True if subclasses of the given class are ok
+        """
+        return Quantity, True
+
 
 units = astropy.units
 quantity = Quantity
