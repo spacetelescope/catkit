@@ -67,7 +67,7 @@ def take_exposures_both_dm_commands(dm2_command_list,
                                     dm1_list_of_paths=True,
                                     num_exposures=10,
                                     camera_type="imaging_camera",
-                                    centering=ImageCentering.custom_apodizer_spots):  # HICAT-949: Should this be auto?
+                                    centering=ImageCentering.custom_apodizer_spots):
 
     for command1 in dm1_command_list:
         if dm1_list_of_paths:
