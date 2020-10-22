@@ -218,7 +218,7 @@ class ZwoCamera(Camera):
                                     height=height, gain=gain, full_image=full_image, bins=bins)
 
         # Create metadata from testbed_state and add extra_metadata input.
-        meta_data = [MetaDataEntry("Exposure Time", "EXP_TIME", exposure_time.to(units.microseconds).m, "microseconds")]
+        meta_data = [MetaDataEntry("Exposure Time", "EXP_TIME", exposure_time.to(units.microsecond).m, "microseconds")]
         meta_data.extend(testbed_state.create_metadata())
         meta_data.append(MetaDataEntry("Camera", "CAMERA", self.config_id, "Camera model, correlates to entry in ini"))
         meta_data.append(MetaDataEntry("Gain", "GAIN", self.gain, "Gain for camera"))

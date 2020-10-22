@@ -39,7 +39,7 @@ def flat_command(bias=False,
         return dm_command_object
 
 
-def poke_command(actuators, amplitude=quantity(700, units.nanometers), bias=False,
+def poke_command(actuators, amplitude=quantity(700, units.nanometer), bias=False,
                  flat_map=True, return_shortname=False, dm_num=1):
     """
     Creates a DmCommand object that pokes actuators at a given amplitude.
@@ -57,7 +57,7 @@ def poke_command(actuators, amplitude=quantity(700, units.nanometers), bias=Fals
     poke_array = np.zeros(total_actuators)
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
-    amplitude = amplitude.to(units.meters).m
+    amplitude = amplitude.to(units.meter).m
 
     # Bias.
     if flat_map:
@@ -81,7 +81,7 @@ def poke_command(actuators, amplitude=quantity(700, units.nanometers), bias=Fals
         return dm_command_object
 
 
-def poke_letter_f_command(amplitude=quantity(250, units.nanometers), bias=False, flat_map=True, dm_num=1):
+def poke_letter_f_command(amplitude=quantity(250, units.nanometer), bias=False, flat_map=True, dm_num=1):
     """
     Creates the letter F in normal orientation when viewed in DS9.
     """
@@ -89,7 +89,7 @@ def poke_letter_f_command(amplitude=quantity(250, units.nanometers), bias=False,
     data = np.zeros((num_actuators_pupil, num_actuators_pupil))
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
-    amplitude = amplitude.to(units.meters).m
+    amplitude = amplitude.to(units.meter).m
 
     # Side
     data[10:24, 12] = amplitude
@@ -104,7 +104,7 @@ def poke_letter_f_command(amplitude=quantity(250, units.nanometers), bias=False,
     return DmCommand(data, dm_num, flat_map=flat_map, bias=bias)
 
 
-def checkerboard_command(amplitude=quantity(250, units.nanometers), bias=False, flat_map=True,
+def checkerboard_command(amplitude=quantity(250, units.nanometer), bias=False, flat_map=True,
                          dm_num=1, offset_x=0, offset_y=3, step=4):
     """
     Creates a checkerboard pattern DM command.  Useful for phase retrieval or 4D images. Default values
@@ -114,7 +114,7 @@ def checkerboard_command(amplitude=quantity(250, units.nanometers), bias=False, 
     data = np.zeros((num_actuators_pupil, num_actuators_pupil))
 
     # Convert peak the valley from a quantity to nanometers, and get the magnitude.
-    amplitude = amplitude.to(units.meters).m
+    amplitude = amplitude.to(units.meter).m
 
     data[offset_x::step, offset_y::step] = amplitude
 
