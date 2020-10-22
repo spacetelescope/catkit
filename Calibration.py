@@ -126,7 +126,9 @@ class Calibration(Experiment):
         except (NameError, AttributeError):
             data = calibration_take_data.take_cal_data(FpmPosition.coron, self.flat_shape, 1,
                                                        quantity(1, units.millisecond), num_exposures=1)[0]
-        centroid, coords = calibration_util.find_center(data, coron=True, return_coords=True)
+
+        coords = calibration_util.find_satellite_spots(data, coron=True)
+        centroid = calibration_util.average_satellite_spots(coords)
         dist = calibration_util.find_average_distance_to_center(centroid, coords)
 
         if self.write_to_csv:
