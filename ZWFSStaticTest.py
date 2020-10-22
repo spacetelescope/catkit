@@ -51,8 +51,8 @@ class ZWFSStaticTest(HicatExperiment):
 
         dm_path = 'Z:/Testbeds/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
         #dm_path = '/home/rpourcelot/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
-        aberration_path = ['2018-01-21T09-34-00_4d_zernike_loop_focus/',
-                           '2018-01-21T12-07-16_4d_zernike_loop_astigmatism45/',
+
+        aberration_path = ['2018-01-21T12-07-16_4d_zernike_loop_astigmatism45/',
                            '2018-01-21T12-37-21_4d_zernike_loop_astigmatism0/',
                            '2018-01-21T13-08-00_4d_zernike_loop_comay/',
                            '2018-01-21T13-39-31_4d_zernike_loop_comax/',
@@ -66,8 +66,7 @@ class ZWFSStaticTest(HicatExperiment):
 
         suffix = 'iteration19/dm_command/dm_command_2d_noflat.fits'
 
-        file_names = ['Focus_zernike_volts_dm2',
-                      'Astigmatism_45_zernike_volts_dm2',
+        file_names = ['Astigmatism_45_zernike_volts_dm2',
                       'Astigmatism_0_zernike_volts_dm2',
                       'Coma_Y_zernike_volts_dm2',
                       'Coma_X_zernike_volts_dm2',
@@ -86,11 +85,12 @@ class ZWFSStaticTest(HicatExperiment):
         zopd_stacks = np.zeros((len(aberration_path), len(aberration_values), zernike_sensor._array_diameter, zernike_sensor._array_diameter))
 
         zernike_sensor.make_reference_opd(self.wave, dm1_shape=dm1_command, dm2_shape=dm2_flat)
+        zernike_sensor.save_list(zernike_sensor._reference_opd, 'ZWFS_reference_opd', self.output_path)
 
         for i, aberration in enumerate(aberration_path):
             for j, p2v in enumerate(aberration_values):
-                dm2_shape = fits.getdata(dm_path+aberration+p2v+suffix)
-                dm2_command = DmCommand.DmCommand(dm2_shape, dm_num=2, flat_map=True, bias=False)
+                #dm2_shape = fits.getdata(dm_path+aberration+p2v+suffix)
+                dm2_command = DmCommand.load_dm_command(dm_path+aberration+p2v+suffix, dm_num=2, flat_map=False, bias=False)
 
                 zopd = zernike_sensor.perform_zwfs_measurement(self.wave, output_path=self.output_path,
                                                                differential=True, dm1_shape=dm1_command,
@@ -105,4 +105,4 @@ class ZWFSStaticTest(HicatExperiment):
         # Save the files
         np.save(self.output_path + '/' + 'zopd_stacks.npy', zopd_stacks)
 
-        zernike_sensor.save_list(zernike_sensor._reference_opd, 'ZWFS_reference_opd', self.output_path)
+
