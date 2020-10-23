@@ -134,6 +134,9 @@ class SegmentedAperture:
         if not self.center_segment:
             active_segments_in_pupil_per_ring = [num-1 for num in max_number_segments_in_pupil_per_ring]
 
+        if self.outer_ring_corners and self.center_segment:
+            active_segments_in_pupil_per_ring = max_number_segments_in_pupil_per_ring
+
         return active_segments_in_pupil_per_ring
 
     def get_max_number_segments_in_pupil_per_ring(self, number_of_rings=7):
