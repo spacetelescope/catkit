@@ -60,14 +60,11 @@ class FakeWriteAndFlush:
             # state between different simulation calls.
             # This intentionally differs from hardware behavior in which an unpowered DM is non-flat.
             self.iris_dm.flatten()
-            self._close_iris_controller_testbed_state()
-
-    @staticmethod
-    def _close_iris_controller_testbed_state():
-        testbed_state.iris_command_object = None
+            testbed_state.iris_command_object = None
 
     def flush(self):
-        """ This doesn't need to do anything when in simulation, but we need to have it."""
+        """ This doesn't need to do anything when in simulation, as it is always called together
+        with write(), but we need to have it."""
         pass
 
 
