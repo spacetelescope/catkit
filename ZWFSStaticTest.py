@@ -79,23 +79,38 @@ class ZWFSStaticTest(HicatExperiment):
         zernike_sensor = zwfs.ZWFS(self.instrument)
         zernike_sensor.calibrate(output_path=self.output_path, dm1_shape=dm1_command, dm2_shape=dm2_flat)
         zernike_sensor.save_list(zernike_sensor._clear_pupil, 'ZWFS_clear_pupil_dms', self.output_path)
-        
-        #basis = np.nan_to_num(zwfs.ztools.zernike.zernike_basis(nterms=nb_aberrations, npix=34)*1e-9)
+
+        ta_diag, _ = zernike_sensor.take_exposure_ta_diagnostic(output_path=self.output_path,
+                                                                dm1_shape=dm1_command,
+                                                                dm2_shape=dm2_flat,
+                                                                file_mode=True)
+
+        nb_aberrations = 10
+        basis = np.nan_to_num(zwfs.ztools.zernike.zernike_basis(nterms=nb_aberrations, npix=34)*1e-9)
 
         zopd_stacks = np.zeros((len(aberration_path), len(aberration_values), zernike_sensor._array_diameter, zernike_sensor._array_diameter))
-
+        ta_stacks = []
         zernike_sensor.make_reference_opd(self.wave, dm1_shape=dm1_command, dm2_shape=dm2_flat)
         zernike_sensor.save_list(zernike_sensor._reference_opd, 'ZWFS_reference_opd', self.output_path)
 
         for i, aberration in enumerate(aberration_path):
             for j, p2v in enumerate(aberration_values):
                 #dm2_shape = fits.getdata(dm_path+aberration+p2v+suffix)
-                dm2_command = DmCommand.load_dm_command(dm_path+aberration+p2v+suffix, dm_num=2, flat_map=False, bias=False)
+                #dm2_command = DmCommand.load_dm_command(dm_path+aberration+p2v+suffix, dm_num=2, flat_map=False, bias=False)
+                dm2_shape = 10*basis[4]
+                dm2_command = DmCommand.DmCommand(dm2_shape, flat_map=True, bias=False, dm_num=2)
 
+                ta_diag, _ = zernike_sensor.take_exposure_ta_diagnostic(output_path=self.output_path,
+                                                                        dm1_shape=dm1_command,
+                                                                        dm2_shape=dm2_command,
+                                                                        file_mode=True)
+
+                zernike_sensor.save_list(dm2_shape, 'dm2_command'+file_names[i]+p2v[:-1], self.output_path+'/'+file_names[i])
                 zopd = zernike_sensor.perform_zwfs_measurement(self.wave, output_path=self.output_path,
                                                                differential=True, dm1_shape=dm1_command,
                                                                dm2_shape=dm2_command, file_mode=True,
                                                                filename=file_names[i]+p2v[:-1])
+
 
                 zopd_stacks[i, j] = zopd.copy()
                 zernike_sensor.save_list(zopd, 'ZWFS_OPD'+file_names[i]+p2v[:-1], self.output_path+'/'+file_names[i])
