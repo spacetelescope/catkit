@@ -98,7 +98,7 @@ class PoppyIrisAOEmulator:
         if buffer == b'quit\n':
             self.dm.relax()
         elif buffer == b'config\n':
-            ptt_data = catkit.hardware.iris_ao.util.read_ini(self.filename_ptt_dm, self.dm.number_of_segments)
+            ptt_data = catkit.hardware.iris_ao.util.read_ptt111(self.filename_ptt_dm, self.dm.number_of_segments)
             self.dm.set_surface(self.dm.convert_command_to_poppy_surface(ptt_data))
         else:
             raise NotImplementedError(f"Emulation of '{self.config_id}' does not recognise the command '{buffer}'")

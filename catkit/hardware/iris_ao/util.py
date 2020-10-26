@@ -250,7 +250,7 @@ def read_segments(path):
         else:
             return None
 
-def read_read_ptt111ptt111(path, number_of_segments):
+def read_ptt111(path, number_of_segments):
     """
     Read the entirety of a PTT111 file
 
