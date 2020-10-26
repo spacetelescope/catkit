@@ -95,10 +95,10 @@ class ZWFSStaticTest(HicatExperiment):
 
         for i, aberration in enumerate(aberration_path):
             for j, p2v in enumerate(aberration_values):
-                #dm2_shape = fits.getdata(dm_path+aberration+p2v+suffix)
-                #dm2_command = DmCommand.load_dm_command(dm_path+aberration+p2v+suffix, dm_num=2, flat_map=False, bias=False)
-                dm2_shape = 10*basis[4]
-                dm2_command = DmCommand.DmCommand(dm2_shape, flat_map=True, bias=False, dm_num=2)
+                dm2_shape = fits.getdata(dm_path+aberration+p2v+suffix)
+                dm2_command = DmCommand.load_dm_command(dm_path+aberration+p2v+suffix, dm_num=2, flat_map=False, bias=False)
+                #dm2_shape = 10*basis[4]
+                dm2_command = DmCommand.DmCommand(dm2_shape, flat_map=False, bias=False, dm_num=2)
 
                 ta_diag, _ = zernike_sensor.take_exposure_ta_diagnostic(output_path=self.output_path,
                                                                         dm1_shape=dm1_command,
