@@ -2,7 +2,7 @@ import logging
 import os
 from astropy.io import fits
 
-from hicat.data_pipeline import standard_file_pipeline
+from hicat.data_pipeline_lite import standard_file_pipeline
 from hicat.experiments.Experiment import Experiment
 from hicat.hardware import testbed_state
 from catkit.catkit_types import ImageCentering

@@ -127,7 +127,7 @@ class Calibration(Experiment):
             data = calibration_take_data.take_cal_data(FpmPosition.coron, self.flat_shape, 1,
                                                        quantity(1, units.millisecond), num_exposures=1)[0]
 
-        coords = calibration_util.find_satellite_spots(data, coron=True)
+        coords = calibration_util.find_psf(data, satellite_spots=True)
         centroid = calibration_util.average_satellite_spots(coords)
         dist = calibration_util.find_average_distance_to_center(centroid, coords)
 
