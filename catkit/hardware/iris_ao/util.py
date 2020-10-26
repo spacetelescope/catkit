@@ -250,7 +250,7 @@ def read_segments(path):
         else:
             return None
 
-def read_ptt111(path, number_of_segments):
+def read_read_ptt111ptt111(path, number_of_segments):
     """
     Read the entirety of a PTT111 file
 
@@ -354,3 +354,17 @@ def read_segment_values(segment_values=None, dm_config_id=None):
         raise TypeError("The segment values input format is not supported")
 
     return ptt_list, segment_names
+
+
+def get_driver_serial_from_ini_file(path):
+    config = ConfigParser()
+    config.optionxform = str  # keep capital letters
+    config.read(path)
+    return config.get("SerialNb", "mirrorSerial")
+
+
+def get_mirror_serial_from_ini_file(path):
+    config = ConfigParser()
+    config.optionxform = str  # keep capital letters
+    config.read(path)
+    return config.get("SerialNb", "driverSerial")
