@@ -70,16 +70,17 @@ class PoppyIrisAOEmulator:
         _full_path_dm_exe = args[0]
         self.enable_hardware = args[1]
 
+        """ TODO: make this work
         if len(cmd) > 2:
             self.path_to_custom_mirror_files = args[2]
             # This file gets read here and only once by the C++ code but only the mirror SN and driver SN are used.
             # Running sim tests may then help prevent damaging mirror/driver/file conflicts.
-            assert self.driver_serial == get_driver_serial_from_ini_file
-            assert self.dm.mirror_serial == get_mirror_serial_from_ini_file
+            assert self.driver_serial == catkit.hardware.iris_ao.util.get_driver_serial_from_ini_file()
+            assert self.dm.mirror_serial == catkit.hardware.iris_ao.util.get_mirror_serial_from_ini_file()
 
         if len(cmd) > 3:
             self.filename_ptt_dm = args[3]
-
+        """
         return self
 
     def write(self, buffer):
