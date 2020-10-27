@@ -62,7 +62,7 @@ class PoppyIrisAOEmulator:
 
         self.enable_hardware = None
 
-        self.path_to_ini_files = None
+        self.path_to_custom_mirror_files = None
         self.filename_ptt_dm = None
 
         self.driver_serial = driver_serial
@@ -80,7 +80,7 @@ class PoppyIrisAOEmulator:
         self.enable_hardware = args[1]
 
         if len(cmd) > 2:
-            self.path_to_ini_files = args[2]
+            self.path_to_custom_mirror_files = args[2]
             # This file gets read here and only once by the C++ code but only the mirror SN and driver SN are used.
             # Running sim tests may then help prevent damaging mirror/driver/file conflicts.
             assert self.driver_serial == get_driver_serial_from_ini_file
