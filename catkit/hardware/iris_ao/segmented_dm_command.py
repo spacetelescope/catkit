@@ -245,8 +245,8 @@ class SegmentedDmCommand(SegmentedAperture):
             self.segments_in_pupil = util.iris_pupil_naming(self.dm_config_id)
 
         # Initalize parameters for displaying the command
-        self.instrument_fov = CONFIG_INI.getint(testbed_config_id, 'fov')
-        self.pixelscale = CONFIG_INI.getfloat(testbed_config_id, 'pixelscale')
+        self.instrument_fov = CONFIG_INI.getint(testbed_config_id, 'fov_irisao_plotting')
+        self.pixelscale = CONFIG_INI.getfloat(testbed_config_id, 'pixelscale_iriso_plotting')
         dm_command_units = CONFIG_INI.get(self.dm_config_id, 'dm_ptt_units').split(',')
         self.dm_command_units = [u.Unit(dm_command_units[0]), u.Unit(dm_command_units[1]),
                                  u.Unit(dm_command_units[2])]
