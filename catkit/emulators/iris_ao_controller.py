@@ -94,10 +94,11 @@ class PoppyIrisAOEmulator:
             # Setting the simulated IrisAO means setting each actuator individually
             for seg, values in ptt_data.items():
                 self.dm.set_actuator(seg-1, values[0]*u.um, values[1]*u.mrad, values[2]*u.mrad)   #TODO: double-check the -1 here, meant to correct for different segment names
-            ptt_list = list(ptt_data.values())
-            dm_command = segmented_dm_command.SegmentedDmCommand()
-            dm_command.read_initial_command(ptt_list)
-            testbed_state.iris_command_object = dm_command
+            # TODO: convert ptt_listi to segmented_dm_command and stash in testbed_state variable for IrisAO command
+            #ptt_list = list(ptt_data.values())
+            #dm_command = segmented_dm_command.SegmentedDmCommand()
+            #dm_command.read_initial_command(ptt_list)
+            #testbed_state.iris_command_object = dm_command
         else:
             raise NotImplementedError(f"Emulation of '{self.config_id}' does not recognise the command '{buffer}'")
 
