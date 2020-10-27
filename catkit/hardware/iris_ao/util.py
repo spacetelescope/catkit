@@ -360,11 +360,11 @@ def get_driver_serial_from_ini_file(path):
     config = ConfigParser()
     config.optionxform = str  # keep capital letters
     config.read(path)
-    return config.get("SerialNb", "mirrorSerial")
+    return config.get("SerialNb", "driverSerial")
 
 
 def get_mirror_serial_from_ini_file(path):
     config = ConfigParser()
     config.optionxform = str  # keep capital letters
     config.read(path)
-    return config.get("SerialNb", "driverSerial")
+    return config.get("SerialNb", "mirrorSerial")
