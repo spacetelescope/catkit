@@ -1,3 +1,4 @@
+import astropy.units as u
 import poppy
 
 import catkit.hardware.iris_ao.iris_ao_controller
@@ -21,33 +22,19 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
         # the driver/controller by catkit.hardware.iris_ao.iris_ao_controller.IrisAoDmController.
         self.mcf_filename = mcf_filename
         #mcf_data, self.mirror_serial = catkit.hardware.iris_ao.util.read_mcf(self.mcf_filename, self.number_of_segments)
-        #mcf_relaxed_poppy_surface = -self.convert_command_to_poppy_surface(mcf_data, _include_relaxation=False)
 
         self.custom_flat_filename = custom_flat_filename
-        custom_flat_data = catkit.hardware.iris_ao.util.read_ini(self.custom_flat_filename, self.number_of_segments)
-        custom_flat_relaxed_poppy_surface = -self.convert_command_to_poppy_surface(custom_flat_data, _include_relaxation=False)
+        custom_flat_data = catkit.hardware.iris_ao.util.read_ptt111(self.custom_flat_filename, self.number_of_segments)   # this returns a DM command dict
 
         # A flat Poppy surfaces := 0.
-        self.relaxed_poppy_surface = custom_flat_relaxed_poppy_surface  # + mcf_relaxed_poppy_surface
+        self.relaxed_poppy_surface = custom_flat_data  # + mcf_data
         self.relax()  # ??? See https://github.com/spacetelescope/catkit/issues/63 (we don't currently relax the bostons like this).
 
-    def convert_command_to_poppy_surface(self, _include_relaxation=True):
-        # _include_relaxation exists only such that this func can be used to get the relaxed surface in the first place.
-
-        # pseudocode...
-        poppy_surface = # convert command to surface.
-
-        # Poppy surfaces are zero based so a relaxed surface is negative.
-        if _include_relaxation:
-            # The .mcf "flat" file is implicitly applied by the driver/controller and is NOT a present contribution of
-            # the command sent to the driver/controller by catkit.hardware.iris_ao.iris_ao_controller.IrisAoDmController.
-            # We need to also implicitly include this contribution since we mimic a relaxed surface.
-            poppy_surface -= self.relaxed_poppy_surface
-
-        return poppy_surface
-
     def relax(self):
-        self.set_surface(self.relaxed_poppy_surface)
+        # Setting the simulated IrisAO means setting each actuator individually
+        # self.relaxed_poppy_surface needs to be a dict like returned by iris_ao.util.create_dict_from_list()
+        for seg, values in self.relaxed_poppy_surface.items():
+            self.set_actuator(seg-1, values[0] * u.um, values[1] * u.mrad, values[2] * u.mrad)  # TODO: double-check the -1 here, meant to correct for different segment names
 
 
 class PoppyIrisAOEmulator:
