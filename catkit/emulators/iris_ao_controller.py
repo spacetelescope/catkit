@@ -26,7 +26,7 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
         #mcf_data, self.mirror_serial = catkit.hardware.iris_ao.util.read_mcf(self.mcf_filename, self.number_of_segments)
 
         self.custom_flat_filename = custom_flat_filename
-        custom_flat_data = catkit.hardware.iris_ao.util.read_ptt111(self.custom_flat_filename, self.number_of_segments)   # this returns a DM command dict
+        custom_flat_data = catkit.hardware.iris_ao.util.read_ini(self.custom_flat_filename, self.number_of_segments)   # this returns a DM command dict
 
         # A flat Poppy surfaces := 0.
         self.relaxed_poppy_surface = custom_flat_data  # + mcf_data
