@@ -231,7 +231,7 @@ class SegmentedDmCommand(SegmentedAperture):
         # Determine if the flat map will be applied
         self.apply_flat_map = apply_flat_map
         if self.apply_flat_map:
-            self.filename_flat = CONFIG_INI.get(self.dm_config_id, 'flat_file_ini')
+            self.filename_flat = CONFIG_INI.get(self.dm_config_id, 'custom_flat_file_ini')
             # Check that the file exists (specifically, are you on the testbed or not)
             if not os.path.isfile(self.filename_flat):
                 raise FileNotFoundError(f"{self.filename_flat} either does not exists or is not currently accessible")
