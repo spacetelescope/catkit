@@ -95,11 +95,11 @@ class IrisAoDmController(DeformableMirrorController):
             cmd.append(self.filename_ptt_dm)
 
         self.instrument = self.instrument_lib.Popen(cmd,
-                                                    stdin=instrument_lib.PIPE, stdout=instrument_lib.PIPE,
-                                                    stderr=instrument_lib.PIPE,
+                                                    stdin=self.instrument_lib.PIPE, stdout=self.instrument_lib.PIPE,
+                                                    stderr=self.instrument_lib.PIPE,
                                                     cwd=self.path_to_dm_exe,
                                                     bufsize=1,
-                                                    creationflags=instrument_lib.CREATE_NEW_PROCESS_GROUP)
+                                                    creationflags=self.instrument_lib.CREATE_NEW_PROCESS_GROUP)
         time.sleep(1)
 
         # Initialize the Iris to zeros.
