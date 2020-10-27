@@ -1,3 +1,5 @@
+import poppy
+
 import catkit.hardware.iris_ao.iris_ao_controller
 import catkit.hardware.iris_ao.util
 from catkit.interfaces.Instrument import SimInstrument
