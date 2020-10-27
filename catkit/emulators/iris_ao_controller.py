@@ -1,7 +1,9 @@
 import astropy.units as u
 import poppy
 
+from catkit.hardware import testbed_state
 import catkit.hardware.iris_ao.iris_ao_controller
+import catkit.hardware.iris_ao.segmented_dm_command as segmented_dm_command
 import catkit.hardware.iris_ao.util
 from catkit.interfaces.Instrument import SimInstrument
 
@@ -86,9 +88,16 @@ class PoppyIrisAOEmulator:
 
         if buffer == b'quit\n':
             self.dm.relax()
+            testbed_state.iris_command_object = None
         elif buffer == b'config\n':
-            ptt_data = catkit.hardware.iris_ao.util.read_ptt111(self.filename_ptt_dm, self.dm.number_of_segments)
-            self.dm.set_surface(self.dm.convert_command_to_poppy_surface(ptt_data))
+            ptt_data = catkit.hardware.iris_ao.util.read_ini(self.filename_ptt_dm, self.dm.number_of_segments)   # this returns a DM command dict
+            # Setting the simulated IrisAO means setting each actuator individually
+            for seg, values in ptt_data.items():
+                self.dm.set_actuator(seg-1, values[0]*u.um, values[1]*u.mrad, values[2]*u.mrad)   #TODO: double-check the -1 here, meant to correct for different segment names
+            ptt_list = list(ptt_data.values())
+            dm_command = segmented_dm_command.SegmentedDmCommand()
+            dm_command.read_initial_command(ptt_list)
+            testbed_state.iris_command_object = dm_command
         else:
             raise NotImplementedError(f"Emulation of '{self.config_id}' does not recognise the command '{buffer}'")
 
