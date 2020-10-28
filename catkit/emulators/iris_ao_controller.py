@@ -90,15 +90,9 @@ class PoppyIrisAOEmulator:
 
         if buffer == b'quit\n':
             self.dm.relax()
-            testbed_state.iris_command_object = None
         elif buffer == b'config\n':
             ptt_data = catkit.hardware.iris_ao.util.read_ini(self.filename_ptt_dm, self.dm.number_of_segments)   # this returns a DM command dict
             self.dm.actuate(ptt_data)
-            # TODO: convert ptt_listi to segmented_dm_command and stash in testbed_state variable for IrisAO command
-            #ptt_list = list(ptt_data.values())
-            #dm_command = segmented_dm_command.SegmentedDmCommand()
-            #dm_command.read_initial_command(ptt_list)
-            #testbed_state.iris_command_object = dm_command
         else:
             raise NotImplementedError(f"Emulation of '{self.config_id}' does not recognise the command '{buffer}'")
 
