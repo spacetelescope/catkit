@@ -62,23 +62,23 @@ class PoppyIrisAOEmulator:
         self.dm = dm  # An instance of PoppyIrisAODM.
 
     def Popen(self,
-              cmd, bufsize=-1, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=True,
+              args, bufsize=-1, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=True,
               shell=False, cwd=None, env=None, universal_newlines=False, startupinfo=None,
               creationflags=0, restore_signals=True, start_new_session=False, pass_fds=(), *, encoding=None,
               errors=None):
 
-        _full_path_dm_exe = cmd[0]
-        self.disable_hardware = cmd[1]
+        _full_path_dm_exe = args[0]
+        self.disable_hardware = args[1]
 
-        if len(cmd) > 2:
-            self.path_to_custom_mirror_files = cmd[2]
+        if len(args) > 2:
+            self.path_to_custom_mirror_files = args[2]
             # This file gets read here and only once by the C++ code but only the mirror SN and driver SN are used.
             # Running sim tests may then help prevent damaging mirror/driver/file conflicts.
             #assert self.driver_serial == catkit.hardware.iris_ao.util.get_driver_serial_from_ini_file()
             #assert self.dm.mirror_serial == catkit.hardware.iris_ao.util.get_mirror_serial_from_ini_file()
 
-        if len(cmd) > 3:
-            self.filename_ptt_dm = cmd[3]
+        if len(args) > 3:
+            self.filename_ptt_dm = args[3]
 
         return self
 
