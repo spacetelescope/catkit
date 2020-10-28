@@ -32,11 +32,13 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
         self.relaxed_poppy_surface = custom_flat_data  # + mcf_data
         self.relax()  # ??? See https://github.com/spacetelescope/catkit/issues/63 (we don't currently relax the bostons like this).
 
-    def relax(self):
+    def actuate(self, data):
         # Setting the simulated IrisAO means setting each actuator individually
-        # self.relaxed_poppy_surface needs to be a dict like returned by iris_ao.util.create_dict_from_list()
-        for seg, values in self.relaxed_poppy_surface.items():
+        for seg, values in data.items():
             self.set_actuator(seg-1, values[0] * u.um, values[1] * u.mrad, values[2] * u.mrad)  # TODO: double-check the -1 here, meant to correct for different segment names
+
+    def relax(self):
+        self.actuate(self.relaxed_poppy_surface)
 
 
 class PoppyIrisAOEmulator:
@@ -91,9 +93,7 @@ class PoppyIrisAOEmulator:
             testbed_state.iris_command_object = None
         elif buffer == b'config\n':
             ptt_data = catkit.hardware.iris_ao.util.read_ini(self.filename_ptt_dm, self.dm.number_of_segments)   # this returns a DM command dict
-            # Setting the simulated IrisAO means setting each actuator individually
-            for seg, values in ptt_data.items():
-                self.dm.set_actuator(seg-1, values[0]*u.um, values[1]*u.mrad, values[2]*u.mrad)   #TODO: double-check the -1 here, meant to correct for different segment names
+            self.dm.actuate(ptt_data)
             # TODO: convert ptt_listi to segmented_dm_command and stash in testbed_state variable for IrisAO command
             #ptt_list = list(ptt_data.values())
             #dm_command = segmented_dm_command.SegmentedDmCommand()
