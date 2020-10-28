@@ -85,7 +85,7 @@ class PoppyIrisAOEmulator:
         return self
 
     def write(self, buffer):
-        if not self.disable_hardware:
+        if self.disable_hardware:
             return
 
         if buffer == b'quit\n':
