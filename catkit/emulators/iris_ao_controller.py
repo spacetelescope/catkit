@@ -1,3 +1,5 @@
+import os
+
 import astropy.units as u
 import poppy
 
@@ -14,10 +16,10 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
     def number_of_segments(self):
         return self.dm_shape
 
-    def __init__(self, mcf_filename, custom_flat_filename, **super_kwargs):
+    def __init__(self, mcf_filename, custom_flat_filename, mirror_serial, **super_kwargs):
         super().__init__(**super_kwargs)
 
-        self.mirror_serial = None
+        self.mirror_serial = mirror_serial
 
         # Read the manufacturers .mcf "flat" file.
         # This is implicitly applied by the driver/controller and is NOT a present contribution of the command sent to
@@ -86,8 +88,13 @@ class PoppyIrisAOEmulator:
             self.path_to_custom_mirror_files = args[2]
             # This file gets read here and only once by the C++ code but only the mirror SN and driver SN are used.
             # Running sim tests may then help prevent damaging mirror/driver/file conflicts.
-            #assert self.driver_serial == catkit.hardware.iris_ao.util.get_driver_serial_from_ini_file()
-            #assert self.dm.mirror_serial == catkit.hardware.iris_ao.util.get_mirror_serial_from_ini_file()
+            ini_file = os.path.join(self.path_to_custom_mirror_files, "CustomFLAT.ini")
+            driver_serial_in_ini_file = catkit.hardware.iris_ao.util.get_driver_serial_from_ini_file(ini_file)
+            if self.driver_serial.strip("'") != driver_serial_in_ini_file:
+                raise ValueError(f"Driver serial mismatch: {self.driver_serial} != {driver_serial_in_ini_file}")
+            mirror_serial_in_ini_file = catkit.hardware.iris_ao.util.get_mirror_serial_from_ini_file(ini_file)
+            if self.dm.mirror_serial.strip("'") != mirror_serial_in_ini_file:
+                raise ValueError(f"Driver serial mismatch: {self.dm.mirror_serial} != {mirror_serial_in_ini_file}")
 
         if len(args) > 3:
             self.filename_ptt_dm = args[3]
