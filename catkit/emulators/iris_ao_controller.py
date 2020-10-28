@@ -106,5 +106,5 @@ class PoppyIrisAOEmulator:
         pass
 
 
-class IrisAoDmController(SimInstrument, catkit.hardware.iris_ao.iris_ao_controller.IrisAoDmController):
+class PoppyIrisAoDmController(SimInstrument, catkit.hardware.iris_ao.iris_ao_controller.IrisAoDmController):
     instrument_lib = PoppyIrisAOEmulator
