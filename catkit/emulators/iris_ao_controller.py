@@ -29,13 +29,23 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
         custom_flat_data = catkit.hardware.iris_ao.util.read_ini(self.custom_flat_filename, self.number_of_segments)   # this returns a DM command dict
 
         # A flat Poppy surfaces := 0.
-        self.relaxed_poppy_surface = custom_flat_data  # + mcf_data
+        self.relaxed_poppy_surface = self.invert_data(custom_flat_data)  # + mcf_data
         self.relax()  # ??? See https://github.com/spacetelescope/catkit/issues/63 (we don't currently relax the bostons like this).
 
     def actuate(self, data):
         # Setting the simulated IrisAO means setting each actuator individually
         for seg, values in data.items():
             self.set_actuator(seg-1, values[0] * u.um, values[1] * u.mrad, values[2] * u.mrad)  # TODO: double-check the -1 here, meant to correct for different segment names
+
+    @staticmethod
+    def invert_data(data):
+        new_data = {}
+        for key, values in data.items():
+            new_values = []
+            for value in values:
+                new_values.append(-value)
+            new_data[key] = tuple(new_values)
+        return new_data
 
     def relax(self):
         self.actuate(self.relaxed_poppy_surface)
