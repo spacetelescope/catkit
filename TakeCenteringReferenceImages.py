@@ -99,7 +99,7 @@ class TakeCenteringReferenceImages(Experiment):
             # For the actual images on the hardware, we want to make these as precisely centered as possible, so they
             # can then serve as the references for what a centered image should look like. TBD how best to do this.
             if testbed_state.current_mode == 'clc2':
-                centering_method = ImageCentering.satellite_spots
+                centering_method = ImageCentering.xy_sym
             if testbed_state.current_mode == 'aplc_v2':
                 centering_method = ImageCentering.custom_apodizer_spots
             self.log.info(f'Centering method for {testbed_state.current_mode} is {centering_method}')
@@ -108,6 +108,8 @@ class TakeCenteringReferenceImages(Experiment):
         move_filter(wavelength=int(np.rint(self.color_filter)), nd=self.nd_filter)
         self.log.info(f'Moving ND filter wheel to {self.nd_filter}')
         self.log.info(f'Moving wavelength filter wheel to {int(np.rint(self.color_filter))}nm')
+
+        exposure_set_name = self.exposure_set_name if self.exposure_set_name else f'coron_{testbed_state.current_mode}_{int(np.rint(self.color_filter))}'
 
         # Take images and save
         take_exposures(dm1_command_object=self.dm1_command_object,
@@ -119,7 +121,7 @@ class TakeCenteringReferenceImages(Experiment):
                        pipeline=self.pipeline,
                        path=self.output_path,
                        filename=None,
-                       exposure_set_name=self.exposure_set_name,
+                       exposure_set_name=exposure_set_name,
                        suffix=self.suffix,
                        auto_expose=self.auto_expose,
                        centering=centering_method,
@@ -136,7 +138,7 @@ class TakeCenteringReferenceImages(Experiment):
         # Now make a plot to verify the centering is OK
 
         fig, axes = plt.subplots(figsize=(11,7), ncols=2)
-        im = fits.getdata(os.path.join(self.output_path, 'coron/coron_image_cal.fits'))
+        im = fits.getdata(os.path.join(self.output_path, f'{exposure_set_name}/{exposure_set_name}_image_cal.fits'))
         norm = matplotlib.colors.LogNorm(1, im.max() )
         cm = matplotlib.cm.get_cmap('viridis')
         cm.set_bad(cm(0))
