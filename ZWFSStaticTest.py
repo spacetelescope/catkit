@@ -76,7 +76,7 @@ class ZWFSStaticTest(HicatExperiment):
 
         dm2_flat = flat_command(bias=False, flat_map=True, dm_num=2)
 
-        zernike_sensor = zwfs.ZWFS(self.instrument)
+        zernike_sensor = zwfs.ZWFS(self.instrument, wavelength=self.wave)
         zernike_sensor.calibrate(output_path=self.output_path, dm1_shape=dm1_command, dm2_shape=dm2_flat)
         zernike_sensor.save_list(zernike_sensor._clear_pupil, 'ZWFS_clear_pupil_dms', self.output_path)
 
