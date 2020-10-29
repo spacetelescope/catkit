@@ -93,7 +93,7 @@ class TakeCenteringReferenceImages(Experiment):
             toggle_simulator_to_reread_config()
             self.log.info("DISABLING simulated image jitter and WFE")
 
-            centering_method = ImageCentering.off
+            centering_method = ImageCentering.xy_sym
             self.log.info(f'Centering method for SIMULATED {testbed_state.current_mode} is {centering_method}')
         else:
             # For the actual images on the hardware, we want to make these as precisely centered as possible, so they
