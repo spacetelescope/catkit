@@ -34,9 +34,9 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
         self.relaxed_poppy_surface = self.invert_data(custom_flat_data)  # + mcf_data
         self.relax()  # ??? See https://github.com/spacetelescope/catkit/issues/63 (we don't currently relax the bostons like this).
 
-    def actuate(self, data):
+    def set_surface(self, new_surface):
         # Setting the simulated IrisAO means setting each actuator individually
-        for seg, values in data.items():
+        for seg, values in new_surface.items():
             self.set_actuator(seg-1, values[0] * u.um, values[1] * u.mrad, values[2] * u.mrad)  # TODO: double-check the -1 here, meant to correct for different segment names
 
     @staticmethod
@@ -50,7 +50,7 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
         return new_data
 
     def relax(self):
-        self.actuate(self.relaxed_poppy_surface)
+        self.set_surface(self.relaxed_poppy_surface)
 
 
 class PoppyIrisAOEmulator:
@@ -109,7 +109,7 @@ class PoppyIrisAOEmulator:
             self.dm.relax()
         elif buffer == b'config\n':
             ptt_data = catkit.hardware.iris_ao.util.read_ini(self.filename_ptt_dm, self.dm.number_of_segments)   # this returns a DM command dict
-            self.dm.actuate(ptt_data)
+            self.dm.set_surface(ptt_data)
         else:
             raise NotImplementedError(f"Emulation of '{self.config_id}' does not recognise the command '{buffer}'")
 
