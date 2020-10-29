@@ -37,7 +37,7 @@ class IrisAoDmController(DeformableMirrorController):
                    disable_hardware,
                    path_to_dm_exe,
                    filename_ptt_dm,
-                   path_to_ini_files=None):
+                   path_to_custom_mirror_files=None):
         """
         Initialize dm manufacturer specific object - this does not, nor should it, open a
         connection.
@@ -50,7 +50,7 @@ class IrisAoDmController(DeformableMirrorController):
         :param path_to_dm_exe: string, The path to the local directory that houses the DM_Control.exe file.
         :param filename_ptt_dm: string, Full path including filename of the ini file that provides the PTT values to be
                                 loaded onto the hardware, e.g. ".../ConfigPTT.ini".
-        :param path_to_ini_files: string, Full path to mirror .ini files.
+        :param path_to_custom_mirror_files: string, Full path to mirror .ini files.
         """
 
         self.log.info("Opening IrisAO connection")
@@ -64,7 +64,7 @@ class IrisAoDmController(DeformableMirrorController):
         self.disable_hardware = disable_hardware
         self.path_to_dm_exe = path_to_dm_exe
         self.full_path_dm_exe = os.path.join(path_to_dm_exe, 'DM_Control.exe')
-        self.path_to_ini_files = path_to_ini_files
+        self.path_to_custom_mirror_files = path_to_custom_mirror_files
 
         # Where to write ConfigPTT.ini file that gets read by the C++ code
         self.filename_ptt_dm = filename_ptt_dm
@@ -89,17 +89,17 @@ class IrisAoDmController(DeformableMirrorController):
     def _open(self):
         """Open a connection to the IrisAO"""
         cmd = [self.full_path_dm_exe, str(self.disable_hardware)]
-        if self.path_to_ini_files:
-            cmd.append(self.path_to_ini_files)
+        if self.path_to_custom_mirror_files:
+            cmd.append(self.path_to_custom_mirror_files)
         if self.filename_ptt_dm:
             cmd.append(self.filename_ptt_dm)
 
         self.instrument = self.instrument_lib.Popen(cmd,
-                                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                                    stderr=subprocess.PIPE,
+                                                    stdin=self.instrument_lib.PIPE, stdout=self.instrument_lib.PIPE,
+                                                    stderr=self.instrument_lib.PIPE,
                                                     cwd=self.path_to_dm_exe,
                                                     bufsize=1,
-                                                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+                                                    creationflags=self.instrument_lib.CREATE_NEW_PROCESS_GROUP)
         time.sleep(1)
 
         # Initialize the Iris to zeros.
