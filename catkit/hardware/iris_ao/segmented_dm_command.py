@@ -90,7 +90,7 @@ class SegmentedAperture:
                                                           flattoflat=self.flat_to_flat,
                                                           gap=self.gap,
                                                           segmentlist=self._segment_list,
-                                                          rotation=-90)
+                                                          rotation=0)
         return aperture
 
     def get_number_of_rings_in_pupil(self):
