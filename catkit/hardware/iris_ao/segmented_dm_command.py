@@ -316,7 +316,7 @@ class SegmentedDmCommand(SegmentedAperture):
 
         :param segment_ind: int, for the segment in the pupil that is to be updated,
                             provide the index of it's location in the active segment list
-        :param ptt_tuple: tuple with three values for piston, tip, and tilt
+        :param ptt_tuple: tuple with three values for piston, tip, and tilt in um and mrad
         """
         if add_to_current:
             command_list = util.create_zero_list(self.number_segments_in_pupil)
