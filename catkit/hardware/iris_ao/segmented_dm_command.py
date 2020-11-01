@@ -392,7 +392,8 @@ class SegmentedDmCommand(SegmentedAperture):
         converted_list = convert_ptt_units(display_data, tip_factor=1, tilt_factor=-1,
                                            starting_units=self.dm_command_units,
                                            ending_units=(u.m, u.rad, u.rad))
-        rounded_list = round_ptt_list(converted_list, decimals=4)
+        #rounded_list = round_ptt_list(converted_list, decimals=4)
+        rounded_list = converted_list
         for seg, values in zip(self.aperture.segmentlist, rounded_list):
             self.aperture.set_actuator(seg, values[0], values[1], values[2])
 
