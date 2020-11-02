@@ -584,6 +584,7 @@ class PoppySegmentedCommand(SegmentedAperture):
 
     :param global_coefficients: list of global zernike coefficients in the form
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
+                                in meters of optical path difference (not waves)
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
     :param wavelength: wavelength: float, wavelength in nm of the poppy optical system used for
