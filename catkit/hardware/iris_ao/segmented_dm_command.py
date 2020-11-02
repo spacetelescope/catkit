@@ -9,7 +9,8 @@ This module can be used to create a command in the following way:
     iris_command = segmented_dm_command.load_command(command, dm_config_id,
                                                      wavelength,
                                                      testbed_config_id,
-                                                     apply_flat_map=True)
+                                                     apply_flat_map=True,
+                                                     filename_flat=FLAT_COMMAND_FILE)
     iris_command.display()
 
 Note that a command can be zeros, None, a poppy command, a .ini file, or a .PTT### file.
@@ -205,6 +206,7 @@ class SegmentedDmCommand(SegmentedAperture):
     This class does NOT interact with hardware directly.
 
     :param apply_flat_map: If true, add flat map correction to the data before creating command
+    :param filename_flat: string, full path to custom flat map
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
     :param wavelength: float, wavelength in nm of the poppy optical system used for
@@ -216,7 +218,7 @@ class SegmentedDmCommand(SegmentedAperture):
     :attribute apply_flat_map: bool, whether or not to apply the flat map
     :attribute source_pupil_numbering: list, numbering native to data
     :attribute command: dict, final command with flat if apply_flat_map = True
-    :attribute filename_flat: str, path to flat
+    :attribute filename_flat: str, full path to custom flat
     :attribute total_number_segments: int, total number of segments in DM
     :attribute active_segment_list: int, number of active segments in the DM
     :attribute instrument_fov: int, field of view of the instrument
@@ -227,15 +229,15 @@ class SegmentedDmCommand(SegmentedAperture):
                          that you are defining
     """
 
-    def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False):
+    def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False, filename_flat=''):
         # Initilize parent class used to create the aperture
         super().__init__(dm_config_id=dm_config_id, wavelength=wavelength)
 
         # Determine if the flat map will be applied
         self.apply_flat_map = apply_flat_map
         if self.apply_flat_map:
-            self.filename_flat = CONFIG_INI.get(self.dm_config_id, 'custom_flat_file_ini')
-            # Check that the file exists (specifically, are you on the testbed or not)
+            self.filename_flat = filename_flat
+            # Check that the file exists
             if not os.path.isfile(self.filename_flat):
                 raise FileNotFoundError(f"{self.filename_flat} either does not exists or is not currently accessible")
 
@@ -456,7 +458,7 @@ class SegmentedDmCommand(SegmentedAperture):
 
 
 def load_command(segment_values, dm_config_id, wavelength, testbed_config_id,
-                 apply_flat_map=True):
+                 apply_flat_map=True, filename_flat=''):
     """
     Loads the segment_values from a file or list and returns a SegmentedDmCommand object.
 
@@ -471,11 +473,13 @@ def load_command(segment_values, dm_config_id, wavelength, testbed_config_id,
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
     :param apply_flat_map: Apply a flat map in addition to the data.
+    :param filename_flat: string, full path to the custom flat map
     :return: SegmentedDmCommand object representing the command dictionary.
     """
     dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, wavelength=wavelength,
                                         testbed_config_id=testbed_config_id,
-                                        apply_flat_map=apply_flat_map)
+                                        apply_flat_map=apply_flat_map,
+                                        filename_flat=filename_flat)
     dm_command_obj.read_initial_command(segment_values)
 
     return dm_command_obj
