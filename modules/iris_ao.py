@@ -81,12 +81,12 @@ def poppy_array(dm_config_id, wavelength, global_coefficients=[0., 0., 0., 2e-7]
     return command_to_load, command_str
 
 
-def zero_array():
+def zero_array(nseg):
     """
     Create a zero array. Can also be used to make a custom command
     :return: list of tuples for DM command, string for command name with date attached to it
     """
-    command_to_load = iris_util.create_zero_list(19)
+    command_to_load = iris_util.create_zero_list(nseg)
     command_str = f'zeros_{create_date()}'
 
     return command_to_load, command_str
