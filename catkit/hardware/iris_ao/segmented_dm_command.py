@@ -45,6 +45,7 @@ class SegmentedAperture:
                          regarding the segmented DM can be found.
     :param wavelength: float, wavelength in nm of the poppy optical system used for
                         (extremely oversimplified) focal plane simulations
+    :param rotation: float, rotation angle of the hex segmented DM in deg
     :attribute wavelength: float, wavelength in nm of the poppy optical system
     :attribute outer_ring_corners: bool, whether or not the segmented aperture includes
                                    the corner segments on the outer-most ring. If True,
@@ -60,12 +61,13 @@ class SegmentedAperture:
                                          parameter in the config file
     """
 
-    def __init__(self, dm_config_id, wavelength):
+    def __init__(self, dm_config_id, wavelength, rotation=0):
         # Set config sections
         self.dm_config_id = dm_config_id
 
         # Parameters specific to testbed setup being used
         self.wavelength = wavelength * u.nm
+        self.rotation = rotation
 
         # Parameters specifc to the aperture and segmented DM being used
         self.outer_ring_corners = CONFIG_INI.getboolean(self.dm_config_id, 'include_outer_ring_corners')
@@ -91,7 +93,7 @@ class SegmentedAperture:
                                                           flattoflat=self.flat_to_flat,
                                                           gap=self.gap,
                                                           segmentlist=self._segment_list,
-                                                          rotation=0)
+                                                          rotation=self.rotation)
         return aperture
 
     def get_number_of_rings_in_pupil(self):
@@ -214,6 +216,7 @@ class SegmentedDmCommand(SegmentedAperture):
                         (extremely oversimplified) focal plane simulations
     :param testbed_config_id: str, name of the section in the config_ini file where information
                            regarding the testbed can be found.
+    :param rotation: float, rotation angle of the hex segmented DM in deg
     :attribute data: list of tuples, input data that can then be updated. This attribute never
                      never includes the custom flat map values; units are determined with the attribute dm_command_units
     :attribute apply_flat_map: bool, whether or not to apply the custom flat map
@@ -230,9 +233,9 @@ class SegmentedDmCommand(SegmentedAperture):
                          that you are defining
     """
 
-    def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False, filename_flat=''):
+    def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False, filename_flat='', rotation=0):
         # Initilize parent class used to create the aperture
-        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength)
+        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength, rotation=rotation)
 
         # Determine if the custom flat map will be applied
         self.apply_flat_map = apply_flat_map
@@ -593,6 +596,7 @@ class PoppySegmentedCommand(SegmentedAperture):
                          regarding the segmented DM can be found.
     :param wavelength: wavelength: float, wavelength in nm of the poppy optical system used for
                         (extremely oversimplified) focal plane simulations
+    :param rotation: float, rotation angle of the hex segmented DM in deg
     :attribute radius: float, half of the flat-to-flat distance of each segment
     :attribute num_terms: int, total number of PTT values on all segments (= 3 x number of segments)
     :attribute dm_command_units: list, the units of the piston, tip, tilt (respecitvely)
@@ -604,9 +608,9 @@ class PoppySegmentedCommand(SegmentedAperture):
                       of the segmented DM being used
     :attribute list of coefficients: list of piston, tip, tilt coefficients in units of m, rad, rad
     """
-    def __init__(self, global_coefficients, dm_config_id, wavelength):
+    def __init__(self, global_coefficients, dm_config_id, wavelength, rotation=0):
         # Initilize parent class
-        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength)
+        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength, rotation=rotation)
 
         self.radius = (self.flat_to_flat/2).to(u.m)
         self.num_terms = (self.number_segments_in_pupil) * 3
