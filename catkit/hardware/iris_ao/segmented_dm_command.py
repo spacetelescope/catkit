@@ -365,7 +365,7 @@ class SegmentedDmCommand(SegmentedAperture):
         if self.apply_flat_map:
             metadata.append(MetaDataEntry("Flat Name", "FLATMAP", self.filename_flat,
                                           "Flat map name/file if applied"))
-        rounded_ptt_list = round_ptt_list(self.data, decimals=4)
+        rounded_ptt_list = round_ptt_list(self.data, decimals=4)    # since self.data is usually in units of (um, mrad, mrad), it is ok to round to 4 digits here)
         for seg, ptt in zip(self.segments_in_pupil, rounded_ptt_list):
             metadata.append(MetaDataEntry(f"Segment {seg}", f"SEG{seg}", str(ptt),
                                           f"Piston/GradX/GradY applied for segment {seg}"))
@@ -394,8 +394,9 @@ class SegmentedDmCommand(SegmentedAperture):
         converted_list = convert_ptt_units(display_data, tip_factor=1, tilt_factor=-1,
                                            starting_units=self.dm_command_units,
                                            ending_units=(u.m, u.rad, u.rad))
-        #rounded_list = round_ptt_list(converted_list, decimals=4)
-        rounded_list = converted_list
+        # We want to round to four significant digits when in DM units (um, mrad, mrad).
+        # Here, we are in SI units (m, rad, rad), so we round to the equivalent, 10 decimals.
+        rounded_list = round_ptt_list(converted_list, decimals=10)
         for seg, values in zip(self.aperture.segmentlist, rounded_list):
             self.aperture.set_actuator(seg, values[0], values[1], values[2])
 
@@ -683,6 +684,6 @@ class PoppySegmentedCommand(SegmentedAperture):
         input_list = convert_ptt_units(input_list, tip_factor=-1, tilt_factor=1,
                                        starting_units=(u.m, u.rad, u.rad),
                                        ending_units=self.dm_command_units)
-        coeffs_list = round_ptt_list(input_list)
+        coeffs_list = round_ptt_list(input_list)    # since input_list is usually in units of (um, mrad, mrad), it is ok to round to 4 digits here)
 
         return coeffs_list
