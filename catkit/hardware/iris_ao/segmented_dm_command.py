@@ -234,7 +234,7 @@ class SegmentedDmCommand(SegmentedAperture):
     """
 
     def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False, filename_flat=None, rotation=0):
-        # Initilize parent class used to create the aperture
+        # Initialize parent class used to create the aperture
         super().__init__(dm_config_id=dm_config_id, wavelength=wavelength, rotation=rotation)
 
         # Determine if the custom flat map will be applied
