@@ -4,14 +4,25 @@ If you have an Iris AO segmented DM, congratulations! You are one of only a few.
 
 
 ## Segment numbering and input formats
-IrisAO has a numeric naming system of the segments in their DMs that puts segment 1 in the center of the DM and continues counting in the "up" direction, and then counterclockwise around the DM, as described when looking in the entrance pupil at the DM. See figures for examples of the PTT111 and PTT489 from IrisAO with their IrisAO numbering.
+IrisAO has a numeric naming system of the segments in their DMs that puts segment 1 in the center of the DM and continues 
+counting in the "up" direction, and then counterclockwise around the DM, as described when looking in the **entrance pupil** 
+at the DM. See figures for examples of the PTT111 and PTT489 from IrisAO with their IrisAO numbering. This is also the 
+numbering that is used in the IrisAO GUI.
 
 ![Figure 1: IrisAO PTT111/PTT111L](figures/iris_ao_ptt111.jpg)
 ![Figure 2: IrisAO PTT489](figures/iris_ao_ptt489.jpg)
 
-In creating a command for your aperture on a IrisAO segmented DM, you will need to specify the aperture and segments to be commanded in the config.ini file (see more on that below). That aperture is what you will be commanding. When loading a custom command, the list of PTT values to be loaded will only be for the segments that you wish to move, such that the first element in your list will be the first segment to be moved, either the center segment or the first segment (at the "top") in the innermost ring of the aperture. Poppy follows the same segment numbering convention as JWST, which numbers segments clockwise when looking at the entrance pupil and we use that orientation in the IrisAO code as well. The only time the IrisAO orientation is used is in the native .PTT### files or .ini files
+In creating a command for your aperture on a IrisAO segmented DM, you will need to specify the aperture and segments to 
+be commanded in the config.ini file (see more on that below). That aperture is what you will be commanding. When loading 
+a custom command, the list of PTT values to be loaded will only be for the segments that you wish to move, such that the 
+first element in your list will be the first segment to be moved, either the center segment or the first segment (at the 
+"top") in the innermost ring of the aperture. `Catkit` follows the same segment numbering convention as Poppy and JWST, 
+which numbers segments clockwise when looking at the **entrance pupil**, so we use that orientation in the IrisAO code 
+as well. The only time the native IrisAO orientation is used is in the native .PTT### files or .ini files
 
-As an example: if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L, you will only be using a subset of segments to build your aperture and will not include the center segment, when passing in a custom command, your command will be given in the order as seen in Figure 3.
+As an example: if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L, you will only be using a subset of 
+segments to build your aperture and will not include the center segment, when passing in a custom command, your command 
+will be given in the order as seen in Figure 3.
 
 ![Figure 3: JWST aperture on a PTT111/PTT111L](figures/jwst_on_iris_ao_ptt111.jpg)
 
@@ -19,7 +30,8 @@ As an example: if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L,
 
 The `catkit` module for the Iris AO expects that you will be passing in one of the following types:
 
-* *.PTT111* file: File format of the command coming out of the IrisAO GUI where the units of the piston, tip, tilt values for each segment are um, mrad, mrad respectively.
+* *.PTT111* file: File format of the command coming out of the IrisAO GUI where the units of the piston, tip, tilt 
+values for each segment are um, mrad, mrad respectively.
 
   Example:
 
@@ -33,23 +45,27 @@ The `catkit` module for the Iris AO expects that you will be passing in one of t
         ...
         [ZV: 37, 0, 0, 0]
 
-* *.ini* file: File format of command that gets sent to the IrisAO controls where the units of the piston, tip, tilt values for each segment are um, mrad, mrad respectively.
+* *.ini* file: File format of command that gets sent to the IrisAO controls where the units of the piston, tip, tilt 
+values for each segment are um, mrad, mrad respectively.
 * list: A list of tuples with three entries for each segment in the aperture in the following form: [(piston, tip, tilt), ...] (see figure 3 for numbering)
 
 Each of these types has to be handled slightly differently, but never fear, we figured that out for you!
 
-We have also included here some util functions that might come in handy and a module for creating your own custom command with POPPY using global coefficients.
+We have also included here some util functions that might come in handy and a module for creating your own custom 
+command with POPPY using global coefficients.
 
 
 ## Using the IrisAO controller
 
 As with the other hardware in `catkit`, you can open and close a connection to the Iris AO as a context manager.
 
-Note that catkit.hardware.iris_ao.segmented_dm_command and catkit.hardware.iris_ao.util pull from CONFIG_INI any time you use either one, so you must import your local CONFIG_INI at the top of your module even if you do not explicitly use it in that module, this will ensure that you are grabbing the correct parameters for *your* testbed.
+Note that catkit.hardware.iris_ao.segmented_dm_command and catkit.hardware.iris_ao.util pull from CONFIG_INI any time 
+you use either one, so you must import your local CONFIG_INI at the top of your module even if you do not explicitly 
+use it in that module, this will ensure that you are grabbing the correct parameters for *your* testbed.
 
 ### Example:
 If putting *only* the flat map on the Iris AO:
-    ```
+    ```python
     from catkit.hardware.iris_ao.segmented_dm_command import load_command
 
     with testbed.segmented_dm() as iris:
@@ -61,7 +77,8 @@ If putting *only* the flat map on the Iris AO:
 ## `config.ini` additions
 
 Note that if you have an Iris AO segmented DM, you will need to add an "iris_ao" section to
-your config.ini file. Note that you can name that section whatever you want, but make sure to pass that name in for the `dm_config_id` parameter in the `load_command` function (see above example).
+your config.ini file. Note that you can name that section whatever you want, but make sure to pass that name in for 
+the `dm_config_id` parameter in the `load_command` function (see above example).
 
 Parameters to be included in the the "iris_ao" section of the config.ini file:
 
@@ -90,14 +107,15 @@ If using segmented_dm_command.PoppySegmentedCommand or segmented_dm_command.Disp
 ---
 **Important Note**:
 
-Each segmented DM from Iris AO was calibrated with a specific driver(s). This calibration is captured in the .mcf file. Mixing a .mcf file with a .dcf file that *does not match* the driver serial number in the .mcf file could be *fatal* to your DM.
+Each segmented DM from Iris AO was calibrated with a specific driver(s). This calibration is captured in the .mcf file. 
+Mixing a .mcf file with a .dcf file that *does not match* the driver serial number in the .mcf file could be *fatal* to your DM.
 
 ***Make sure the mirror and driver serial numbers are correct in your config.ini file.***
 
 ---
 
 ### Example:
-    ```
+    ```ini
     [iris_ao]
 
     mirror_serial = 'PWA##-##-##-####'
@@ -119,9 +137,10 @@ Note that the code expects to find the `DM_Control.exe` file in `path_to_dm_exe`
 
 
 ## Update your `testbed_state.py` file
-The `iris_ao_controller` will update your `testbed_state.py` file with the current command being applied to the Iris AO. In order to allow this, you will need to add the following to your file:
+The `iris_ao_controller` will update your `testbed_state.py` file with the current command being applied to the Iris AO. 
+In order to allow this, you will need to add the following to your file:
 
-    ```
+    ```python
     # IrisAO command object currently being applied.
     iris_command_object = None
     ```
@@ -129,9 +148,10 @@ The `iris_ao_controller` will update your `testbed_state.py` file with the curre
 When there is no command on the the Iris AO, this variable will be changed back to `None`.
 
 ## Update your `testbed.py` file
-You also need to make sure you can open and close your Iris AO like other hardware, as a context manager. To do this, add the following block of code (edited as necessary for your testbed) to your `testbed.py` file
+You also need to make sure you can open and close your Iris AO like other hardware, as a context manager. To do this, 
+add the following block of code (edited as necessary for your testbed) to your `testbed.py` file
 
-    ```
+    ```python
     from catkit.hardware.iris_ao.iris_ao_controller import IrisAoDmController # Iris AO
 
     def segmented_dm_controller():
