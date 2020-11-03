@@ -10,7 +10,7 @@ This module can be used to create a command in the following way:
                                                      wavelength,
                                                      testbed_config_id,
                                                      apply_flat_map=True,
-                                                     filename_flat=FLAT_COMMAND_FILE)
+                                                     filename_flat='repo-path/hardware/iris-ao/CustomFLAT.ini')
     iris_command.display()
 
 Note that a command can be zeros, None, a poppy command, a .ini file, or a .PTT### file.
@@ -209,7 +209,7 @@ class SegmentedDmCommand(SegmentedAperture):
     This class does NOT interact with hardware directly.
 
     :param apply_flat_map: If true, add the custom flat map correction to the data before creating the command
-    :param filename_flat: string, full path to custom flat map
+    :param filename_flat: string, full path to custom flat map, only needed if apply_flat_map=True
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
     :param wavelength: float, wavelength in nm of the poppy optical system used for
@@ -222,7 +222,7 @@ class SegmentedDmCommand(SegmentedAperture):
     :attribute apply_flat_map: bool, whether or not to apply the custom flat map
     :attribute source_pupil_numbering: list, numbering native to data
     :attribute command: dict, final command with flat if apply_flat_map = True; units are determined with the attribute dm_command_units
-    :attribute filename_flat: str, full path to custom flat
+    :attribute filename_flat: str, full path to custom flat, only needed if apply_flat_map=True
     :attribute total_number_segments: int, total number of segments in DM, includes dead segments
     :attribute active_segment_list: int, number of active segments in the DM
     :attribute instrument_fov: int, field of view of the instrument in pixels
@@ -233,7 +233,7 @@ class SegmentedDmCommand(SegmentedAperture):
                          that you are defining
     """
 
-    def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False, filename_flat='', rotation=0):
+    def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False, filename_flat=None, rotation=0):
         # Initilize parent class used to create the aperture
         super().__init__(dm_config_id=dm_config_id, wavelength=wavelength, rotation=rotation)
 
@@ -464,7 +464,7 @@ class SegmentedDmCommand(SegmentedAperture):
 
 
 def load_command(segment_values, dm_config_id, wavelength, testbed_config_id,
-                 apply_flat_map=True, filename_flat=''):
+                 apply_flat_map=True, filename_flat=None):
     """
     Loads the segment_values from a file or list and returns a SegmentedDmCommand object.
 
@@ -479,7 +479,7 @@ def load_command(segment_values, dm_config_id, wavelength, testbed_config_id,
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
     :param apply_flat_map: bool, whether to apply a flat map in addition to the data when sending command to hardware
-    :param filename_flat: string, full path to the custom flat map
+    :param filename_flat: string, full path to the custom flat map, only needed if apply_flat_map=True
     :return: SegmentedDmCommand object representing the command dictionary.
     """
     dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, wavelength=wavelength,
