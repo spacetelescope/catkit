@@ -4,7 +4,7 @@ import astropy.units as u
 import poppy
 
 from catkit.hardware import testbed_state
-import catkit.hardware.iris_ao.iris_ao_controller
+from catkit.hardware.iris_ao.iris_ao_controller import IrisAoDmController
 import catkit.hardware.iris_ao.segmented_dm_command as segmented_dm_command
 import catkit.hardware.iris_ao.util
 from catkit.interfaces.Instrument import SimInstrument
@@ -118,5 +118,5 @@ class PoppyIrisAOEmulator:
         pass
 
 
-class PoppyIrisAoDmController(SimInstrument, catkit.hardware.iris_ao.iris_ao_controller.IrisAoDmController):
+class PoppyIrisAoDmController(SimInstrument, IrisAoDmController):
     instrument_lib = PoppyIrisAOEmulator
