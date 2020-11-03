@@ -143,6 +143,7 @@ class ApplyApodizerStrutsPoke(ApplyActuatorPattern):
                  392, 325, 259, 197, 139,  # bottom left
                  389, 320, 252, 188, 128]  # bottom right
 
+
 class ApplyAsymmetricTestPattern(ApplyActuatorPattern):
     """ Poke actuators in an asymmetric pattern that shows handedness and orientation of a DM in an unambiguous fashion
 
