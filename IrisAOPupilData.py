@@ -1,17 +1,17 @@
 # noinspection PyUnresolvedReferences
 import os.path
 import astropy.io.fits as fits
-import numpy as np
 
 from catkit.hardware.boston import commands
 from catkit.hardware.iris_ao import segmented_dm_command
 from catkit.catkit_types import units, quantity, LyotStopPosition
+from hicat.experiments.ApplyActuatorPattern import ApplyAsymmetricTestPattern
 from hicat.experiments.Experiment import Experiment
 from hicat.experiments.modules import iris_ao
 from hicat.hardware import testbed
-from hicat.hardware.testbed import move_lyot_stop
+from hicat.hardware.testbed import move_fpm, move_lyot_stop
 import hicat.util
-from hicat.wfc_algorithms.wfsc_utils import take_exposure_hicat, take_pupilcam_hicat
+from hicat.wfc_algorithms.wfsc_utils import take_pupilcam_hicat
 from hicat.config import CONFIG_INI
 
 
@@ -53,6 +53,8 @@ class IrisAOPupilData(Experiment):
 
             # Move Lyot stop out
             move_lyot_stop(LyotStopPosition.out_of_beam)
+            # Move FPM in
+            move_fpm('coron')
 
             with testbed.iris_ao(self.dm_config_id) as iris_dm:
 
@@ -71,88 +73,39 @@ class IrisAOPupilData(Experiment):
                                                       exposure_time=self.exptime_pupil)[0]
                 fits.writeto(os.path.join(self.output_path, 'pupilcam_all_flat.fits'), pupil_reference)
 
-                # Take focal plane direct image
-                direct_reference, direct_header = take_exposure_hicat(np.zeros(952), np.zeros(952), devices,
-                                                                      wavelength=self.iris_wavelength,
-                                                                      exposure_type='direct',
-                                                                      exposure_time=None,
-                                                                      auto_expose=True,
-                                                                      initial_path=self.output_path,
-                                                                      num_exposures=5,
-                                                                      file_mode=True,
-                                                                      suffix=f"direct",
-                                                                      raw_skip=np.inf)
-
-                # Define the commands that should be run
-                zero_array, zero_string = iris_ao.zero_array(nseg=37)
+                # Define the letter F commands for IrisAO
                 letter_f, letter_string = iris_ao.letter_f(self.dm_config_id, self.testbed_config_id,
                                                            self.iris_filename_flat, self.iris_wavelength)
 
-                # Apply pattern to IrisAO and take pupil images
-                for i, pattern in enumerate([(zero_array, zero_string), (letter_f, letter_string)]):
-
-                    # Apply shape to IrisAO
-                    iris_command = segmented_dm_command.load_command(pattern[0], self.dm_config_id,
+                # Apply letter F shape to IrisAO while Bostons are still flat
+                letter_f_command = segmented_dm_command.load_command(letter_f, self.dm_config_id,
                                                                      self.iris_wavelength, self.testbed_config_id,
                                                                      apply_flat_map=True,
                                                                      filename_flat=self.iris_filename_flat)
 
-                    iris_dm.apply_shape(iris_command)
+                iris_dm.apply_shape(letter_f_command)
 
-                    # Take pupil exposure.
-                    suffix = f'_pattern{i}_{pattern[1]}'
-                    pupil_image = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix=f'pupilcam{suffix}',
-                                                      exposure_time=self.exptime_pupil)[0]
+                # Take pupil exposure.
+                suffix = f'Bostons_flat_IrisAO_{letter_string}'
+                pupil_image1 = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix=f'pupilcam_{suffix}',
+                                                   exposure_time=self.exptime_pupil)[0]
 
-                    # Now do the subtraction of the reference (flat) pupil image from that pupil image
-                    fits.writeto(os.path.join(self.output_path, 'pupilcam_delta{}.fits'.format(suffix)),
-                                 pupil_image - pupil_reference)
+                # Now do the subtraction of the reference (flat) pupil image from that pupil image
+                fits.writeto(os.path.join(self.output_path, f'pupilcam_delta_{suffix}.fits'),
+                             pupil_image1 - pupil_reference)
 
-                    # Take focal plane direct image
-                    direct_reference, direct_header = take_exposure_hicat(np.zeros(952), np.zeros(952), devices,
-                                                                          wavelength=self.iris_wavelength,
-                                                                          exposure_type='direct',
-                                                                          exposure_time=None,
-                                                                          auto_expose=True,
-                                                                          initial_path=self.output_path,
-                                                                          num_exposures=5,
-                                                                          file_mode=True,
-                                                                          suffix=f"direct{suffix}",
-                                                                          raw_skip=np.inf)
-                """
-                # Move Lyot stop in
-                move_lyot_stop(LyotStopPosition.in_beam)
+                # Apply asymmetric pattern do DM1, keep letter F on IrisAO
+                asymmetric_poke_actuators = ApplyAsymmetricTestPattern.actuators
+                amp = CONFIG_INI.getfloat('boston_kilo952', 'dm1_ideal_poke')
+                amplitude = quantity(amp, units.nanometer)
+                command_dm1 = commands.poke_command(asymmetric_poke_actuators, dm_num=1, amplitude=amplitude)
+                dm.apply_shape(command_dm1, dm_num=1)
 
-                # Update reference image
-                dm.apply_shape_to_both(flat_dm1, flat_dm2)
-                pupil_reference = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path,
-                                                      suffix='pupilcam_withlyot_dms_all_flat',
-                                                      exposure_time=self.exptime_pupil)[0]
-                fits.writeto(os.path.join(self.output_path, 'pupilcam_withlyot_all_flat.fits'), pupil_reference)
+                # Take pupil exposure.
+                suffix = f'DM1_asymmetric_IrisAO_{letter_string}'
+                pupil_image2 = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix=f'pupilcam_{suffix}',
+                                                   exposure_time=self.exptime_pupil)[0]
 
-
-                for amp in self.amplitudes:
-                    amplitude = quantity(amp, units.nanometer)
-                    for i, pattern in enumerate([centerpokeplus_actuators, apodizer_struts_actuators]):
-
-                        for dmnum in [1]:
-
-                            # Apply shapes to DMs
-                            if dmnum==1:
-                                command_dm1 = commands.poke_command(pattern, dm_num=1, amplitude=amplitude)
-                                command_dm2 = commands.poke_command(pattern, dm_num=2, amplitude=zeroamp)
-                            else:
-                                command_dm1 = commands.poke_command(pattern, dm_num=1, amplitude=zeroamp)
-                                command_dm2 = commands.poke_command(pattern, dm_num=2, amplitude=amplitude)
-
-                            dm.apply_shape_to_both(command_dm1, command_dm2)
-
-                            # Take pupil exposure.
-                            suffix = '_pattern{}_dm{}_amp{}'.format(i,dmnum,amp)
-                            pupil_image = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix='pupilcam_withlyot_'+suffix,
-                                                exposure_time=self.exptime_pupil)[0]
-
-                            # Now do the subtraction of the reference (flat) pupil image from that pupil image
-                            fits.writeto(os.path.join(self.output_path, 'pupilcam_withlyot_delta{}.fits'.format(suffix)),
-                                         pupil_image - pupil_reference)
-                    """
+                # Now do the subtraction of the reference (flat) pupil image from that pupil image
+                fits.writeto(os.path.join(self.output_path, f'pupilcam_delta_{suffix}.fits'),
+                             pupil_image2 - pupil_reference)
