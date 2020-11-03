@@ -182,3 +182,12 @@ def save_images(images, meta_data, path, base_filename, raw_skip=0):
 
         hdu.writeto(full_path, overwrite=True)
         log.info(f"'{full_path}' written to disk.")
+
+
+def str2bool(buffer):
+    if buffer.lower() == "true":
+        return True
+    elif buffer.lower() == "false":
+        return False
+    else:
+        raise ValueError(f"Expected case insensitive bool but got '{buffer}'")

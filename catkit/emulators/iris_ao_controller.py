@@ -8,6 +8,7 @@ import catkit.hardware.iris_ao.iris_ao_controller
 import catkit.hardware.iris_ao.segmented_dm_command as segmented_dm_command
 import catkit.hardware.iris_ao.util
 from catkit.interfaces.Instrument import SimInstrument
+import catkit.util
 
 
 class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
@@ -82,7 +83,7 @@ class PoppyIrisAOEmulator:
               errors=None):
 
         _full_path_dm_exe = args[0]
-        self.disable_hardware = args[1]
+        self.disable_hardware = catkit.util.str2bool(args[1])
 
         if len(args) > 2:
             self.path_to_custom_mirror_files = args[2]
