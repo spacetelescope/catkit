@@ -9,7 +9,8 @@ This module can be used to create a command in the following way:
     iris_command = segmented_dm_command.load_command(command, dm_config_id,
                                                      wavelength,
                                                      testbed_config_id,
-                                                     apply_flat_map=True)
+                                                     apply_flat_map=True,
+                                                     filename_flat=FLAT_COMMAND_FILE)
     iris_command.display()
 
 Note that a command can be zeros, None, a poppy command, a .ini file, or a .PTT### file.
@@ -44,6 +45,7 @@ class SegmentedAperture:
                          regarding the segmented DM can be found.
     :param wavelength: float, wavelength in nm of the poppy optical system used for
                         (extremely oversimplified) focal plane simulations
+    :param rotation: float, rotation angle of the hex segmented DM in deg
     :attribute wavelength: float, wavelength in nm of the poppy optical system
     :attribute outer_ring_corners: bool, whether or not the segmented aperture includes
                                    the corner segments on the outer-most ring. If True,
@@ -59,12 +61,13 @@ class SegmentedAperture:
                                          parameter in the config file
     """
 
-    def __init__(self, dm_config_id, wavelength):
+    def __init__(self, dm_config_id, wavelength, rotation=0):
         # Set config sections
         self.dm_config_id = dm_config_id
 
         # Parameters specific to testbed setup being used
         self.wavelength = wavelength * u.nm
+        self.rotation = rotation
 
         # Parameters specifc to the aperture and segmented DM being used
         self.outer_ring_corners = CONFIG_INI.getboolean(self.dm_config_id, 'include_outer_ring_corners')
@@ -90,7 +93,7 @@ class SegmentedAperture:
                                                           flattoflat=self.flat_to_flat,
                                                           gap=self.gap,
                                                           segmentlist=self._segment_list,
-                                                          rotation=-90)
+                                                          rotation=self.rotation)
         return aperture
 
     def get_number_of_rings_in_pupil(self):
@@ -134,6 +137,9 @@ class SegmentedAperture:
         if not self.center_segment:
             active_segments_in_pupil_per_ring = [num-1 for num in max_number_segments_in_pupil_per_ring]
 
+        if self.outer_ring_corners and self.center_segment:
+            active_segments_in_pupil_per_ring = max_number_segments_in_pupil_per_ring
+
         return active_segments_in_pupil_per_ring
 
     def get_max_number_segments_in_pupil_per_ring(self, number_of_rings=7):
@@ -157,7 +163,7 @@ class SegmentedAperture:
         This list is passed to Poppy to help create the aperture.
 
         :param num_rings: int, The number of rings in your pupil
-        :return: list, the list of segments
+        :return: list, the list of segments # TODO: the list of segment *names* (as e.g. in the GUI)?
         """
         num_segs = self.total_number_segments_in_aperture(self._num_rings)
         seglist = np.arange(num_segs)
@@ -197,42 +203,45 @@ class SegmentedDmCommand(SegmentedAperture):
     each segment. Creates a dictionary of the form {seg: (piston, tip, tilt)} that can
     be loaded onto the hardware.
 
-    Units of the loaded command are expected to be in um (for piston) and mrad (for tip and tilt)
+    Units of the loaded command are defined with the atrribute "dm_command_units" and are
+    usually in um (for piston) and mrad (for tip and tilt).
 
     This class does NOT interact with hardware directly.
 
-    :param apply_flat_map: If true, add flat map correction to the data before creating command
+    :param apply_flat_map: If true, add the custom flat map correction to the data before creating the command
+    :param filename_flat: string, full path to custom flat map
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
     :param wavelength: float, wavelength in nm of the poppy optical system used for
                         (extremely oversimplified) focal plane simulations
     :param testbed_config_id: str, name of the section in the config_ini file where information
                            regarding the testbed can be found.
+    :param rotation: float, rotation angle of the hex segmented DM in deg
     :attribute data: list of tuples, input data that can then be updated. This attribute never
-                     never includes the flat map values.
-    :attribute apply_flat_map: bool, whether or not to apply the flat map
+                     never includes the custom flat map values; units are determined with the attribute dm_command_units
+    :attribute apply_flat_map: bool, whether or not to apply the custom flat map
     :attribute source_pupil_numbering: list, numbering native to data
-    :attribute command: dict, final command with flat if apply_flat_map = True
-    :attribute filename_flat: str, path to flat
-    :attribute total_number_segments: int, total number of segments in DM
+    :attribute command: dict, final command with flat if apply_flat_map = True; units are determined with the attribute dm_command_units
+    :attribute filename_flat: str, full path to custom flat
+    :attribute total_number_segments: int, total number of segments in DM, includes dead segments
     :attribute active_segment_list: int, number of active segments in the DM
-    :attribute instrument_fov: int, field of view of the instrument
-    :attribute pixelscale: float, pixelscale of the instrument
+    :attribute instrument_fov: int, field of view of the instrument in pixels
+    :attribute pixelscale: float, pixelscale of the instrument in arcsec / pix
     :attribute dm_command_units: tuple of floats, the units of the piston, tip, tilt
                                  values on the hardware
     :attribute aperture: poppy.dms.HexSegmentedDeformableMirror object, the aperture
                          that you are defining
     """
 
-    def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False):
+    def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False, filename_flat='', rotation=0):
         # Initilize parent class used to create the aperture
-        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength)
+        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength, rotation=rotation)
 
-        # Determine if the flat map will be applied
+        # Determine if the custom flat map will be applied
         self.apply_flat_map = apply_flat_map
         if self.apply_flat_map:
-            self.filename_flat = CONFIG_INI.get(self.dm_config_id, 'custom_flat_file_ini')
-            # Check that the file exists (specifically, are you on the testbed or not)
+            self.filename_flat = filename_flat
+            # Check that the file exists
             if not os.path.isfile(self.filename_flat):
                 raise FileNotFoundError(f"{self.filename_flat} either does not exists or is not currently accessible")
 
@@ -288,13 +297,13 @@ class SegmentedDmCommand(SegmentedAperture):
         return command_list
 
     def get_data(self):
-        """ Grab the current shape to be applied to the DM (does NOT include the flat map)
+        """ Grab the current shape to be applied to the DM (does NOT include the custom flat map)
         """
         return self.data
 
     def to_command(self):
-        """ Output command suitable (in the form a dictionary with an entry for each segment
-        on the for sending to the hardware driver. The flat map will be added only at this stage
+        """ Output command suitable (in the form a dictionary with an entry for each segment)
+        for sending to the hardware driver. The custom flat map will be added only at this stage.
         """
         if self.apply_flat_map:
             command_data = self.add_map(self.filename_flat, return_new_map=True)
@@ -306,14 +315,15 @@ class SegmentedDmCommand(SegmentedAperture):
 
     def update_one_segment(self, segment_ind, ptt_tuple, add_to_current=True):
         """ Update the value of one segment by supplying the new command that will be added
-        to or will replace the current PTT tuple. To identify the segment to be changed, give
-        the *index* of that segment in the active segment list. This will be added
+        to or will replace the current PTT tuple on this segment only. To identify the segment to be changed, give
+        the *command index* (not its name like in the GUI) of that segment in the active segment list. This will be added
         to the current value only if the add_to_current flag is set to True, otherwise, value
         given will replace the current value.
 
         :param segment_ind: int, for the segment in the pupil that is to be updated,
                             provide the index of it's location in the active segment list
-        :param ptt_tuple: tuple with three values for piston, tip, and tilt
+        :param ptt_tuple: tuple with three values for piston, tip, and tilt in um and mrad unless specified otherwise
+                          with self.dm_command_units
         """
         if add_to_current:
             command_list = util.create_zero_list(self.number_segments_in_pupil)
@@ -341,7 +351,7 @@ class SegmentedDmCommand(SegmentedAperture):
 
     def to_ini(self, filename, out_dir=''):
         """
-        Write the command to a .ini file. Note: This will NOT include the applied flat
+        Write the command to a .ini file. Note: This will NOT include the applied custom flat
         map values
         :param filename: str, name of ini file to be written out
         :param out_dir: str, name of directory where ini file will be saved
@@ -354,13 +364,13 @@ class SegmentedDmCommand(SegmentedAperture):
     def get_extra_meta_data(self):
         """
         Create meta data to be saved with fits files that gives the ptt values/segment
-        and if the flat map was applied.The values saved will NOT include flat map PTT values.
+        and if the flat map was applied.The values saved will NOT include custom flat map PTT values.
         """
         metadata = []
         if self.apply_flat_map:
             metadata.append(MetaDataEntry("Flat Name", "FLATMAP", self.filename_flat,
                                           "Flat map name/file if applied"))
-        rounded_ptt_list = round_ptt_list(self.data, decimals=4)
+        rounded_ptt_list = round_ptt_list(self.data, decimals=4)    # since self.data is usually in units of (um, mrad, mrad), it is ok to round to 4 digits here)
         for seg, ptt in zip(self.segments_in_pupil, rounded_ptt_list):
             metadata.append(MetaDataEntry(f"Segment {seg}", f"SEG{seg}", str(ptt),
                                           f"Piston/GradX/GradY applied for segment {seg}"))
@@ -389,7 +399,9 @@ class SegmentedDmCommand(SegmentedAperture):
         converted_list = convert_ptt_units(display_data, tip_factor=1, tilt_factor=-1,
                                            starting_units=self.dm_command_units,
                                            ending_units=(u.m, u.rad, u.rad))
-        rounded_list = round_ptt_list(converted_list, decimals=4)
+        # We want to round to four significant digits when in DM units (um, mrad, mrad).
+        # Here, we are in SI units (m, rad, rad), so we round to the equivalent, 10 decimals.
+        rounded_list = round_ptt_list(converted_list, decimals=10)
         for seg, values in zip(self.aperture.segmentlist, rounded_list):
             self.aperture.set_actuator(seg, values[0], values[1], values[2])
 
@@ -452,7 +464,7 @@ class SegmentedDmCommand(SegmentedAperture):
 
 
 def load_command(segment_values, dm_config_id, wavelength, testbed_config_id,
-                 apply_flat_map=True):
+                 apply_flat_map=True, filename_flat=''):
     """
     Loads the segment_values from a file or list and returns a SegmentedDmCommand object.
 
@@ -466,12 +478,14 @@ def load_command(segment_values, dm_config_id, wavelength, testbed_config_id,
                            pupil (see README for more information)
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
-    :param apply_flat_map: Apply a flat map in addition to the data.
+    :param apply_flat_map: bool, whether to apply a flat map in addition to the data when sending command to hardware
+    :param filename_flat: string, full path to the custom flat map
     :return: SegmentedDmCommand object representing the command dictionary.
     """
     dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, wavelength=wavelength,
                                         testbed_config_id=testbed_config_id,
-                                        apply_flat_map=apply_flat_map)
+                                        apply_flat_map=apply_flat_map,
+                                        filename_flat=filename_flat)
     dm_command_obj.read_initial_command(segment_values)
 
     return dm_command_obj
@@ -511,14 +525,15 @@ def convert_ptt_units(ptt_list, tip_factor, tilt_factor, starting_units, ending_
     - ending_units = (u.m, u.rad, u.rad)
 
     :param ppt_list: list, of tuples existing of piston, tip, tilt, values for each
-                     segment in a pupil
+                     segment in a pupil, in the respective starting_units
     :param tip_factor: int, either -1 or 1 based on the information above
     :param tilt_factor: int, either -1 or 1 based on the information above
     :param starting_units: tuple or list of the units associated with the piston, tip,
                            tilt values respectively of the input ptt_list
     :param ending_units: tuple_or_list of the units associated with the piston, tip,
                            tilt values respectively of the expected output
-    :return: list of tuples of the piston, tip, tilt values for each segment listed
+    :return: list of tuples of the piston, tip, tilt values for each segment listed,
+             in the respective ending_units
     """
     converted = [(ptt[0]*(starting_units[0]).to(ending_units[0]),
                   tip_factor*ptt[2]*(starting_units[2]).to(ending_units[2]),
@@ -533,9 +548,9 @@ def set_to_dm_limits(ptt_list, limit=5.):
     the IrisAO GUI has set.
 
     :param ppt_list: list, of tuples existing of piston, tip, tilt, values for each
-                     segment in a pupil
+                     segment in a pupil, in DM units
     :param limit: float, in DM units. Default = 5.
-    :return: list of tuples of the piston, tip, tilt values for each segment listed
+    :return: list of tuples of the piston, tip, tilt values in DM units for each segment listed
              such that none of the values exceed the limit
     """
     updated = [tuple(min(i, limit) for i in ptt) for ptt in ptt_list]
@@ -562,7 +577,7 @@ class PoppySegmentedCommand(SegmentedAperture):
     """
     Create a segement values list (and dictionary) (in POPPY: wavefront error) using
     POPPY for your pupil. This is currently limited to global shapes. The output is
-    a list of piston, tip, tilt  values with units of (um, mrad, mrad), respectively,
+    a list of piston, tip, tilt values with DM units, usually (um, mrad, mrad), respectively,
     for each segment.
 
     This class inherits the SegmentedAperture class.
@@ -576,23 +591,26 @@ class PoppySegmentedCommand(SegmentedAperture):
 
     :param global_coefficients: list of global zernike coefficients in the form
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
+                                in meters of optical path difference (not waves)
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
     :param wavelength: wavelength: float, wavelength in nm of the poppy optical system used for
                         (extremely oversimplified) focal plane simulations
+    :param rotation: float, rotation angle of the hex segmented DM in deg
     :attribute radius: float, half of the flat-to-flat distance of each segment
-    :attribute num_terms: int, total number of PTT values on all segments (3 x number of segments)
+    :attribute num_terms: int, total number of PTT values on all segments (= 3 x number of segments)
     :attribute dm_command_units: list, the units of the piston, tip, tilt (respecitvely)
                                  values when coming from the DM or DM command
-    :attribute global_coefficents: list of global zernike coefficients in the form
+    :attribute global_coefficients: list of global zernike coefficients in the form
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
+                                in meters of optical path difference (not waves)
     :attribute basis: poppy.zernike.Segment_PTT_Basis object, basis based on the characteristics
                       of the segmented DM being used
-    :attribute list of coefficients: list of piston, tip, tilt coefficients in units of u, rad, rad
+    :attribute list of coefficients: list of piston, tip, tilt coefficients in units of m, rad, rad
     """
-    def __init__(self, global_coefficients, dm_config_id, wavelength):
+    def __init__(self, global_coefficients, dm_config_id, wavelength, rotation=0):
         # Initilize parent class
-        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength)
+        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength, rotation=rotation)
 
         self.radius = (self.flat_to_flat/2).to(u.m)
         self.num_terms = (self.number_segments_in_pupil) * 3
@@ -628,6 +646,7 @@ class PoppySegmentedCommand(SegmentedAperture):
 
         :param global_coefficients: list of global zernike coefficients in the form
                                     [piston, tip, tilt, defocus, ...] (Noll convention)
+                                    in meters of optical path difference (not waves)
         :return: Poppy ZernikeWFE object, the global wavefront described by the input coefficients
         """
         wavefront = poppy.ZernikeWFE(radius=self.radius, coefficients=global_coefficients)
@@ -667,13 +686,14 @@ class PoppySegmentedCommand(SegmentedAperture):
         Convert the PTT list to DM hardware units so that it can be passed to the
         SegmentDmCommand class
 
-        :return: list of coefficients for piston, tip, and tilt, for your pupil
+        :return: list of coefficients for piston, tip, and tilt, for your pupil, in DM units,
+                 usually um, mrad, mrad unless otherwise specified in the config
         """
         input_list = self.list_of_coefficients
         # Convert from Poppy's m, rad, rad to the DM units
         input_list = convert_ptt_units(input_list, tip_factor=-1, tilt_factor=1,
                                        starting_units=(u.m, u.rad, u.rad),
                                        ending_units=self.dm_command_units)
-        coeffs_list = round_ptt_list(input_list)
+        coeffs_list = round_ptt_list(input_list)    # since input_list is usually in units of (um, mrad, mrad), it is ok to round to 4 digits here)
 
         return coeffs_list
