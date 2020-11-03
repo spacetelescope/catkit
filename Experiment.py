@@ -2,12 +2,15 @@ from abc import ABC, abstractmethod
 import copy
 import logging
 from multiprocessing import Process
+import os
 import time
 
 from catkit.hardware.boston.commands import flat_command
+from catkit.hardware.iris_ao import segmented_dm_command
 
-from hicat.config import CONFIG_INI
+from hicat.config import CONFIG_INI, CONFIG_MODES
 import hicat.util
+from hicat.experiments.modules import iris_ao as iris_module
 from hicat.experiments.SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
 from hicat.hardware import testbed, testbed_state
 from hicat.control.align_lyot import LyotStopAlignment
@@ -207,6 +210,9 @@ class HicatExperiment(Experiment, ABC):
 
         # Instantiate, open connections, and cache all required devices.
         try:
+            disable_hardware = False
+            if CONFIG_MODES.get(testbed_state.current_mode, "iris_ao") == "not_iris_ao":
+                disable_hardware = True
             with testbed.laser_source() as laser, \
                     testbed.dm_controller() as dm, \
                     testbed.motor_controller() as motor_controller, \
@@ -220,7 +226,7 @@ class HicatExperiment(Experiment, ABC):
                     testbed.target_acquisition_camera() as ta_cam, \
                     testbed.color_wheel() as color_wheel, \
                     testbed.nd_wheel() as nd_wheel, \
-                    testbed.iris_ao(config_id=CONFIG_INI.get("testbed", "iris_ao")) as iris_ao:
+                    testbed.iris_ao(config_id=CONFIG_INI.get("testbed", "iris_ao"), disable_hardware=disable_hardware) as iris_ao:
 
                 devices = {'laser': laser,
                            'dm': dm,
@@ -262,6 +268,17 @@ class HicatExperiment(Experiment, ABC):
         # Flatten DMs before attempting initial target acquisition or Lyot alignment.
         dm_flat = flat_command(bias=False, flat_map=True)
         devices["dm"].apply_shape_to_both(dm_flat, copy.deepcopy(dm_flat))
+
+        testbed_config_id = 'testbed'
+        dm_config_id = CONFIG_INI.get(testbed_config_id, 'iris_ao')
+        iris_wavelength = CONFIG_INI.getfloat('thorlabs_source_mcls1', 'lambda_nm')
+        repo_root = hicat.util.find_repo_location()
+        iris_filename_flat = os.path.join(repo_root, CONFIG_INI.get(dm_config_id, 'custom_flat_file_ini'))
+        flat_irisao = segmented_dm_command.load_command(iris_module.zero_array(nseg=37)[0], dm_config_id,
+                                                        iris_wavelength,
+                                                        testbed_config_id, apply_flat_map=True,
+                                                        filename_flat=iris_filename_flat)
+        devices["iris_ao"].apply_shape(flat_irisao)
 
         # Align the Lyot Stop
         if self.align_lyot_stop:
