@@ -163,7 +163,7 @@ class SegmentedAperture:
         This list is passed to Poppy to help create the aperture.
 
         :param num_rings: int, The number of rings in your pupil
-        :return: list, the list of segments # TODO: the list of segment *names* (as e.g. in the GUI)?
+        :return: list, the list of segments as passed into poppy
         """
         num_segs = self.total_number_segments_in_aperture(self._num_rings)
         seglist = np.arange(num_segs)
