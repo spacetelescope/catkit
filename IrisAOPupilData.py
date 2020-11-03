@@ -1,6 +1,7 @@
 # noinspection PyUnresolvedReferences
 import os.path
 import astropy.io.fits as fits
+import numpy as np
 
 from catkit.hardware.boston import commands
 from catkit.hardware.iris_ao import segmented_dm_command
@@ -10,7 +11,7 @@ from hicat.experiments.modules import iris_ao
 from hicat.hardware import testbed
 from hicat.hardware.testbed import move_lyot_stop
 import hicat.util
-from hicat.wfc_algorithms.wfsc_utils import take_pupilcam_hicat
+from hicat.wfc_algorithms.wfsc_utils import take_exposure_hicat, take_pupilcam_hicat
 from hicat.config import CONFIG_INI
 
 
@@ -58,15 +59,29 @@ class IrisAOPupilData(Experiment):
                 # Take pupil image with all three DMs flat, for reference
                 flat_dm1 = commands.flat_command(bias=False, flat_map=True, dm_num=1)
                 flat_dm2 = commands.flat_command(bias=False, flat_map=True, dm_num=2)
-                flat_irisao = segmented_dm_command.load_command(None, self.dm_config_id, self.iris_wavelength,
+                flat_irisao = segmented_dm_command.load_command(iris_ao.zero_array(nseg=37)[0], self.dm_config_id, self.iris_wavelength,
                                                                 self.testbed_config_id, apply_flat_map=True,
                                                                 filename_flat=self.iris_filename_flat)
 
                 dm.apply_shape_to_both(flat_dm1, flat_dm2)
                 iris_dm.apply_shape(flat_irisao)
+
+                # Take pupil image
                 pupil_reference = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix='pupilcam_dms_all_flat',
                                                       exposure_time=self.exptime_pupil)[0]
                 fits.writeto(os.path.join(self.output_path, 'pupilcam_all_flat.fits'), pupil_reference)
+
+                # Take focal plane direct image
+                direct_reference, direct_header = take_exposure_hicat(np.zeros(952), np.zeros(952), devices,
+                                                                      wavelength=self.iris_wavelength,
+                                                                      exposure_type='direct',
+                                                                      exposure_time=None,
+                                                                      auto_expose=True,
+                                                                      initial_path=self.output_path,
+                                                                      num_exposures=5,
+                                                                      file_mode=True,
+                                                                      suffix=f"direct",
+                                                                      raw_skip=np.inf)
 
                 # Define the commands that should be run
                 zero_array, zero_string = iris_ao.zero_array(nseg=37)
@@ -86,12 +101,24 @@ class IrisAOPupilData(Experiment):
 
                     # Take pupil exposure.
                     suffix = f'_pattern{i}_{pattern[1]}'
-                    pupil_image = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix='pupilcam'+suffix,
+                    pupil_image = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix=f'pupilcam{suffix}',
                                                       exposure_time=self.exptime_pupil)[0]
 
                     # Now do the subtraction of the reference (flat) pupil image from that pupil image
                     fits.writeto(os.path.join(self.output_path, 'pupilcam_delta{}.fits'.format(suffix)),
                                  pupil_image - pupil_reference)
+
+                    # Take focal plane direct image
+                    direct_reference, direct_header = take_exposure_hicat(np.zeros(952), np.zeros(952), devices,
+                                                                          wavelength=self.iris_wavelength,
+                                                                          exposure_type='direct',
+                                                                          exposure_time=None,
+                                                                          auto_expose=True,
+                                                                          initial_path=self.output_path,
+                                                                          num_exposures=5,
+                                                                          file_mode=True,
+                                                                          suffix=f"direct{suffix}",
+                                                                          raw_skip=np.inf)
                 """
                 # Move Lyot stop in
                 move_lyot_stop(LyotStopPosition.in_beam)
