@@ -1,10 +1,11 @@
 import os
 
 import astropy.units as u
+import numpy as np
 import poppy
 
 from catkit.hardware import testbed_state
-import catkit.hardware.iris_ao.iris_ao_controller
+from catkit.hardware.iris_ao.iris_ao_controller import IrisAoDmController
 import catkit.hardware.iris_ao.segmented_dm_command as segmented_dm_command
 import catkit.hardware.iris_ao.util
 from catkit.interfaces.Instrument import SimInstrument
@@ -36,8 +37,17 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
         self.relax()  # ??? See https://github.com/spacetelescope/catkit/issues/63 (we don't currently relax the bostons like this).
 
     def set_surface(self, new_surface):
+
+        def convert_command_to_poppy_surface(dm_command_dict):
+            # Adding the negative relaxed state to any new command in order to compensate for relaxation offset
+            # Addition of dicts taken from old JOST version here:
+            # https://github.com/spacetelescope/jost-package/blob/aa7cc5517bb474eed971db0f4007ce5fc1226fec/jost/DM_functions.py#L453
+            dm_surface = {seg: tuple(np.asarray(self.relaxed_poppy_surface.get(seg, (0., 0., 0.))) + np.asarray(dm_command_dict.get(seg, (0., 0., 0.)))) for
+                          seg in set(self.relaxed_poppy_surface) | set(dm_command_dict)}
+            return dm_surface
+
         # Setting the simulated IrisAO means setting each actuator individually
-        for seg, values in new_surface.items():
+        for seg, values in convert_command_to_poppy_surface(new_surface).items():
             self.set_actuator(seg-1, values[0] * u.um, values[1] * u.mrad, values[2] * u.mrad)  # TODO: double-check the -1 here, meant to correct for different segment names
 
     @staticmethod
@@ -51,7 +61,9 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
         return new_data
 
     def relax(self):
-        self.set_surface(self.relaxed_poppy_surface)
+        zeros_list = catkit.hardware.iris_ao.util.create_zero_list(self.number_of_segments)
+        zero_dict = catkit.hardware.iris_ao.util.create_dict_from_list(zeros_list)
+        self.set_surface(zero_dict)
 
 
 class PoppyIrisAOEmulator:
@@ -118,5 +130,5 @@ class PoppyIrisAOEmulator:
         pass
 
 
-class PoppyIrisAoDmController(SimInstrument, catkit.hardware.iris_ao.iris_ao_controller.IrisAoDmController):
+class PoppyIrisAoDmController(SimInstrument, IrisAoDmController):
     instrument_lib = PoppyIrisAOEmulator
