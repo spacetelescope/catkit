@@ -61,7 +61,7 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
         return new_data
 
     def relax(self):
-        zeros_list = catkit.hardware.iris_ao.util.create_zero_list(37)
+        zeros_list = catkit.hardware.iris_ao.util.create_zero_list(self.number_of_segments)
         zero_dict = catkit.hardware.iris_ao.util.create_dict_from_list(zeros_list)
         self.set_surface(zero_dict)
 
