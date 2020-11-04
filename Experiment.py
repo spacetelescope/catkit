@@ -269,14 +269,13 @@ class HicatExperiment(Experiment, ABC):
         dm_flat = flat_command(bias=False, flat_map=True)
         devices["dm"].apply_shape_to_both(dm_flat, copy.deepcopy(dm_flat))
 
-        testbed_config_id = 'testbed'
-        dm_config_id = CONFIG_INI.get(testbed_config_id, 'iris_ao')
-        iris_wavelength = CONFIG_INI.getfloat('thorlabs_source_mcls1', 'lambda_nm')
+        dm_config_id = CONFIG_INI.get("testbed", "iris_ao")
+        iris_wavelength = CONFIG_INI.getfloat("thorlabs_source_mcls1", "lambda_nm")
         repo_root = hicat.util.find_repo_location()
-        iris_filename_flat = os.path.join(repo_root, CONFIG_INI.get(dm_config_id, 'custom_flat_file_ini'))
+        iris_filename_flat = os.path.join(repo_root, CONFIG_INI.get(dm_config_id, "custom_flat_file_ini"))
         flat_irisao = segmented_dm_command.load_command(iris_module.zero_array(nseg=37)[0], dm_config_id,
                                                         iris_wavelength,
-                                                        testbed_config_id, apply_flat_map=True,
+                                                        "testbed", apply_flat_map=True,
                                                         filename_flat=iris_filename_flat)
         devices["iris_ao"].apply_shape(flat_irisao)
 
