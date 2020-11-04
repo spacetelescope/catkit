@@ -28,8 +28,7 @@ class IrisAOPupilData(Experiment):
 
         self.exptime_pupil = exptime_pupil
 
-        self.testbed_config_id = 'testbed'
-        self.dm_config_id = CONFIG_INI.get(self.testbed_config_id, 'iris_ao')
+        self.dm_config_id = CONFIG_INI.get("testbed", 'iris_ao')
         self.iris_wavelength = CONFIG_INI.getfloat('thorlabs_source_mcls1', 'lambda_nm')
         repo_root = hicat.util.find_repo_location()
         self.iris_filename_flat = os.path.join(repo_root, CONFIG_INI.get(self.dm_config_id, 'custom_flat_file_ini'))
@@ -62,7 +61,7 @@ class IrisAOPupilData(Experiment):
                 flat_dm1 = commands.flat_command(bias=False, flat_map=True, dm_num=1)
                 flat_dm2 = commands.flat_command(bias=False, flat_map=True, dm_num=2)
                 flat_irisao = segmented_dm_command.load_command(iris_ao.zero_array(nseg=37)[0], self.dm_config_id, self.iris_wavelength,
-                                                                self.testbed_config_id, apply_flat_map=True,
+                                                                "testbed", apply_flat_map=True,
                                                                 filename_flat=self.iris_filename_flat)
 
                 dm.apply_shape_to_both(flat_dm1, flat_dm2)
@@ -74,12 +73,12 @@ class IrisAOPupilData(Experiment):
                 fits.writeto(os.path.join(self.output_path, 'pupilcam_all_flat.fits'), pupil_reference)
 
                 # Define the letter F commands for IrisAO
-                letter_f, letter_string = iris_ao.letter_f(self.dm_config_id, self.testbed_config_id,
+                letter_f, letter_string = iris_ao.letter_f(self.dm_config_id, "testbed",
                                                            self.iris_filename_flat, self.iris_wavelength)
 
                 # Apply letter F shape to IrisAO while Bostons are still flat
                 letter_f_command = segmented_dm_command.load_command(letter_f, self.dm_config_id,
-                                                                     self.iris_wavelength, self.testbed_config_id,
+                                                                     self.iris_wavelength, "testbed",
                                                                      apply_flat_map=True,
                                                                      filename_flat=self.iris_filename_flat)
 
