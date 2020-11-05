@@ -48,7 +48,7 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
 
         # Setting the simulated IrisAO means setting each actuator individually
         for seg, values in convert_command_to_poppy_surface(new_surface).items():
-            self.set_actuator(seg-1, values[0] * u.um, values[1] * u.mrad, values[2] * u.mrad)  # TODO: double-check the -1 here, meant to correct for different segment names
+            self.set_actuator(seg-1, values[0] * u.um, values[2] * u.mrad, values[1] * u.mrad)  # TODO: double-check the -1 here, meant to correct for different segment names
 
     @staticmethod
     def invert_data(data):
