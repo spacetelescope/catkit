@@ -210,9 +210,7 @@ class HicatExperiment(Experiment, ABC):
 
         # Instantiate, open connections, and cache all required devices.
         try:
-            disable_hardware = False
-            if CONFIG_MODES.get(testbed_state.current_mode, "iris_ao") == "not_iris_ao":
-                disable_hardware = True
+            disable_hardware = CONFIG_MODES.get(testbed_state.current_mode, "iris_ao") == "not_iris_ao"
             with testbed.laser_source() as laser, \
                     testbed.dm_controller() as dm, \
                     testbed.motor_controller() as motor_controller, \
