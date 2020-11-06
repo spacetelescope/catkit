@@ -10,7 +10,7 @@ from catkit.hardware.iris_ao import segmented_dm_command
 
 from hicat.config import CONFIG_INI, CONFIG_MODES
 import hicat.util
-from hicat.experiments.modules import iris_ao as iris_module
+import hicat.experiments.modules.iris_ao as iris_module
 from hicat.experiments.SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
 from hicat.hardware import testbed, testbed_state
 from hicat.control.align_lyot import LyotStopAlignment
@@ -267,14 +267,7 @@ class HicatExperiment(Experiment, ABC):
         dm_flat = flat_command(bias=False, flat_map=True)
         devices["dm"].apply_shape_to_both(dm_flat, copy.deepcopy(dm_flat))
 
-        dm_config_id = CONFIG_INI.get("testbed", "iris_ao")
-        iris_wavelength = CONFIG_INI.getfloat("thorlabs_source_mcls1", "lambda_nm")
-        repo_root = hicat.util.find_repo_location()
-        iris_filename_flat = os.path.join(repo_root, CONFIG_INI.get(dm_config_id, "custom_flat_file_ini"))
-        flat_irisao = segmented_dm_command.load_command(iris_module.zero_array(nseg=37)[0], dm_config_id,
-                                                        iris_wavelength,
-                                                        "testbed", apply_flat_map=True,
-                                                        filename_flat=iris_filename_flat)
+        flat_irisao = iris_module.flat_command()
         devices["iris_ao"].apply_shape(flat_irisao)
 
         # Align the Lyot Stop
