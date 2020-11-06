@@ -48,7 +48,13 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
 
         # Setting the simulated IrisAO means setting each actuator individually
         for seg, values in convert_command_to_poppy_surface(new_surface).items():
-            self.set_actuator(seg-1, values[0] * u.um, values[1] * u.mrad, values[2] * u.mrad)  # TODO: double-check the -1 here, meant to correct for different segment names
+            # The IrisAO hardware component and the poppy hex DM object have flipped
+            # x/y coordinate axes, so we need to feed what is called "tilt" on the IrisAO
+            # into the "tip" argument from poppy and vice versa.
+            piston = values[0] * u.um
+            tip = values[2] * u.mrad
+            tilt = values[1] * u.mrad
+            self.set_actuator(seg-1, piston, tip, tilt)  # TODO: double-check the -1 here, meant to correct for different segment names
 
     @staticmethod
     def invert_data(data):
