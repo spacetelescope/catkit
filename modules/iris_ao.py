@@ -6,32 +6,13 @@ import catkit.hardware.iris_ao.util as iris_util
 from hicat.hardware import testbed
 
 
-def create_date(return_as_string=True):
-    """
-    Create a string or array representing the current date.
-    :param return_as_string: bool, if True, return date as a string in the form
-                             yyyy-mm-dd-hhh-mmmin, if False, return as array in
-                             the form [yyyy, mm, dd, hh, mm]
-    :return: string or array with current date down to the minute
-    """
-    now = datetime.datetime.now()
-    date_ = [now.year, now.month, now.day, now.hour, now.minute]
-
-    if return_as_string:
-        date = "{}-{}-{}-{}h-{}min".format(*date_)
-    else:
-        date = date_
-
-    return date
-
-
 def none_command():
     """
-    Create a command from None
-    :return: list of tuples for DM command, string for command name with date attached to it
+    Create a command from None, will contain all zeros as command.
+    :return: list of tuples for DM command, string for command name
     """
     command_to_load = None    # Load zeros, if flat_map=True, will just be flat
-    command_str = f'default_flat_{create_date()}'
+    command_str = f'default_flat'
 
     return command_to_load, command_str
 
@@ -40,27 +21,28 @@ def flat_map_4d(flat_command_file):
     """
     Create a command from the 4D flat
     :param flat_command_file: catkit.hardware.iris_ao.segmented_dm_command.SegmentedDmCommand
-    :return: list of tuples for DM command, string for command name with date attached to it
+    :return: list of tuples for DM command, string for command name
     """
     command_to_load = flat_command_file
-    command_str = f'4d_flat_{create_date()}'
+    command_str = f'4d_flat'
 
     return command_to_load, command_str
 
 
 def image_array(image_array_command_file):
     """
-    Create a command of the Image Array configuration
+    Create a command of the Image Array configuration, which assumes a radially symmetric tip/tilt
+    on each segment, moving each subPSF radially outward.
     :param image_array_command_file: catkit.hardware.iris_ao.segmented_dm_command.SegmentedDmCommand
-    :return: list of tuples for DM command, string for command name with date attached to it
+    :return: list of tuples for DM command, string for command name
     """
     command_to_load = image_array_command_file
-    command_str = f'image_array_{create_date()}'
+    command_str = f'image_array'
 
     return command_to_load, command_str
 
 
-def poppy_array(dm_config_id, wavelength, global_coefficients=[0., 0., 0., 2e-7]):
+def command_from_zernikes(dm_config_id, wavelength, global_coefficients=[0., 0., 0., 2e-7]):
     """
     Create a command from Poppy using global coefficents
     :param dm_config_id: str, name of the section in the config_ini file where information
@@ -70,24 +52,24 @@ def poppy_array(dm_config_id, wavelength, global_coefficients=[0., 0., 0., 2e-7]
     :param global_coefficients: list of global zernike coefficients in the form
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
                                 in meters of optical path difference (not waves)
-    :return: list of tuples for DM command, string for command name with date attached to it
+    :return: list of tuples for DM command, string for command name
     """
     poppy_command = segmented_dm_command.PoppySegmentedCommand(global_coefficients,
                                                                dm_config_id=dm_config_id,
                                                                wavelength=wavelength)
     command_to_load = poppy_command.to_dm_list()
-    command_str = f'poppy_defoc_{create_date()}'
+    command_str = f'poppy_defoc'
 
     return command_to_load, command_str
 
 
 def zero_array(nseg):
     """
-    Create a zero array. Can also be used to make a custom command
-    :return: list of tuples for DM command, string for command name with date attached to it
+    Create a zero array, which can be passed to a sgmented DM command.
+    :return: list of tuples for DM command, string for command name
     """
     command_to_load = iris_util.create_zero_list(nseg)
-    command_str = f'zeros_{create_date()}'
+    command_str = f'zeros'
 
     return command_to_load, command_str
 
@@ -102,7 +84,7 @@ def letter_f(dm_config_id, testbed_config_id, filename_flat, wavelength):
     :param filename_flat: str, full path to the custom flat map
     :param wavelength: float, wavelength in nm of the poppy optical system used for
                        (extremely oversimplified) focal plane simulations
-    :return: list of tuples for DM command, string for command name with date attached to it
+    :return: list of tuples for DM command, string for command name
     """
     letter_f_command = segmented_dm_command.SegmentedDmCommand(dm_config_id=dm_config_id,
                                                                wavelength=wavelength,
@@ -113,7 +95,7 @@ def letter_f(dm_config_id, testbed_config_id, filename_flat, wavelength):
         letter_f_command.update_one_segment(i, (0, 2, 0), add_to_current=True)
 
     command_to_load = letter_f_command.data
-    command_str = f'letter_f_{create_date()}'
+    command_str = f'letter_f'
 
     return command_to_load, command_str
 
@@ -139,8 +121,6 @@ def place_command_on_iris_ao(dm_config_id, command_str='', iris_command=None, se
             print("Command before flat map is applied: {}".format(iris_command.get_data()))
 
         time.sleep(seconds_to_hold_shape)  # Wait while holding shape on DM
-
-    time.sleep(5)    # Wait before turning off laser to make sure Iris connection closed
 
 
 def run_one_command(dm_config_id, testbed_config_id, apply_flat_map, filename_flat, command_to_load, command_str,

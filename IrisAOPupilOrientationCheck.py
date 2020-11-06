@@ -15,13 +15,13 @@ from hicat.wfc_algorithms.wfsc_utils import take_pupilcam_hicat
 from hicat.config import CONFIG_INI
 
 
-class IrisAOPupilData(Experiment):
+class IrisAOPupilOrientationCheck(Experiment):
     name = 'IrisAO Pupil Data'
 
     def __init__(self, exptime_pupil=None, **kwargs):
         """ Take a set of calibration pupil images for IrisAO calibration.
 
-        :param exptime_pupil: flat, exptime in microsec. Set to None to
+        :param exptime_pupil: float, exptime in microsec. Set to None to
                use default value in take_pupilcam_hicat.
         """
         super().__init__(**kwargs)
@@ -29,7 +29,7 @@ class IrisAOPupilData(Experiment):
         self.exptime_pupil = exptime_pupil
 
         self.dm_config_id = CONFIG_INI.get("testbed", 'iris_ao')
-        self.iris_wavelength = CONFIG_INI.getfloat('thorlabs_source_mcls1', 'lambda_nm')
+        self.iris_wavelength = 640   # nm, only used for diagnostic plots
         repo_root = hicat.util.find_repo_location()
         self.iris_filename_flat = os.path.join(repo_root, CONFIG_INI.get(self.dm_config_id, 'custom_flat_file_ini'))
 
@@ -37,14 +37,12 @@ class IrisAOPupilData(Experiment):
 
         self.output_path = hicat.util.create_data_path(suffix=self.suffix)
 
-        with testbed.laser_source() as laser, \
-                testbed.dm_controller() as dm, \
-                testbed.motor_controller() as motor_controller, \
-                testbed.beam_dump() as beam_dump, \
-                testbed.imaging_camera() as cam, \
-                testbed.pupil_camera() as pupilcam:
-            devices = {'laser': laser,
-                       'dm': dm,
+        with testbed.dm_controller() as dm, \
+             testbed.motor_controller() as motor_controller, \
+             testbed.beam_dump() as beam_dump, \
+             testbed.imaging_camera() as cam, \
+             testbed.pupil_camera() as pupilcam:
+            devices = {'dm': dm,
                        'motor_controller': motor_controller,
                        'beam_dump': beam_dump,
                        'imaging_camera': cam,
@@ -73,8 +71,8 @@ class IrisAOPupilData(Experiment):
                 fits.writeto(os.path.join(self.output_path, 'pupilcam_all_flat.fits'), pupil_reference)
 
                 # Define the letter F commands for IrisAO
-                letter_f, letter_string = iris_ao.letter_f(self.dm_config_id, "testbed",
-                                                           self.iris_filename_flat, self.iris_wavelength)
+                letter_f, _ = iris_ao.letter_f(self.dm_config_id, "testbed",
+                                               self.iris_filename_flat, self.iris_wavelength)
 
                 # Apply letter F shape to IrisAO while Bostons are still flat
                 letter_f_command = segmented_dm_command.load_command(letter_f, self.dm_config_id,
@@ -85,7 +83,7 @@ class IrisAOPupilData(Experiment):
                 iris_dm.apply_shape(letter_f_command)
 
                 # Take pupil exposure.
-                suffix = f'Bostons_flat_IrisAO_{letter_string}'
+                suffix = f'Bostons_flat_IrisAO_letter_F'
                 pupil_image1 = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix=f'pupilcam_{suffix}',
                                                    exposure_time=self.exptime_pupil)[0]
 
@@ -93,7 +91,7 @@ class IrisAOPupilData(Experiment):
                 fits.writeto(os.path.join(self.output_path, f'pupilcam_delta_{suffix}.fits'),
                              pupil_image1 - pupil_reference)
 
-                # Apply asymmetric pattern do DM1, keep letter F on IrisAO
+                # Apply asymmetric pattern to DM1, keep letter F on IrisAO
                 asymmetric_poke_actuators = ApplyAsymmetricTestPattern.actuators
                 amp = CONFIG_INI.getfloat('boston_kilo952', 'dm1_ideal_poke')
                 amplitude = quantity(amp, units.nanometer)
@@ -101,7 +99,7 @@ class IrisAOPupilData(Experiment):
                 dm.apply_shape(command_dm1, dm_num=1)
 
                 # Take pupil exposure.
-                suffix = f'DM1_asymmetric_IrisAO_{letter_string}'
+                suffix = f'DM1_asymmetric_IrisAO_letter_F'
                 pupil_image2 = take_pupilcam_hicat(devices, num_exposures=1, initial_path=self.output_path, suffix=f'pupilcam_{suffix}',
                                                    exposure_time=self.exptime_pupil)[0]
 
