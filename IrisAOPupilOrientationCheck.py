@@ -58,9 +58,7 @@ class IrisAOPupilOrientationCheck(Experiment):
                 # Take pupil image with all three DMs flat, for reference
                 flat_dm1 = commands.flat_command(bias=False, flat_map=True, dm_num=1)
                 flat_dm2 = commands.flat_command(bias=False, flat_map=True, dm_num=2)
-                flat_irisao = segmented_dm_command.load_command(iris_ao.zero_array(nseg=37)[0], self.dm_config_id, self.iris_wavelength,
-                                                                "testbed", apply_flat_map=True,
-                                                                filename_flat=self.iris_filename_flat)
+                flat_irisao = iris_ao.flat_command()
 
                 dm.apply_shape_to_both(flat_dm1, flat_dm2)
                 iris_dm.apply_shape(flat_irisao)

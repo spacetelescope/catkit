@@ -1,9 +1,28 @@
-import datetime
 import time
+import os
 
 from catkit.hardware.iris_ao import segmented_dm_command
 import catkit.hardware.iris_ao.util as iris_util
+from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
+import hicat.util
+
+
+def flat_command():
+    """
+    Return a catkit SegmentedDmCommand() object containing only the custom flat command.
+    """
+    dm_config_id = CONFIG_INI.get("testbed", 'iris_ao')
+    repo_root = hicat.util.find_repo_location()
+    iris_filename_flat = os.path.join(repo_root, CONFIG_INI.get(dm_config_id, 'custom_flat_file_ini'))
+
+    command_flat = segmented_dm_command.load_command(zero_array(nseg=37)[0],
+                                                     dm_config_id,
+                                                     640,
+                                                     "testbed",
+                                                     apply_flat_map=True,
+                                                     filename_flat=iris_filename_flat)
+    return command_flat
 
 
 def none_command():
