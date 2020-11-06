@@ -66,7 +66,10 @@ class ZWFSStaticTest(HicatExperiment):
 
         suffix = 'iteration19/dm_command/dm_command_2d_noflat.fits'
 
-        file_names = ['Astigmatism_45_zernike_volts_dm2',
+        file_names = ['Tip_dm2',
+                      'Tilt_dm2',
+                      'Focus_dm2',
+                      'Astigmatism_45_zernike_volts_dm2',
                       'Astigmatism_0_zernike_volts_dm2',
                       'Coma_Y_zernike_volts_dm2',
                       'Coma_X_zernike_volts_dm2',
@@ -85,45 +88,54 @@ class ZWFSStaticTest(HicatExperiment):
                                                                 dm2_shape=dm2_flat,
                                                                 file_mode=True)
 
-        nb_aberrations = 5
+
+        nb_aberrations = 11
         basis = np.nan_to_num(zwfs.ztools.zernike.zernike_basis(nterms=nb_aberrations, npix=34)*1e-9)
-        pure_zernikes_values = [5]#, 10, 20]
-        zopd_stacks = np.zeros((len(aberration_path), len(aberration_values), zernike_sensor._array_diameter, zernike_sensor._array_diameter))
+        pure_zernikes_values = [2, 7, 15]
+        zopd_stacks = np.zeros((nb_aberrations, len(pure_zernikes_values),
+                                zernike_sensor._array_diameter, zernike_sensor._array_diameter))
         ta_stacks = []
+
+        # Reference OPD for differential measurements
         zernike_sensor.make_reference_opd(self.wave, dm1_shape=dm1_command, dm2_shape=dm2_flat)
         zernike_sensor.save_list(zernike_sensor._reference_opd, 'ZWFS_reference_opd', self.output_path)
 
         #for i, aberration in enumerate(aberration_path):
-        for i, aberration in enumerate(basis[4:]):
+        for i, aberration in enumerate(basis[1:nb_aberrations]):
             #for j, p2v in enumerate(aberration_values):
             for j, val in enumerate(pure_zernikes_values):
 
                 p2v = str(val)+'RMS'
                 #dm2_shape = fits.getdata(dm_path+aberration+p2v+suffix)
                 #dm2_command = DmCommand.load_dm_command(dm_path+aberration+p2v+suffix, dm_num=2, flat_map=False, bias=False)
+
+                # Create DM shape
                 dm2_shape = val*aberration
+                zernike_sensor.save_list(dm2_shape, 'dm2_command' + file_names[i] + p2v[:-1],
+                                         self.output_path + '/' + file_names[i])
 
-
+                # Convert to DM command
                 dm2_command = DmCommand.DmCommand(dm2_shape, flat_map=True, bias=False, dm_num=2)
 
-                ta_diag, _ = zernike_sensor.take_exposure_ta_diagnostic(output_path=self.output_path,
-                                                                        dm1_shape=dm1_command,
-                                                                        dm2_shape=dm2_command,
-                                                                        file_mode=True)
+                #Check TA images
+                #ta_diag, _ = zernike_sensor.take_exposure_ta_diagnostic(output_path=self.output_path,
+                #                                                        dm1_shape=dm1_command,
+                #                                                        dm2_shape=dm2_command,
+                #                                                        file_mode=True)
 
-                zernike_sensor.save_list(dm2_shape, 'dm2_command'+file_names[i]+p2v[:-1], self.output_path+'/'+file_names[i])
+                # Perform the actual phase measurement
                 zopd = zernike_sensor.perform_zwfs_measurement(self.wave, output_path=self.output_path,
                                                                differential=True, dm1_shape=dm1_command,
                                                                dm2_shape=dm2_command, file_mode=True,
                                                                filename=file_names[i]+p2v[:-1])
 
-
+                # Store it
                 zopd_stacks[i, j] = zopd.copy()
                 zernike_sensor.save_list(zopd, 'ZWFS_OPD'+file_names[i]+p2v[:-1], self.output_path+'/'+file_names[i])
                 #fits.writeto('/mnt/c/Users/rpourcelot/Documents/zopd.fits', zopd)
 
 
         # Save the files
-        np.save(self.output_path + '/' + 'zopd_stacks.npy', zopd_stacks)
+        #np.save(self.output_path + '/' + 'zopd_stacks.npy', zopd_stacks)
 
 

@@ -35,20 +35,25 @@ class TakeSingleZWFSAcquisition(HicatExperiment):
         F[16:20, 12:23] = 1
         F[5:9, 12:26] = 1
         F[5:29, 12:16] = 1
-        F = np.flipud(F) * 1e-7
+        F = np.flipud(F) * 5e-8
 
         # Init the sensor object
         F_shape = DmCommand.DmCommand(F, dm_num=1, bias=False, flat_map=True)
+        F_shape2 = DmCommand.DmCommand(F, dm_num=2, bias=False, flat_map=True)
+
         zernike_sensor = zwfs.ZWFS(self.instrument, wavelength=self.wave)
         zernike_sensor.calibrate(output_path=self.output_path)
         zernike_sensor.make_reference_opd(self.wave)
 
         # Actual phase measurment
-        zopd = zernike_sensor.perform_zwfs_measurement(self.wave, dm1_shape=F_shape, output_path=self.output_path, differential=True)
-
+        zopd = zernike_sensor.perform_zwfs_measurement(self.wave, dm1_shape=F_shape, output_path=self.output_path,
+                                                       differential=True, file_mode=True)
+        zopd2 = zernike_sensor.perform_zwfs_measurement(self.wave, dm2_shape=F_shape2, output_path=self.output_path,
+                                                        differential=True, file_mode=True)
         #F_shape.save_as_fits(self.output_path+'fits_dm_command.fits')
 
         # Save files
-        zernike_sensor.save_list(zopd, 'ZWFS_OPD', self.output_path)
+        zernike_sensor.save_list(zopd, 'ZWFS_OPD_F1', self.output_path)
+        zernike_sensor.save_list(zopd2, 'ZWFS_OPD_F2', self.output_path)
         zernike_sensor.save_list(F, 'F', self.output_path)
         zernike_sensor.save_list(zernike_sensor._reference_opd, 'ref_OPD', self.output_path)

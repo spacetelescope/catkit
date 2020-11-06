@@ -51,7 +51,7 @@ class ZWFSTestFourierResponse(HicatExperiment):
 
         zernike_sensor = zwfs.ZWFS(self.instrument, wavelength=self.wave)
 
-        nb_freqx = 50
+        nb_freqx = 25
         #nb_freqy = nb_freqx
         nb_freqy = 1
         freq_max = 8
@@ -59,7 +59,7 @@ class ZWFSTestFourierResponse(HicatExperiment):
         freqx = np.linspace(freq_min, freq_max, nb_freqx)
         freqy = np.linspace(freq_min, freq_max, nb_freqy)
 
-        aamp = 3e-8
+        aamp = 0e-8
         bamp = 1e-8
 
         dm_pup = zwfs.aperture.disc(34, 34, diameter=True)
@@ -73,13 +73,70 @@ class ZWFSTestFourierResponse(HicatExperiment):
         pup_dim = zernike_sensor.pupil_diameter
         zopd_stack = np.zeros((nb_freqx, nb_freqy, pup_dim, pup_dim))
 
+        final_roi = zwfs.aperture.disc(zernike_sensor.pupil_diameter, zernike_sensor.pupil_diameter, diameter=True)
+
+        for i, fx in enumerate(freqx):
+            for j, fy in enumerate(freqy):
+                fourier_fun = fourier_ab(fx, fy)
+                blank_pup = np.ones((34, 34))
+
+                # dm_shape = fourier_fun(dm_pup, aamp, bamp).reshape((34,34))
+                dm_shape = fourier_fun(dm_pup, aamp, bamp).reshape((34, 34))
+                zernike_sensor.save_list(dm_shape, f'dmshape_x{fx:.2f}_y{fy:.2}', self.output_path+'/')
+                shapes_stack[i, j] = dm_shape.copy()
+
+                zopd = zernike_sensor.perform_zwfs_measurement(self.wave,
+                                                               output_path=self.output_path,
+                                                               differential=True,
+                                                               dm1_shape=dm_shape,
+                                                               file_mode=True).squeeze()
+
+                final_roi = zwfs.aperture.disc(zernike_sensor.pupil_diameter, zernike_sensor.pupil_diameter,
+                                               diameter=True)
+                array_dim = zopd.shape[-1]
+
+                cropped_zopd = zopd[(array_dim - pup_dim) // 2:(array_dim + pup_dim) // 2,
+                               (array_dim - pup_dim) // 2:(array_dim + pup_dim) // 2]
+
+                zopd_stack[i, j] = cropped_zopd.copy()
+
+                #cropped_zopd = zwfs.imutils.scale(cropped_zopd, 0, new_dim=[34,34])
+
+                ab_fit, _ = so.curve_fit(fourier_fun, final_roi,
+                                         cropped_zopd.reshape(zernike_sensor.pupil_diameter ** 2))
+
+                #ab_fit, _ = so.curve_fit(fourier_fun, dm_pup, cropped_zopd.reshape(34*34))
+
+                #reference_fit, _ = so.curve_fit(fourier_fun, dm_pup, dm_shape.reshape(34 * 34))
+                ab_stack[i, j] = ab_fit  # / reference_fit * 1e-9
+                fits.writeto(self.output_path + f'/zopd_x{fx:.2f}_y{fy:.2}.fits', cropped_zopd)
+
+        plt.figure(figsize=(20, 10))
+        plt.semilogy(freqx, abs(ab_stack[:, 0, 1]), label='x; b_coeff')
+        plt.semilogy(freqy, abs(ab_stack[0, :, 1]), label='y; b_coeff')
+        plt.semilogy(freqx, abs(ab_stack[:, 0, 0]), label='x; a_coeff')
+        plt.semilogy(freqy, abs(ab_stack[0, :, 0]), label='y; a_coeff')
+        plt.legend()
+        plt.xlabel('Spatial frequency (c/p)')
+        plt.ylabel('Fitted coefficient')
+        # plt.legend(['x frequencies', 'y frequencies'])
+        plt.savefig(self.output_path + '/frequency_plot.pdf')
+
+        plt.figure(figsize=(10, 10))
+        plt.imshow(np.flipud(abs(ab_stack[:, :, 0])), extent=[freq_min, freq_max, freq_min, freq_max])
+        plt.savefig(self.output_path + '/2D_plot.pdf')
+
+        np.save(self.output_path + '/dm_shapes', shapes_stack)
+        np.save(self.output_path + '/numpy_ab_stack', ab_stack)
+        """
+        #sc_zopd_stack = np.zeros((nb_freqx, nb_freqy, 34, 34))
         for i, fx in enumerate(freqx):
             for j, fy in enumerate(freqy):
                 fourier_fun = fourier_ab(fx, fy)
                 blank_pup = np.ones((34,34))
 
                 #dm_shape = fourier_fun(dm_pup, aamp, bamp).reshape((34,34))
-                dm_shape = fourier_fun(blank_pup, aamp, bamp).reshape((34,34))
+                dm_shape = fourier_fun(dm_pup, aamp, bamp).reshape((34,34))
 
                 shapes_stack[i,j] = dm_shape.copy()
 
@@ -87,19 +144,26 @@ class ZWFSTestFourierResponse(HicatExperiment):
                                                                output_path=self.output_path,
                                                                differential=True,
                                                                dm1_shape=dm_shape,
-                                                               file_mode=False).squeeze()
+                                                               file_mode=True).squeeze()
 
-                final_roi = zwfs.aperture.disc(zernike_sensor.pupil_diameter, zernike_sensor.pupil_diameter, diameter=True)
+
                 array_dim = zopd.shape[-1]
 
                 cropped_zopd = zopd[(array_dim-pup_dim)//2:(array_dim+pup_dim)//2,
                                (array_dim-pup_dim)//2:(array_dim+pup_dim)//2]
-                zopd_stack[i,j] = cropped_zopd.copy()
 
-                ab_fit, _ = so.curve_fit(fourier_fun, final_roi, cropped_zopd.reshape(zernike_sensor.pupil_diameter**2))
-                reference_fit, _ = so.curve_fit(fourier_fun, dm_pup, dm_shape.reshape(34*34))
+                #sc_zopd = zwfs.imutils.scale(cropped_zopd, 0, new_dim=[34,34])
+
+                zopd_stack[i,j] = cropped_zopd.copy()
+                #sc_zopd_stack[i,j] = sc_zopd.copy()
+
+                ab_fit, _ = so.curve_fit(fourier_fun, final_roi, final_roi*cropped_zopd.reshape(zernike_sensor.pupil_diameter**2))
+                #ab_fit, _ = so.curve_fit(fourier_fun, dm_pup, zwfs.imutils.scale(cropped_zopd, 0, new_dim=[34,34]).reshape(34*34))
+                #reference_fit, _ = so.curve_fit(fourier_fun, final_roi, fourier_fundm_shape.reshape(34*34))
+
                 ab_stack[i,j] = ab_fit #/ reference_fit * 1e-9
                 fits.writeto(self.output_path+ f'/zopd_x{fx:.2f}_y{fy:.2}.fits', cropped_zopd)
+                #fits.writeto(self.output_path + f'/sc_zopd_x{fx:.2f}_y{fy:.2}.fits', sc_zopd)
 
         plt.figure(figsize=(20,10))
         plt.semilogy(freqx, abs(ab_stack[:, 0, 1]), label='x; b_coeff')
@@ -121,5 +185,6 @@ class ZWFSTestFourierResponse(HicatExperiment):
         np.save(self.output_path+'/numpy_ab_stack', ab_stack)
 
         zernike_sensor.save_list(zopd, 'ZWFS_res', self.output_path)
+        """
 
 
