@@ -28,11 +28,6 @@ class IrisAOPupilOrientationCheck(Experiment):
 
         self.exptime_pupil = exptime_pupil
 
-        self.dm_config_id = CONFIG_INI.get("testbed", 'iris_ao')
-        self.iris_wavelength = 640   # nm, only used for diagnostic plots
-        repo_root = hicat.util.find_repo_location()
-        self.iris_filename_flat = os.path.join(repo_root, CONFIG_INI.get(self.dm_config_id, 'custom_flat_file_ini'))
-
     def experiment(self):
 
         self.output_path = hicat.util.create_data_path(suffix=self.suffix)
@@ -53,7 +48,7 @@ class IrisAOPupilOrientationCheck(Experiment):
             # Move FPM in
             move_fpm('coron')
 
-            with testbed.iris_ao(self.dm_config_id) as iris_dm:
+            with testbed.iris_ao() as iris_dm:
 
                 # Take pupil image with all three DMs flat, for reference
                 flat_dm1 = commands.flat_command(bias=False, flat_map=True, dm_num=1)
@@ -68,16 +63,8 @@ class IrisAOPupilOrientationCheck(Experiment):
                                                       exposure_time=self.exptime_pupil)[0]
                 fits.writeto(os.path.join(self.output_path, 'pupilcam_all_flat.fits'), pupil_reference)
 
-                # Define the letter F commands for IrisAO
-                letter_f, _ = iris_ao.letter_f(self.dm_config_id, "testbed",
-                                               self.iris_filename_flat, self.iris_wavelength)
-
                 # Apply letter F shape to IrisAO while Bostons are still flat
-                letter_f_command = segmented_dm_command.load_command(letter_f, self.dm_config_id,
-                                                                     self.iris_wavelength, "testbed",
-                                                                     apply_flat_map=True,
-                                                                     filename_flat=self.iris_filename_flat)
-
+                letter_f_command = iris_ao.letter_f()
                 iris_dm.apply_shape(letter_f_command)
 
                 # Take pupil exposure.
