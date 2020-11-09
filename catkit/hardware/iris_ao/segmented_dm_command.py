@@ -4,10 +4,10 @@ segmented DM hardware as a command.
 
 
 This module can be used to create a command in the following way:
-    poppy_obj = PoppySegmentedCommand(global_coefficients, dm_config_id, wavelength)
+    poppy_obj = PoppySegmentedCommand(global_coefficients, dm_config_id, display_wavelength)
     command = poppy_obj.to_dm_list()
     iris_command = segmented_dm_command.load_command(command, dm_config_id,
-                                                     wavelength,
+                                                     display_wavelength,
                                                      testbed_config_id,
                                                      apply_flat_map=True,
                                                      filename_flat='repo-path/hardware/iris-ao/CustomFLAT.ini')
@@ -32,21 +32,17 @@ from catkit.config import CONFIG_INI
 from catkit.hardware.iris_ao import util
 
 
-class SegmentedAperture:
+class SegmentedAperture(poppy.dms.HexSegmentedDeformableMirror):
     """
     Create a segmented aperture with Poppy using the parameters for the testbed
     and segmented DM from the config.ini file.
 
     To create an aperture, with the config.ini file loaded, run:
         segmented_aperture_obj = SegmentedAperture()
-        my_aperture = segmented_aperture_obj.create_aperture()
 
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
-    :param wavelength: float, wavelength in nm of the poppy optical system used for
-                        (extremely oversimplified) focal plane simulations
     :param rotation: float, rotation angle of the hex segmented DM in deg
-    :attribute wavelength: float, wavelength in nm of the poppy optical system
     :attribute outer_ring_corners: bool, whether or not the segmented aperture includes
                                    the corner segments on the outer-most ring. If True,
                                    corner segments are included. If False, they are not
@@ -61,12 +57,11 @@ class SegmentedAperture:
                                          parameter in the config file
     """
 
-    def __init__(self, dm_config_id, wavelength, rotation=0):
+    def __init__(self, dm_config_id, rotation=0):
         # Set config sections
         self.dm_config_id = dm_config_id
 
         # Parameters specific to testbed setup being used
-        self.wavelength = wavelength * u.nm
         self.rotation = rotation
 
         # Parameters specifc to the aperture and segmented DM being used
@@ -80,21 +75,13 @@ class SegmentedAperture:
         self._num_rings = self.get_number_of_rings_in_pupil()
         self._segment_list = self.get_segment_list()
 
-        self.aperture = self.create_aperture()
+        super().__init__(name='Segmented DM',
+                         rings=self._num_rings,
+                         flattoflat=self.flat_to_flat,
+                         gap=self.gap,
+                         segmentlist=self._segment_list,
+                         rotation=self.rotation)
 
-    def create_aperture(self):
-        """
-        Based on values in config file, create the aperture to be simulated
-
-        :return: A Poppy HexSegmentedDeformableMirror object for this aperture
-        """
-        aperture = poppy.dms.HexSegmentedDeformableMirror(name='Segmented DM',
-                                                          rings=self._num_rings,
-                                                          flattoflat=self.flat_to_flat,
-                                                          gap=self.gap,
-                                                          segmentlist=self._segment_list,
-                                                          rotation=self.rotation)
-        return aperture
 
     def get_number_of_rings_in_pupil(self):
         """
@@ -197,7 +184,7 @@ class SegmentedAperture:
         return number_segments_in_pupil_per_ring[number_of_rings]
 
 
-class SegmentedDmCommand(SegmentedAperture):
+class SegmentedDmCommand(object):
     """
     Handle segmented DM specific commands in terms of piston, tip and tilt (PTT) for
     each segment. Creates a dictionary of the form {seg: (piston, tip, tilt)} that can
@@ -212,10 +199,8 @@ class SegmentedDmCommand(SegmentedAperture):
     :param filename_flat: string, full path to custom flat map, only needed if apply_flat_map=True
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
-    :param wavelength: float, wavelength in nm of the poppy optical system used for
+    :param display_wavelength: float, display_wavelength in nm of the poppy optical system used for
                         (extremely oversimplified) focal plane simulations
-    :param testbed_config_id: str, name of the section in the config_ini file where information
-                           regarding the testbed can be found.
     :param rotation: float, rotation angle of the hex segmented DM in deg
     :attribute data: list of tuples, input data that can then be updated. This attribute never
                      never includes the custom flat map values; units are determined with the attribute dm_command_units
@@ -225,21 +210,27 @@ class SegmentedDmCommand(SegmentedAperture):
     :attribute filename_flat: str, full path to custom flat, only needed if apply_flat_map=True
     :attribute total_number_segments: int, total number of segments in DM, includes dead segments
     :attribute active_segment_list: int, number of active segments in the DM
-    :attribute instrument_fov: int, field of view of the instrument in pixels
-    :attribute pixelscale: float, pixelscale of the instrument in arcsec / pix
+    :attribute display_instrument_fov: int, field of view of the instrument in pixels
+    :attribute display_pixelscale: float, display_pixelscale of the instrument in arcsec / pix
     :attribute dm_command_units: tuple of floats, the units of the piston, tip, tilt
                                  values on the hardware
     :attribute aperture: poppy.dms.HexSegmentedDeformableMirror object, the aperture
                          that you are defining
     """
 
-    def __init__(self, dm_config_id, wavelength, testbed_config_id, apply_flat_map=False, filename_flat=None, rotation=0):
-        # Initialize parent class used to create the aperture
-        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength, rotation=rotation)
+    @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
+    def __init__(self, dm_config_id, display_wavelength=640*u.nm, apply_flat_map=False, filename_flat=None, rotation=0):
+        self.dm_config_id = dm_config_id
+
+        # Initialize class used to model the segmented aperture geometry
+        self.aperture = SegmentedAperture(dm_config_id, rotation=rotation)
+
 
         # Determine if the custom flat map will be applied
         self.apply_flat_map = apply_flat_map
         if self.apply_flat_map:
+            if filename_flat is None:
+                raise ValueError("Must provide a filename for the segmented DM flat file, not None.")
             self.filename_flat = filename_flat
             # Check that the file exists
             if not os.path.isfile(self.filename_flat):
@@ -253,17 +244,18 @@ class SegmentedDmCommand(SegmentedAperture):
         except NoOptionError:
             self.segments_in_pupil = util.iris_pupil_naming(self.dm_config_id)
 
-        # Initalize parameters for displaying the command
-        self.instrument_fov = CONFIG_INI.getint(testbed_config_id, 'fov_irisao_plotting')
-        self.pixelscale = CONFIG_INI.getfloat(testbed_config_id, 'pixelscale_iriso_plotting')
+        # Initialize parameters for displaying the command
+        self.display_wavelength = display_wavelength
+        self.display_instrument_fov = CONFIG_INI.getint(dm_config_id, 'fov_irisao_plotting')
+        self.display_pixelscale = CONFIG_INI.getfloat(dm_config_id, 'pixelscale_iriso_plotting')
+
+        # Set units for piston, tip, tilt
         dm_command_units = CONFIG_INI.get(self.dm_config_id, 'dm_ptt_units').split(',')
         self.dm_command_units = [u.Unit(dm_command_units[0]), u.Unit(dm_command_units[1]),
                                  u.Unit(dm_command_units[2])]
-        # Create the aperture
-        self.aperture = self.create_aperture()
 
         # Initalize command
-        self.data = util.create_zero_list(self.number_segments_in_pupil)
+        self.data = util.create_zero_list(self.aperture.number_segments_in_pupil)
         self.input_data = None
         self.command = None
 
@@ -326,7 +318,7 @@ class SegmentedDmCommand(SegmentedAperture):
                           with self.dm_command_units
         """
         if add_to_current:
-            command_list = util.create_zero_list(self.number_segments_in_pupil)
+            command_list = util.create_zero_list(self.aperture.number_segments_in_pupil)
             command_list[segment_ind] = ptt_tuple
             self.add_map(command_list)
         else:
@@ -450,10 +442,10 @@ class SegmentedDmCommand(SegmentedAperture):
         plt.figure()
         osys = poppy.OpticalSystem()
         osys.add_pupil(self.aperture)
-        osys.add_detector(pixelscale=self.pixelscale, fov_arcsec=self.instrument_fov)
+        osys.add_detector(pixelscale=self.display_pixelscale, fov_arcsec=self.display_instrument_fov)
         osys.add_rotation(angle=rotation_angle)
 
-        psf = osys.calc_psf(wavelength=self.wavelength)
+        psf = osys.calc_psf(wavelength=self.display_wavelength)
         poppy.display_psf(psf, vmin=vmin, vmax=vmax,
                           title='PSF created by the shape put on the active segments')
         if save_figure:
@@ -463,7 +455,7 @@ class SegmentedDmCommand(SegmentedAperture):
             plt.show()
 
 
-def load_command(segment_values, dm_config_id, wavelength, testbed_config_id,
+def load_command(segment_values, dm_config_id, wavelength,
                  apply_flat_map=True, filename_flat=None):
     """
     Loads the segment_values from a file or list and returns a SegmentedDmCommand object.
@@ -482,8 +474,7 @@ def load_command(segment_values, dm_config_id, wavelength, testbed_config_id,
     :param filename_flat: string, full path to the custom flat map, only needed if apply_flat_map=True
     :return: SegmentedDmCommand object representing the command dictionary.
     """
-    dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, wavelength=wavelength,
-                                        testbed_config_id=testbed_config_id,
+    dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, display_wavelength=wavelength,
                                         apply_flat_map=apply_flat_map,
                                         filename_flat=filename_flat)
     dm_command_obj.read_initial_command(segment_values)
@@ -573,18 +564,19 @@ def get_wavefront_from_coeffs(coeff_list, basis):
     return wavefront
 
 
-class PoppySegmentedCommand(SegmentedAperture):
-    """
-    Create a segement values list (and dictionary) (in POPPY: wavefront error) using
-    POPPY for your pupil. This is currently limited to global shapes. The output is
-    a list of piston, tip, tilt values with DM units, usually (um, mrad, mrad), respectively,
-    for each segment.
+class PoppySegmentedDmCommand(SegmentedDmCommand):
+    """ Create segmented DM command based on provided wavefront parameters
+
+    This is currently limited to global shapes defined by Zernike coefficients
+
+    The output is
+    a SegmentedDmCommand containing piston, tip, tilt values with DM units,
+    usually (um, mrad, mrad), respectively, for each segment.
 
     This class inherits the SegmentedAperture class.
 
     To use to get command for the segmented DM:
-      poppy_obj = PoppySegmentedCommand(global_coefficients)
-      command = poppy_obj.to_dm_list()
+      poppy_obj = PoppySegmentedCommand(coefficients)
 
     The method .to_dm_list() will place the command in the correct units and can then
     be used as input to load_command or be used with the DisplayCommand class.
@@ -594,26 +586,27 @@ class PoppySegmentedCommand(SegmentedAperture):
                                 in meters of optical path difference (not waves)
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
-    :param wavelength: wavelength: float, wavelength in nm of the poppy optical system used for
+    :param wavelength: float, wavelength in nm of the poppy optical system used for
                         (extremely oversimplified) focal plane simulations
     :param rotation: float, rotation angle of the hex segmented DM in deg
     :attribute radius: float, half of the flat-to-flat distance of each segment
     :attribute num_terms: int, total number of PTT values on all segments (= 3 x number of segments)
     :attribute dm_command_units: list, the units of the piston, tip, tilt (respecitvely)
                                  values when coming from the DM or DM command
-    :attribute global_coefficients: list of global zernike coefficients in the form
+    :attribute coefficients: list of global zernike coefficients in the form
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
                                 in meters of optical path difference (not waves)
     :attribute basis: poppy.zernike.Segment_PTT_Basis object, basis based on the characteristics
                       of the segmented DM being used
     :attribute list of coefficients: list of piston, tip, tilt coefficients in units of m, rad, rad
     """
-    def __init__(self, global_coefficients, dm_config_id, wavelength, rotation=0):
-        # Initilize parent class
-        super().__init__(dm_config_id=dm_config_id, wavelength=wavelength, rotation=rotation)
+    @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
+    def __init__(self, global_coefficients, dm_config_id, display_wavelength=640*u.nm, rotation=0, **kwargs):
+        # Initialize parent class
+        super().__init__(dm_config_id,rotation=rotation, display_wavelength=display_wavelength, **kwargs)
 
-        self.radius = (self.flat_to_flat/2).to(u.m)
-        self.num_terms = (self.number_segments_in_pupil) * 3
+        self.radius = (self.aperture.flat_to_flat/2).to(u.m)
+        self.num_terms = (self.aperture.number_segments_in_pupil) * 3
 
         # Grab the units of the DM for the piston, tip, tilt values to convert to
         dm_command_units = CONFIG_INI.get(self.dm_config_id, 'dm_ptt_units').split(',')
@@ -628,16 +621,19 @@ class PoppySegmentedCommand(SegmentedAperture):
         # Create list of segment coefficients
         self.list_of_coefficients = self.get_list_from_global()
 
+        # Set the command data based on that list of coefficients
+        self.read_initial_command(self.to_dm_list())
+
     def create_ptt_basis(self):
         """
         Create the basis needed for getting the per/segment coeffs back
 
         :return: Poppy Segment_PTT_Basis object for the specified pupil
         """
-        pttbasis = poppy.zernike.Segment_PTT_Basis(rings=self._num_rings,
-                                                   flattoflat=self.flat_to_flat,
-                                                   gap=self.gap,
-                                                   segmentlist=self._segment_list)
+        pttbasis = poppy.zernike.Segment_PTT_Basis(rings=self.aperture._num_rings,
+                                                   flattoflat=self.aperture.flat_to_flat,
+                                                   gap=self.aperture.gap,
+                                                   segmentlist=self.aperture._segment_list)
         return pttbasis
 
     def create_wavefront_from_global(self, global_coefficients):
@@ -650,7 +646,7 @@ class PoppySegmentedCommand(SegmentedAperture):
         :return: Poppy ZernikeWFE object, the global wavefront described by the input coefficients
         """
         wavefront = poppy.ZernikeWFE(radius=self.radius, coefficients=global_coefficients)
-        wavefront_out = wavefront.sample(wavelength=self.wavelength,
+        wavefront_out = wavefront.sample(wavelength=self.display_wavelength,
                                          grid_size=2*self.radius,
                                          npix=512, what='opd')
         return wavefront_out
@@ -667,7 +663,7 @@ class PoppySegmentedCommand(SegmentedAperture):
         """
         coeff_list = poppy.zernike.opd_expand_segments(wavefront, nterms=self.num_terms,
                                                         basis=self.basis)
-        coeff_list = np.reshape(coeff_list, (self.number_segments_in_pupil, 3))
+        coeff_list = np.reshape(coeff_list, (self.aperture.number_segments_in_pupil, 3))
         return coeff_list
 
     def get_list_from_global(self):
