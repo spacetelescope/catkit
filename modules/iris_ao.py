@@ -45,7 +45,8 @@ def image_array(image_array_command_file):
     :return: list of tuples for DM command, string for command name
     """
     command_to_load = image_array_command_file
-    # TODO - shouldn't this function do more than just return a provided filename?!
+    # TODO - Rather than having to pass in the filename to an existing file with the image array PTT values,
+    # this function should probably load a saved version from within this repo, and return that.
     return command_to_load
 
 
@@ -75,22 +76,22 @@ def zero_array(nseg=37):
     return iris_util.create_zero_list(nseg)
 
 
-def letter_f():
+def letter_f(axis=1, amplitude=2):
     """ Return a letter F command for the IrisAO segmented DM
 
-    :param dm_config_id: str, name of the section in the config_ini file where information
-                         regarding the segmented DM can be found.
-    :param testbed_config_id: str, name of the section in the config_ini file where information
-                              regarding the testbed can be found.
-    :param filename_flat: str, full path to the custom flat map
-    :param wavelength: float, wavelength in nm of the poppy optical system used for
-                       (extremely oversimplified) focal plane simulations
+    :param axis: Which axis (0=piston, 1=tip, 2=tilt) to make the letter F using.
+        By default the F is made up of segments with tip on them (axis=1).
+    :param amplitude: Amplitude of the letter F, in the control units for that axis.
+
     :return: Segmented DM command object
     """
+
+
     letter_f_command = HicatSegmentedDmCommand()
     letter_f_segments = [18, 6, 5, 14, 8, 0]
+    ptt_values = tuple(amplitude if i==axis else 0 for i in range(3))
     for i in letter_f_segments:
-        letter_f_command.update_one_segment(i, (0, 2, 0), add_to_current=True)
+        letter_f_command.update_one_segment(i, ptt_values, add_to_current=True)
     return letter_f_command
 
 

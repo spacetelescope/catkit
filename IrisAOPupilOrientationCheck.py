@@ -3,7 +3,6 @@ import os.path
 import astropy.io.fits as fits
 
 from catkit.hardware.boston import commands
-from catkit.hardware.iris_ao import segmented_dm_command
 from catkit.catkit_types import units, quantity, LyotStopPosition
 from hicat.experiments.ApplyActuatorPattern import ApplyAsymmetricTestPattern
 from hicat.experiments.Experiment import Experiment
