@@ -210,7 +210,6 @@ class HicatExperiment(Experiment, ABC):
 
         # Instantiate, open connections, and cache all required devices.
         try:
-            disable_hardware = CONFIG_MODES.get(testbed_state.current_mode, "iris_ao") == "not_iris_ao"
             with testbed.laser_source() as laser, \
                     testbed.dm_controller() as dm, \
                     testbed.motor_controller() as motor_controller, \
@@ -224,7 +223,7 @@ class HicatExperiment(Experiment, ABC):
                     testbed.target_acquisition_camera() as ta_cam, \
                     testbed.color_wheel() as color_wheel, \
                     testbed.nd_wheel() as nd_wheel, \
-                    testbed.iris_ao(config_id=CONFIG_INI.get("testbed", "iris_ao"), disable_hardware=disable_hardware) as iris_ao:
+                    testbed.iris_ao() as iris_ao:
 
                 devices = {'laser': laser,
                            'dm': dm,
