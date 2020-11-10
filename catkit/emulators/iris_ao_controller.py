@@ -54,7 +54,7 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
             piston = values[0] * u.um
             tip = values[2] * u.mrad
             tilt = values[1] * u.mrad
-            self.set_actuator(seg-1, piston, tip, tilt)  # TODO: double-check the -1 here, meant to correct for different segment names
+            self.set_actuator(seg-1, piston, tip, tilt)
 
     @staticmethod
     def invert_data(data):
