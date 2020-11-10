@@ -4,16 +4,16 @@ segmented DM hardware as a command.
 
 
 This module can be used to create a command in the following way:
-    poppy_obj = PoppySegmentedCommand(global_coefficients, dm_config_id, display_wavelength)
-    command = poppy_obj.to_dm_list()
-    iris_command = segmented_dm_command.load_command(command, dm_config_id,
-                                                     display_wavelength,
-                                                     testbed_config_id,
-                                                     apply_flat_map=True,
-                                                     filename_flat='repo-path/hardware/iris-ao/CustomFLAT.ini')
-    iris_command.display()
+    command = SegmentedDmCommand(dm_config_id, apply_flat_map=True,
+                                 filename_flat='repo-path/hardware/iris-ao/CustomFLAT.ini')
+    command.read_initial_values(segment_ptt_values)
+    command.update_one_segment(segment_index, segment_ptt_values)
+    command.display()
+    dm_object.apply_shape(command)
 
-Note that a command can be zeros, None, a poppy command, a .ini file, or a .PTT### file.
+Note that a command can be initialized from zeros, None, a list of tuples giving (P,T,T) for each segment,
+an .ini file, or a .PTT### file. The PoppySegmentedDmCommand class can be used to create a command from
+input Zernike coefficients.
 Additionally, a single segment can be changed using the SegmentedDmCommand.update_one_segment()
 method.
 
@@ -239,7 +239,7 @@ class SegmentedDmCommand(object):
         # Establish segment information
         try:
             self.segments_in_pupil = json.loads(CONFIG_INI.get(self.dm_config_id, 'active_segment_list'))
-            if len(self.segments_in_pupil) != self.number_segments_in_pupil:
+            if len(self.segments_in_pupil) != self.aperture.number_segments_in_pupil:
                 raise ValueError("The length of active_segment_list does not match the active_number_of_segments in the config.ini. Please update your config.ini.")
         except NoOptionError:
             self.segments_in_pupil = util.iris_pupil_naming(self.dm_config_id)
@@ -455,7 +455,7 @@ class SegmentedDmCommand(object):
             plt.show()
 
 
-def load_command(segment_values, dm_config_id, wavelength,
+def load_command(segment_values, dm_config_id, display_wavelength,
                  apply_flat_map=True, filename_flat=None):
     """
     Loads the segment_values from a file or list and returns a SegmentedDmCommand object.
@@ -470,11 +470,13 @@ def load_command(segment_values, dm_config_id, wavelength,
                            pupil (see README for more information)
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
+    :param display_wavelength: float, wavelength in nanometers to be used in optional display of
+                          simple model PSFs from the segmented mirror
     :param apply_flat_map: bool, whether to apply a flat map in addition to the data when sending command to hardware
     :param filename_flat: string, full path to the custom flat map, only needed if apply_flat_map=True
     :return: SegmentedDmCommand object representing the command dictionary.
     """
-    dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, display_wavelength=wavelength,
+    dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, display_wavelength=display_wavelength,
                                         apply_flat_map=apply_flat_map,
                                         filename_flat=filename_flat)
     dm_command_obj.read_initial_command(segment_values)
@@ -576,24 +578,25 @@ class PoppySegmentedDmCommand(SegmentedDmCommand):
     This class inherits the SegmentedAperture class.
 
     To use to get command for the segmented DM:
-      poppy_obj = PoppySegmentedCommand(coefficients)
+      command = PoppySegmentedDmCommand(coefficients, dm_config_id)
+      dm_object.apply_shape(command)
 
-    The method .to_dm_list() will place the command in the correct units and can then
-    be used as input to load_command or be used with the DisplayCommand class.
+    The method .to_dm_list() will place the command in the correct units to be sent to the hardware;
+    this happens automatically in __init__.
 
     :param global_coefficients: list of global zernike coefficients in the form
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
                                 in meters of optical path difference (not waves)
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
-    :param wavelength: float, wavelength in nm of the poppy optical system used for
+    :param display_wavelength: float, wavelength in nm of the poppy optical system used for
                         (extremely oversimplified) focal plane simulations
     :param rotation: float, rotation angle of the hex segmented DM in deg
     :attribute radius: float, half of the flat-to-flat distance of each segment
     :attribute num_terms: int, total number of PTT values on all segments (= 3 x number of segments)
     :attribute dm_command_units: list, the units of the piston, tip, tilt (respecitvely)
                                  values when coming from the DM or DM command
-    :attribute coefficients: list of global zernike coefficients in the form
+    :attribute global_coefficients: list of global zernike coefficients in the form
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
                                 in meters of optical path difference (not waves)
     :attribute basis: poppy.zernike.Segment_PTT_Basis object, basis based on the characteristics
