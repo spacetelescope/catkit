@@ -3,26 +3,25 @@ import os
 
 import astropy.units as u
 from catkit.hardware.iris_ao import segmented_dm_command
-import catkit.hardware.iris_ao.util as iris_util
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
 import hicat.util
 
-# Functions for interacting with the IrisAO Deformable Mirrors, particularly control commands
+# Functions for interacting with the IrisAO Deformable Mirrors, particularly control commands.
 #
 # The following functions are mostly conveniences for easily making typical commands we might
-# want to send to the Iris DM on HICAT. See catkit's segmented_dm_commands.py for the full interface.
+# want to send to the Iris DM on HiCAT. See catkit's segmented_dm_commands.py for the full interface.
 #
 # TODO: Add function(s) to decompose a wavefront as measured by pairwise sensing on HICAT into a
 #       control command for the segmented DM.
 
 
 class HicatSegmentedDmCommand(segmented_dm_command.SegmentedDmCommand):
-    """Subclass of SegmentedDmCommand with correct default values for HICAT
+    """Subclass of SegmentedDmCommand with correct default values for HiCAT
 
     This sets the dm_config_id and filename_flat values by default to the values
-    in the HICAT config file. You can optionally still override those by setting the
-    parameters if you want, but for typical HICAT usage you should not have to do so.
+    in the HiCAT config file. You can optionally still override those by setting the
+    parameters if you want, but for typical HiCAT usage you should not have to do so.
 
     The point of this class is to avoid having to manually pass around the default values
     for dm_config_id, apply_flat_map, and so on, into all of the segmented DM command functions.
@@ -46,7 +45,6 @@ class HicatSegmentedDmCommand(segmented_dm_command.SegmentedDmCommand):
         super().plot_psf(wavelength=wavelength, pixelscale=pixelscale, instrument_fov=instrument_fov, *args, **kwargs)
 
 
-
 def flat_command():
     """ Return a catkit SegmentedDmCommand() object to flatten the segmented DM
 
@@ -58,18 +56,18 @@ def flat_command():
 def command_from_zernikes(global_coefficients=[0., 0., 0., 2e-7]):
     """ Create a command using global Zernike coefficents to set the shape of the segmented DM
 
-    :param coefficients: list of global zernike coefficients in the form
+    :param global_coefficients: list of global zernike coefficients in the form
                                 [piston, tip, tilt, defocus, ...] (Noll convention)
                                 in meters of optical path difference (not waves)
     :return: Segmented DM command object
     """
-    hicat_command = HicatSegmentedDmCommand()   # used only to get the relevant hicat default parameters
+    hicat_command = HicatSegmentedDmCommand()   # used only to get the relevant HiCAT default parameters
                                                 # which we pass into this call to create the desired command:
     zernike_command = segmented_dm_command.PoppySegmentedDmCommand(global_coefficients,
                                                                    dm_config_id=hicat_command.dm_config_id,
                                                                    apply_flat_map=hicat_command.apply_flat_map,
                                                                    filename_flat=hicat_command.filename_flat)
-    hicat_command.read_initial_command(zernike_command.to_dm_list())  # cast back into the HICAT-specific class to have
+    hicat_command.read_initial_command(zernike_command.to_dm_list())  # cast back into the HiCAT-specific class to have
                                                                       # the overridden display function
     return hicat_command
 
@@ -78,16 +76,15 @@ def letter_f(axis=1, amplitude=2):
     """ Return a letter F command for the IrisAO segmented DM
 
     :param axis: Which axis (0=piston, 1=tip, 2=tilt) to make the letter F using.
-        By default the F is made up of segments with tip on them (axis=1).
-    :param amplitude: Amplitude of the letter F, in the control units for that axis.
+           By default the F is made up of segments with tip on them (axis=1).
+    :param amplitude: Amplitude of the letter F, in the control units for that
+           axis (um for piston, mrad for tip/tilt).
 
     :return: Segmented DM command object
     """
-
-
     letter_f_command = HicatSegmentedDmCommand()
     letter_f_segments = [18, 6, 5, 14, 8, 0]
-    ptt_values = tuple(amplitude if i==axis else 0 for i in range(3))
+    ptt_values = tuple(amplitude if i == axis else 0 for i in range(3))
     for i in letter_f_segments:
         letter_f_command.update_one_segment(i, ptt_values, add_to_current=True)
     return letter_f_command
@@ -122,7 +119,6 @@ def place_command_on_iris_ao(iris_command=None, seconds_to_hold_shape=10,
     Most basic function that puts a shape on the DM and holds that shape for a specified number of second
     :param iris_command: catkit.hardware.iris_ao.segmented_dm_command.SegmentedDmCommand
     :param seconds_to_hold_shape: float, how many seconds to hold the command before releasing
-    :param apply_flat: bool, whether to also apply the custom flat or not
     :param verbose: bool, whether to print out the command put on the IrisAO or not
     """
 
@@ -165,5 +161,3 @@ def run_one_command(command_to_load, command_str, seconds_to_hold_shape=10, simu
 
     place_command_on_iris_ao(iris_command=iris_command,
                              seconds_to_hold_shape=seconds_to_hold_shape,  verbose=verbose)
-
-
