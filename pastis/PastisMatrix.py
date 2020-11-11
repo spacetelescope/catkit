@@ -1,12 +1,14 @@
 import hicat.simulators
 
 from astropy.io import fits
+import astropy.units as u
 import hcipy
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 
 from hicat.config import CONFIG_INI
+from hicat.experiments.modules import iris_ao
 from hicat.experiments.modules import pastis_functions
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
@@ -28,7 +30,7 @@ class PastisMatrix(PastisExperiment):
         Measure a PASTIS matrix on hardware.
         
         :param zernike: str, which local Zernike to apply to IrisAO, has to be 'piston', 'tip' or 'tilt'
-        :param calibration_aberration: float, calibration aberration for PASTIS matrix in meters
+        :param calibration_aberration: float, calibration aberration for PASTIS matrix in astropy units
         :param probe_filename: str, path to probe file, used only to get DH geometry
         :param dm_map_path: str, path to folder that contains DH solution
         :param color_filter: str, wavelength for color flipmount
@@ -48,7 +50,7 @@ class PastisMatrix(PastisExperiment):
                          align_lyot_stop, run_ta)
 
         self.zernike = zernike   # Can only be piston, tip or tilt on hardware. Will determine calibartion aberration position in list of IrisAO command
-        self.calib_aberration = calibration_aberration   # in METERS
+        self.calib_aberration = calibration_aberration   # in astropu units
         if self.zernike not in ('piston', 'tip', 'tilt'):
             raise AttributeError("The local aberration set with self.zernike can only be 'piston', 'tip' or 'tilt'.")
 
@@ -62,7 +64,7 @@ class PastisMatrix(PastisExperiment):
     def experiment(self):
 
         # A couple of initial log messages
-        self.log.info(f'wfe_aber: {self.calib_aberration} m')
+        self.log.info(f'wfe_aber: {self.calib_aberration}')
         self.log.info(f'Total number of segment pairs in HiCAT pupil: {len(list(pastis.util.segment_pairs_all(self.nb_seg)))}')
         self.log.info(
             f'Non-repeating pairs in HiCAT pupil calculated here: {len(list(pastis.util.segment_pairs_non_repeating(self.nb_seg)))}')
@@ -78,13 +80,8 @@ class PastisMatrix(PastisExperiment):
         self.log.info('Measuring reference PSF (direct) and coronagraph floor')
         self.measure_coronagraph_floor(devices)
 
-        #iris_dm = devices['iris_dm']    # TODO: Is this how I will access the IrisDM?
-        matrix_data_path = os.path.join(self.output_path, 'pastis_matrix')
-
         ### Measure contrast matrix
-
-        # Instantiate a connection to the IrisAO
-        iris_dm = pastis_functions.IrisAO()
+        matrix_data_path = os.path.join(self.output_path, 'pastis_matrix')
 
         # for loop over all segment pairs
         self.log.info('Start measuring contrast matrix')
@@ -95,13 +92,13 @@ class PastisMatrix(PastisExperiment):
             initial_path = os.path.join(matrix_data_path, f'pair_{pair[0]}-{pair[1]}')
 
             # Make sure the IrisAO is flat
-            iris_dm.flatten()
+            devices['iris_ao'].apply_shape(iris_ao.flat_command())
 
             # TODO: make it such that we can pick between piston, tip and tilt
             # Aberrate pair of segments on IrisAO, piston only for now
-            iris_dm.set_actuator(pair[0], self.calib_aberration, 0, 0)    # calibration aberration needed in meters
+            devices['iris_ao'].update_one_segment(pair[0], (self.calib_aberration.to(u.um).value, 0, 0))
             if pair[0] != pair[1]:    # if we are on the matrix diagonal, aberrate the segment only once
-                iris_dm.set_actuator(pair[1], self.calib_aberration, 0, 0)
+                devices['iris_ao'].update_one_segment(pair[1], (self.calib_aberration.to(u.um).value, 0, 0))
 
             # TODO: save IrisAO WFE maps
 
@@ -133,7 +130,7 @@ class PastisMatrix(PastisExperiment):
         # Calculate the PASTIS matrix from the contrast matrix: off-axis elements, symmetrize and normalization
         self.log.info('Calculate PASTIS matrix from measured contrast matrix')
         # calibration aberration needed in meters
-        self.pastis_matrix = pastis_from_contrast_matrix(self.contrast_contribution_matrix, self.seglist, self.calib_aberration)
+        self.pastis_matrix = pastis_from_contrast_matrix(self.contrast_contribution_matrix, self.seglist, self.calib_aberration.to(u.m).value)
 
         # Save matrix to fits file - this is in units of contrast/nm^2
         hicat.util.write_fits(self.pastis_matrix, os.path.join(self.output_path, 'pastis_matrix.fits'))
