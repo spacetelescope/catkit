@@ -91,14 +91,16 @@ class PastisMatrix(PastisExperiment):
             self.log.info(f'Measuring aberrated pair {pair[0]}-{pair[1]}')
             initial_path = os.path.join(matrix_data_path, f'pair_{pair[0]}-{pair[1]}')
 
-            # Make sure the IrisAO is flat
-            devices['iris_ao'].apply_shape(iris_ao.flat_command())
+            # Make sure our base command is just the flat
+            pair_poke_command = iris_ao.flat_command()
 
             # TODO: make it such that we can pick between piston, tip and tilt
-            # Aberrate pair of segments on IrisAO, piston only for now
-            devices['iris_ao'].update_one_segment(pair[0], (self.calib_aberration.to(u.um).value, 0, 0))
+            # Aberrate pair of segments in the IrisAO command, piston only for now
+            pair_poke_command.update_one_segment(pair[0], (self.calib_aberration.to(u.um).value, 0, 0))
             if pair[0] != pair[1]:    # if we are on the matrix diagonal, aberrate the segment only once
-                devices['iris_ao'].update_one_segment(pair[1], (self.calib_aberration.to(u.um).value, 0, 0))
+                pair_poke_command.update_one_segment(pair[1], (self.calib_aberration.to(u.um).value, 0, 0))
+            # Apply command to IrisAO
+            devices["iris_ao"].apply_shape(pair_poke_command)
 
             # TODO: save IrisAO WFE maps
 
