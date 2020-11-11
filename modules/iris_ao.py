@@ -1,11 +1,20 @@
 import time
 import os
 
+import astropy.units as u
 from catkit.hardware.iris_ao import segmented_dm_command
 import catkit.hardware.iris_ao.util as iris_util
 from hicat.config import CONFIG_INI
 from hicat.hardware import testbed
 import hicat.util
+
+# Functions for interacting with the IrisAO Deformable Mirrors, particularly control commands
+#
+# The following functions are mostly conveniences for easily making typical commands we might
+# want to send to the Iris DM on HICAT. See catkit's segmented_dm_commands.py for the full interface.
+#
+# TODO: Add function(s) to decompose a wavefront as measured by pairwise sensing on HICAT into a
+#       control command for the segmented DM.
 
 
 class HicatSegmentedDmCommand(segmented_dm_command.SegmentedDmCommand):
@@ -18,15 +27,24 @@ class HicatSegmentedDmCommand(segmented_dm_command.SegmentedDmCommand):
     The point of this class is to avoid having to manually pass around the default values
     for dm_config_id, apply_flat_map, and so on, into all of the segmented DM command functions.
     """
-    def __init__(self, dm_config_id=None, rotation=0, display_wavelength=640, apply_flat_map=True, filename_flat=None):
+    def __init__(self, dm_config_id=None, rotation=0, apply_flat_map=True, filename_flat=None):
         if dm_config_id is None:
             dm_config_id = CONFIG_INI.get('testbed', 'iris_ao')
         repo_root = hicat.util.find_repo_location()
         if filename_flat is None:
             filename_flat = os.path.join(repo_root, CONFIG_INI.get(dm_config_id,
                                                                    'custom_flat_file_ini'))  # Path to the 4D flat for this DM
-        super().__init__(dm_config_id, rotation=rotation, display_wavelength=display_wavelength,
+        super().__init__(dm_config_id, rotation=rotation,
                          apply_flat_map=apply_flat_map, filename_flat=filename_flat)
+
+    def plot_psf(self, wavelength=640*u.nm, pixelscale=None, instrument_fov=None, *args, **kwargs):
+        # Initialize parameters for displaying the command
+        if instrument_fov is None:
+            instrument_fov = CONFIG_INI.getint(self.dm_config_id, 'fov_irisao_plotting')
+        if pixelscale is None:
+            pixelscale = CONFIG_INI.getfloat(self.dm_config_id, 'pixelscale_iriso_plotting')
+        super().plot_psf(wavelength=wavelength, pixelscale=pixelscale, instrument_fov=instrument_fov, *args, **kwargs)
+
 
 
 def flat_command():
@@ -35,19 +53,6 @@ def flat_command():
     :return: Segmented DM command object
     """
     return HicatSegmentedDmCommand()
-
-
-def image_array(image_array_command_file):
-    """
-    Create a command of the Image Array configuration, which assumes a radially symmetric tip/tilt
-    on each segment, moving each subPSF radially outward.
-    :param image_array_command_file: catkit.hardware.iris_ao.segmented_dm_command.SegmentedDmCommand
-    :return: list of tuples for DM command, string for command name
-    """
-    command_to_load = image_array_command_file
-    # TODO - Rather than having to pass in the filename to an existing file with the image array PTT values,
-    # this function should probably load a saved version from within this repo, and return that.
-    return command_to_load
 
 
 def command_from_zernikes(global_coefficients=[0., 0., 0., 2e-7]):
@@ -62,18 +67,11 @@ def command_from_zernikes(global_coefficients=[0., 0., 0., 2e-7]):
                                                 # which we pass into this call to create the desired command:
     zernike_command = segmented_dm_command.PoppySegmentedDmCommand(global_coefficients,
                                                                    dm_config_id=hicat_command.dm_config_id,
-                                                                   display_wavelength=hicat_command.display_wavelength,
                                                                    apply_flat_map=hicat_command.apply_flat_map,
                                                                    filename_flat=hicat_command.filename_flat)
-    return zernike_command
-
-
-def zero_array(nseg=37):
-    """
-    Create a zero array, which can be passed to a sgmented DM command.
-    :return: list of tuples for DM command, string for command name
-    """
-    return iris_util.create_zero_list(nseg)
+    hicat_command.read_initial_command(zernike_command.to_dm_list())  # cast back into the HICAT-specific class to have
+                                                                      # the overridden display function
+    return hicat_command
 
 
 def letter_f(axis=1, amplitude=2):
@@ -93,6 +91,29 @@ def letter_f(axis=1, amplitude=2):
     for i in letter_f_segments:
         letter_f_command.update_one_segment(i, ptt_values, add_to_current=True)
     return letter_f_command
+
+
+def poke_one_segment(segment_ind, piston=1.0):
+    """ Return a command that pokes one segment by the specified amount
+
+    :param segment_ind: index of which segment to poke
+    :param piston: float, amount of piston in control units (microns)
+    """
+    poke_command = HicatSegmentedDmCommand()
+    poke_command.update_one_segment(segment_ind, (piston, 0, 0))
+    return poke_command
+
+
+def tilt_one_segment(segment_ind, tip=0, tilt=0):
+    """ Return a command that tilts one segment by the specified amount
+
+    :param segment_ind: index of which segment to poke
+    :param tip: float, amount of tip in control units (mrad)
+    :param tilt: float, amount of tilt in control units (mrad)
+    """
+    tt_command = HicatSegmentedDmCommand()
+    tt_command.update_one_segment(segment_ind, (0, tip, tilt))
+    return tt_command
 
 
 def place_command_on_iris_ao(iris_command=None, seconds_to_hold_shape=10,
@@ -140,44 +161,9 @@ def run_one_command(command_to_load, command_str, seconds_to_hold_shape=10, simu
         if verbose:
             print(f"All output files will be saved to {out_dir}")
         iris_command.display(display_wavefront=True, display_psf=True,
-                             psf_rotation_angle=90, figure_name_prefix=command_str, out_dir=out_dir)
+                             psf_rotation_angle=0, figure_name_prefix=command_str, out_dir=out_dir)
 
     place_command_on_iris_ao(iris_command=iris_command,
                              seconds_to_hold_shape=seconds_to_hold_shape,  verbose=verbose)
 
 
-def kick_out_all_segments(nseg, dm_config_id, testbed_config_id, filename_flat, out_dir, image_array_command_file,
-                          wavelength, seconds_to_hold_shape=10, simulation=False, verbose=False):
-    """
-    In an Image Array configuration, move all segments individually and take images
-    :param nseg: int, total number of active segments in the pupil
-    :param dm_config_id: str, name of the section in the config_ini file where information
-                         regarding the segmented DM can be found.
-    :param testbed_config_id: str, name of the section in the config_ini file where information
-                              regarding the testbed can be found.
-    :param filename_flat: str, full path to the custom flat map
-    :param out_dir: str, where to save out any sim files
-    :param image_array_command_file: catkit.hardware.iris_ao.segmented_dm_command.SegmentedDmCommand
-    :param wavelength: float, wavelength in nm of the poppy optical system used for
-                       (extremely oversimplified) focal plane simulations
-    :param seconds_to_hold_shape: float, how many seconds to hold the command before releasing
-    :param simulation: bool, whether to save out what the simulator thinks we will see on
-                       the DM or in an imaging camera
-    :param verbose: bool, whether to print out the command put on the IrisAO or not
-    """
-    apply_flat_map = True
-    command_to_load, command_str = image_array(image_array_command_file)
-    iris_command = segmented_dm_command.load_command(command_to_load, dm_config_id,
-                                                     wavelength, testbed_config_id,
-                                                     apply_flat_map=apply_flat_map,
-                                                     filename_flat=filename_flat)
-    for i in range(nseg):
-        iris_command.update_one_segment(i, (0.0, 5.0, 0.0))
-        command_str = f'{command_str}_move_seg{i}'
-
-        if simulation:
-            iris_command.display(display_wavefront=True, display_psf=True,
-                                 psf_rotation_angle=90, figure_name_prefix=command_str, out_dir=out_dir)
-
-        place_command_on_iris_ao(iris_command=iris_command,
-                                 seconds_to_hold_shape=seconds_to_hold_shape,  verbose=verbose)
