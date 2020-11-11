@@ -195,12 +195,10 @@ class SegmentedDmCommand(object):
 
     This class does NOT interact with hardware directly.
 
-    :param apply_flat_map: If true, add the custom flat map correction to the data before creating the command
-    :param filename_flat: string, full path to custom flat map, only needed if apply_flat_map=True
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
-    :param display_wavelength: float, display_wavelength in nm of the poppy optical system used for
-                        (extremely oversimplified) focal plane simulations
+    :param apply_flat_map: If true, add the custom flat map correction to the data before creating the command
+    :param filename_flat: string, full path to custom flat map, only needed if apply_flat_map=True
     :param rotation: float, rotation angle of the hex segmented DM in deg
     :attribute data: list of tuples, input data that can then be updated. This attribute never
                      never includes the custom flat map values; units are determined with the attribute dm_command_units
@@ -210,16 +208,13 @@ class SegmentedDmCommand(object):
     :attribute filename_flat: str, full path to custom flat, only needed if apply_flat_map=True
     :attribute total_number_segments: int, total number of segments in DM, includes dead segments
     :attribute active_segment_list: int, number of active segments in the DM
-    :attribute display_instrument_fov: int, field of view of the instrument in pixels
-    :attribute display_pixelscale: float, display_pixelscale of the instrument in arcsec / pix
     :attribute dm_command_units: tuple of floats, the units of the piston, tip, tilt
                                  values on the hardware
     :attribute aperture: poppy.dms.HexSegmentedDeformableMirror object, the aperture
                          that you are defining
     """
 
-    @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
-    def __init__(self, dm_config_id, display_wavelength=640*u.nm, apply_flat_map=False, filename_flat=None, rotation=0):
+    def __init__(self, dm_config_id, apply_flat_map=False, filename_flat=None, rotation=0):
         self.dm_config_id = dm_config_id
 
         # Initialize class used to model the segmented aperture geometry
@@ -243,11 +238,6 @@ class SegmentedDmCommand(object):
                 raise ValueError("The length of active_segment_list does not match the active_number_of_segments in the config.ini. Please update your config.ini.")
         except NoOptionError:
             self.segments_in_pupil = util.iris_pupil_naming(self.dm_config_id)
-
-        # Initialize parameters for displaying the command
-        self.display_wavelength = display_wavelength
-        self.display_instrument_fov = CONFIG_INI.getint(dm_config_id, 'fov_irisao_plotting')
-        self.display_pixelscale = CONFIG_INI.getfloat(dm_config_id, 'pixelscale_iriso_plotting')
 
         # Set units for piston, tip, tilt
         dm_command_units = CONFIG_INI.get(self.dm_config_id, 'dm_ptt_units').split(',')
@@ -368,7 +358,7 @@ class SegmentedDmCommand(object):
                                           f"Piston/GradX/GradY applied for segment {seg}"))
         return metadata
 
-    def display(self, display_wavefront=True, display_psf=True, psf_rotation_angle=90.,
+    def display(self, display_wavefront=True, display_psf=True, psf_rotation_angle=0.,
                 save_figures=True, figure_name_prefix='', out_dir=''):
         """
         Display either the deployed mirror state ("wavefront") and/or the PSF created
@@ -402,7 +392,7 @@ class SegmentedDmCommand(object):
         if display_wavefront:
             self.plot_wavefront(figure_name_prefix, out_dir, save_figure=save_figures)
         if display_psf:
-            self.plot_psf(psf_rotation_angle, figure_name_prefix, out_dir,
+            self.plot_psf(rotation_angle=psf_rotation_angle, figure_name_prefix=figure_name_prefix, out_dir=out_dir,
                           save_figure=save_figures)
 
     def plot_wavefront(self, figure_name_prefix, out_dir, vmax=0.5e-6*u.meter, save_figure=True):
@@ -425,37 +415,41 @@ class SegmentedDmCommand(object):
         else:
             plt.show()
 
-    def plot_psf(self, rotation_angle, figure_name_prefix, out_dir, vmin=10e-8,
+    @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
+    def plot_psf(self, wavelength=640*u.nm, figure_name_prefix=None, rotation_angle=0,  out_dir=None, vmin=10e-8,
+                 pixelscale=0.010, instrument_fov=1.0,
                  vmax=10e-2, save_figure=True):
         """
-        Plot the simulated PSF based on the mirror state
+        Plot the simulated PSF based on the mirror state. Optionally save figure to a file as well
 
-        :param rotation_anlge: float, the rotation to apply to the PSF image in order to match
+        :param wavelength: Wavelength to calculate and display a PSF for
+        :param pixelscale: pixel scale to calculate and display the PSF on
+        :param instrument_fov: instrument field of view to calculate and display the PSF on
+        :param rotation_angle: float, the rotation to apply to the PSF image in order to match
                                our testbed. Note that this value is specific to each testbed
+        :param save_figure: bool, If true, save out the figures in the directory specified by
+                            out_dir
         :param figure_name_prefix: str, String to be added to filenames of output figures
         :param out_dir: str, name of output directory
         :param vmin: float, the minimum value to display in the plot
         :param vmax: float, the maximum value to display in the plot
-        :param save_figure: bool, If true, save out the figures in the directory specified by
-                            out_dir
-        """
+       """
         plt.figure()
         osys = poppy.OpticalSystem()
         osys.add_pupil(self.aperture)
-        osys.add_detector(pixelscale=self.display_pixelscale, fov_arcsec=self.display_instrument_fov)
+        osys.add_detector(pixelscale=pixelscale, fov_arcsec=instrument_fov)
         osys.add_rotation(angle=rotation_angle)
 
-        psf = osys.calc_psf(wavelength=self.display_wavelength)
+        psf = osys.calc_psf(wavelength=wavelength)
         poppy.display_psf(psf, vmin=vmin, vmax=vmax,
                           title='PSF created by the shape put on the active segments')
         if save_figure:
+            if out_dir is None or figure_name_prefix is None:
+                raise ValueError("Must specify out_dir and figure_name_prefix if save_figure is True")
             plt.savefig(os.path.join(out_dir, f'{figure_name_prefix}simulated_psf.png'))
             plt.close()
-        else:
-            plt.show()
 
-
-def load_command(segment_values, dm_config_id, display_wavelength,
+def load_command(segment_values, dm_config_id,
                  apply_flat_map=True, filename_flat=None):
     """
     Loads the segment_values from a file or list and returns a SegmentedDmCommand object.
@@ -470,13 +464,11 @@ def load_command(segment_values, dm_config_id, display_wavelength,
                            pupil (see README for more information)
     :param dm_config_id: str, name of the section in the config_ini file where information
                          regarding the segmented DM can be found.
-    :param display_wavelength: float, wavelength in nanometers to be used in optional display of
-                          simple model PSFs from the segmented mirror
     :param apply_flat_map: bool, whether to apply a flat map in addition to the data when sending command to hardware
     :param filename_flat: string, full path to the custom flat map, only needed if apply_flat_map=True
     :return: SegmentedDmCommand object representing the command dictionary.
     """
-    dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id, display_wavelength=display_wavelength,
+    dm_command_obj = SegmentedDmCommand(dm_config_id=dm_config_id,
                                         apply_flat_map=apply_flat_map,
                                         filename_flat=filename_flat)
     dm_command_obj.read_initial_command(segment_values)
@@ -604,9 +596,9 @@ class PoppySegmentedDmCommand(SegmentedDmCommand):
     :attribute list of coefficients: list of piston, tip, tilt coefficients in units of m, rad, rad
     """
     @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
-    def __init__(self, global_coefficients, dm_config_id, display_wavelength=640*u.nm, rotation=0, **kwargs):
+    def __init__(self, global_coefficients, dm_config_id, rotation=0, **kwargs):
         # Initialize parent class
-        super().__init__(dm_config_id,rotation=rotation, display_wavelength=display_wavelength, **kwargs)
+        super().__init__(dm_config_id,rotation=rotation, **kwargs)
 
         self.radius = (self.aperture.flat_to_flat/2).to(u.m)
         self.num_terms = (self.aperture.number_segments_in_pupil) * 3
@@ -639,17 +631,19 @@ class PoppySegmentedDmCommand(SegmentedDmCommand):
                                                    segmentlist=self.aperture._segment_list)
         return pttbasis
 
-    def create_wavefront_from_global(self, global_coefficients):
+    def create_wavefront_from_global(self, global_coefficients, wavelength=640*u.nm):
         """
         Given an list of global coefficients, create wavefront
 
         :param global_coefficients: list of global zernike coefficients in the form
                                     [piston, tip, tilt, defocus, ...] (Noll convention)
                                     in meters of optical path difference (not waves)
+        :param wavelength: Wavelength to create this wavefront at; does not actually affect the
+                                    values of the OPD, which is modeled as wavelength-independent.
         :return: Poppy ZernikeWFE object, the global wavefront described by the input coefficients
         """
         wavefront = poppy.ZernikeWFE(radius=self.radius, coefficients=global_coefficients)
-        wavefront_out = wavefront.sample(wavelength=self.display_wavelength,
+        wavefront_out = wavefront.sample(wavelength=wavelength,
                                          grid_size=2*self.radius,
                                          npix=512, what='opd')
         return wavefront_out
