@@ -2,19 +2,19 @@ import logging
 import time
 
 from hicat.experiments.Experiment import Experiment
-from hicat.experiments.modules.iris_ao import flat_command as flat_command_iris
-from catkit.hardware.boston.commands import flat_command as flat_command_bostons
+from hicat.experiments.modules import iris_ao
+from catkit.hardware.boston.commands import flat_command
 from hicat.hardware import testbed
 
 
-class ApplyFlatMap(Experiment):
-    name = "Apply Flat Map"
+class ApplyFlatMaps(Experiment):
+    name = "Apply Flat Maps"
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 dm1_command_object=flat_command_bostons(bias=False, flat_map=True),  # Default flat with bias.
-                 dm2_command_object=flat_command_bostons(bias=False, flat_map=True),  # Default flat with bias.
-                 iris_ao_command_object=flat_command_iris(),  # Default custom flat map.
+                 dm1_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
+                 dm2_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
+                 iris_ao_command_object=iris_ao.flat_command(),  # Default custom flat map.
                  output_path=None,
                  suffix='apply_flat_map',
                  timeout=600,
