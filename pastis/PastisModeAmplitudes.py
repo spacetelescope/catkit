@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 import numpy as np
 
-from catkit.hardware.iris_ao import segmented_dm_command
-from hicat.config import CONFIG_INI
+from hicat.experiments.modules import iris_ao
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
 
@@ -94,7 +93,8 @@ class PastisModeAmplitudes(PastisExperiment):
             command_list = []
             for seg in range(self.nb_seg):
                 command_list.append((opd[seg].to(u.um).value, 0, 0))
-            opd_command = segmented_dm_command.load_command(command_list, apply_flat_map=True, dm_config_id=CONFIG_INI.get('testbed', 'iris_ao'))
+            opd_command = iris_ao.HicatSegmentedDmCommand()
+            opd_command.read_initial_command(command_list)
 
             # Apply this to IrisAO
             devices["iris_ao"].apply_shape(opd_command)
