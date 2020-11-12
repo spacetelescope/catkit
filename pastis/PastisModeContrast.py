@@ -3,8 +3,8 @@ from astropy.io import fits
 import astropy.units as u
 import numpy as np
 
+from hicat.config import CONFIG_INI
 from catkit.hardware.iris_ao import segmented_dm_command
-from hicat.experiments.modules import pastis_functions
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
 
@@ -105,10 +105,6 @@ class PastisModeContrast(PastisExperiment):
         if self.c_target <= self.coronagraph_floor:
             raise ValueError(f"Coronagraph floor ({self.coronagraph_floor}) cannot be above target contrast ({self.c_target}).")
 
-        # iris_dm = devices['iris_dm']    # TODO: Is this how I will access the IrisDM?
-        # Instantiate a connection to the IrisAO
-        iris_dm = pastis_functions.IrisAO()
-
         # Loop over all modes
         for maxmode in range(self.pastis_modes.shape[0]):
             self.log.info(f'Working on mode {maxmode}/{self.pastis_modes.shape[0]}')
@@ -125,12 +121,11 @@ class PastisModeContrast(PastisExperiment):
             # TODO: make it such that we can pick between piston, tip and tilt (will require extra keyword "zernike")
             command_list = []
             for seg in range(self.nb_seg):
-                command_list.append((opd[seg], 0, 0))
-            #opd_command = segmented_dm_command.load_command(command_list, apply_flat_map=True, dm_config_id='iris_ao')
-            opd_command = None
+                command_list.append((opd[seg].to(u.um).value, 0, 0))
+            opd_command = segmented_dm_command.load_command(command_list, apply_flat_map=True, dm_config_id=CONFIG_INI.get('testbed', 'iris_ao'))
 
             # Apply this to IrisAO
-            iris_dm.apply_shape(opd_command)
+            devices["iris_ao"].apply_shape(opd_command)
 
             # Take coro images
             pair_image, header = self.take_exposure(devices, 'coron', self.wvln, initial_path, dark_zone_mask=self.dark_zone)

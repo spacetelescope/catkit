@@ -9,7 +9,6 @@ import os
 
 from hicat.config import CONFIG_INI
 from hicat.experiments.modules import iris_ao
-from hicat.experiments.modules import pastis_functions
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
 import hicat.util

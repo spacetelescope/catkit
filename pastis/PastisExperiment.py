@@ -7,7 +7,6 @@ import numpy as np
 
 from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import HicatExperiment
-from hicat.experiments.modules import pastis_functions
 from hicat.hardware import testbed_state
 from hicat.hardware.testbed import move_filter
 from hicat.wfc_algorithms import wfsc_utils

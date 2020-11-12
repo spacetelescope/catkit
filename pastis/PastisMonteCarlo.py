@@ -3,7 +3,7 @@ import astropy.units as u
 import numpy as np
 
 from catkit.hardware.iris_ao import segmented_dm_command
-from hicat.experiments.modules import pastis_functions
+from hicat.config import CONFIG_INI
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
 
@@ -92,10 +92,6 @@ class PastisMonteCarlo(PastisExperiment):
 
         initial_path = os.path.join(self.output_path, 'all_random_realizations')
 
-        # iris_dm = devices['iris_dm']    # TODO: Is this how I will access the IrisDM?
-        # Instantiate a connection to the IrisAO
-        iris_dm = pastis_functions.IrisAO()
-
         # Loop over all modes/segments
         for rep in range(self.n_repeat):
 
@@ -124,12 +120,11 @@ class PastisMonteCarlo(PastisExperiment):
             # TODO: make it such that we can pick between piston, tip and tilt (will require extra keyword "zernike")
             command_list = []
             for seg in range(self.nb_seg):
-                command_list.append((random_opd[seg], 0, 0))
-            #random_opd_command = segmented_dm_command.load_command(command_list, apply_flat_map=True, dm_config_id='iris_ao')
-            random_opd_command = None
+                command_list.append((random_opd[seg].to(u.um).value, 0, 0))
+            random_opd_command = segmented_dm_command.load_command(command_list, apply_flat_map=True, dm_config_id=CONFIG_INI.get('testbed', 'iris_ao'))
 
             # Apply this to IrisAO
-            iris_dm.apply_shape(random_opd_command)
+            devices["iris_ao"].apply_shape(random_opd_command)
 
             # TODO: save random OPD command on IrisAO as WFE map
 

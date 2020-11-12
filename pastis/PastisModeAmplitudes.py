@@ -5,7 +5,7 @@ from matplotlib.ticker import ScalarFormatter
 import numpy as np
 
 from catkit.hardware.iris_ao import segmented_dm_command
-from hicat.experiments.modules import pastis_functions
+from hicat.config import CONFIG_INI
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
 
@@ -61,7 +61,7 @@ class PastisModeAmplitudes(PastisExperiment):
         # A couple of initial log messages
         self.log.info(f'Will be scaling mode number {self.mode_number}')
         self.log.info(f'Target contrast: {self.c_target}')
-        self.log.info(f'WFE amplitudes used for scaling: {self.wfe_amplitudes}')
+        self.log.info(f'WFE amplitudes used for scaling: {self.wfe_amplitudes} nm')
         self.log.info(f'PASTIS modes and mode weights read from {self.pastis_results_path}')
 
         # Access testbed devices
@@ -81,10 +81,6 @@ class PastisModeAmplitudes(PastisExperiment):
 
         # TODO: save used mode to output folder (txt file or plot of its WFE map, or both)
 
-        # iris_dm = devices['iris_dm']    # TODO: Is this how I will access the IrisDM?
-        # Instantiate a connection to the IrisAO
-        iris_dm = pastis_functions.IrisAO()
-
         # Loop over all WFE amplitudes
         for i, wfe in enumerate(self.wfe_amplitudes):
             self.log.info(f'Applying scaling of {wfe}nm rms')
@@ -98,12 +94,11 @@ class PastisModeAmplitudes(PastisExperiment):
             # TODO: make it such that we can pick between piston, tip and tilt (will require extra keyword "zernike")
             command_list = []
             for seg in range(self.nb_seg):
-                command_list.append((opd[seg], 0, 0))
-            #opd_command = segmented_dm_command.load_command(command_list, apply_flat_map=True, dm_config_id='iris_ao')
-            opd_command = None
+                command_list.append((opd[seg].to(u.um).value, 0, 0))
+            opd_command = segmented_dm_command.load_command(command_list, apply_flat_map=True, dm_config_id=CONFIG_INI.get('testbed', 'iris_ao'))
 
             # Apply this to IrisAO
-            iris_dm.apply_shape(opd_command)
+            devices["iris_ao"].apply_shape(opd_command)
 
             # Take coro images
             pair_image, header = self.take_exposure(devices, 'coron', self.wvln, initial_path, dark_zone_mask=self.dark_zone)
