@@ -85,7 +85,7 @@ class PastisModeContrast(PastisExperiment):
             self.log.info('Working on cumulative contrast from modes.')
         self.log.info(f'Target contrast: {self.c_target}')
         self.log.info(f'PASTIS modes and mode weights read from {self.pastis_results_path}')
-        if self.pastis_matrix:
+        if self.pastis_matrix is not None:
             self.log.info(f'PASTIS matrix read from {self.pastis_matrix_path}')
         else:
             self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')

@@ -65,7 +65,7 @@ class PastisHockeyStick(PastisExperiment):
         # A couple of initial log messages
         self.log.info(f'Number of rms values tested: {self.rms_range.shape[0]}')
         self.log.info(f'Number of realizations per rms value: {self.no_realizations}')
-        if self.pastis_matrix:
+        if self.pastis_matrix is not None:
             self.log.info(f'PASTIS matrix read from {self.pastis_matrix_path}')
         else:
             self.log.warning('PASTIS matrix not found. Will only perform empirical measurements.')
