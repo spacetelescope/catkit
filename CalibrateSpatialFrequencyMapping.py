@@ -6,7 +6,6 @@ import numpy as np
 from astropy.io import ascii
 from astropy.io import fits
 from scipy.linalg import polar, logm
-from skimage.feature import register_translation  # WARNING! Deprecated in skimage v0.17
 
 from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import HicatExperiment  # noqa: E402
