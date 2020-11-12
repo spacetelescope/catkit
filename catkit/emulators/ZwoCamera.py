@@ -2,7 +2,7 @@ import abc
 import logging
 
 import zwoasi
-from hicat.config import CONFIG_INI, CONFIG_MODES
+from catkit.config import CONFIG_INI
 
 import catkit.hardware.zwo.ZwoCamera
 

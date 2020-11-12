@@ -4,8 +4,8 @@ import sys
 import numpy as np
 import zwoasi
 
-from hicat.config import CONFIG_INI
-from hicat.hardware import testbed_state
+from catkit.config import CONFIG_INI
+from catkit.hardware import testbed_state
 
 
 from catkit.catkit_types import MetaDataEntry, units, quantity
