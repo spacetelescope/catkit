@@ -11,7 +11,7 @@ class ApplyFlatmapIrisAO(Experiment):
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 iris_ao_command_object=iris_ao.flat_command(),  # Default custom flat map.
+                 iris_ao_command_object=None,  # Default custom flat map.
                  output_path=None,
                  suffix='apply_flatmap_irisao',
                  timeout=600,
@@ -26,7 +26,8 @@ class ApplyFlatmapIrisAO(Experiment):
         """
         super().__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.timeout = timeout
-        self.iris_ao_command_object = iris_ao_command_object
+        if not iris_ao_command_object:
+            self.iris_ao_command_object = iris_ao.flat_command()
 
     def experiment(self):
         with testbed.iris_ao() as iris_ao:

@@ -12,9 +12,9 @@ class ApplyFlatMaps(Experiment):
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 dm1_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
-                 dm2_command_object=flat_command(bias=False, flat_map=True),  # Default flat with bias.
-                 iris_ao_command_object=iris_ao.flat_command(),  # Default custom flat map.
+                 dm1_command_object=None,  # Will default to flat with bias.
+                 dm2_command_object=None,  # Will default to flat with bias.
+                 iris_ao_command_object=None,  # Will default to custom flat map.
                  output_path=None,
                  suffix='apply_flat_map',
                  timeout=600,
@@ -31,9 +31,12 @@ class ApplyFlatMaps(Experiment):
         """
         super().__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.timeout = timeout
-        self.dm1_command_object = dm1_command_object
-        self.dm2_command_object = dm2_command_object
-        self.iris_ao_command_object = iris_ao_command_object
+        if not dm1_command_object:
+            self.dm1_command_object = flat_command(bias=False, flat_map=True)
+        if not dm2_command_object:
+            self.dm2_command_object = flat_command(bias=False, flat_map=True)
+        if not iris_ao_command_object:
+            self.iris_ao_command_object = iris_ao.flat_command()
 
     def experiment(self):
         with testbed.dm_controller() as dm, \
