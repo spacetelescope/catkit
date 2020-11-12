@@ -10,7 +10,6 @@ from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
 
 from pastis.pastis_analysis import modes_from_file
-from pastis.plotting import plot_contrast_per_mode
 
 
 class PastisModeAmplitudes(PastisExperiment):

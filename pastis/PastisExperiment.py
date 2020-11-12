@@ -1,14 +1,9 @@
-import hicat.simulators
-import glob
 import os
 from astropy.io import fits
 import hcipy
 import numpy as np
 
-from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import HicatExperiment
-from hicat.hardware import testbed_state
-from hicat.hardware.testbed import move_filter
 from hicat.wfc_algorithms import wfsc_utils
 
 import pastis.util

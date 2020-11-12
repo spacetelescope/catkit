@@ -1,13 +1,10 @@
 import hicat.simulators
 
-from astropy.io import fits
 import astropy.units as u
-import hcipy
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-from hicat.config import CONFIG_INI
 from hicat.experiments.modules import iris_ao
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
