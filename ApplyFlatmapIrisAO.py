@@ -26,7 +26,7 @@ class ApplyFlatmapIrisAO(Experiment):
         """
         super().__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.timeout = timeout
-        if not iris_ao_command_object:
+        if iris_ao_command_object is None:
             self.iris_ao_command_object = iris_ao.flat_command()
 
     def experiment(self):

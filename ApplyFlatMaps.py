@@ -31,11 +31,11 @@ class ApplyFlatMaps(Experiment):
         """
         super().__init__(output_path=output_path, suffix=suffix, **kwargs)
         self.timeout = timeout
-        if not dm1_command_object:
+        if dm1_command_object is None:
             self.dm1_command_object = flat_command(bias=False, flat_map=True)
-        if not dm2_command_object:
+        if dm2_command_object is None:
             self.dm2_command_object = flat_command(bias=False, flat_map=True)
-        if not iris_ao_command_object:
+        if iris_ao_command_object is None:
             self.iris_ao_command_object = iris_ao.flat_command()
 
     def experiment(self):
