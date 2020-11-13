@@ -211,7 +211,6 @@ class HicatExperiment(Experiment, ABC):
         # Instantiate, open connections, and cache all required devices.
         try:
             with testbed.laser_source() as laser, \
-                    testbed.dm_controller() as dm, \
                     testbed.motor_controller() as motor_controller, \
                     testbed.apodizer_picomotor_mount() as apodizer_picomotor_mount, \
                     testbed.quadcell_picomotor_mount() as quadcell_picomotor_mount, \
@@ -223,10 +222,11 @@ class HicatExperiment(Experiment, ABC):
                     testbed.target_acquisition_camera() as ta_cam, \
                     testbed.color_wheel() as color_wheel, \
                     testbed.nd_wheel() as nd_wheel, \
-                    testbed.iris_ao() as iris_ao:
+                    testbed.iris_ao() as iris_ao, \
+                    testbed.dm_controller() as dm:
 
-                devices = {'laser': laser,
-                           'dm': dm,
+                devices = {'dm': dm,
+                           'laser': laser,
                            'motor_controller': motor_controller,
                            'beam_dump': beam_dump,
                            'imaging_camera': cam,
@@ -248,9 +248,9 @@ class HicatExperiment(Experiment, ABC):
                                           TargetCamera.TA: ta_cam}}
 
                 # Add devices to cache.
+                testbed_state.devices.update(devices)
                 testbed_state.devices.update(ls_align_devices, namespace="ls_align_devices")
                 testbed_state.devices.update(ta_devices, namespace="ta_devices")
-                testbed_state.devices.update(devices)
                 # -----------------
                 # CODE FREE ZONE
                 # -----------------
