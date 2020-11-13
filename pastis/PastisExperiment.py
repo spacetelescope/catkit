@@ -19,13 +19,13 @@ class PastisExperiment(HicatExperiment):
 
     name = 'PASTIS Experiment'
 
-    def __init__(self, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
+    def __init__(self, probe_filename, dm_map_path, wavelength, nd_direct, nd_coron,
                  num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                  align_lyot_stop=True, run_ta=True):
         """
         :param probe_filename: str, path to probe file, used only to get DH geometry
         :param dm_map_path: str, path to folder that contains DH solution
-        :param color_filter: str, wavelength for color flipmount
+        :param wavelength: str, wavelength for color flipmount to run the entire experiment with
         :param nd_direct: str, ND filter choice for direct images
         :param nd_coron: str, ND filter choice for coronagraphic images
         :param num_exposures: int, number of exposures for each image acquisition
@@ -43,7 +43,6 @@ class PastisExperiment(HicatExperiment):
         self.align_lyot_stop = align_lyot_stop
         self.run_ta = run_ta
 
-        self.color_filter = color_filter
         self.nd_direct = nd_direct
         self.nd_coron = nd_coron
         self.num_exposures = num_exposures
@@ -56,7 +55,7 @@ class PastisExperiment(HicatExperiment):
         # General telescope parameters
         self.nb_seg = 37
         self.seglist = pastis.util.get_segment_list('HiCAT')
-        self.wvln = 640    # nm
+        self.wvln = wavelength    # nm
         self.log.info(f'Number of segments: {self.nb_seg}')    # TODO: this is not being saved to .log file, because we're in the __init__()
         self.log.info(f'Segment list: {self.seglist}')    # TODO: this is not being saved to .log file, because we're in the __init__()
 

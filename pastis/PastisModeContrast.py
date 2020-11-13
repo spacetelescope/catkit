@@ -13,7 +13,7 @@ from pastis.plotting import plot_contrast_per_mode, plot_cumulative_contrast_com
 
 class PastisModeContrast(PastisExperiment):
 
-    def __init__(self, pastis_results_path, pastis_matrix_path, use_uniform_weights, individual, c_target, probe_filename, dm_map_path, color_filter, nd_direct, nd_coron,
+    def __init__(self, pastis_results_path, pastis_matrix_path, use_uniform_weights, individual, c_target, probe_filename, dm_map_path, wavelength, nd_direct, nd_coron,
                  num_exposures, exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                  align_lyot_stop=True, run_ta=True):
         """
@@ -26,7 +26,7 @@ class PastisModeContrast(PastisExperiment):
         :param c_target: float, target contrast for which the mode weights have been calculated
         :param probe_filename: str, path to probe file, used only to get DH geometry
         :param dm_map_path: str, path to folder that contains DH solution
-        :param color_filter: str, wavelength for color flipmount
+        :param wavelength: str, wavelength for color flipmount to run the entire experiment with
         :param nd_direct: str, ND filter choice for direct images
         :param nd_coron: str, ND filter choice for coronagraphic images
         :param num_exposures: int, number of exposures for each image acquisition
@@ -43,7 +43,7 @@ class PastisModeContrast(PastisExperiment):
         else:
             self.name = 'PASTIS Mode Contrast Cumulative'
 
-        super().__init__(probe_filename, dm_map_path, color_filter, nd_direct, nd_coron, num_exposures,
+        super().__init__(probe_filename, dm_map_path, wavelength, nd_direct, nd_coron, num_exposures,
                          exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                          align_lyot_stop, run_ta)
 
