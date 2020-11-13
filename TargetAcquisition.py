@@ -10,6 +10,8 @@ from hicat.control.target_acq import MotorMount, TargetCamera, TargetAcquisition
 from hicat.hardware import testbed
 from hicat.experiments.Experiment import Experiment
 from hicat.hardware.testbed import move_filter
+from hicat.experiments.modules import iris_ao
+
 
 
 class TargetAcquisitionExperiment(Experiment):
@@ -28,6 +30,7 @@ class TargetAcquisitionExperiment(Experiment):
     def experiment(self):
         with testbed.laser_source() as laser, \
                 testbed.dm_controller() as dm, \
+                testbed.iris_ao() as iris_dm, \
                 testbed.motor_controller() as motor_controller, \
                 testbed.apodizer_picomotor_mount() as apodizer_picomotor_mount, \
                 testbed.quadcell_picomotor_mount() as quadcell_picomotor_mount, \
@@ -39,6 +42,7 @@ class TargetAcquisitionExperiment(Experiment):
 
             self.devices = {'laser': laser,
                             'dm': dm,
+                            'iris_dm': iris_dm,
                             'motor_controller': motor_controller,
                             'beam_dump': beam_dump,
                             'imaging_camera': sci_cam,
@@ -61,7 +65,7 @@ class TargetAcquisitionExperiment(Experiment):
                 # Flatten DMs before attempting initial target acquisition.
                 ta_dm_flat = flat_command(bias=False, flat_map=True)
                 self.devices["dm"].apply_shape_to_both(ta_dm_flat, copy.deepcopy(ta_dm_flat))
-
+                self.devices['iris_dm'].apply_shape(iris_ao.flat_command())
                 # Now setup filter wheels.
                 move_filter(wavelength=640,
                             nd="clear_1",
