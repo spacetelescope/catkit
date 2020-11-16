@@ -6,10 +6,24 @@ _not_permitted_error = "Positional args are not permitted. Call with explicit ke
                        "E.g., def func(a, b) called as func(1, 2) -> func(a=1, b=2)"
 
 
-def call_with_correct_args(func, **kwargs):
-    """ Extract from kwargs only those args required by func."""
+def call_with_correct_args(func, object=None, kwargs_to_assign=None, **kwargs):
+    """ Extract from kwargs only those args required by func.
+        If args in `kwargs_to_assign` or `kwargs` don't belong to func's signature assign them to object.__dict__.
+    """
     signature = inspect.getfullargspec(func)
-    func_kwargs = {arg: kwargs[arg] for arg in kwargs if arg in signature.args or arg in signature.kwonlyargs}
+    func_kwargs = {}
+    if not object or kwargs_to_assign:
+        # Parse **kwargs. If object and not kwargs_to_assign is dealt with in `if object`.
+        func_kwargs.update({arg: kwargs[arg] for arg in kwargs if arg in signature.args or arg in signature.kwonlyargs})
+
+    if object:  # This assumes that func is an method of object, i.e., __init__.
+        # kwargs_to_assign can be an explicit dict of kwargs to assign or any and all in kwargs.
+        _kwargs_to_assign = kwargs_to_assign if kwargs_to_assign else kwargs
+        for key, value in _kwargs_to_assign.items():
+            if key in signature.args or key in signature.kwonlyargs:
+                func_kwargs[key] = value
+            else:
+                object.__dict__[key] = value
     return func(**func_kwargs)
 
 
