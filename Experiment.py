@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import copy
+import inspect
 import logging
 from multiprocessing import Process
 import os
@@ -7,6 +8,7 @@ import time
 
 from catkit.hardware.boston.commands import flat_command
 from catkit.hardware.iris_ao import segmented_dm_command
+from catkit.interfaces.Instrument import call_with_correct_args
 
 from hicat.config import CONFIG_INI, CONFIG_MODES
 import hicat.util
@@ -28,6 +30,9 @@ class Experiment(ABC):
     interval = CONFIG_INI.getint("safety", "check_interval")
     list_of_safety_tests = [UpsSafetyTest, HumidityTemperatureTest]#, WeatherWarningTest()]
     safety_tests =[]
+
+    def __del__(self):
+        self.delete_caches()
 
     def __init__(self, output_path=None, suffix=None):
         """ Initialize attributes common to all Experiments.
@@ -139,6 +144,8 @@ class Experiment(ABC):
         Wrapper for experiment to catch the softkill function's KeyboardInterrupt signal more gracefully.
         Do not override.
         """
+
+        # NOTE: This try/finally IS THE context manager for the device cache and ALL devices.
         try:
             self.init_experiment_log()
             testbed_state.pre_experiment_return = self.pre_experiment()
@@ -148,15 +155,11 @@ class Experiment(ABC):
             self.log.warning("Child process: caught ctrl-c, raising exception.")
             raise
         finally:
-            testbed_state.devices.delete_all_devices()
-            # Del testbed_state.cache
-            keys = list(testbed_state.cache.keys())
-            for key in keys:
-                item = testbed_state.cache.pop(key)
-                try:
-                    item.__exit__(None, None, None)
-                except Exception:
-                    self.log.exception(f"{item} failed to exit.")
+            self.delete_caches()
+
+    def delete_caches(self):
+        """ Injection layer for deleting global caches. """
+        testbed_state.delete_caches()
 
     @staticmethod
     def __smart_sleep(interval, process):
@@ -202,8 +205,12 @@ class Experiment(ABC):
 
 
 class HicatExperiment(Experiment, ABC):
-    def pre_experiment(self, *args, **kwargs):
+    def __init__(self, *args, run_ta=True, align_lyot_stop=True, **kwargs):
+        return call_with_correct_args(super().__init__,
+                                      object=self,
+                                      kwargs_to_assign={"run_ta": run_ta, "align_lyot_stop": align_lyot_stop}, **kwargs)
 
+    def pre_experiment(self, *args, **kwargs):
         # The device cache should be and needs to be empty.
         if testbed_state.devices:
             raise Exception(f"The device cache (testbed_state.devices) is NOT empty and contains the following keys: {testbed_state.devices.keys()}")
@@ -258,7 +265,7 @@ class HicatExperiment(Experiment, ABC):
             # WARNING!!! Adding devices to the cache will persist them beyond the with block thus any exception raised
             # between the cache set and the end of the with block will result in devices NOT safely closing!
             # Explicitly close all devices in this eventuality.
-            testbed_state.devices.delete_all_devices()
+            self.delete_caches()
             raise
         # Exit the with block early so as to test persistence sooner rather than later.
 
