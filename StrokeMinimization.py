@@ -50,6 +50,8 @@ class StrokeMinimization(HicatExperiment):
     :param dm_calibration_fudge: coefficient on DM2 for rescaling. probably temporary.
     :param mu_start: starting value for Lagrange multiplier line search
     :param suffix: Name of simulation when generating output directory
+    :param align_lyot_stop : Whether to align the Lyot Stop at the start of the experiment
+    :param run_ta: Whether to run with target acquisition.
     """
 
     name = "Stroke Minimization"
@@ -72,8 +74,10 @@ class StrokeMinimization(HicatExperiment):
                  mu_start=1e-7,
                  suffix = 'stroke_minimization',
                  file_mode=True,
-                 raw_skip=0):
-        super(StrokeMinimization, self).__init__(suffix=suffix)
+                 raw_skip=0,
+                 align_lyot_stop=False,
+                 run_ta=False):
+        super().__init__(suffix=suffix, run_ta=run_ta, align_lyot_stop=align_lyot_stop)
 
         self.file_mode = file_mode
         self.raw_skip = raw_skip

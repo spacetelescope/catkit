@@ -84,7 +84,8 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                  raw_skip=0,
                  align_lyot_stop=False,
                  run_ta=False):
-        super(StrokeMinimization, self).__init__(suffix=suffix)
+        # Don't call super().__init__() (StrokeMinimization.__init__()) but instead call StrokeMinimization.super().__init__().
+        super(StrokeMinimization, self).__init__(suffix=suffix, run_ta=run_ta, align_lyot_stop=align_lyot_stop)
 
         # TODOs:
         # - Don't correct for ND filter flux in monochromatic mode
@@ -189,8 +190,6 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         self.prior_correction = np.zeros(wfsc_utils.num_actuators * 2, float)
         self.git_label = util.git_description()
         self.perfect_knowledge_mode = perfect_knowledge_mode
-        self.align_lyot_stop = align_lyot_stop
-        self.run_ta = run_ta
 
         # Metrics
         self.timestamp = []

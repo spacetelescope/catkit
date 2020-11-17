@@ -37,11 +37,9 @@ class PastisExperiment(HicatExperiment):
         :param align_lyot_stop: bool, whether to automatically align the Lyot stop before the experiment or not
         :param run_ta: bool, whether to run target acquisition. Will still just measure TA if False.
         """
-        super().__init__()
+        super().__init__(run_ta=run_ta, align_lyot_stop=align_lyot_stop)
         self.probe_filename = probe_filename  # needed for DH geometry only
         self.dm_map_path = dm_map_path  # will need to load these DM maps to get to low contrast (take from good PW+SM run)
-        self.align_lyot_stop = align_lyot_stop
-        self.run_ta = run_ta
 
         self.nd_direct = nd_direct
         self.nd_coron = nd_coron

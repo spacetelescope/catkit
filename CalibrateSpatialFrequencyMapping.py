@@ -344,7 +344,7 @@ class CalibrateSpatialFrequencyMapping(HicatExperiment):
                           to the value dm1_ideal_poke or dm2_ideal_poke in the boston_kilo952
                           section of the config file.
         """
-        super().__init__()
+        super().__init__(run_ta=run_ta, align_lyot_stop=align_lyot_stop)
         self.inner_radius = inner_radius
         self.outer_radius = outer_radius
         self.num_speckle = num_speckle
@@ -356,8 +356,6 @@ class CalibrateSpatialFrequencyMapping(HicatExperiment):
         self.num_exposures = num_exposures
         self.exposure_time = exposure_time
         self.raw_skip = raw_skip if raw_skip is not None else num_exposures+1
-        self.align_lyot_stop = align_lyot_stop
-        self.run_ta = run_ta
 
         # These don't affect the imaging wavelength at all; they are just passed into the
         # take_exposure_hicat() function from wfsc_utils.py, which uses it to generate

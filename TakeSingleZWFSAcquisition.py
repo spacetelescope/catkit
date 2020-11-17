@@ -22,12 +22,10 @@ class TakeSingleZWFSAcquisition(HicatExperiment):
         :param filename: (str) name of the file saved on disk
         """
 
-        super().__init__()
+        super().__init__(run_ta=run_ta, align_lyot_stop=align_lyot_stop)
         self.filename = filename
         self.wave = wave
         self.instrument = instrument
-        self.align_lyot_stop = align_lyot_stop
-        self.run_ta = run_ta
 
     def experiment(self):
 
