@@ -4,6 +4,7 @@ import os
 from catkit.hardware.FilterWheelAssembly import FilterWheelAssembly
 
 from hicat.experiments.Experiment import Experiment
+from hicat.experiments.modules import iris_ao
 from catkit.catkit_types import * # OHNO
 from catkit.hardware.boston.commands import flat_command
 from hicat.hardware import testbed
@@ -53,8 +54,10 @@ class BroadbandTakeExposures(Experiment):
 
     def experiment(self):
 
-        with testbed.dm_controller() as dm:
+        with testbed.dm_controller() as dm, \
+                testbed.iris_ao() as iris_dm:
             dm.apply_shape_to_both(self.dm1_command_object, self.dm2_command_object)
+            iris_dm.apply_shape(iris_ao.flat_command())
 
             testbed.run_hicat_imaging_broadband(self.broadband_filter_set,
                                                 self.exposure_time, self.num_exposures, self.fpm,

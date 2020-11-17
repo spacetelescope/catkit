@@ -4,6 +4,7 @@ from catkit.catkit_types import units, quantity, FpmPosition
 from catkit.hardware.boston.commands import flat_command
 from hicat.config import CONFIG_INI
 from hicat.experiments.Experiment import Experiment
+from hicat.experiments.modules import iris_ao
 from hicat.experiments.modules.mtf_sampling import mtf_sampling
 from hicat.hardware import testbed
 import hicat.calibration_util
@@ -51,18 +52,16 @@ class CalculateSampling(Experiment):
         direct_exp_time_estimate = self.exposure_time
         num_exposures = self.num_exposures
 
-        with testbed.laser_source() as laser:
-            direct_laser_current = CONFIG_INI.getint("thorlabs_source_mcls1", "direct_current")
-            laser.set_current(direct_laser_current)
-
-            with testbed.dm_controller() as dm:
-                # Flat.
-                dm.apply_shape_to_both(flat_command_object1, flat_command_object2)
-                cal_image, header = testbed.run_hicat_imaging(direct_exp_time_estimate, num_exposures, FpmPosition.direct,
-                                                      path=self.output_path, exposure_set_name="direct",
-                                                      filename=flat_file_name, camera_type=self.camera_type,
-                                                      pipeline=True,
-                                                      **self.kwargs)
+        with testbed.dm_controller() as dm, \
+             testbed.iris_ao() as iris_dm:
+            # Flat.
+            iris_dm.apply_shape(iris_ao.flat_command())
+            dm.apply_shape_to_both(flat_command_object1, flat_command_object2)
+            cal_image, header = testbed.run_hicat_imaging(direct_exp_time_estimate, num_exposures, FpmPosition.direct,
+                                                  path=self.output_path, exposure_set_name="direct",
+                                                  filename=flat_file_name, camera_type=self.camera_type,
+                                                  pipeline=True,
+                                                  **self.kwargs)
 
         bin_file_path = header["PATH"]
         self.log.info("Binned file: "+bin_file_path)

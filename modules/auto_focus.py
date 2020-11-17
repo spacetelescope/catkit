@@ -12,6 +12,7 @@ import numpy as np
 
 from catkit.hardware.boston.commands import flat_command
 import hicat.util
+from hicat.experiments.modules import iris_ao
 from hicat.hardware import testbed
 import hicat.calibration_util
 
@@ -44,10 +45,12 @@ def take_auto_focus_data(bias,
             # Initialize motors.
             log.info("Initialized motors for Auto Focus once, and will now only move the camera motor.")
 
-        with testbed.dm_controller() as dm:
+        with testbed.dm_controller() as dm, \
+                testbed.iris_ao() as iris_dm:
             dm_command_object = flat_command(bias=bias, flat_map=flat_map)
             dm_command_object_2 = flat_command(bias=bias, flat_map=flat_map, dm_num=2)
             dm.apply_shape_to_both(dm_command_object, dm_command_object_2)
+            iris_dm.apply_shape(iris_ao.flat_command())
 
             for i, position in enumerate(position_list):
                 with testbed.motor_controller(initialize_to_nominal=False) as mc:

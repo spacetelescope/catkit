@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from catkit.catkit_types import FpmPosition
 
 from hicat.experiments.Experiment import Experiment
+from hicat.experiments.modules import iris_ao
 from hicat.hardware import testbed
 import hicat.plotting.animation
 import hicat.plotting
@@ -101,12 +102,14 @@ class ContrastStability(Experiment):
 
         with testbed.laser_source() as laser, \
                 testbed.dm_controller() as dm, \
+                testbed.iris_ao() as iris_dm, \
                 testbed.motor_controller() as motor_controller, \
                 testbed.beam_dump() as beam_dump, \
                 testbed.imaging_camera() as cam, \
                 testbed.temp_sensor(config_id="aux_temperature_sensor") as temp_sensor:
             devices = {'laser': laser,
                        'dm': dm,
+                       'iris_dm': iris_dm,
                        'motor_controller': motor_controller,
                        'beam_dump': beam_dump,
                        'imaging_camera': cam,
@@ -118,6 +121,9 @@ class ContrastStability(Experiment):
                                                         devices,
                                                         initial_path=self.output_path,
                                                         num_exposures=self.num_exposures)
+
+            # Flatten the IrisAO
+            self.devices['iris_dm'].apply_shape(iris_ao.flat_command())
 
             for i in range(self.iter):
 

@@ -8,6 +8,7 @@ from catkit.hardware.boston.sin_command import sin_command  # noqa: E402
 from catkit.hardware.boston.commands import flat_command
 from hicat.config import CONFIG_INI  # noqa: E402
 from hicat.experiments.Experiment import Experiment  # noqa: E402
+from hicat.experiments.modules import iris_ao
 from hicat.hardware import testbed  # noqa: E402
 import hicat.util  # noqa: E402
 
@@ -44,11 +45,13 @@ class SimpleSineTest(Experiment):
         # if we are running in simulation mode, create subdirectory with DM misalignment information
         subdirectory = f'x={dm_translation_x_microns}_y={dm_translation_y_microns}'
 
-        with testbed.dm_controller() as dm:
+        with testbed.dm_controller() as dm, \
+                testbed.iris_ao() as iris_dm:
             # First take an image with DMs flat as the baseline, for background subtraction of the rest of the PSF
             # to measure the spots better
             suffix_in = "both_dms_flat"
-            dm.apply_shape_to_both(flat_command(bias=False, flat_map=True), flat_command(bias=False, flat_map=True) )
+            dm.apply_shape_to_both(flat_command(bias=False, flat_map=True), flat_command(bias=False, flat_map=True))
+            iris_dm.apply_shape(iris_ao.flat_command())
 
             saveto_path = hicat.util.create_data_path(initial_path=os.path.join(self.output_path, subdirectory),
                                                       suffix=suffix_in)

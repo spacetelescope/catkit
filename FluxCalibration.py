@@ -1,6 +1,7 @@
 import numpy as np
 
 from hicat.experiments.Experiment import Experiment
+from hicat.experiments.modules import iris_ao
 import hicat.hardware.testbed as testbed
 from hicat.wfc_algorithms import wfsc_utils
 
@@ -45,6 +46,7 @@ class FluxCalibration(Experiment):
 
         with testbed.laser_source() as laser, \
                 testbed.dm_controller() as dm, \
+                testbed.iris_ao() as iris_dm, \
                 testbed.motor_controller() as motor_controller, \
                 testbed.beam_dump() as beam_dump, \
                 testbed.imaging_camera() as cam, \
@@ -52,12 +54,15 @@ class FluxCalibration(Experiment):
                 testbed.nd_wheel() as nd_wheel:
             devices = {'laser': laser,
                        'dm': dm,
+                       'iris_dm': iris_dm,
                        'motor_controller': motor_controller,
                        'beam_dump': beam_dump,
                        'imaging_camera': cam,
                        'color_wheel': color_wheel,
                        'nd_wheel': nd_wheel}
 
+            # Flatten the IrisAO
+            self.devices['iris_dm'].apply_shape(iris_ao.flat_command())
 
             self.log.info(f"Measuring flux calibration for wavelengths: {self.wavelengths}")
             # Calculate flux attenuation factor between direct+ND and coronagraphic images

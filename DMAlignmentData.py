@@ -7,6 +7,7 @@ from hicat.hardware import testbed
 from catkit.catkit_types import units, quantity, LyotStopPosition
 from hicat.experiments.Experiment import Experiment
 from hicat.experiments.ApplyActuatorPattern import ApplyCenterPokePlus, ApplyApodizerStrutsPoke, ApplyAsymmetricTestPattern
+from hicat.experiments.modules import iris_ao
 import hicat.util
 from hicat.wfc_algorithms.wfsc_utils import take_pupilcam_hicat
 from hicat.hardware.testbed import move_lyot_stop
@@ -44,16 +45,21 @@ class DMAlignmentData(Experiment):
 
         with testbed.laser_source() as laser, \
                 testbed.dm_controller() as dm, \
+                testbed.iris_ao() as iris_dm, \
                 testbed.motor_controller() as motor_controller, \
                 testbed.beam_dump() as beam_dump, \
                 testbed.imaging_camera() as cam, \
                 testbed.pupil_camera() as pupilcam:
             devices = {'laser': laser,
                        'dm': dm,
+                       'iris_dm': iris_dm,
                        'motor_controller': motor_controller,
                        'beam_dump': beam_dump,
                        'imaging_camera': cam,
                        'pupil_camera': pupilcam}
+
+            # Flatten the IrisAO
+            self.devices['iris_dm'].apply_shape(iris_ao.flat_command())
 
             # Move Lyot stop out
             move_lyot_stop(LyotStopPosition.out_of_beam)
