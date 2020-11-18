@@ -12,18 +12,22 @@ class ZWFSStaticTest(HicatExperiment):
     log = logging.getLogger(__name__)
 
     def __init__(self,
-                 instrument='HICAT',
+                 instrument='HiCAT',
                  wave=640e-9,
                  filename='ZWFS',
                  align_lyot_stop=False,
                  run_ta=True):
 
         """
-        Performs a calibration and a phase measurement with the ZWFS.
+        Performs a series of measurements with Zernike polynomials on DM2 on top of the flat map.
+
         :param instrument:  (str) name of the pyZELDA file to load the info from the sensor
         :param wave: (float) wavelength of operation, in meters
                  WARNING: pyZELDA convention uses wavelengths in meters !!!
         :param filename: (str) name of the file saved on disk
+        :param align_lyot_stop: (bool) Do align Lyot stop. Useless for ZWFS measurements unless coron images are taken.
+         Default at False.
+        :param run_ta: (bool) Do run target acquisition. Default is True.
         """
 
         super().__init__()
@@ -46,26 +50,20 @@ class ZWFSStaticTest(HicatExperiment):
         - spherical
         '''
 
+        # Define flat command for DM 1&2
         dm1_command = flat_command(bias=False, flat_map=True, dm_num=1)
+        dm2_flat = flat_command(bias=False, flat_map=True, dm_num=2)
 
+        # Initialize and calibrate ZWFS with flat DMs
+        zernike_sensor = zwfs.ZWFS(self.instrument, wavelength=self.wave)
+        zernike_sensor.calibrate(output_path=self.output_path, dm1_shape=dm1_command, dm2_shape=dm2_flat)
+        zernike_sensor.save_list(zernike_sensor._clear_pupil, 'ZWFS_clear_pupil_dms', self.output_path)
 
-        dm_path = 'Z:/Testbeds/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
-        #dm_path = '/home/rpourcelot/hicat_dev/data_vault/dm_calibration/dm2_calibration/'
+        # Perform reference OPD measurement with flat DMs
+        zernike_sensor.make_reference_opd(self.wave, dm1_shape=dm1_command, dm2_shape=dm2_flat)
+        zernike_sensor.save_list(zernike_sensor._reference_opd, 'ZWFS_reference_opd', self.output_path)
 
-        aberration_path = ['2018-01-21T12-07-16_4d_zernike_loop_astigmatism45/',
-                           '2018-01-21T12-37-21_4d_zernike_loop_astigmatism0/',
-                           '2018-01-21T13-08-00_4d_zernike_loop_comay/',
-                           '2018-01-21T13-39-31_4d_zernike_loop_comax/',
-                           '2018-01-21T14-10-45_4d_zernike_loop_trefoily/',
-                           '2018-01-21T14-41-48_4d_zernike_loop_trefoilx/',
-                           '2018-01-21T15-13-01_4d_zernike_loop_spherical/']
-
-        aberration_values = ['20_nm_p2v/',
-                             '40_nm_p2v/',
-                             '80_nm_p2v/']
-
-        suffix = 'iteration19/dm_command/dm_command_2d_noflat.fits'
-
+        # Aberration names for saving and tracking
         file_names = ['Tip_dm2',
                       'Tilt_dm2',
                       'Focus_dm2',
@@ -77,39 +75,33 @@ class ZWFSStaticTest(HicatExperiment):
                       'Trefoil_X_zernike_volts_dm2',
                       'Spherical_zernike_volts_dm2']
 
-        dm2_flat = flat_command(bias=False, flat_map=True, dm_num=2)
 
-        zernike_sensor = zwfs.ZWFS(self.instrument, wavelength=self.wave)
-        zernike_sensor.calibrate(output_path=self.output_path, dm1_shape=dm1_command, dm2_shape=dm2_flat)
-        zernike_sensor.save_list(zernike_sensor._clear_pupil, 'ZWFS_clear_pupil_dms', self.output_path)
 
+        # Take TA image for PSF diagnostic FIXME: crop not centered on PSF
         ta_diag, _ = zernike_sensor.take_exposure_ta_diagnostic(output_path=self.output_path,
                                                                 dm1_shape=dm1_command,
                                                                 dm2_shape=dm2_flat,
                                                                 file_mode=True)
 
 
+        # Initialize aberration basis
         nb_aberrations = 11
         basis = np.nan_to_num(zwfs.ztools.zernike.zernike_basis(nterms=nb_aberrations, npix=34)*1e-9)
-        pure_zernikes_values = [2, 7, 15]
+        pure_zernikes_values = [2, 7, 15] # RMS values in nm
+
+        # Initialize stack array for OPDs
         zopd_stacks = np.zeros((nb_aberrations, len(pure_zernikes_values),
                                 zernike_sensor._array_diameter, zernike_sensor._array_diameter))
-        ta_stacks = []
 
-        # Reference OPD for differential measurements
-        zernike_sensor.make_reference_opd(self.wave, dm1_shape=dm1_command, dm2_shape=dm2_flat)
-        zernike_sensor.save_list(zernike_sensor._reference_opd, 'ZWFS_reference_opd', self.output_path)
 
-        #for i, aberration in enumerate(aberration_path):
+        # Actual loop on aberrations and aberrations values
         for i, aberration in enumerate(basis[1:nb_aberrations]):
-            #for j, p2v in enumerate(aberration_values):
+
             for j, val in enumerate(pure_zernikes_values):
 
                 p2v = str(val)+'RMS'
-                #dm2_shape = fits.getdata(dm_path+aberration+p2v+suffix)
-                #dm2_command = DmCommand.load_dm_command(dm_path+aberration+p2v+suffix, dm_num=2, flat_map=False, bias=False)
 
-                # Create DM shape
+                # Create DM shape & save it
                 dm2_shape = val*aberration
                 zernike_sensor.save_list(dm2_shape, 'dm2_command' + file_names[i] + p2v[:-1],
                                          self.output_path + '/' + file_names[i])
@@ -117,7 +109,7 @@ class ZWFSStaticTest(HicatExperiment):
                 # Convert to DM command
                 dm2_command = DmCommand.DmCommand(dm2_shape, flat_map=True, bias=False, dm_num=2)
 
-                #Check TA images
+                #Check TA images - FIXME: ROI to be adjusted
                 #ta_diag, _ = zernike_sensor.take_exposure_ta_diagnostic(output_path=self.output_path,
                 #                                                        dm1_shape=dm1_command,
                 #                                                        dm2_shape=dm2_command,
@@ -132,10 +124,3 @@ class ZWFSStaticTest(HicatExperiment):
                 # Store it
                 zopd_stacks[i, j] = zopd.copy()
                 zernike_sensor.save_list(zopd, 'ZWFS_OPD'+file_names[i]+p2v[:-1], self.output_path+'/'+file_names[i])
-                #fits.writeto('/mnt/c/Users/rpourcelot/Documents/zopd.fits', zopd)
-
-
-        # Save the files
-        #np.save(self.output_path + '/' + 'zopd_stacks.npy', zopd_stacks)
-
-
