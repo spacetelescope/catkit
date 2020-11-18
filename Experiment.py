@@ -32,7 +32,7 @@ class Experiment(ABC):
     safety_tests =[]
 
     def __del__(self):
-        self.delete_caches()
+        self.clear_cache()
 
     def __init__(self, output_path=None, suffix=None):
         """ Initialize attributes common to all Experiments.
@@ -155,11 +155,11 @@ class Experiment(ABC):
             self.log.warning("Child process: caught ctrl-c, raising exception.")
             raise
         finally:
-            self.delete_caches()
+            self.clear_cache()
 
-    def delete_caches(self):
+    def clear_cache(self):
         """ Injection layer for deleting global caches. """
-        testbed_state.delete_caches()
+        testbed_state.clear()
 
     @staticmethod
     def __smart_sleep(interval, process):
@@ -265,7 +265,7 @@ class HicatExperiment(Experiment, ABC):
             # WARNING!!! Adding devices to the cache will persist them beyond the with block thus any exception raised
             # between the cache set and the end of the with block will result in devices NOT safely closing!
             # Explicitly close all devices in this eventuality.
-            self.delete_caches()
+            self.clear_cache()
             raise
         # Exit the with block early so as to test persistence sooner rather than later.
 
