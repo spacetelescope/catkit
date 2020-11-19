@@ -28,7 +28,7 @@ dependencies:
   - pyserial
   - pysnmp
   - pytest
-  - python>=3.6,<3.7
+  - python=3.7.6
   - pyvisa
   - pyvisa-py
   - requests
