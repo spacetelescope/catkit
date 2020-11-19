@@ -1,7 +1,6 @@
-import visa
 import platform
 from catkit.config import CONFIG_INI
-from pyvisa import constants
+import pyvisa
 import time
 
 from catkit.interfaces.FilterWheel import FilterWheel
@@ -10,7 +9,7 @@ from catkit.interfaces.FilterWheel import FilterWheel
 class ThorlabsFW102C(FilterWheel):
     """Abstract base class for filter wheels."""
 
-    instrument_lib = visa
+    instrument_lib = pyvisa
 
     def initialize(self, *args, **kwargs):
         """ Initializes class instance, but doesn't -- and shouldn't -- open a connection to the hardware."""
@@ -41,7 +40,7 @@ class ThorlabsFW102C(FilterWheel):
     def get_position(self):
         out = self.instrument.write("pos?")
 
-        if out[1] == constants.StatusCode.success:
+        if out[1] == pyvisa.constants.StatusCode.success:
 
             # First read the echo to clear the buffer.
             self.instrument.read()
@@ -55,7 +54,7 @@ class ThorlabsFW102C(FilterWheel):
         command = "pos=" + str(new_position)
         out = self.instrument.write(command)
 
-        if out[1] == constants.StatusCode.success:
+        if out[1] == pyvisa.constants.StatusCode.success:
             self.instrument.read()
             # Wait for wheel to move. Fairly arbitrary 3 s delay...
             time.sleep(3)
