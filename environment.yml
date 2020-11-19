@@ -29,8 +29,8 @@ dependencies:
   - pysnmp
   - pytest
   - python=3.7.6
-  - pyvisa
-  - pyvisa-py
+  - pyvisa=1.9.1  # See HICAT-973
+  - pyvisa-py=0.3.1  # See HICAT-973 (This may not need to be strict and pyvisa can determine the ver for this).
   - requests
   - scikit-image>=0.15
   - scipy
