@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import copy
 import inspect
 import logging
-from multiprocessing import Process
+import multiprocessing
 import os
 import time
 
@@ -25,6 +25,7 @@ class Experiment(ABC):
     need to implement a function called "experiment()", which is designated as an abstractmethod here.
     """
     name = None
+    multiprocessing_start_method = "spawn"
 
     log = logging.getLogger(__name__)
     interval = CONFIG_INI.getint("safety", "check_interval")
@@ -92,7 +93,8 @@ class Experiment(ABC):
 
             self.log.info("Creating separate process to run experiment...")
             # Spin off and start the process to run the experiment.
-            experiment_process = Process(target=self.run_experiment)
+            ctx = multiprocessing.get_context(self.multiprocessing_start_method)
+            experiment_process = ctx.Process(target=self.run_experiment)
             experiment_process.start()
             self.log.info(self.name + " process started")
 
