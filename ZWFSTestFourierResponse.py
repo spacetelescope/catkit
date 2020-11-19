@@ -75,7 +75,7 @@ class ZWFSTestFourierResponse(HicatExperiment):
             return funab
 
         # Initialize the ZWFS object
-        zernike_sensor = zwfs.ZWFS(self.instrument, wavelength=self.wave)
+        zernike_sensor = zwfs.ZWFS(wavelength=self.wave, instrument=self.instrument)
         pup_dim = zernike_sensor.pupil_diameter
         # ZWFS calibration with clear image
         zernike_sensor.calibrate(output_path=self.output_path)

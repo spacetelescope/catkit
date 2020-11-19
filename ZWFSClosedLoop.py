@@ -64,7 +64,7 @@ class ZWFSClosedLoop(HicatExperiment):
         dm2_command = DmCommand.DmCommand(dm2_surf, flat_map=True, bias=False, dm_num=2)
 
         # Initialize, calibrate and take reference OPD with Zernike sensor, DMs with reference shapes
-        zernike_sensor = zwfs.ZWFS(self.instrument, wavelength=self.wave)
+        zernike_sensor = zwfs.ZWFS(wavelength=self.wave, instrument=self.instrument)
         zernike_sensor.calibrate(dm1_shape=dm1_command, dm2_shape=dm2_command,
                                  output_path=self.output_path)
         zernike_sensor.make_reference_opd(self.wave, dm1_shape=dm1_command, dm2_shape=dm2_command)
@@ -100,7 +100,7 @@ class ZWFSClosedLoop(HicatExperiment):
             dm2_vector = wfsc_utils.dm_actuators_from_surface(dm2_surf)
 
             # Take science image
-            sc_img, _ = wfsc_utils.take_exposure_hicat(dm1_vector,
+            '''sc_img, _ = wfsc_utils.take_exposure_hicat(dm1_vector,
                                                     dm2_vector,
                                                     zernike_sensor.devices,
                                                     exposure_type='coron',
@@ -108,10 +108,10 @@ class ZWFSClosedLoop(HicatExperiment):
                                                     initial_path=self.output_path,
                                                     suffix=f'iteration{it}',
                                                     wavelength=self.wave*1e9)
-
+            
             dim = int(np.sqrt(sc_img.shape))
             sc_img = sc_img.reshape((dim,dim))
-
+            '''
             # Crop measured OPD
             array_dim = zopd.shape[-1]
             cropped_zopd = zopd[(array_dim - pup_dim) // 2:(array_dim + pup_dim) // 2,
@@ -150,11 +150,13 @@ class ZWFSClosedLoop(HicatExperiment):
             plt.colorbar()
             plt.axis('off')
 
+            # TODO: fix science image acquisitions
+            '''
             plt.subplot(5, 10, 4*nb_iterations+it+1)
             plt.imshow(sc_img, norm=cl.LogNorm(vmax=1, vmin=1e-7))
             plt.colorbar()
             plt.axis('off')
-
+            '''
 
         plt.tight_layout()
 
