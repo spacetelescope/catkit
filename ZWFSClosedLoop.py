@@ -106,8 +106,8 @@ class ZWFSClosedLoop(HicatExperiment):
             hc.apodizer = CONFIG_MODES.get(configured_mode, 'apodizer')
             hc.lyot_stop = CONFIG_MODES.get(configured_mode, 'lyot_stop')
             hc.include_fpm = True
-            hc.dm1.set_surface(current_dm_surf)
-            hc.dm2.flatten(dm2_surf)
+            hc.dm1.set_surface(-current_dm_surf)
+            hc.dm2.set_surface(-dm2_surf)
 
             sc_img, int_img = hc.calc_psf(display=False, return_intermediates=True)
 
@@ -164,7 +164,7 @@ class ZWFSClosedLoop(HicatExperiment):
 
             # TODO: fix science image acquisitions
             plt.subplot(5, 10, 4*nb_iterations+it+1)
-            plt.imshow(sc_img, norm=cl.LogNorm(vmax=1, vmin=1e-7))
+            plt.imshow(sc_img[0].data, norm=cl.LogNorm(vmin=1e-8))
             plt.colorbar()
             plt.axis('off')
 
