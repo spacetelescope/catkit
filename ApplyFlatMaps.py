@@ -46,8 +46,11 @@ class ApplyFlatMaps(Experiment):
             self.iris_ao_command_object = iris_ao.flat_command()
 
     def experiment(self):
+        # Decide whether to control the IrisAO or not
+        turn_off_irisao = True if not self.control_iris_ao else False
+
         with testbed.dm_controller() as dm, \
-             testbed.iris_ao() as iris_ao:
+             testbed.iris_ao(disable_hardware=turn_off_irisao) as iris_ao:
 
             if self.control_boston_dms:
                 dm.apply_shape_to_both(self.dm1_command_object, self.dm2_command_object)
