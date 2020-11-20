@@ -5,7 +5,6 @@ from catkit.hardware.boston import DmCommand
 import logging
 
 import numpy as np
-import scipy.optimize as so
 import matplotlib.pyplot as plt
 import matplotlib.colors as cl
 from astropy.io import fits
@@ -47,7 +46,7 @@ class ZWFSClosedLoop(HicatExperiment):
         # Initialize the values
 
         nb_iterations = 10
-        num_zernike = 4 # Number of the intial zernike. Here astig
+        num_zernike_mode = 4 # Number of the intial zernike. Here astig
         ab_rms_val = 1e-8 # value in nm RMS of the initial aberration
         gain = .5
         dm_pup = zwfs.aperture.disc(34,32,diameter=True, cpix=False)
@@ -73,7 +72,7 @@ class ZWFSClosedLoop(HicatExperiment):
 
         # Initial aberration
         dm_zernike_basis = np.nan_to_num(zwfs.ztools.zernike.zernike_basis(npix=34, nterms=10))
-        initial_aberration = dm_zernike_basis[num_zernike] * ab_rms_val
+        initial_aberration = dm_zernike_basis[num_zernike_mode] * ab_rms_val
 
         # Init the loop
         # current_dm_surf is the tracker of DM1 shape
@@ -98,6 +97,19 @@ class ZWFSClosedLoop(HicatExperiment):
             # FIXME: coron image not fully working. Cannot retrieve dark hole with the shapes from stroke min.
             dm1_vector = wfsc_utils.dm_actuators_from_surface(current_dm_surf)
             dm2_vector = wfsc_utils.dm_actuators_from_surface(dm2_surf)
+            hc = zernike_sensor._simulator
+            hc.testbed_state['detector'] = 'imaging_camera'
+            configured_mode = zwfs.testbed.testbed_state.current_mode
+            CONFIG_MODES = zwfs.CONFIG_MODES
+            hc.pupil_mask = CONFIG_MODES.get(configured_mode, 'pupil_mask')
+            hc.iris_ao = CONFIG_MODES.get(configured_mode, 'iris_ao')
+            hc.apodizer = CONFIG_MODES.get(configured_mode, 'apodizer')
+            hc.lyot_stop = CONFIG_MODES.get(configured_mode, 'lyot_stop')
+            hc.include_fpm = True
+            hc.dm1.set_surface(current_dm_surf)
+            hc.dm2.flatten(dm2_surf)
+
+            sc_img, int_img = hc.calc_psf(display=False, return_intermediates=True)
 
             # Take science image
             '''sc_img, _ = wfsc_utils.take_exposure_hicat(dm1_vector,
@@ -151,12 +163,10 @@ class ZWFSClosedLoop(HicatExperiment):
             plt.axis('off')
 
             # TODO: fix science image acquisitions
-            '''
             plt.subplot(5, 10, 4*nb_iterations+it+1)
             plt.imshow(sc_img, norm=cl.LogNorm(vmax=1, vmin=1e-7))
             plt.colorbar()
             plt.axis('off')
-            '''
 
         plt.tight_layout()
 
