@@ -57,6 +57,7 @@ class ZwoCamera(Camera):
         # Pull flip parameters
         self.theta = CONFIG_INI.getint(self.config_id, 'image_rotation')
         self.fliplr = CONFIG_INI.getboolean(self.config_id, 'image_fliplr')
+        self.flipud = CONFIG_INI.getboolean(self.config_id, 'image_flipud')
 
     def _open(self):
 
@@ -133,7 +134,7 @@ class ZwoCamera(Camera):
             raise RuntimeError(f"Exposure status: {error.exposure_status}") from error
         return image.astype(np.dtype(np.float32))
 
-    def __capture_and_orient(self, initial_sleep, theta, fliplr):
+    def __capture_and_orient(self, initial_sleep, theta, fliplr, flipud):
         """ Takes and image and flips according to theta and l/r input.
 
         WARNING: This func does NOT set the exposure time!
@@ -154,7 +155,7 @@ class ZwoCamera(Camera):
         """
 
         unflipped_image = self.__capture(initial_sleep=initial_sleep)
-        image = catkit.util.rotate_and_flip_image(unflipped_image, theta, fliplr)
+        image = catkit.util.rotate_and_flip_image(unflipped_image, theta, fliplr, flipud)
         return image
     
     def _close(self):
@@ -233,7 +234,7 @@ class ZwoCamera(Camera):
         img_list = []
         # Take exposures and add to list.
         for i in range(num_exposures):
-            img = self.__capture_and_orient(initial_sleep=exposure_time, theta=self.theta, fliplr=self.fliplr)
+            img = self.__capture_and_orient(initial_sleep=exposure_time, theta=self.theta, fliplr=self.fliplr, flipud=self.flipud)
             img_list.append(img)
 
         return img_list, meta_data

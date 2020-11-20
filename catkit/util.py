@@ -74,7 +74,7 @@ def write_fits(data, filepath, header=None, metadata=None):
     return filepath
 
 
-def rotate_and_flip_image(data, theta, flip):
+def rotate_and_flip_image(data, theta, fliplr, flipud):
     """
     Converts an image based on rotation and flip parameters.
     :param data: Numpy array of image data.
@@ -84,8 +84,10 @@ def rotate_and_flip_image(data, theta, flip):
     """
     data_corr = np.rot90(data, int(theta / 90))
 
-    if flip:
+    if fliplr:
         data_corr = np.fliplr(data_corr)
+    if flipud:
+        data_corr = np.flipud(data_corr)
 
     return data_corr
 
