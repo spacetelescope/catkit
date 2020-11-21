@@ -5,7 +5,7 @@ from catkit.hardware.FilterWheelAssembly import FilterWheelAssembly
 
 from hicat.experiments.Experiment import Experiment
 from hicat.experiments.modules import iris_ao
-from catkit.catkit_types import * # OHNO
+from catkit.catkit_types import FpmPosition, quantity, units
 from catkit.hardware.boston.commands import flat_command
 from hicat.hardware import testbed
 from catkit.hardware.thorlabs.ThorlabsFW102C import ThorlabsFW102C

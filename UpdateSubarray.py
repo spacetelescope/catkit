@@ -7,7 +7,7 @@ import numpy as np
 from photutils.detection.core import find_peaks
 
 from hicat.experiments.Experiment import Experiment
-from catkit.catkit_types import *
+from catkit.catkit_types import quantity, units
 from catkit.hardware.boston.commands import flat_command
 from hicat.experiments.modules.general import take_exposures
 import hicat.util

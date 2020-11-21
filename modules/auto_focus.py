@@ -16,7 +16,7 @@ from hicat.experiments.modules import iris_ao
 from hicat.hardware import testbed
 import hicat.calibration_util
 
-from catkit.catkit_types import *
+from catkit.catkit_types import FpmPosition, MetaDataEntry
 from hicat.config import CONFIG_INI
 
 
