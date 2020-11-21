@@ -54,3 +54,4 @@ class AutoFocus(Experiment):
                                                       self.camera_type,
                                                       **self.kwargs)
         auto_focus.collect_final_images(output_path)
+        auto_focus.auto_focus_mtf(output_path, self.mtf_snr_threshold)
