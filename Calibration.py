@@ -27,9 +27,10 @@ class Calibration(Experiment):
                  write_to_csv=True,
                  suffix="calibration",
                  output_path=None,
-                 plot=True):
+                 plot=True,
+                 **kwargs):
 
-        super(Calibration, self).__init__(output_path=output_path, suffix=suffix, **kwargs)
+        super().__init__(output_path=output_path, suffix=suffix, **kwargs)
 
         self.write_to_csv = write_to_csv
 
