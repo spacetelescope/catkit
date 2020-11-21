@@ -4,7 +4,7 @@ import numpy as np
 from hicat.experiments.Experiment import Experiment
 from hicat.experiments.modules import auto_focus
 from hicat.config import CONFIG_INI
-from catkit.catkit_types import *
+from catkit.catkit_types import quantity, units
 
 
 class AutoFocus(Experiment):
@@ -21,7 +21,7 @@ class AutoFocus(Experiment):
                  camera_type="imaging_camera",
                  mtf_snr_threshold=None,
                  **kwargs):
-        super(AutoFocus, self).__init__(output_path=output_path, **kwargs)
+        super().__init__(output_path=output_path, **kwargs)
 
         if position_list is None:
             start_pos = CONFIG_INI.getfloat("calibration", "auto_focus_start_position")
@@ -54,4 +54,4 @@ class AutoFocus(Experiment):
                                                       self.camera_type,
                                                       **self.kwargs)
         auto_focus.collect_final_images(output_path)
-        auto_focus.auto_focus_mtf(output_path, self.mtf_snr_threshold)
+        self.best_focus = auto_focus.auto_focus_mtf(output_path, self.mtf_snr_threshold)
