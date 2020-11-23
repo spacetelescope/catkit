@@ -98,7 +98,7 @@ class TakeCenteringReferenceImages(Experiment):
         else:
             # For the actual images on the hardware, we want to make these as precisely centered as possible, so they
             # can then serve as the references for what a centered image should look like. TBD how best to do this.
-            if testbed_state.current_mode == 'clc2':
+            if 'clc' in testbed_state.current_mode:
                 centering_method = ImageCentering.xy_sym
             if testbed_state.current_mode == 'aplc_v2':
                 centering_method = ImageCentering.custom_apodizer_spots
