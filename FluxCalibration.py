@@ -62,7 +62,7 @@ class FluxCalibration(Experiment):
                        'nd_wheel': nd_wheel}
 
             # Flatten the IrisAO
-            self.devices['iris_dm'].apply_shape(iris_ao.flat_command())
+            devices['iris_dm'].apply_shape(iris_ao.flat_command())
 
             self.log.info(f"Measuring flux calibration for wavelengths: {self.wavelengths}")
             # Calculate flux attenuation factor between direct+ND and coronagraphic images
