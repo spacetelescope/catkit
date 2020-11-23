@@ -31,7 +31,14 @@ class TakeCenteringReferenceImages(Experiment):
                  **kwargs):
         """
         Take a calibrated, well centered reference image in the given wavelength filter.
-        Centering method for CLC2 mode will be satellite spots, while the APLC mode will use the custom apodizer spots.
+
+        When running this on hardware, centering method for any CLC mode will be to cross-correlate an image with a
+        mirrored copy of itself, while an APLC mode will use the custom apodizer spots.
+
+        When running this on the simulator, disable simulated image jitter, and turn off all simulated WFE. This makes
+        the simulated reference images idealized and nearly perfectly symmetrical + centered (the only asymmetries in
+        the system are from the model for the DM actuator surface print through).
+
         :param color_filter: float or int, wavelength of the color filter to be used
         :param nd_filter: string, name of ND filter to be used, default "clear_1"
         :param dm1_command_object: (DmCommand) DmCommand object to apply on DM1, default flat.
