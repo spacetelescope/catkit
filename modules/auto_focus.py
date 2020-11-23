@@ -84,8 +84,8 @@ def auto_focus_mtf(filePath, threshold):
     print('Starting autofocus analysis')
 
     # Create directory for diagnostics
-    mtf_dir = 'mtf_diagnostics'
-    os.makedirs(os.path.join(filePath, mtf_dir), exist_ok=True)
+    mtf_dir = hicat.util.create_data_path(filePath, suffix='mtf_diagnostics')
+    os.makedirs(mtf_dir, exist_ok=True)
 
     # Read calibrated images
     im_list = glob(os.path.join(filePath, '*_cal.fits*'))
@@ -171,4 +171,6 @@ def auto_focus_mtf(filePath, threshold):
     plt.xlabel('Camera position [mm]')
     plt.ylabel('MTF sum [counts]')
     plt.legend()
-    plt.savefig(os.path.join(filePath, 'autofocus_results.pdf'))
+    plt.savefig(os.path.join(filePath, mtf_dir, 'autofocus_results.pdf'))
+
+    return best_foc
