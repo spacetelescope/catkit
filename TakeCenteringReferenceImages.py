@@ -146,7 +146,7 @@ class TakeCenteringReferenceImages(Experiment):
 
         fig, axes = plt.subplots(figsize=(11,7), ncols=2)
         im = fits.getdata(os.path.join(self.output_path, f'{exposure_set_name}/{exposure_set_name}_image_cal.fits'))
-        norm = matplotlib.colors.LogNorm(1, im.max() )
+        norm = matplotlib.colors.LogNorm(1, im.max())
         cm = matplotlib.cm.get_cmap('viridis')
         cm.set_bad(cm(0))
 
@@ -156,7 +156,7 @@ class TakeCenteringReferenceImages(Experiment):
         axes[1].imshow(im, norm=norm, cmap=cm)
         axes[1].set_title(f"New centering image for {self.color_filter}, zoom to center")
         cen = (im.shape[0]-1)/2
-        boxsize=10
+        boxsize = 10
         axes[1].set_xlim(cen-boxsize, cen+boxsize)
         axes[1].set_ylim(cen-boxsize, cen+boxsize)
         for ax in axes:
@@ -164,7 +164,6 @@ class TakeCenteringReferenceImages(Experiment):
             ax.axvline(cen, ls='--',color='orange')
         plt.text(0.1, 0.1, self.output_path, color='gray', transform=fig.transFigure)
         plt.savefig(os.path.join(self.output_path, f"centering_reference_check_{self.color_filter}.pdf"))
-
 
 
 if __name__ == "__main__":
