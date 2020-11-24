@@ -17,13 +17,15 @@ from hicat.hardware import testbed_state
 log = logging.getLogger(__name__)
 
 
-def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True, zoom_in=False, ax=None):
+def satellite_photometry(data, im_type, output_path='', sigma=8.0, thresh_factor=30, fwhm=21, save_fig=True, zoom_in=False, ax=None):
     """
     Performs source detection and extraction on 'data' within spatial limits.
     :param data: array, image to analyze
     :param im_type: string, 'direct' or 'coron' (only used to name plot)
     :param output_path: string, path to save outputs to
     :param sigma: float, number of stddevs for clipping limit
+    :param thresh_factor: float, factor by whcih sigma gets calculated, yields the threshold in source detection with DAOStarFinder()
+    :param fwhm: float, full-width half-max used in source detection with DAOStarFinder()
     :param save_fig: bool, toggle to save figures
     :param zoom_in: bool, saves a cropped image with the aperture in more detail
     :return: astropy.table.table.Qtable, photometry table of input image
@@ -34,12 +36,11 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, save_fig=True
 
     # Scale distances and source detection parameters via img shape.
     im_shape = np.shape(data)
-    fwhm = int(np.round(im_shape[0] * 0.03))      #TODO: HICAT-770
     radius = int(np.round(im_shape[0] * 0.045))   #TODO: HICAT-770
 
     # Find sources in entire image.
     mean, median, std = sigma_clipped_stats(data, sigma=sigma)
-    daofind = DAOStarFinder(fwhm=fwhm, threshold=30 * std)    #TODO: HICAT-770
+    daofind = DAOStarFinder(fwhm=fwhm, threshold=thresh_factor * std)
 
     # Mask out all sources except upper-middle satellite source.
     mask = np.zeros(data.shape, dtype=bool)
