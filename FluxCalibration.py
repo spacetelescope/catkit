@@ -21,7 +21,7 @@ class FluxCalibration(Experiment):
 
         :param num_exp: number of exposures to use at each wavelength.
         :param wavelengths: iterable of wavelengths in nm for which to perform this measurement.
-        :param short_exposure_time: float, exp time in microset to use for the short unsaturated direct exposures
+        :param short_exposure_time: float, exp time in microsec to use for the short unsaturated direct exposures
         """
         super().__init__()
 
