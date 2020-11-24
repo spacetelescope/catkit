@@ -12,6 +12,7 @@ from photutils import aperture_photometry
 from photutils import CircularAperture
 from photutils import DAOStarFinder
 
+from hicat.config import CONFIG_MODES
 import hicat.util
 from hicat.hardware import testbed_state
 log = logging.getLogger(__name__)
@@ -186,12 +187,17 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
     # Set up output file
     fig, axes = plt.subplots(figsize=(7*ncols, 6), ncols=ncols, gridspec_kw={'wspace':0.07})
 
+    # Infer satellite spot FWHM from sampling at 640nm
+    sampling = CONFIG_MODES.getfloat(testbed_state.current_mode, 'sampling_with_lyot_stop')
+    sampling_ratio = wavelen/640
+    fwhm_satellite = 2 * sampling * sampling_ratio
+
     # Get photometry
     photometry_func = satellite_photometry if apodizer == 'no_apodizer' else rectangle_photometry
     coron_table = photometry_func(data=coron_img, im_type=f'coron-{nd_filter_coron}-{color_filter_coron}',
-                                  output_path=out_path, ax=axes[0])
+                                  output_path=out_path, fwhm=fwhm_satellite, ax=axes[0])
     direct_table = photometry_func(data=direct_img, im_type=f'direct-{nd_filter_direct}-{color_filter_direct}',
-                                   output_path=out_path, ax=axes[1])
+                                   output_path=out_path, fwhm=fwhm_satellite, ax=axes[1])
     axes[0].text(0.05, 0.05, f"exp_time = {coron_header['EXP_TIME']:.1f} $\mu$s", color='white', transform=axes[0].transAxes)
     axes[1].text(0.05, 0.05, f"exp_time = {direct_header['EXP_TIME']:.1f} $\mu$s", color='white', transform=axes[1].transAxes)
     axes[0].set_title(f"Coron, with {nd_filter_coron}")
@@ -226,7 +232,7 @@ def calc_attenuation_factor(coron_data, direct_data, out_path, apodizer='no_apod
     if unsaturated_data is not None:
         # Also plot the unsaturated data as a third panel, and use it to work out the brightness of the laser source.
         _ = photometry_func(data=unsat_direct_img, im_type=f'unsat-direct-{nd_filter_direct}-{color_filter_direct}',
-                            output_path=out_path, ax=axes[2])
+                            output_path=out_path, fwhm=fwhm_satellite, ax=axes[2])
         axes[2].set_title(f"Direct, with {nd_filter_direct}, short exposure unsaturated")
         axes[2].text(0.05, 0.05, f"exp_time = {unsat_direct_header['EXP_TIME']:.1f} $\mu$s", color='white',
                      transform=axes[2].transAxes)
