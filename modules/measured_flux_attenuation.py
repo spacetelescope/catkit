@@ -62,7 +62,7 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, thresh_factor
 
     # Adjust for multiple source detections. This should not occur often with adjusted parameters.
     if len(phot_table) > 1:
-        log.warning('Multiple elligible sources found initially. Brightest will be selected.')
+        log.warning(f'Multiple elligible sources found initially in {im_type} image. Brightest will be selected.')
         phot_table = phot_table[phot_table['aperture_sum'] == phot_table['aperture_sum'].max()]
         coord_list = [phot_table['xcenter'].value[0], phot_table['ycenter'].value[0]]
         positions = np.array([coord_list])
