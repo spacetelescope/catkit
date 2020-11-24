@@ -51,7 +51,7 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, thresh_factor
     # Detect sources
     sources = daofind(data, mask=mask)
     if not sources:
-        raise ValueError("Failed to find sources")
+        raise ValueError(f"Failed to find sources in {im_type} image.")
 
     # Transpose to have xy-pairs (x,y), especially if there are multiple sources.
     positions = np.transpose((sources['xcentroid'], sources['ycentroid']))
