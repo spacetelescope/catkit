@@ -95,14 +95,26 @@ class ZWFSClosedLoop(HicatExperiment):
                                                    zernike_sensor.devices,
                                                    exposure_type='coron',
                                                    num_exposures=20,
-                                                   exposure_time=5e5,
-                                                   auto_expose=False,
+                                                   auto_expose=True,
                                                    initial_path=self.output_path,
                                                    suffix=f'ref_dh',
                                                    wavelength=self.wave * 1e9)
 
+        norm_img, _ = wfsc_utils.take_exposure_hicat(dm1_vector / nm_to_m,
+                                                     dm2_vector / nm_to_m,
+                                                     zernike_sensor.devices,
+                                                     exposure_type='direct',
+                                                     num_exposures=20,
+                                                     auto_expose=True,
+                                                     initial_path=self.output_path,
+                                                     suffix=f'norm_dh',
+                                                     wavelength=self.wave * 1e9)
+
+        # Restore FPM position
+        zwfs.testbed.move_fpm('coron', devices=zernike_sensor.devices)
+
         dim = int(np.sqrt(sc_img.shape))
-        sc_img = sc_img.reshape((dim, dim))
+        sc_img = sc_img.reshape((dim, dim))/np.max(norm_img)
 
         zernike_sensor.save_list(zernike_sensor._reference_opd, 'reference_opd', self.output_path)
         zernike_sensor.save_list(sc_img, 'ref_DH', self.output_path)
@@ -146,14 +158,29 @@ class ZWFSClosedLoop(HicatExperiment):
                                                        zernike_sensor.devices,
                                                        exposure_type='coron',
                                                        num_exposures=20,
-                                                       exposure_time=5e5,
-                                                       auto_expose=False,
+                                                       auto_expose=True,
                                                        initial_path=self.output_path,
                                                        suffix=f'iteration{it}',
                                                        wavelength=self.wave*1e9)
+
+            # normalization image
+
+            norm_img, _ = wfsc_utils.take_exposure_hicat(dm1_vector/nm_to_m,
+                                                         dm2_vector/nm_to_m,
+                                                         zernike_sensor.devices,
+                                                         exposure_type='direct',
+                                                         num_exposures=20,
+                                                         auto_expose=True,
+                                                         initial_path=self.output_path,
+                                                         suffix=f'direct_iteration{it}',
+                                                         wavelength=self.wave*1e9)
+
+            # Restore FPM position
+            zwfs.testbed.move_fpm('coron', devices=zernike_sensor.devices)
             
             dim = int(np.sqrt(sc_img.shape))
-            sc_img = sc_img.reshape((dim,dim))
+            sc_img = abs(sc_img.reshape((dim,dim)))
+            sc_img /= np.max(norm_img)
 
             # Crop measured OPD
             array_dim = zopd.shape[-1]
@@ -185,7 +212,7 @@ class ZWFSClosedLoop(HicatExperiment):
 
 
             plt.subplot(4, nb_iterations, 2*nb_iterations+it+1)
-            plt.imshow(abs(sc_img), norm=cl.LogNorm(vmin=1e-4))
+            plt.imshow(sc_img, norm=cl.LogNorm())
             plt.colorbar()
             plt.axis('off')
 
