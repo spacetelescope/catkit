@@ -84,22 +84,22 @@ class ZWFSTestFourierResponse(HicatExperiment):
 
         # Initialize the frequencies to be tested
         # How many samples in each direction
-        nb_freqx = 24
-        nb_freqy = 1
+        nb_freqx = 20
+        nb_freqy = 20
 
         # Boundaries in cycles/pupil
         freqx_max = 7
-        freqx_min = 1
-        freqy_max = 0
-        freqy_min = 0
+        freqx_min = 0.5
+        freqy_max = 7
+        freqy_min = 0.5
 
         # Define frequencies to be probed
         freqx = np.linspace(freqx_min, freqx_max, nb_freqx)
         freqy = np.linspace(freqy_min, freqy_max, nb_freqy)
 
         # a and b amplitude to be tested. In nm.
-        aamp = 0e-8
-        bamp = 1e-8
+        aamp = 1e-8
+        bamp = 0e-8
 
         # Pupil as on the DM.
         dm_pup = zwfs.aperture.disc(34, 34, diameter=True)
@@ -153,8 +153,8 @@ class ZWFSTestFourierResponse(HicatExperiment):
         plt.figure(figsize=(20, 10))
 
         # Plot a and b response for x and y frequencies
-        plt.semilogy(freqx, abs(ab_stack[:, 0, 1]), label='x; b_coeff')
-        plt.semilogy(freqy, abs(ab_stack[0, :, 1]), label='y; b_coeff')
+        #plt.semilogy(freqx, abs(ab_stack[:, 0, 1]), label='x; b_coeff')
+        #plt.semilogy(freqy, abs(ab_stack[0, :, 1]), label='y; b_coeff')
         plt.semilogy(freqx, abs(ab_stack[:, 0, 0]), label='x; a_coeff')
         plt.semilogy(freqy, abs(ab_stack[0, :, 0]), label='y; a_coeff')
         plt.legend()

@@ -1,6 +1,7 @@
 from hicat.experiments.Experiment import HicatExperiment
 from hicat.control import zwfs
 from hicat.wfc_algorithms import wfsc_utils
+from hicat.hardware import testbed_state
 from catkit.hardware.boston import DmCommand
 import logging
 
@@ -43,18 +44,24 @@ class ZWFSClosedLoop(HicatExperiment):
 
     def experiment(self):
 
+
         # Initialize the values
 
         nb_iterations = 10
         num_zernike_mode = 4 # Number of the intial zernike. Here astig
-        ab_rms_val = 1e-8 # value in nm RMS of the initial aberration
-        gain = .5
+        ab_rms_val = 4e-8 # value in nm RMS of the initial aberration
+        gain = 1
         dm_pup = zwfs.aperture.disc(34,32,diameter=True, cpix=False)
         nm_to_m = 1e-9
 
         # Load reference DM shapes the algorithm will try to retrieve
-        # WARNING: local path
-        shapes_path = '/mnt/c/Users/rpourcelot/Documents/git_repos/CLC2_dm_shapes/'
+
+        if testbed_state.simulation:
+            # WARNING: local path
+            shapes_path = '/mnt/c/Users/rpourcelot/Documents/git_repos/CLC2_dm_shapes/'
+        else:
+            shapes_path = 'C:/Users/HICAT/hicat_data/2020-09-18T15-01-14_broadband_stroke_minimization/iter0022/coron_640/dm_command'
+
         dm1_surf = fits.getdata(shapes_path+'dm1_command_2d_noflat.fits')
         dm2_surf = fits.getdata(shapes_path+'dm2_command_2d_noflat.fits')
 
@@ -70,6 +77,32 @@ class ZWFSClosedLoop(HicatExperiment):
 
         pup_dim = zernike_sensor.pupil_diameter
 
+        # Acquire non-aberrated data
+
+        zernike_sensor.save_list(dm1_surf, 'initial_DM1_surf_it', self.output_path)
+
+        dm1_vector = wfsc_utils.dm_actuators_from_surface(dm1_surf)
+        dm2_vector = wfsc_utils.dm_actuators_from_surface(dm2_surf)
+
+        # Take science image
+        sc_img, _ = wfsc_utils.take_exposure_hicat(dm1_vector / nm_to_m,
+                                                   dm2_vector / nm_to_m,
+                                                   zernike_sensor.devices,
+                                                   exposure_type='coron',
+                                                   num_exposures=20,
+                                                   exposure_time=5e5,
+                                                   auto_expose=False,
+                                                   initial_path=self.output_path,
+                                                   suffix=f'ref_dh',
+                                                   wavelength=self.wave * 1e9)
+
+        dim = int(np.sqrt(sc_img.shape))
+        sc_img = sc_img.reshape((dim, dim))
+
+        zernike_sensor.save_list(zernike_sensor._reference_opd, 'reference_opd', self.output_path)
+        zernike_sensor.save_list(sc_img, 'ref_DH', self.output_path)
+
+
         # Initial aberration
         dm_zernike_basis = np.nan_to_num(zwfs.ztools.zernike.zernike_basis(npix=34, nterms=10))
         initial_aberration = dm_zernike_basis[num_zernike_mode] * ab_rms_val
@@ -78,6 +111,7 @@ class ZWFSClosedLoop(HicatExperiment):
         # current_dm_surf is the tracker of DM1 shape
         current_dm_surf = dm1_surf + initial_aberration
 
+        azimutal_mean_stack = []
         # Init figure for nice plot
         plt.figure(figsize=(40, 16))
 
@@ -95,8 +129,11 @@ class ZWFSClosedLoop(HicatExperiment):
                                                            dm2_shape=dm2_command)
 
             # FIXME: coron image not fully working. Cannot retrieve dark hole with the shapes from stroke min.
+
             dm1_vector = wfsc_utils.dm_actuators_from_surface(current_dm_surf)
             dm2_vector = wfsc_utils.dm_actuators_from_surface(dm2_surf)
+
+            '''
             hc = zernike_sensor._simulator
             hc.testbed_state['detector'] = 'imaging_camera'
             configured_mode = zwfs.testbed.testbed_state.current_mode
@@ -106,24 +143,27 @@ class ZWFSClosedLoop(HicatExperiment):
             hc.apodizer = CONFIG_MODES.get(configured_mode, 'apodizer')
             hc.lyot_stop = CONFIG_MODES.get(configured_mode, 'lyot_stop')
             hc.include_fpm = True
-            hc.dm1.set_surface(-current_dm_surf)
-            hc.dm2.set_surface(-dm2_surf)
+            hc.dm1.set_surface(current_dm_surf)
+            hc.dm2.set_surface(dm2_surf)
 
             sc_img, int_img = hc.calc_psf(display=False, return_intermediates=True)
-
+            '''
             # Take science image
-            '''sc_img, _ = wfsc_utils.take_exposure_hicat(dm1_vector,
-                                                    dm2_vector,
-                                                    zernike_sensor.devices,
-                                                    exposure_type='coron',
-                                                    num_exposures=5,
-                                                    initial_path=self.output_path,
-                                                    suffix=f'iteration{it}',
-                                                    wavelength=self.wave*1e9)
+
+            sc_img, _ = wfsc_utils.take_exposure_hicat(dm1_vector/nm_to_m,
+                                                       dm2_vector/nm_to_m,
+                                                       zernike_sensor.devices,
+                                                       exposure_type='coron',
+                                                       num_exposures=20,
+                                                       exposure_time=5e5,
+                                                       auto_expose=False,
+                                                       initial_path=self.output_path,
+                                                       suffix=f'iteration{it}',
+                                                       wavelength=self.wave*1e9)
             
             dim = int(np.sqrt(sc_img.shape))
             sc_img = sc_img.reshape((dim,dim))
-            '''
+
             # Crop measured OPD
             array_dim = zopd.shape[-1]
             cropped_zopd = zopd[(array_dim - pup_dim) // 2:(array_dim + pup_dim) // 2,
@@ -142,31 +182,31 @@ class ZWFSClosedLoop(HicatExperiment):
             current_dm_surf = current_dm_surf + sized_zopd
 
             # Plotting section. Not finalized yet.
-            plt.subplot(5, 10, it+1)
-            plt.imshow(cropped_zopd)#, vmin=-20, vmax=20)
+            plt.subplot(4, nb_iterations, it+1)
+            plt.imshow(cropped_zopd, vmin=-40, vmax=40)
             plt.colorbar()
             plt.axis('off')
 
-            plt.subplot(5, 10, nb_iterations+it+1)
-            plt.imshow(dm_pup*dm_surf_backup - dm1_surf)#, vmin=-2e-8, vmax=2e-8)
+            plt.subplot(4, nb_iterations, nb_iterations+it+1)
+            plt.imshow(dm_pup*dm_surf_backup-dm1_surf, vmin=-2e-8, vmax=2e-8)
             plt.axis('off')
             plt.colorbar()
-
-            plt.subplot(5, 10, 2*nb_iterations+it+1)
-            plt.imshow(sized_zopd)#, norm=cl.LogNorm())
-            plt.colorbar()
-            plt.axis('off')
-
-            plt.subplot(5, 10, 3*nb_iterations+it+1)
-            plt.imshow(dm_pup*current_dm_surf-dm1_surf)
-            plt.colorbar()
-            plt.axis('off')
 
             # TODO: fix science image acquisitions
-            plt.subplot(5, 10, 4*nb_iterations+it+1)
-            plt.imshow(sc_img[0].data, norm=cl.LogNorm(vmin=1e-8))
+            plt.subplot(4, nb_iterations, 2*nb_iterations+it+1)
+            #plt.imshow(sc_img[0].data, norm=cl.LogNorm(vmin=1e-9))
+            #tbp = abs(sc_img)/sc_img.max()
+            plt.imshow(abs(sc_img), norm=cl.LogNorm(vmin=1e-4))
             plt.colorbar()
             plt.axis('off')
+
+            plt.subplot(4, nb_iterations, 3*nb_iterations+it+1)
+            prof, x_sep = zwfs.imutils.profile(sc_img)
+            azimutal_mean_stack.append(prof)
+
+            for i in azimutal_mean_stack:
+                plt.semilogy(x_sep, i)
+
 
         plt.tight_layout()
 

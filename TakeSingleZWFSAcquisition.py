@@ -46,9 +46,7 @@ class TakeSingleZWFSAcquisition(HicatExperiment):
         f_array[5:9, 12:26] = 1
         f_array[5:29, 12:16] = 1
 
-        # TODO: this can to be taken out once CATKIT-57 is implemented
-        # There is an up-down flip between the DM1 plane and the Zernike camera plane
-        f_array = np.flipud(f_array) * 5e-8
+        f_array = 5e-8 * f_array
 
         # Init the sensor object for both DMs
         f_shape = DmCommand.DmCommand(f_array, dm_num=1, bias=False, flat_map=True)
