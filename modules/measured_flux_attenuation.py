@@ -25,7 +25,7 @@ def satellite_photometry(data, im_type, output_path='', sigma=8.0, thresh_factor
     :param im_type: string, 'direct' or 'coron' (only used to name plot)
     :param output_path: string, path to save outputs to
     :param sigma: float, number of stddevs for clipping limit
-    :param thresh_factor: float, factor by whcih sigma gets calculated, yields the threshold in source detection with DAOStarFinder()
+    :param thresh_factor: float, factor by which sigma gets calculated, yields the threshold in source detection with DAOStarFinder()
     :param fwhm: float, full-width half-max used in source detection with DAOStarFinder()
     :param save_fig: bool, toggle to save figures
     :param zoom_in: bool, saves a cropped image with the aperture in more detail
