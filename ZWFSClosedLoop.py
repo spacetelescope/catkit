@@ -45,7 +45,7 @@ class ZWFSClosedLoop(HicatExperiment):
     def experiment(self):
 
 
-        # Initialize the values
+        # Initialize values
 
         nb_iterations = 10
         num_zernike_mode = 4 # Number of the intial zernike. Here astig
@@ -55,6 +55,7 @@ class ZWFSClosedLoop(HicatExperiment):
         nm_to_m = 1e-9
 
         # Load reference DM shapes the algorithm will try to retrieve
+        # ---------------------------------
 
         if testbed_state.simulation:
             # WARNING: local path
@@ -69,7 +70,10 @@ class ZWFSClosedLoop(HicatExperiment):
         dm1_command = DmCommand.DmCommand(dm1_surf, flat_map=True, bias=False, dm_num=1)
         dm2_command = DmCommand.DmCommand(dm2_surf, flat_map=True, bias=False, dm_num=2)
 
+
         # Initialize, calibrate and take reference OPD with Zernike sensor, DMs with reference shapes
+        # ----------------------------------
+
         zernike_sensor = zwfs.ZWFS(wavelength=self.wave, instrument=self.instrument)
         zernike_sensor.calibrate(dm1_shape=dm1_command, dm2_shape=dm2_command,
                                  output_path=self.output_path)
@@ -78,6 +82,7 @@ class ZWFSClosedLoop(HicatExperiment):
         pup_dim = zernike_sensor.pupil_diameter
 
         # Acquire non-aberrated data
+        # --------------------------
 
         zernike_sensor.save_list(dm1_surf, 'initial_DM1_surf_it', self.output_path)
 
@@ -102,8 +107,9 @@ class ZWFSClosedLoop(HicatExperiment):
         zernike_sensor.save_list(zernike_sensor._reference_opd, 'reference_opd', self.output_path)
         zernike_sensor.save_list(sc_img, 'ref_DH', self.output_path)
 
+        # Define initial aberration
+        # -------------------------
 
-        # Initial aberration
         dm_zernike_basis = np.nan_to_num(zwfs.ztools.zernike.zernike_basis(npix=34, nterms=10))
         initial_aberration = dm_zernike_basis[num_zernike_mode] * ab_rms_val
 
@@ -111,8 +117,10 @@ class ZWFSClosedLoop(HicatExperiment):
         # current_dm_surf is the tracker of DM1 shape
         current_dm_surf = dm1_surf + initial_aberration
 
+        # Stack for azimutal DH averages
         azimutal_mean_stack = []
-        # Init figure for nice plot
+
+        # Init figure for nice plots
         plt.figure(figsize=(40, 16))
 
         # Correction loop
@@ -128,26 +136,9 @@ class ZWFSClosedLoop(HicatExperiment):
                                                            dm1_shape=dm1_command,
                                                            dm2_shape=dm2_command)
 
-            # FIXME: coron image not fully working. Cannot retrieve dark hole with the shapes from stroke min.
-
             dm1_vector = wfsc_utils.dm_actuators_from_surface(current_dm_surf)
             dm2_vector = wfsc_utils.dm_actuators_from_surface(dm2_surf)
 
-            '''
-            hc = zernike_sensor._simulator
-            hc.testbed_state['detector'] = 'imaging_camera'
-            configured_mode = zwfs.testbed.testbed_state.current_mode
-            CONFIG_MODES = zwfs.CONFIG_MODES
-            hc.pupil_mask = CONFIG_MODES.get(configured_mode, 'pupil_mask')
-            hc.iris_ao = CONFIG_MODES.get(configured_mode, 'iris_ao')
-            hc.apodizer = CONFIG_MODES.get(configured_mode, 'apodizer')
-            hc.lyot_stop = CONFIG_MODES.get(configured_mode, 'lyot_stop')
-            hc.include_fpm = True
-            hc.dm1.set_surface(current_dm_surf)
-            hc.dm2.set_surface(dm2_surf)
-
-            sc_img, int_img = hc.calc_psf(display=False, return_intermediates=True)
-            '''
             # Take science image
 
             sc_img, _ = wfsc_utils.take_exposure_hicat(dm1_vector/nm_to_m,
@@ -192,10 +183,8 @@ class ZWFSClosedLoop(HicatExperiment):
             plt.axis('off')
             plt.colorbar()
 
-            # TODO: fix science image acquisitions
+
             plt.subplot(4, nb_iterations, 2*nb_iterations+it+1)
-            #plt.imshow(sc_img[0].data, norm=cl.LogNorm(vmin=1e-9))
-            #tbp = abs(sc_img)/sc_img.max()
             plt.imshow(abs(sc_img), norm=cl.LogNorm(vmin=1e-4))
             plt.colorbar()
             plt.axis('off')
