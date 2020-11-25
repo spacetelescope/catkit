@@ -8,8 +8,6 @@ from hicat.experiments.modules import iris_ao
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
 from hicat.hardware import testbed_state
 
-from pastis.pastis_analysis import modes_from_file
-
 
 class PastisModeAmplitudes(PastisExperiment):
 
@@ -21,7 +19,7 @@ class PastisModeAmplitudes(PastisExperiment):
         """
         Pick one mode, scale it by different WFE amplitudes, apply to IrisAO and measure resulting average contrast in DH.
 
-        :param pastis_results_path: str, path to the overall PASTIS data directory, without the 'results' at the end
+        :param pastis_results_path: str, path to the overall PASTIS data directory
         :param mode_number: int, mode index of the mode to work on
         :param c_target: float, target contrast for which the mode weights have been calculated
         :param wfe_amplitudes: array of WFE rms in nm to scale the mode by
@@ -49,8 +47,9 @@ class PastisModeAmplitudes(PastisExperiment):
 
         # Read PASTIS modes and mode weights from file
         self.pastis_results_path = pastis_results_path
-        self.pastis_modes, self.eigenvalues = modes_from_file(pastis_results_path)
-        self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, 'results', f'mode_requirements_{c_target}_uniform.txt'))
+        self.eigenvalues = np.loadtxt(os.path.join(pastis_results_path, 'eigenvalues.txt'))
+        self.pastis_modes = np.loadtxt(os.path.join(pastis_results_path, 'pastis_modes.txt'))
+        self.mode_weights = np.loadtxt(os.path.join(pastis_results_path, f'mode_requirements_{c_target}_uniform.txt'))
 
         self.measured_contrast = []
 
