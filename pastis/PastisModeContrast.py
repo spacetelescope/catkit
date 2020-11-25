@@ -53,14 +53,15 @@ class PastisModeContrast(PastisExperiment):
 
         # Read PASTIS modes from file
         self.pastis_results_path = pastis_results_path
-        self.pastis_modes, self.eigenvalues = modes_from_file(self.pastis_results_path)
+        self.eigenvalues = np.loadtxt(os.path.join(pastis_results_path, 'eigenvalues.txt'))
+        self.pastis_modes = np.loadtxt(os.path.join(pastis_results_path, 'pastis_modes.txt'))
 
         # Read PASTIS mode weights from file
         if use_uniform_weights:
             filename_modes_weights = f'mode_requirements_{self.c_target}_uniform.txt'
         else:
             filename_modes_weights = f'mode_requirements_{self.c_target}_segment-based.txt'
-        self.mode_weights = np.loadtxt(os.path.join(self.pastis_results_path, 'results', filename_modes_weights))
+        self.mode_weights = np.loadtxt(os.path.join(self.pastis_results_path, filename_modes_weights))
 
         # Read PASTIS matrix from file
         self.pastis_matrix_path = pastis_matrix_path
