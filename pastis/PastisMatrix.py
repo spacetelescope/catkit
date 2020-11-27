@@ -4,6 +4,7 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import pandas as pd
 
 from hicat.experiments.modules import iris_ao
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
@@ -45,6 +46,10 @@ class PastisMatrix(PastisExperiment):
                          exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                          align_lyot_stop, run_ta)
 
+        self.experiment_info = {'probe_filename': probe_filename,
+                                'dm_map_path': dm_map_path,
+                                'calibration_aberration': calibration_aberration}
+
         self.zernike = zernike   # Can only be piston, tip or tilt on hardware. Will determine calibartion aberration position in list of IrisAO command
         self.calib_aberration = calibration_aberration   # in astropu units
         if self.zernike not in ('piston', 'tip', 'tilt'):
@@ -58,6 +63,10 @@ class PastisMatrix(PastisExperiment):
         self.contrast_contribution_matrix = np.zeros([self.nb_seg, self.nb_seg])
 
     def experiment(self):
+
+        # Save some experiment input params into a readme
+        exp_data_frame = pd.DataFrame(self.experiment_info.items()).rename(columns={0: 'param', 1: 'value'})
+        exp_data_frame.to_csv(os.path.join(self.output_path, '_README.txt'), '\t', header=False, index=False)
 
         # A couple of initial log messages
         self.log.info(f'wfe_aber: {self.calib_aberration}')

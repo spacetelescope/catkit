@@ -2,6 +2,7 @@ import os
 from astropy.io import fits
 import astropy.units as u
 import numpy as np
+import pandas as pd
 
 from hicat.experiments.modules import iris_ao
 from hicat.experiments.pastis.PastisExperiment import PastisExperiment
@@ -43,6 +44,13 @@ class PastisHockeyStick(PastisExperiment):
                          exposure_time_coron, exposure_time_direct, auto_expose, file_mode, raw_skip,
                          align_lyot_stop, run_ta)
 
+        # Collect some experiment input params
+        self.experiment_info = {'probe_filename': probe_filename,
+                                'dm_map_path': dm_map_path,
+                                'pastis_matrix_path': pastis_matrix_path,
+                                'rms_range': rms_range,
+                                'no_realizations': no_realizations}
+
         self.rms_range = rms_range
         self.no_realizations = no_realizations
         self.pastis_matrix_path = pastis_matrix_path
@@ -60,6 +68,10 @@ class PastisHockeyStick(PastisExperiment):
         self.pastis_mean_over_realizations = []
 
     def experiment(self):
+
+        # Save some experiment input params into a readme
+        exp_data_frame = pd.DataFrame(self.experiment_info.items()).rename(columns={0: 'param', 1: 'value'})
+        exp_data_frame.to_csv(os.path.join(self.output_path, '_README.txt'), '\t', header=False, index=False)
 
         # A couple of initial log messages
         self.log.info(f'Number of rms values tested: {self.rms_range.shape[0]}')
