@@ -5,6 +5,7 @@ top.
 """
 
 import logging
+import os
 import struct
 
 from catkit.hardware.npoint.nPointTipTiltController import Commands, Parameters, NPointTipTiltController
@@ -112,3 +113,10 @@ class SimNPointTipTiltController(SimInstrument, NPointTipTiltController):
 
     instrument_lib = PyusbNpointEmulator
     library_mapping = {'libusb0': EmulatedLibUSB, 'libusb1': EmulatedLibUSB}
+
+    def initialize(self, vendor_id, product_id, library_path=None, library='libusb0', timeout=60):
+        return super().initialize(vendor_id=vendor_id,
+                                  product_id=product_id,
+                                  library_path=os.path.abspath(__file__),
+                                  library=library,
+                                  timeout=timeout)
