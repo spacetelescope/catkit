@@ -1,4 +1,6 @@
 # flake8: noqa: E402
+import gc
+
 import hicat.simulators
 sim = hicat.simulators.auto_enable_sim()
 
@@ -121,10 +123,69 @@ class BroadbandStrokeMinimization(StrokeMinimization):
         self.spectral_weights = {wavelength: self.spectral_weights[n] for n, wavelength in enumerate(wavelengths)}
 
         self.wavelengths = wavelengths
+
+        # The following are loaded in self.pre_experiment().
         self.jacobians = {}
         self.probes = {}
         self.H_invs = {}
 
+        self.num_iterations = num_iterations
+        self.num_exposures = num_exposures
+        self.exposure_time_coron = exposure_time_coron
+        self.exposure_time_direct = exposure_time_direct
+        self.auto_expose = auto_expose
+        self.auto_num_exposures = auto_num_exposures
+        self.target_snr_per_pix = target_snr_per_pix
+        self.use_dm2 = use_dm2
+
+        self.gamma = gamma
+        self.control_gain = control_gain
+        self.auto_adjust_gamma = auto_adjust_gamma
+        self.direct_every = direct_every
+        self.resume = resume
+        self.dm_command_dir_to_restore = dm_command_dir_to_restore
+        self.autoscale_e_field = autoscale_e_field
+        self.dm_calibration_fudge = dm_calibration_fudge
+        self.correction = np.zeros(wfsc_utils.num_actuators * 2, float)
+        self.prior_correction = np.zeros(wfsc_utils.num_actuators * 2, float)
+        self.git_label = util.git_description()
+        self.perfect_knowledge_mode = perfect_knowledge_mode
+
+        # Metrics
+        self.timestamp = []
+        self.temp = []
+        self.humidity = []
+
+        if self.resume and self.auto_adjust_gamma:
+            self.log.warning("Auto adjust gamma is not reliable with resume=True. Disabling auto adjust gamma.")
+            self.auto_adjust_gamma = False
+
+        self.dm1_actuators = None  # Loaded in self.pre_experiment().
+        self.dm2_actuators = None  # Loaded in self.pre_experiment().
+        self.mu_start = mu_start
+
+        # Values for diagnostic plots
+        # In broadband, some of these need to be dicts over wavelength
+        self.e_field_scale_factors = {wavelength: [] for wavelength in wavelengths}
+        self.mean_contrasts_image = []  # keep just one of these, it will be broadband (eventually)
+        self.mean_contrasts_pairwise = []
+        self.mean_contrasts_probe = []
+        self.predicted_contrasts = []
+        self.predicted_contrast_deltas = []
+        self.measured_contrast_deltas = []
+        self.estimated_incoherent_backgrounds = []
+
+        # Initialize output path and logging
+        self.output_path = util.create_data_path(suffix=self.suffix)
+        util.setup_hicat_logging(self.output_path, self.suffix)
+        print("LOGGING: "+self.output_path+"  "+self.suffix)
+
+        # Before doing anything more interesting, save a copy of the probes to disk
+        # TODO: if self.file_mode: HICAT-817
+        #self.save_probes()
+
+    def pre_experiment(self, *args, **kwargs):
+        """ Load data here so that the it doesn't exist twice in memory when spawning a new process. """
         # Iterate over provided Jacobians for each wavelength
         for wavelength in self.wavelengths:
             try:
@@ -149,8 +210,10 @@ class BroadbandStrokeMinimization(StrokeMinimization):
 
                 # Assume the dark zone regions are the same independent of wavelength. The code reads them in anyway redundantly at
                 # each wavelength for now - ugly but easy and it works.
-                self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(), wfsc_utils.focal_grid)
-                self.dark_zone_probe = hcipy.Field(np.asarray(probe_info['DARK_ZONE_PROBE'].data, bool).ravel(), wfsc_utils.focal_grid)
+                self.dark_zone = hcipy.Field(np.asarray(probe_info['DARK_ZONE'].data, bool).ravel(),
+                                             wfsc_utils.focal_grid)
+                self.dark_zone_probe = hcipy.Field(np.asarray(probe_info['DARK_ZONE_PROBE'].data, bool).ravel(),
+                                                   wfsc_utils.focal_grid)
 
                 self.log.info("Loading probe DM shapes from {}".format(self.probe_filenames[wavelength]))
                 self.probes[wavelength] = probe_info['PROBES'].data
@@ -164,64 +227,15 @@ class BroadbandStrokeMinimization(StrokeMinimization):
                 self.dz_rout = probe_info[0].header.get('DZ_ROUT', '?')
                 self.probe_amp = probe_info[0].header.get('PROBEAMP', '?')
 
-        self.num_iterations = num_iterations
-        self.num_exposures = num_exposures
-        self.exposure_time_coron = exposure_time_coron
-        self.exposure_time_direct = exposure_time_direct
-        self.auto_expose = auto_expose
-        self.auto_num_exposures = auto_num_exposures
-        self.target_snr_per_pix = target_snr_per_pix
-        self.use_dm2 = use_dm2
-
         # Cut Jacobian in half if using only DM1
         if not self.use_dm2:
             for wavelength in self.jacobians:
                 self.jacobians[wavelength] = self.jacobians[wavelength][:wfsc_utils.num_actuators, :]
-
-        self.gamma = gamma
-        self.control_gain = control_gain
-        self.auto_adjust_gamma = auto_adjust_gamma
-        self.direct_every = direct_every
-        self.resume = resume
-        self.dm_command_dir_to_restore = dm_command_dir_to_restore
-        self.autoscale_e_field = autoscale_e_field
-        self.dm_calibration_fudge = dm_calibration_fudge
-        self.correction = np.zeros(wfsc_utils.num_actuators * 2, float)
-        self.prior_correction = np.zeros(wfsc_utils.num_actuators * 2, float)
-        self.git_label = util.git_description()
-        self.perfect_knowledge_mode = perfect_knowledge_mode
-
-        # Metrics
-        self.timestamp = []
-        self.temp = []
-        self.humidity = []
-
-        if self.resume and self.auto_adjust_gamma:
-            self.log.warning("Auto adjust gamma is not reliable with resume=True. Disabling auto adjust gamma.")
-            self.auto_adjust_gamma = False
+            gc.collect()  # Garbage collect the no longer needed full arrays.
 
         self.dm1_actuators, self.dm2_actuators = self.get_initial_dm_commands()
-        self.mu_start = mu_start
 
-        # Values for diagnostic plots
-        # In broadband, some of these need to be dicts over wavelength
-        self.e_field_scale_factors = {wavelength: [] for wavelength in wavelengths}
-        self.mean_contrasts_image = []  # keep just one of these, it will be broadband (eventually)
-        self.mean_contrasts_pairwise = []
-        self.mean_contrasts_probe = []
-        self.predicted_contrasts = []
-        self.predicted_contrast_deltas = []
-        self.measured_contrast_deltas = []
-        self.estimated_incoherent_backgrounds = []
-
-        # Initialize output path and logging
-        self.output_path = util.create_data_path(suffix=self.suffix)
-        util.setup_hicat_logging(self.output_path, self.suffix)
-        print("LOGGING: "+self.output_path+"  "+self.suffix)
-
-        # Before doing anything more interesting, save a copy of the probes to disk
-        # TODO: if self.file_mode: HICAT-817
-        #self.save_probes()
+        return super().pre_experiment(*args, **kwargs)
 
     def take_exposure(self,
                       devices,
