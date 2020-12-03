@@ -11,8 +11,12 @@ class MotorController(ABC):
         """Opens connection with the DM and sets class attributes for 'config_id' and 'dm'."""
         self.config_id = config_id
         self.socket_id = None
-        self.motor_controller = self.initialize(*args, **kwargs)
         self._keep_alive = False
+        self.instrument = None
+
+        # Connect.
+        self.motor_controller = self.initialize(*args, **kwargs)
+        self.instrument = self.motor_controller
         self.log.info("Initialized Motor Controller " + config_id)
 
     # Implementing context manager.
@@ -22,8 +26,11 @@ class MotorController(ABC):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         try:
             if not self._keep_alive:
-                self.close()
-                self.motor_controller = None
+                try:
+                    self.close()
+                finally:
+                    self.motor_controller = None
+                    self.instrument = None
                 self.log.info("Safely closed connection to Motor Controller " + self.config_id)
         finally:
             # Reset, single use basis only.

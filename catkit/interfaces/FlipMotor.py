@@ -11,8 +11,12 @@ class FlipMotor(ABC):
         """Opens connection with the motor controller and sets class attributes for 'config_id' and 'motor'."""
         self.config_id = config_id
         self.serial = None
-        self.motor = self.initialize(*args, **kwargs)
         self._keep_alive = False
+        self.instrument = None
+
+        # Connect.
+        self.motor = self.initialize(*args, **kwargs)
+        self.instrument = self.motor
         self.log.info("Opened connection to flip motor " + config_id)
 
     # Implementing context manager.
@@ -22,8 +26,11 @@ class FlipMotor(ABC):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         try:
             if not self._keep_alive:
-                self.close()
-                self.motor = None
+                try:
+                    self.close()
+                finally:
+                    self.motor = None
+                    self.instrument = None
                 self.log.info(f"Safely closed connection to flip motor {self.config_id}")
         finally:
             # Reset, single use basis only.
