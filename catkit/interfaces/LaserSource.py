@@ -10,8 +10,12 @@ class LaserSource(ABC):
     def __init__(self, config_id, *args, **kwargs):
         """Opens connection with the laser source and sets class attributes for 'config_id'"""
         self.config_id = config_id
-        self.laser = self.initialize(*args, **kwargs)
         self._keep_alive = False
+        self.instrument = None
+
+        # Connect.
+        self.laser = self.initialize(*args, **kwargs)
+        self.instrument = self.laser
         self.log.info("Opened connection to laser source " + config_id)
 
     # Implementing context manager.
@@ -21,8 +25,11 @@ class LaserSource(ABC):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         try:
             if not self._keep_alive:
-                self.close()
-                self.laser = None
+                try:
+                    self.close()
+                finally:
+                    self.laser = None
+                    self.instrument = None
                 self.log.info("Safely closed connection to laser source " + self.config_id)
         finally:
             # Reset, single use basis only.

@@ -83,6 +83,11 @@ class Instrument(ABC):
 
     def __open(self):
         # __func() can't be overridden without also overriding those that call it.
+
+        # If instrument is already opened, don't create multiple connections.
+        if self.instrument:
+            return
+
         try:
             self.instrument = self._open()
             self.log.info("Opened connection to '{}'".format(self.config_id))
