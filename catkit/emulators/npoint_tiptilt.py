@@ -8,21 +8,15 @@ import logging
 import os
 import struct
 
-from catkit.hardware.npoint.nPointTipTiltController import Commands, Parameters, NPointTipTiltController
+from catkit.hardware.npoint.nPointTipTiltController import Commands, Parameters, NPointLC400
 from catkit.interfaces.Instrument import SimInstrument
 
 
-class EmulatedLibUSB:
-    @staticmethod
-    def get_backend(find_library=None):
-        pass
-
-
-class PyusbNpointEmulator:
+class PyvisaNpointEmulator:
     """nPointTipTilt connection class. 
 
     This nPointTipTilt class acts as a useful connection and storage vehicle 
-    for commands sent to the nPoint FTID LC400 controller. It has built in 
+    for commands sent to the nPoint FTDI LC400 controller. It has built in
     functions that allow for writing commands, checking the status, etc. 
     By instantiating the nPointTipTilt object you find the LC400 controller 
     and set the default configuration. Memory managers in the back end 
@@ -37,35 +31,33 @@ class PyusbNpointEmulator:
         will get sent in emulated messages. """
 
         self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
+        self.initialize()
 
-        self.value_store = {n: {var: 0 for var in Parameters} for n in NPointTipTiltController.channels}
+    def initialize(self):
+        self.value_store = {n: {var: 0 for var in Parameters} for n in NPointLC400.channels}
         self.response_message = []
         self.address_cursor = None
         self.message = None  # Used only for introspection, debugging, & testing.
 
-    def find(self, find_all=False, backend=None, custom_match=None, **args):
+    def ResourceManager(self, *args, **kwargs):
         """ On hardware, locates device. In simulation, returns itself so we can keep going."""
-        self.log.info('SIMULATED nPointTipTilt instantiated and logging online.')
+        self.log.info('SIMULATED NPointLC400 instantiated and logging online.')
         return self
 
-    def __iter__(self):
-        """ Simulated iteration to appeal to the ability to check the configuration modes with `get_config`. """
-        for cfg in self.config_params:
-            yield cfg
-    
-    def set_configuration(self, configuration=None):
-        """ On hardware, sets nPoint to its default configuration. In simulation, no behavior necessary."""
-        if configuration is not None:
-            raise NotImplementedError("We don't have the ability to set or simulate non-default configuration.")
+    def open_resource(self, *args, **kwargs):
+        return self
 
-    def read(self, endpoint, message_length, timeout):
+    def close(self, *args, **kwargs):
+        self.initialize()
+
+    def read_bytes(self, byte_count):
         """ On hardware, reads single message from device. In simulation, pulls most recent message that expected a response. """
-        return self.response_message.pop()
+        return self.response_message.pop()[:byte_count]
 
-    def write(self, endpoint, message, timeout):
+    def write_raw(self, message):
         """ On hardware, writes a single message from device. In simulation,
         updates logical stored values. """
-        endian = NPointTipTiltController.endian
+        endian = NPointLC400.endian
 
         self.message = message
 
@@ -73,11 +65,12 @@ class PyusbNpointEmulator:
         #    raise ValueError(f"Corrupt data: message has incorrect endpoint.")
 
         # Parse message.
-        command, parameter, address, channel, value = NPointTipTiltController.parse_message(message)
+        command, parameter, address, channel, value = NPointLC400.parse_message(message)
 
-        if command in (Commands.GET, Commands.SET):
+        if command in (Commands.GET_SINGLE, Commands.GET_ARRAY, Commands.SET):
             self.address_cursor = (channel, parameter)
 
+        # Set value or construct response ready for next read.
         if command is Commands.SET:
             self.value_store[channel][parameter] = value
         elif command is Commands.SECOND_MSG:
@@ -91,32 +84,21 @@ class PyusbNpointEmulator:
             first_32b = struct.pack(endian + 'I', self.value_store[channel][parameter])
             second_32b = struct.pack(endian + 'I', value)
             self.value_store[channel][parameter] = struct.unpack(endian + 'd', first_32b + second_32b)[0]
-        elif command is Commands.GET:
+        elif command in (Commands.GET_SINGLE, Commands.GET_ARRAY):
             # Construct response message ready for it to be returned upon read.
-            n_reads = value
-            if n_reads == 1:
-                data_type_fmt = 'I'
-            elif n_reads == 2:
-                data_type_fmt = 'd'
-            else:
-                raise NotImplementedError(f"Supports only 32b ints and 64b floats. Received {n_reads * 32}b data block.")
-            return_value = struct.pack(endian + data_type_fmt, self.value_store[channel][parameter])
-            self.response_message.append(b''.join([Commands.GET.value, address, return_value, NPointTipTiltController.endpoint]))
+            return_value = struct.pack(endian + parameter.data_type_fmt, self.value_store[channel][parameter])
+            self.response_message.append(b''.join([command.value, address, return_value, NPointLC400.endpoint]))
+            print("self.response_message", self.response_message)
         else:
             raise NotImplementedError(f'Non implemented command ({command}) found in message.')
 
 
-class SimNPointTipTiltController(SimInstrument, NPointTipTiltController):
+class SimNPointLC400(SimInstrument, NPointLC400):
     """ Emulated version of the nPoint tip tilt controller. 
     Directly follows the npoint, except points to simlated USB connection
     library. """
 
-    instrument_lib = PyusbNpointEmulator
-    library_mapping = {'libusb0': EmulatedLibUSB, 'libusb1': EmulatedLibUSB}
+    instrument_lib = PyvisaNpointEmulator
 
-    def initialize(self, vendor_id, product_id, library_path=None, library='libusb0', timeout=60):
-        return super().initialize(vendor_id=vendor_id,
-                                  product_id=product_id,
-                                  library_path=os.path.abspath(__file__),
-                                  library=library,
-                                  timeout=timeout)
+    def initialize(self, com_id, timeout=5):
+        return super().initialize(com_id=com_id, timeout=timeout)
