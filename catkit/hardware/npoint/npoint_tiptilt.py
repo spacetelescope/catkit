@@ -24,25 +24,10 @@ import warnings
 
 from numpy import double
 
-from usb.backend import libusb0, libusb1
-import usb.core
-import usb.util
+import pyvisa
 
 
 ## -- FUNCTIONS and FIDDLING 
-
-# Decorator with error handling
-def usb_except(function):
-    """Decorator that catches PyUSB errors."""
-
-    @functools.wraps(function)
-    def wrapper(self, *args, **kwargs):
-        try:
-            return function(self, *args, **kwargs)
-        except usb.core.USBError as e:
-            raise Exception('USB connection error.') from e
-
-    return wrapper
 
 
 class nPointTipTilt():
@@ -55,11 +40,8 @@ class nPointTipTilt():
     and set the default configuration. Memory managers in the back end 
     should close the connection when the time is right.
     """
-
-    # Define this library mapping as a static attribute.
-    library_mapping = {'libusb0': libusb0, 'libusb1': libusb1}
     
-    def __init__(self, vendor_id=None, product_id=None, library_path=None, library=None):
+    def __init__(self, com_id=None):
 
         """Initial function to configure logging and find the device. Anything 
         set to None will attempt to pull from the config file.
@@ -76,30 +58,8 @@ class nPointTipTilt():
             Which libusb library, right now supports libusb0 and libusb1. Defaults to None.
         """
         
-        # Pull device specifics from config file
-        if None in [vendor_id, product_id]:
-            config_path = os.environ.get('CATKIT_CONFIG')
-            if config_path is None:
-                raise OSError('No available config to specify npoint connection.')
-        
-            config = configparser.ConfigParser()
-            config.read(config_path)
-        
-        self.vendor_id = config.get('npoint_tiptilt_lc_400', 'vendor_id') if vendor_id is None else vendor_id
-        self.product_id = config.get('npoint_tiptilt_lc_400', 'product_id') if product_id is None else product_id
-        
-        self.library_path = os.environ.get('CATKIT_LIBUSB_PATH') if library_path is None else library_path
-        if not self.library_path:
-            raise OSError("No library path was passed to the npoint and CATKIT_LIBUSB_PATH is not set on your machine")
 
-        library = config.get('npoint_tiptilt_lc_400', 'libusb_library') if library is None else library
-        if library not in self.library_mapping:
-            raise NotImplementedError(f"The backend you specified ({library}) is not available at this time.")
-        elif not os.path.exists(self.library_path):
-            raise FileNotFoundError(f"The library path you specified ({self.library_path}) does not exist.")
-        else:
-            self.library = self.library_mapping[library]
-            self.backend = self.library.get_backend(find_library=lambda x: self.library_path)
+
         
         # Set up the logging.
         str_date = str(datetime.datetime.now()).replace(' ', '_').replace(':', '_')
@@ -117,22 +77,15 @@ class nPointTipTilt():
         ch.setLevel(logging.DEBUG)
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
-        
-        # Instantiate the device
-        self.dev = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id, backend=self.backend)
-        if self.dev is None:
-            self.close_logger()
-            raise NameError("Go get the device sorted you knucklehead.")
-             
-        # Set to default configuration -- for LC400 this is the right one.
-        self.dev.set_configuration()
+
         self.logger.info('nPointTipTilt instantiated and logging online.')
 
 
     def __enter__(self):
         """ Enter function to allow for context management."""
-        
-        return self
+        rm = pyvisa.ResourceManager("@py")
+        self.instrument = rm.open_resource('ASRLCOM7::INSTR')
+        return self.instrument
 
     def __exit__(self, ex_type, ex_value, traceback):
         """ Exit function to open loop, reset gain parameters to 0, close the
@@ -265,7 +218,7 @@ class nPointTipTilt():
         message_length = 100
         timeout = 1000
         while len(resp) < 4 and tries < max_tries:
-            resp = self.dev.read(endpoint, message_length, timeout) 
+            resp = self.dev.read_raw(message_length)
             tries += 1 
         time_elapsed = time.time() - start
         
@@ -305,7 +258,7 @@ class nPointTipTilt():
         endpoint = 0x02
         timeout = 100
         for message in msg:
-            self.dev.write(endpoint, message, timeout)
+            self.dev.write_raw(message)
     
     def close(self):
         """ Function for the close behavior. Return every parameter to zero
@@ -320,6 +273,7 @@ class nPointTipTilt():
         for channel in [1, 2]:
             for key in ["loop", "p_gain", "i_gain", "d_gain"]:
                 self.command(key, channel, 0)
+        self.instrument.close()
         
     def close_logger(self):
         """Function for the close logger behavior."""
@@ -329,7 +283,6 @@ class nPointTipTilt():
             handler.close()
             self.logger.removeHandler(handler)
     
-    @usb_except
     def command(self, cmd_key, channel, value):
         """Function to send a command to the controller and read back 
         to make sure it matches. 
@@ -361,7 +314,6 @@ class nPointTipTilt():
         else:
             raise ValueError('Command NOT successful : {} != {}.'.format(value, set_value))
 
-    @usb_except
     def get_config(self):
         """Checks the feasible configurations for the device."""
         
@@ -369,7 +321,6 @@ class nPointTipTilt():
             self.logger.info('Device config : ')
             self.logger.info(cfg)
         
-    @usb_except
     def get_status(self, channel):
         """Checks the status of the loop, and p/i/d_gain for 
         the specified channel.
