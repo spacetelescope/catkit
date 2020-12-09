@@ -4,38 +4,42 @@
     "upload_type": "software",
     "creators": [
         {
-            "affiliation": "@spacetelescope",
+            "affiliation": "Space Telescope Science Institute",
             "name": "James Noss",
             "orcid": "0000-0002-0922-5770"
         },
         {
+            "affiliation": "Space Telescope Science Institute, University of California Santa Cruz",
             "name": "Jules Fowler",
             "orcid": "0000-0002-0726-9323"
         },
         {
+            "affiliation": "Harvard Center for Astrophysics",
             "name": "Christopher Moriarty",
             "orcid": "0000-0002-1757-7573"
         },
         {
-            "affiliation": "@spacetelescope",
-            "name": "Keira Brooks",
+            "affiliation": "Space Telescope Science Institute",
+            "name": "Keira J. Brooks",
             "orcid": "0000-0002-2780-9593"
         },
         {
-            "affiliation": "@spacetelescope",
+            "affiliation": "Space Telescope Science Institute, ONERA, Laboratoire d'Astrophysique de Marseille",
             "name": "Iva Laginja",
             "orcid": "0000-0003-1783-5023"
         },
         {
             "affiliation": "Space Telescope Science Institute",
-            "name": "Marshall Perrin",
+            "name": "Marshall D. Perrin",
             "orcid": "0000-0002-3191-8151"
         },
         {
+            "affiliation": "Space Telescope Science Institute",
             "name": "R\u00e9mi Soummer",
             "orcid": "0000-0003-2753-2819"
         },
         {
+            "affiliation": "Space Telescope Science Institute",
             "name": "Tom Comeau",
             "orcid": "0000-0003-2005-9627"
         },
