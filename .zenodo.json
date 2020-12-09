@@ -1,0 +1,52 @@
+{
+    "description": "Hardware control interfaces for optics lab instrumentation development and experiments.",
+    "license": "other-open",
+    "upload_type": "software",
+    "creators": [
+        {
+            "affiliation": "@spacetelescope",
+            "name": "James Noss",
+            "orcid": "0000-0002-0922-5770"
+        },
+        {
+            "name": "Jules Fowler",
+            "orcid": "0000-0002-0726-9323"
+        },
+        {
+            "name": "Christopher Moriarty",
+            "orcid": "0000-0002-1757-7573"
+        },
+        {
+            "affiliation": "@spacetelescope",
+            "name": "Keira Brooks",
+            "orcid": "0000-0002-2780-9593"
+        },
+        {
+            "affiliation": "@spacetelescope",
+            "name": "Iva Laginja",
+            "orcid": "0000-0003-1783-5023"
+        },
+        {
+            "affiliation": "Space Telescope Science Institute",
+            "name": "Marshall Perrin",
+            "orcid": "0000-0002-3191-8151"
+        },
+        {
+            "name": "R\u00e9mi Soummer",
+            "orcid": "0000-0003-2753-2819"
+        },
+        {
+            "name": "Tom Comeau",
+            "orcid": "0000-0003-2005-9627"
+        },
+        {
+            "name": "Heather Olszewski",
+            "orcid": "0000-0003-3416-5885"
+        },
+        {
+            "affiliation": "@spacetelescope",
+            "name": "Russell B. Makidon Optics Laboratory"
+        }
+    ],
+    "access_right": "open"
+}
