@@ -1,6 +1,6 @@
 {
     "description": "Hardware control interfaces for optics lab instrumentation development and experiments.",
-    "license": "other-open",
+    "license": "BSD 3-Clause \"New\" or \"Revised\" License",
     "upload_type": "software",
     "creators": [
         {
@@ -46,10 +46,6 @@
         {
             "name": "Heather Olszewski",
             "orcid": "0000-0003-3416-5885"
-        },
-        {
-            "affiliation": "@spacetelescope",
-            "name": "Russell B. Makidon Optics Laboratory"
         }
     ],
     "access_right": "open"
