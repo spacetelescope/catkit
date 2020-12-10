@@ -27,7 +27,8 @@ class FlipMotor(ABC):
         try:
             if not self._keep_alive:
                 try:
-                    self.close()
+                    if self.instrument:
+                        self.close()
                 finally:
                     self.motor = None
                     self.instrument = None

@@ -26,7 +26,8 @@ class LaserSource(ABC):
         try:
             if not self._keep_alive:
                 try:
-                    self.close()
+                    if self.instrument:
+                        self.close()
                 finally:
                     self.laser = None
                     self.instrument = None

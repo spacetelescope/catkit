@@ -27,7 +27,8 @@ class MotorController(ABC):
         try:
             if not self._keep_alive:
                 try:
-                    self.close()
+                    if self.instrument:
+                        self.close()
                 finally:
                     self.motor_controller = None
                     self.instrument = None
