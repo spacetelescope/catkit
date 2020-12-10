@@ -1,6 +1,6 @@
 {
     "description": "Hardware control interfaces for optics lab instrumentation development and experiments.",
-    "license": "BSD 3-Clause \"New\" or \"Revised\" License",
+    "license": "other-open",
     "upload_type": "software",
     "creators": [
         {
