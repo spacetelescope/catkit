@@ -10,7 +10,7 @@ class DummyLaserSource(LaserSource):
     log = logging.getLogger(__name__)
 
     def initialize(self, *args, **kwargs):
-        return None
+        return self
 
     def close(self):
         self.log.info("Dummy Laser closed.")
