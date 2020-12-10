@@ -1,7 +1,4 @@
 {
-    "description": "Hardware control interfaces for optics lab instrumentation development and experiments.",
-    "license": "other-open",
-    "upload_type": "software",
     "creators": [
         {
             "affiliation": "Space Telescope Science Institute",
@@ -48,5 +45,8 @@
             "orcid": "0000-0003-3416-5885"
         }
     ],
+    "description": "Hardware control interfaces for optics lab instrumentation development and experiments.",
+    "license": "other-open",
+    "upload_type": "software",
     "access_right": "open"
 }
