@@ -5,7 +5,6 @@ import sys
 import numpy as np
 
 from catkit.config import CONFIG_INI
-from catkit.hardware import testbed_state
 from catkit.interfaces.MotorController import MotorController
 
 """Implementation of the Newport motor controller interface."""
@@ -49,9 +48,6 @@ class NewportMotorController(MotorController):
             for motor_name in motors:
                 self.__move_to_nominal(motor_name)
 
-        # Update the testbed_state for the FPM and Lyot Stop.
-        self.__update_testbed_state("motor_lyot_stop_y")
-        self.__update_testbed_state("motor_FPM_X")
         return myxps
 
     def close(self):
@@ -75,8 +71,6 @@ class NewportMotorController(MotorController):
             error_code, return_string = self.motor_controller.GroupMoveAbsolute(self.socket_id, positioner, [position])
             if error_code != 0:
                 self.__raise_exceptions(error_code, 'GroupMoveAbsolute')
-            else:
-                self.__update_testbed_state(motor_id)
 
     def relative_move(self, motor_id, distance):
         """
@@ -93,8 +87,6 @@ class NewportMotorController(MotorController):
         error_code, return_string = self.motor_controller.GroupMoveRelative(self.socket_id, positioner, [distance])
         if error_code != 0:
             self.__raise_exceptions(error_code, 'GroupMoveRelative')
-        else:
-            self.__update_testbed_state(motor_id)
 
     def get_position(self, motor_id):
         """
@@ -168,14 +160,3 @@ class NewportMotorController(MotorController):
             if error_code == -108:
                 raise Exception(api_name + ': The TCP/IP connection was closed by an administrator')
         raise Exception("Unknown error_code returned from Newport Motor Controller.")
-
-    # Only a few of the motor IDs have testbed state entries.
-    def __update_testbed_state(self, motorid):
-        if self.use_testbed_state:
-            position = self.get_position(motorid)
-            if motorid == "motor_lyot_stop_y":
-                ini_value = CONFIG_INI.getfloat(motorid, "in_beam")
-                testbed_state.lyot_stop = True if np.isclose(ini_value, position, atol=.001) else False
-            elif motorid == "motor_FPM_X":
-                ini_value = CONFIG_INI.getfloat(motorid, "default_coron")
-                testbed_state.coronograph = True if np.isclose(ini_value, position, atol=.001) else False
