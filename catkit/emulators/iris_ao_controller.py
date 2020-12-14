@@ -4,7 +4,6 @@ import astropy.units as u
 import numpy as np
 import poppy
 
-from catkit.hardware import testbed_state
 from catkit.hardware.iris_ao.iris_ao_controller import IrisAoDmController
 import catkit.hardware.iris_ao.segmented_dm_command as segmented_dm_command
 import catkit.hardware.iris_ao.util
