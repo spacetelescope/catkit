@@ -5,8 +5,6 @@ import numpy as np
 import zwoasi
 
 from catkit.config import CONFIG_INI
-from catkit.hardware import testbed_state
-
 
 from catkit.catkit_types import MetaDataEntry, units, quantity
 from catkit.interfaces.Camera import Camera
@@ -217,9 +215,8 @@ class ZwoCamera(Camera):
         self.__setup_control_values(exposure_time, subarray_x=subarray_x, subarray_y=subarray_y, width=width,
                                     height=height, gain=gain, full_image=full_image, bins=bins)
 
-        # Create metadata from testbed_state and add extra_metadata input.
+        # Create metadata from extra_metadata input.
         meta_data = [MetaDataEntry("Exposure Time", "EXP_TIME", exposure_time.to(units.microsecond).m, "microseconds")]
-        meta_data.extend(testbed_state.create_metadata())
         meta_data.append(MetaDataEntry("Camera", "CAMERA", self.config_id, "Camera model, correlates to entry in ini"))
         meta_data.append(MetaDataEntry("Gain", "GAIN", self.gain, "Gain for camera"))
         meta_data.append(MetaDataEntry("Bins", "BINS", self.bins, "Binning for camera"))
