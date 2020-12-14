@@ -19,10 +19,6 @@ def dummy_testbed_state(dummy_config_ini):
     # Create dummy testbed_state module
     dummy_testbed_state_module = ModuleType("dummy_testbed_state")
 
-    # Add the required attributes needed for the subsequent tests
-    dummy_testbed_state_module.dm1_command_object = None
-    dummy_testbed_state_module.dm2_command_object = None
-
     # Add it to the module cache
     if dummy_testbed_state_module.__name__ not in sys.modules:
         sys.modules[dummy_testbed_state_module.__name__] = dummy_testbed_state_module
