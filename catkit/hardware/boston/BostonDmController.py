@@ -3,7 +3,6 @@ import sys
 
 import numpy as np
 
-from catkit.hardware import testbed_state
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 
 # BMC is Boston's library and it only works on windows.
@@ -32,6 +31,8 @@ class BostonDmController(DeformableMirrorController):
         # Create class attributes for storing individual DM commands.
         self.dm1_command = None
         self.dm2_command = None
+        self.dm1_command_object = None
+        self.dm2_command_object = None
         self.serial_num = serial_number
         self.command_length = command_length
         self.dac_bit_width = dac_bit_width
@@ -90,8 +91,6 @@ class BostonDmController(DeformableMirrorController):
                 self.instrument.close_dm()
         finally:
             self.instrument = None
-            # Update testbed_state.
-            self.__close_dm_controller_testbed_state()
 
     def apply_shape_to_both(self, dm1_command_object, dm2_command_object):
         """Combines both commands and sends to the controller to produce a shape on each DM."""
@@ -112,10 +111,8 @@ class BostonDmController(DeformableMirrorController):
         # Update both dm_command class attributes.
         self.dm1_command = dm1_command
         self.dm2_command = dm2_command
-
-        # Update testbed_state.
-        self.__update_dm_state(dm1_command_object)
-        self.__update_dm_state(dm2_command_object)
+        self.dm1_command_object = dm1_command_object
+        self.dm2_command_object = dm2_command_object
 
     def apply_shape(self, dm_command_object, dm_num):
         self.log.info("Applying shape to DM " + str(dm_num))
@@ -137,20 +134,7 @@ class BostonDmController(DeformableMirrorController):
         # Update the dm_command class attribute.
         if dm_num == 1:
             self.dm1_command = dm_command
+            self.dm1_command_object = dm_command_object
         else:
             self.dm2_command = dm_command
-
-        # Update the testbed_state.
-        self.__update_dm_state(dm_command_object)
-
-    @staticmethod
-    def __update_dm_state(dm_command_object):
-        if dm_command_object.dm_num == 1:
-            testbed_state.dm1_command_object = dm_command_object
-        if dm_command_object.dm_num == 2:
-            testbed_state.dm2_command_object = dm_command_object
-
-    @staticmethod
-    def __close_dm_controller_testbed_state():
-        testbed_state.dm1_command_object = None
-        testbed_state.dm2_command_object = None
+            self.dm2_command_object = dm_command_object

@@ -3,10 +3,10 @@
 import os
 import signal
 import subprocess
-import  time
+import time
 
-from catkit.hardware import testbed_state
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
+from catkit.hardware.iris_ao.segmented_dm_command import SegmentedDmCommand
 
 from catkit.hardware.iris_ao import util
 
@@ -55,7 +55,7 @@ class IrisAoDmController(DeformableMirrorController):
 
         self.log.info("Opening IrisAO connection")
         # Create class attributes for storing an individual command.
-        self.command = None
+        self.command_object = None
 
         self.mirror_serial = mirror_serial
         self.driver_serial = driver_serial
@@ -103,11 +103,7 @@ class IrisAoDmController(DeformableMirrorController):
         time.sleep(1)
 
         # Initialize the Iris to zeros.
-        zeros = self.zero(return_zeros=True)
-
-        # Store the current dm_command values in class attributes.
-        self.command = zeros
-        self._update_iris_state(self.command)
+        self.zero()
 
         return self.instrument
 
@@ -117,14 +113,12 @@ class IrisAoDmController(DeformableMirrorController):
         :return: If return_zeros=True, return a dictionary of zeros
         """
         zero_list = util.create_zero_list(util.iris_num_segments(self.config_id))
-        zeros = util.create_dict_from_list(zero_list, util.iris_pupil_naming(self.config_id))
-        self.send_data(zeros)
-
-        # Update the testbed state
-        self._update_iris_state(zeros)
+        dm_shape = SegmentedDmCommand(dm_config_id=self.config_id)
+        dm_shape.read_initial_command(zero_list)
+        self.apply_shape(dm_shape)
 
         if return_zeros:
-            return zeros
+            return util.create_dict_from_list(zero_list, util.iris_pupil_naming(self.config_id))
 
     def _close(self):
         """Close connection safely."""
@@ -146,7 +140,6 @@ class IrisAoDmController(DeformableMirrorController):
                 pass
         finally:
             self.instrument = None
-            self._close_iris_controller_testbed_state()
 
     def apply_shape(self, dm_shape, dm_num=1):
         """
@@ -167,19 +160,12 @@ class IrisAoDmController(DeformableMirrorController):
         self.send_data(command)
 
         # Update the dm_command class attribute.
-        self.command = command
-
-        # Update the testbed_state.
-        self._update_iris_state(dm_shape)
+        self.command_object = dm_shape
 
     def apply_shape_to_both(self, dm1_shape=None, dm2_shape=None):
         """Method only used by the BostonDmController"""
         raise NotImplementedError("apply_shape_to_both is not implemented for the Iris AO")
 
-    @staticmethod
-    def _update_iris_state(command_object):
-        testbed_state.iris_command_object = command_object
-
-    @staticmethod
-    def _close_iris_controller_testbed_state():
-        testbed_state.iris_command_object = None
+    @property
+    def command(self):
+        return self.command_object.to_command() if self.command_object is not None else None
