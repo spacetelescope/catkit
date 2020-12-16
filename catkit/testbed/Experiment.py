@@ -6,17 +6,21 @@ import multiprocessing
 import os
 import time
 
-from catkit.hardware.boston.commands import flat_command
-from catkit.hardware.iris_ao import segmented_dm_command
-from catkit.interfaces.Instrument import call_with_correct_args
+import catkit.util
 
-from hicat.config import CONFIG_INI, CONFIG_MODES
-import hicat.util
-import hicat.experiments.modules.iris_ao as iris_module
-from hicat.experiments.SafetyTest import UpsSafetyTest, HumidityTemperatureTest, WeatherWarningTest, SafetyException
-from hicat.hardware import testbed, testbed_state
-from hicat.control.align_lyot import LyotStopAlignment
-from hicat.control.target_acq import MotorMount, TargetAcquisition, TargetCamera
+
+class SafetyTest(ABC):
+    name = None
+    warning = False
+
+    @abstractmethod
+    def check(self):
+        """Implement to return two values: boolean for pass/fail, and a string for status message."""
+
+
+class SafetyException(Exception):
+    def __init__(self, *args):
+        Exception.__init__(self, *args)
 
 
 class Experiment(ABC):
@@ -28,31 +32,39 @@ class Experiment(ABC):
     multiprocessing_start_method = "spawn"
 
     log = logging.getLogger(__name__)
-    interval = CONFIG_INI.getint("safety", "check_interval")
-    list_of_safety_tests = [UpsSafetyTest, HumidityTemperatureTest]#, WeatherWarningTest()]
-    safety_tests =[]
 
     def __del__(self):
         self.clear_cache()
 
-    def __init__(self, output_path=None, suffix=None):
+    def __init__(self, safety_tests, safety_check_interval=60, output_path=None, suffix=None):
         """ Initialize attributes common to all Experiments.
         All child classes should implement their own __init__ and call this via super()
 
-        :param output_path: Output directory to write all files to (or to subdirectories thereof).
-                     For the vast majority of use cases this should be left as None, in which
-                     case it will be auto-generated based on date-time + suffix.
-        :paran suffix: Descriptive string to include as part of the path.
+        Parameters
+        ----------
+        safety_tests : list
+            List of SafetyTest objects.
+        safety_check_interval : int, float, optional:
+            Time interval between calling each SafetyTest.chceck().
+        output_path: str, optional
+            Output directory to write all files to (or to subdirectories thereof).
+             For the vast majority of use cases this should be left as None, in which
+             case it will be auto-generated based on date-time + suffix.
+        suffix : str, optional
+            Descriptive string to include as part of the path.
         """
         # Default is to wait to set the path until the experiment starts (rather than the constructor)
-        # but users can optionally pass in a specifc path if they want to do something different in a
+        # but users can optionally pass in a specific path if they want to do something different in a
         # particular case.
         self.output_path = output_path
         self.suffix = suffix
 
-        if self.safety_tests == []:
-            for test in self.list_of_safety_tests:
-                self.safety_tests.append(test())
+        self.pre_experiment_return = None
+        self.experiment_return = None
+        self.post_experiment_return = None
+
+        self.safety_check_interval = safety_check_interval
+        self.safety_tests = safety_tests.copy()
 
     def pre_experiment(self, *args, **kwargs):
         """ This is called immediately BEFORE self.experiment()."""
@@ -112,7 +124,7 @@ class Experiment(ABC):
                             # Shut down the experiment (but allow context managers to exit properly).
                             errmessage = safety_test.name + " reports unsafe conditions repeatedly. Aborting experiment! Details: {}".format(msg)
                             self.log.critical(errmessage)
-                            hicat.util.soft_kill(experiment_process)
+                            catkit.util.soft_kill(experiment_process)
                             raise SafetyException(errmessage)
 
                     else:
@@ -122,7 +134,7 @@ class Experiment(ABC):
                         safety_test.warning = True
 
                 # Sleep until it is time to check safety again.
-                if not self.__smart_sleep(self.interval, experiment_process):
+                if not self.__smart_sleep(self.safety_check_interval, experiment_process):
                     # Experiment ended before the next check interval, exit the while loop.
                     break
                     self.log.info("Experment ended before check interval; exiting.")
@@ -137,7 +149,7 @@ class Experiment(ABC):
             self.log.exception(safety_exception)
             # Shut down the experiment (but allow context managers to exit properly).
             if experiment_process is not None:
-                hicat.util.soft_kill(experiment_process)
+                catkit.util.soft_kill(experiment_process)
             # must return SafetyException type specifically to signal queue to stop in typical calling scripts
             raise safety_exception
 
@@ -150,18 +162,19 @@ class Experiment(ABC):
         # NOTE: This try/finally IS THE context manager for the device cache and ALL devices.
         try:
             self.init_experiment_log()
-            testbed_state.pre_experiment_return = self.pre_experiment()
-            testbed_state.experiment_return = self.experiment()
-            testbed_state.post_experiment_return = self.post_experiment()
+            self.pre_experiment_return = self.pre_experiment()
+            self.experiment_return = self.experiment()
+            self.post_experiment_return = self.post_experiment()
         except KeyboardInterrupt:
             self.log.warning("Child process: caught ctrl-c, raising exception.")
             raise
         finally:
             self.clear_cache()
 
+    @abstractmethod
     def clear_cache(self):
         """ Injection layer for deleting global caches. """
-        testbed_state.clear()
+        pass
 
     @staticmethod
     def __smart_sleep(interval, process):
@@ -183,123 +196,12 @@ class Experiment(ABC):
                 return True
         return False
 
+    @abstractmethod
     def init_experiment_path(self):
-        """Set up experiment output.
-        Called from start() prior to experiment()
+        """ Set up experiment output. Called from start() prior to experiment(). """
+        pass
 
-        Do not override.
-        """
-
-        if self.suffix is None:
-            self.suffix = str(self.name).replace(" ","_").lower()
-
-        if self.output_path is None:
-            self.output_path = hicat.util.create_data_path(suffix=self.suffix)
-
+    @abstractmethod
     def init_experiment_log(self):
-        """ Initialize log writing.
-        Called from run_experiment() prior to experiment()
-
-        Do not override.
-        """
-
-        hicat.util.setup_hicat_logging(self.output_path, self.suffix)
-
-
-class HicatExperiment(Experiment, ABC):
-    def __init__(self, *args, run_ta=True, align_lyot_stop=True, **kwargs):
-        return call_with_correct_args(super().__init__,
-                                      object=self,
-                                      kwargs_to_assign={"run_ta": run_ta, "align_lyot_stop": align_lyot_stop}, **kwargs)
-
-    def pre_experiment(self, *args, **kwargs):
-        # The device cache should be and needs to be empty.
-        if testbed_state.devices:
-            raise Exception(f"The device cache (testbed_state.devices) is NOT empty and contains the following keys: {testbed_state.devices.keys()}")
-
-        # Instantiate, open connections, and cache all required devices.
-        try:
-            with testbed.laser_source() as laser, \
-                    testbed.motor_controller() as motor_controller, \
-                    testbed.apodizer_picomotor_mount() as apodizer_picomotor_mount, \
-                    testbed.quadcell_picomotor_mount() as quadcell_picomotor_mount, \
-                    testbed.beam_dump() as beam_dump, \
-                    testbed.imaging_camera() as cam, \
-                    testbed.pupil_camera() as pupilcam, \
-                    testbed.zwfs_camera() as zwfscam, \
-                    testbed.temp_sensor(config_id="aux_temperature_sensor") as temp_sensor, \
-                    testbed.target_acquisition_camera() as ta_cam, \
-                    testbed.color_wheel() as color_wheel, \
-                    testbed.nd_wheel() as nd_wheel, \
-                    testbed.iris_ao() as iris_ao, \
-                    testbed.dm_controller() as dm:
-
-                devices = {'dm': dm,
-                           'laser': laser,
-                           'motor_controller': motor_controller,
-                           'beam_dump': beam_dump,
-                           'imaging_camera': cam,
-                           'pupil_camera': pupilcam,
-                           'zwfs_camera': zwfscam,
-                           'temp_sensor': temp_sensor,
-                           'color_wheel': color_wheel,
-                           'nd_wheel': nd_wheel,
-                           'iris_ao': iris_ao}
-
-                # Cache Lyot stop alignment devices in testbed_state.
-                ls_align_devices = {'motor_controller': motor_controller, 'pupil_camera': pupilcam}
-
-                # Cache target-acquisition devices in testbed_state.
-                ta_devices = {"picomotors": {MotorMount.APODIZER: apodizer_picomotor_mount,
-                                             MotorMount.QUAD_CELL: quadcell_picomotor_mount},
-                              "beam_dump": beam_dump,
-                              "cameras": {TargetCamera.SCI: cam,
-                                          TargetCamera.TA: ta_cam}}
-
-                # Add devices to cache.
-                testbed_state.devices.update(devices)
-                testbed_state.devices.update(ls_align_devices, namespace="ls_align_devices")
-                testbed_state.devices.update(ta_devices, namespace="ta_devices")
-                # -----------------
-                # CODE FREE ZONE
-                # -----------------
-        except Exception:
-            # WARNING!!! Adding devices to the cache will persist them beyond the with block thus any exception raised
-            # between the cache set and the end of the with block will result in devices NOT safely closing!
-            # Explicitly close all devices in this eventuality.
-            self.clear_cache()
-            raise
-        # Exit the with block early so as to test persistence sooner rather than later.
-
-        # Flatten DMs before attempting initial target acquisition or Lyot alignment.
-        dm_flat = flat_command(bias=False, flat_map=True)
-        devices["dm"].apply_shape_to_both(dm_flat, copy.deepcopy(dm_flat))
-
-        flat_irisao = iris_module.flat_command()
-        devices["iris_ao"].apply_shape(flat_irisao)
-
-        # Align the Lyot Stop
-        if self.align_lyot_stop:
-            lyot_stop_controller = LyotStopAlignment(ls_align_devices,
-                                                     output_path_root=self.output_path,
-                                                     calculate_pixel_scale=True)
-            lyot_stop_controller.iterative_align_lyot_stop()
-
-        # Run Target Acquisition.
-        with TargetAcquisition(ta_devices,
-                               self.output_path,
-                               use_closed_loop=False,
-                               n_exposures=20,
-                               exposure_period=5,
-                               target_pixel_tolerance={TargetCamera.TA: 2, TargetCamera.SCI: 25}) as ta_controller:
-            testbed_state.cache["ta_controller"] = ta_controller
-
-            # Now setup filter wheels.
-            testbed.move_filter(wavelength=640,
-                                nd="clear_1",
-                                devices={"color_wheel": devices["color_wheel"], "nd_wheel": devices["nd_wheel"]})
-            if self.run_ta:
-                ta_controller.acquire_target(recover_from_coarse_misalignment=True)
-            else:
-                # Plot position of PSF centroid on TA camera.
-                ta_controller.distance_to_target(TargetCamera.TA, check_threshold=False)
+        """ Initialize log writing. Called from run_experiment() prior to experiment(). """
+        pass
