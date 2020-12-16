@@ -2,6 +2,8 @@ import importlib
 import os
 import logging
 import logging.handlers
+import signal
+import time
 from catkit.catkit_types import MetaDataEntry
 
 import numpy as np
@@ -191,3 +193,34 @@ def str2bool(buffer):
         return False
     else:
         raise ValueError(f"Expected case insensitive bool but got '{buffer}'")
+
+
+def soft_kill(process):
+    """
+    Sends a "ctrl-c"-like event to a process to allow context managers to close gracefully. The function will
+    wait until the process closes.  Uses a console ctrl event for windows, and signal.SIGINT for linux/mac.
+    :param process: A multiprocessing.Process object.
+    """
+    log = logging.getLogger()
+    if os.name == "nt":
+        import win32api
+        import win32con
+        try:
+            log.info("Sending ctrl-c event...")
+            win32api.GenerateConsoleCtrlEvent(win32con.CTRL_C_EVENT, 0)
+            while process.is_alive():
+                log.info("Child process is still alive...")
+                time.sleep(1)
+            log.info("Child process softly killed.")
+        except KeyboardInterrupt:
+            log.exception("Main process: caught ctrl-c")
+    else:
+        try:
+            log.info("Sending ctrl-c event...")
+            os.kill(process.pid, signal.SIGINT)
+            while process.is_alive():
+                log.info("Child process is still alive...")
+                time.sleep(1)
+            log.info("Child process softly killed.")
+        except KeyboardInterrupt:
+            log.exception("Main process: caught ctrl-c")
