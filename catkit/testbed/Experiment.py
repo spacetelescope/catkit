@@ -7,6 +7,7 @@ import os
 import time
 
 import catkit.util
+from catkit.testbed.caching import DeviceCache
 
 
 class SafetyTest(ABC):
@@ -21,6 +22,45 @@ class SafetyTest(ABC):
 class SafetyException(Exception):
     def __init__(self, *args):
         Exception.__init__(self, *args)
+
+
+class RestrictedDeviceCache(DeviceCache):
+    """ Restricted version of catkit.testbed.caching.DeviceCache that allows linking but nothing else until unlocked. """
+
+    def __init__(self, *args, **kwargs):
+        super().__setattr__("__lock", False)  # Unlock such that super().__init__() has access.
+        super().__init__(*args, **kwargs)
+        super().__setattr__("__lock", True)
+        super().__setattr__("__unrestricted", ("aliases", "Callback", "callbacks", "link"))
+
+    def __getattribute__(self, item):
+        if (super().__getattribute__("__lock") and
+                item not in super().__getattribute__("__unrestricted")):
+            raise NameError(f"Access to '{item}' is restricted The device cache can only be used from a running experiment.")
+        return super().__getattribute__(item)
+
+    def __setattr__(self, item, value):
+        if (super().__getattribute__("__lock") and
+                item not in super().__getattribute__("__unrestricted")):
+            raise NameError(f"Access to '{item}' is restricted! The device cache can only be used from a running experiment.")
+        return super().__setattr__(item, value)
+
+    def __enter__(self):
+        super().__setattr__("__lock", False)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.clear()
+        super().__setattr__("__lock", True)
+
+    def __del__(self):
+        super().__setattr__("__lock", False)
+        self.clear()
+
+
+# Restrict the device cache such that only linking is allowed. Once run_experiment() is called this gets swapped
+# out for the unrestricted version that is context manged by Experiment.
+devices = RestrictedDeviceCache()
 
 
 class Experiment(ABC):
@@ -43,7 +83,7 @@ class Experiment(ABC):
         Parameters
         ----------
         safety_tests : list
-            List of SafetyTest objects.
+            List of SafetyTest class defs, not already instantiated objects (nothing else should own these).
         safety_check_interval : int, float, optional:
             Time interval between calling each SafetyTest.chceck().
         output_path: str, optional
@@ -64,7 +104,9 @@ class Experiment(ABC):
         self.post_experiment_return = None
 
         self.safety_check_interval = safety_check_interval
-        self.safety_tests = safety_tests.copy()
+        self.safety_tests = []
+        for test in safety_tests:
+            self.safety_tests.append(test())
 
     def pre_experiment(self, *args, **kwargs):
         """ This is called immediately BEFORE self.experiment()."""
@@ -159,12 +201,28 @@ class Experiment(ABC):
         Do not override.
         """
 
-        # NOTE: This try/finally IS THE context manager for the device cache and ALL devices.
+        # NOTE: This try/finally IS THE context manager for any cache cleared by self.clear_cache().
         try:
             self.init_experiment_log()
-            self.pre_experiment_return = self.pre_experiment()
-            self.experiment_return = self.experiment()
-            self.post_experiment_return = self.post_experiment()
+
+            # De-restrict device cache access.
+            global devices
+            with devices:
+                # Allow pre_experiment() to cache some devices to test for persistence (dev assertions only).
+                self._persistence_checker = {}
+
+                # Run pre-experiment code, e.g., open devices, run calibrations, etc.
+                self.pre_experiment_return = self.pre_experiment()
+
+                # Assert some devices remained opened.
+                for device in self._persistence_checker.values():
+                    assert device.instrument  # Explicit test that instrument remained open.
+
+                # Run the core experiment.
+                self.experiment_return = self.experiment()
+
+                # Run any post-experiment analysis, etc.
+                self.post_experiment_return = self.post_experiment()
         except KeyboardInterrupt:
             self.log.warning("Child process: caught ctrl-c, raising exception.")
             raise
@@ -173,7 +231,7 @@ class Experiment(ABC):
 
     @abstractmethod
     def clear_cache(self):
-        """ Injection layer for deleting global caches. """
+        """ Injection layer for deleting any global caches. """
         pass
 
     @staticmethod
