@@ -52,19 +52,30 @@ class DeviceCache(UserCache):
     class OwnedContext:
         """ Container to "own" cache entries such that they can't be closed by external with stmnts. """
 
+        # NOTE: A trivial container will not suffice since it will cause isinstance() checks on OwnedContext objects
+        # returned from DeviceCache to fail. Dynamic inheritance and ugly __getattribute__() switching is required.
+
+        def __new__(cls, device, *args, **kwargs):
+            class ChildOwnedContext(cls, device.__class__):
+                pass
+            return super().__new__(ChildOwnedContext, *args, **kwargs)
+
         def __del__(self):
-            self.un_own()
+            super().__getattribute__("un_own")()
 
         def __init__(self, device):
             object.__setattr__(self, "_owned_obj", device)
             # Open.
-            self._owned_obj.__enter__()
+            super().__getattribute__("_owned_obj").__enter__()
 
-        def __getattr__(self, name):
-            return self._owned_obj.__getattribute__(name)
+        def __getattribute__(self, item):
+            if item in ("__del__", "__init__", "__enter__", "__exit__", "_owned_obj", "un_own"):
+                return super().__getattribute__(item)
+            else:
+                return super().__getattribute__("_owned_obj").__getattribute__(item)
 
         def __setattr__(self, name, value):
-            return object.__setattr__(self._owned_obj, name, value)
+            return super().__setattr__(object.__getattribute__("_owned_obj"), name, value)
 
         def __enter__(self):
             return self
@@ -73,7 +84,7 @@ class DeviceCache(UserCache):
             pass
 
         def un_own(self):
-            obj = self._owned_obj
+            obj = super().__getattribute__("_owned_obj")
             if obj is None or obj.instrument is None:
                 return
             set_keep_alive(obj, False)
