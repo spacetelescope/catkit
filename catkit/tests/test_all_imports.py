@@ -26,11 +26,12 @@ for item in all_files:
 exclude_exceptions_containing = ["zwoas",
                                  "bmc",
                                  "TSP01",
-                                 "libftd2xx"]
+                                 "libftd2xx",
+                                 "test_testbed"]
 
 
 @pytest.mark.parametrize("to_import", all_imports)
-def test_imports(to_import):
+def test_imports(to_import, derestricted_device_cache):
     if any(exclusion in str(to_import) for exclusion in exclude_exceptions_containing):
         return
 

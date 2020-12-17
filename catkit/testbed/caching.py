@@ -143,7 +143,7 @@ class DeviceCache(UserCache):
     def load(self, key, *args, **kwargs):
         callback = self.callbacks.get(key)
         if callback is None:
-            raise KeyError(f"The cache key '{key}' was either never decorated with auto_open() or adequate aliases weren't provided.")
+            raise KeyError(f"The cache key '{key}' was either never decorated with link() or adequate aliases weren't provided.")
 
         # It's possible that the key passed is an alias rather than the root key, so map back to key_root.
         # This ensures that orphaned aliases don't exits without root_keys in self.data.
