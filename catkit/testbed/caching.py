@@ -140,6 +140,14 @@ class DeviceCache(UserCache):
         else:
             self.data[key] = self.OwnedContext(value)
 
+    def open_all(self):
+        if not self.callbacks:
+            return
+
+        for callback in self.callbacks.values():
+            self.__getitem__(callback.root_key)
+        return self
+
     def load(self, key, *args, **kwargs):
         callback = self.callbacks.get(key)
         if callback is None:
