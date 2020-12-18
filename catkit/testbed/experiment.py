@@ -226,6 +226,9 @@ class Experiment(ABC):
         except KeyboardInterrupt:
             self.log.warning("Child process: caught ctrl-c, raising exception.")
             raise
+        except Exception as error:
+            self.log.exception(error)
+            raise
         finally:
             self.clear_cache()
 
