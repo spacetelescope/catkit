@@ -1,14 +1,13 @@
-import abc
+from abc import abstractmethod, ABC
 from collections import namedtuple, UserDict
-from collections.abc import Iterable
-import copy
+from enum import Enum
 import warnings
 
 from catkit.interfaces.Instrument import Instrument
 
 
-class UserCache(UserDict, abc.ABC):
-    @abc.abstractmethod
+class UserCache(UserDict, ABC):
+    @abstractmethod
     def load(self, key, *args, **kwargs):
         """ Func to load non-existent cache entries. """
 
@@ -212,3 +211,65 @@ class DeviceCache(UserCache):
         self.aliases.clear()
         #self.callbacks.clear()  # Don't clear this, it's populated at import time.
         return super().clear()
+
+
+class DeviceCacheEnum(Enum):
+    """ Enum API to DeviceCache. """
+
+    def __init__(self, description, config_id):
+        self.description = description
+        self.config_id = config_id
+
+    @classmethod
+    def _missing_(cls, value):
+        """ Allow lookup by config_id, such that DeviceCacheEnum(config_id) returns its matching member. """
+        for item in cls:
+            if value == item.config_id:
+                return item
+
+    def __getattr__(self, item):
+        global devices
+        """ Allow DeviceCacheEnum.member.attribute -> catkit.testbed.devices[member].attribute """
+        config_id = object.__getattribute__(self, "config_id")
+        member = self.__class__(config_id)
+        device = devices[member]
+        return device.__getattribute__(item)
+
+
+class RestrictedDeviceCache(DeviceCache):
+    """ Restricted version of catkit.testbed.caching.DeviceCache that allows linking but nothing else until unlocked. """
+
+    def __init__(self, *args, **kwargs):
+        super().__setattr__("__lock", False)  # Unlock such that super().__init__() has access.
+        super().__init__(*args, **kwargs)
+        super().__setattr__("__lock", True)
+        super().__setattr__("__unrestricted", ("aliases", "Callback", "callbacks", "link"))
+
+    def __getattribute__(self, item):
+        if (super().__getattribute__("__lock") and
+                item not in super().__getattribute__("__unrestricted")):
+            raise NameError(f"Access to '{item}' is restricted The device cache can only be used from a running experiment.")
+        return super().__getattribute__(item)
+
+    def __setattr__(self, item, value):
+        if (super().__getattribute__("__lock") and
+                item not in super().__getattribute__("__unrestricted")):
+            raise NameError(f"Access to '{item}' is restricted! The device cache can only be used from a running experiment.")
+        return super().__setattr__(item, value)
+
+    def __enter__(self):
+        super().__setattr__("__lock", False)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.clear()
+        super().__setattr__("__lock", True)
+
+    def __del__(self):
+        super().__setattr__("__lock", False)
+        self.clear()
+
+
+# Restrict the device cache such that only linking is allowed. Once run_experiment() is called this gets swapped
+# out for the unrestricted version that is context manged by Experiment.
+devices = RestrictedDeviceCache()

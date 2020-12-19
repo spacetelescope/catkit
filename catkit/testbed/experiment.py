@@ -1,13 +1,10 @@
 from abc import ABC, abstractmethod
-import copy
-import inspect
 import logging
 import multiprocessing
-import os
 import time
 
 import catkit.util
-from catkit.testbed.caching import DeviceCache
+from catkit.testbed import devices
 
 
 class SafetyTest(ABC):
@@ -22,45 +19,6 @@ class SafetyTest(ABC):
 class SafetyException(Exception):
     def __init__(self, *args):
         Exception.__init__(self, *args)
-
-
-class RestrictedDeviceCache(DeviceCache):
-    """ Restricted version of catkit.testbed.caching.DeviceCache that allows linking but nothing else until unlocked. """
-
-    def __init__(self, *args, **kwargs):
-        super().__setattr__("__lock", False)  # Unlock such that super().__init__() has access.
-        super().__init__(*args, **kwargs)
-        super().__setattr__("__lock", True)
-        super().__setattr__("__unrestricted", ("aliases", "Callback", "callbacks", "link"))
-
-    def __getattribute__(self, item):
-        if (super().__getattribute__("__lock") and
-                item not in super().__getattribute__("__unrestricted")):
-            raise NameError(f"Access to '{item}' is restricted The device cache can only be used from a running experiment.")
-        return super().__getattribute__(item)
-
-    def __setattr__(self, item, value):
-        if (super().__getattribute__("__lock") and
-                item not in super().__getattribute__("__unrestricted")):
-            raise NameError(f"Access to '{item}' is restricted! The device cache can only be used from a running experiment.")
-        return super().__setattr__(item, value)
-
-    def __enter__(self):
-        super().__setattr__("__lock", False)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.clear()
-        super().__setattr__("__lock", True)
-
-    def __del__(self):
-        super().__setattr__("__lock", False)
-        self.clear()
-
-
-# Restrict the device cache such that only linking is allowed. Once run_experiment() is called this gets swapped
-# out for the unrestricted version that is context manged by Experiment.
-devices = RestrictedDeviceCache()
 
 
 class Experiment(ABC):

@@ -2,16 +2,16 @@ import gc
 
 import pytest
 
-import catkit.testbed
+from catkit.testbed import devices
 
 
 @pytest.fixture(scope="function", autouse=False)
 def derestricted_device_cache():
     # Setup.
-    with catkit.testbed.devices:
+    with devices:
         yield
 
     with pytest.raises(NameError):
-        catkit.testbed.devices["npoint_a"]
+        devices["npoint_a"]
     # Teardown.
     gc.collect()
