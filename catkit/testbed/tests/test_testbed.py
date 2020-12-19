@@ -113,3 +113,16 @@ def test_clear(derestricted_device_cache):
 def test_restriction():
     with pytest.raises(NameError):
         catkit.testbed.devices["npoint_a"]
+
+
+def test_DeviceCache():
+    class Dev(catkit.testbed.DeviceCacheEnum):
+        NPOINT_C = ("npoint a for test", "dummy_config_id")
+
+    @catkit.testbed.devices.link(key=Dev.NPOINT_C)
+    def npoint_c():
+        return SimNPointLC400(config_id="npoint_tiptilt_lc_400", com_id="dummy")
+
+    with catkit.testbed.devices:
+        device_c = Dev.NPOINT_C
+        assert device_c.instrument

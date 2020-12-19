@@ -1,3 +1,2 @@
-from catkit.testbed.experiment import devices
-from catkit.testbed.experiment import Experiment
-from catkit.testbed.experiment import SafetyException
+from catkit.testbed.caching import devices, DeviceCacheEnum
+from catkit.testbed.experiment import Experiment, SafetyException
