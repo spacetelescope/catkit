@@ -359,7 +359,7 @@ class SegmentedDmCommand(object):
         return metadata
 
     def display(self, display_wavefront=True, display_psf=True, psf_rotation_angle=0.,
-                save_figures=True, figure_name_prefix='', out_dir=''):
+                save_figures=True, figure_name_prefix='', out_dir='', **kwargs):
         """
         Display either the deployed mirror state ("wavefront") and/or the PSF created
         by this mirror state.
@@ -390,10 +390,10 @@ class SegmentedDmCommand(object):
         if figure_name_prefix:
             figure_name_prefix = f'{figure_name_prefix}_'
         if display_wavefront:
-            self.plot_wavefront(figure_name_prefix, out_dir, save_figure=save_figures)
+            self.plot_wavefront(figure_name_prefix, out_dir, save_figure=save_figures, **kwargs)
         if display_psf:
             self.plot_psf(rotation_angle=psf_rotation_angle, figure_name_prefix=figure_name_prefix, out_dir=out_dir,
-                          save_figure=save_figures)
+                          save_figure=save_figures, **kwargs)
 
     def plot_wavefront(self, figure_name_prefix, out_dir, vmax=0.5e-6*u.meter, save_figure=True):
         """
@@ -416,8 +416,8 @@ class SegmentedDmCommand(object):
             plt.show()
 
     @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
-    def plot_psf(self, wavelength=640*u.nm, figure_name_prefix=None, rotation_angle=0,  out_dir=None, vmin=10e-8,
-                 pixelscale=0.010, instrument_fov=1.0,
+    def plot_psf(self, wavelength=640*u.nm, figure_name_prefix=None, rotation_angle=0,
+                 out_dir=None, vmin=10e-8, pixelscale=0.010, instrument_fov=1.0,
                  vmax=10e-2, save_figure=True):
         """
         Plot the simulated PSF based on the mirror state. Optionally save figure to a file as well
@@ -598,7 +598,7 @@ class PoppySegmentedDmCommand(SegmentedDmCommand):
     @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
     def __init__(self, global_coefficients, dm_config_id, rotation=0, **kwargs):
         # Initialize parent class
-        super().__init__(dm_config_id,rotation=rotation, **kwargs)
+        super().__init__(dm_config_id, rotation=rotation, **kwargs)
 
         self.radius = (self.aperture.flat_to_flat/2).to(u.m)
         self.num_terms = (self.aperture.number_segments_in_pupil) * 3
