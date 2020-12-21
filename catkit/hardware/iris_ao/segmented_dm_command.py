@@ -390,7 +390,7 @@ class SegmentedDmCommand(object):
         if figure_name_prefix:
             figure_name_prefix = f'{figure_name_prefix}_'
         if display_wavefront:
-            self.plot_wavefront(figure_name_prefix, out_dir, save_figure=save_figures, **kwargs)
+            self.plot_wavefront(figure_name_prefix, out_dir, save_figure=save_figures)
         if display_psf:
             self.plot_psf(rotation_angle=psf_rotation_angle, figure_name_prefix=figure_name_prefix, out_dir=out_dir,
                           save_figure=save_figures, **kwargs)
@@ -659,7 +659,7 @@ class PoppySegmentedDmCommand(SegmentedDmCommand):
                  in units of [m] for piston, and [rad] for tip and tilt
         """
         coeff_list = poppy.zernike.opd_expand_segments(wavefront, nterms=self.num_terms,
-                                                        basis=self.basis)
+                                                       basis=self.basis)
         coeff_list = np.reshape(coeff_list, (self.aperture.number_segments_in_pupil, 3))
         return coeff_list
 
