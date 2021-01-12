@@ -195,7 +195,9 @@ class NewportPicomotorController(MotorController2):
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
         
         if float(set_value) != value:
-            self.log.error(f'Something is wrong, {set_value} != {value}') 
+            error_msg = f"Newport Pico Motor failed to move as {set_value} != {value}. Try increasing sleep duration."
+            self.log.error(error_msg)
+            raise RuntimeError(error_msg)
          
         self.log.info(f'Command sent. Action : {cmd_key}. Axis : {axis}. Value : {value}')
 
