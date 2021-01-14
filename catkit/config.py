@@ -36,7 +36,7 @@ def load_config_ini(config_filename):
     global CONFIG_INI
 
     # Read config file once here.
-    config = configparser.ConfigParser()
+    config = configparser.ConfigParser(allow_no_value=True)
     config._interpolation = configparser.ExtendedInterpolation()
     config.read(config_filename)
 
