@@ -104,6 +104,7 @@ class DeviceCache(UserCache):
         self.callbacks = {}
 
     def __enter__(self):
+        self.clear()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -259,10 +260,10 @@ class RestrictedDeviceCache(DeviceCache):
 
     def __enter__(self):
         super().__setattr__("__lock", False)
-        return self
+        return super().__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.clear()
+        super().__exit__(exc_type, exc_val, exc_tb)
         super().__setattr__("__lock", True)
 
     def __del__(self):
