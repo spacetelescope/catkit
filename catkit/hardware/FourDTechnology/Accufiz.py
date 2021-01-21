@@ -1,12 +1,16 @@
 import h5py
-import time
-import requests
-import os
 import math
-import numpy as np
+import os
+import requests
+import tempfile
+import time
+import shutil
+import uuid
+
 from astropy.io import fits
-from scipy import ndimage
 from glob import glob
+import numpy as np
+from scipy import ndimage
 
 from catkit.interfaces.FizeauInterferometer import FizeauInterferometer
 import catkit.util
@@ -28,12 +32,14 @@ class Accufiz(FizeauInterferometer):
         self.ip = CONFIG_INI.get(self.config_id, "ip")
         self.timeout = CONFIG_INI.getint(self.config_id, "timeout")
         self.html_prefix = f"http://{self.ip}/WebService4D/WebService4D.asmx"
-        self.local_path = local_path
-        self.server_path = server_path
         self.mask = mask
         self.post_save_sleep = post_save_sleep
 
-    def _open(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.local_path = os.path.join(local_path, self.temp_dir.name)
+        self.server_path = os.path.join(server_path, self.temp_dir.name)
+
+def _open(self):
         # Set the 4D timeout.
         self.set_timeout_string = f"{self.html_prefix}/SetTimeout?timeOut={self.timeout}"
         self.instrument_lib.get(set_timeout_string)
@@ -53,7 +59,7 @@ class Accufiz(FizeauInterferometer):
 
     def take_measurement(self,
                          num_frames=2,
-                         filename=None,
+                         filepath=None,
                          rotate=0,
                          fliplr=False,
                          exposure_set=""):
@@ -63,9 +69,7 @@ class Accufiz(FizeauInterferometer):
         if "success" not in measurement_resp.text:
             raise RuntimeError(f"{self.config_id}: Failed to take data - {measurement_resp.text}.")
 
-        if filename is None:
-            filename = "4d_measurement"
-
+        filename = str(uuid.uuid4())
         server_file_path = os.path.join(self.server_path, filename)
         local_file_path = os.path.join(self.local_path, filename)
 
@@ -74,11 +78,6 @@ class Accufiz(FizeauInterferometer):
         #  they disappear
         server_file_path = server_file_path.replace('\\', '/')
         server_file_path = server_file_path.replace('/', '\\\\')
-
-        # Create dir.
-        local_path_root = os.path.dirname(local_file_path)
-        if not os.path.exists(local_path_root):
-            os.makedirs(local_path_root)
 
         # Send request to save data.
         _resp = self.instrument_lib.post(f"{self.html_prefix}/SaveMeasurement", data={"fileName": server_file_path})
@@ -89,7 +88,12 @@ class Accufiz(FizeauInterferometer):
 
         self.log.info(f"{self.config_id}: Succeeded to save measurement data to '{local_file_path}'")
 
-        return self.convert_h5_to_fits(local_file_path, rotate, fliplr)
+        fits_local_file_path, fits_hdu = self.convert_h5_to_fits(local_file_path, rotate, fliplr)
+
+        if filepath:
+            shutil.copyfile(fits_local_file_path, filepath)
+
+        return fits_hdu
 
     @staticmethod
     def __get_mask_path(mask):
@@ -124,4 +128,4 @@ class Accufiz(FizeauInterferometer):
         image = image * wavelength
 
         fits.PrimaryHDU(image).writeto(fits_filepath, overwrite=True)
-        return fits_filepath
+        return fits_filepath, fits_hdu
