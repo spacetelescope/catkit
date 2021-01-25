@@ -38,9 +38,9 @@ class ThorlabsFW102C(FilterWheel):
         self.instrument.close()
 
     def get_position(self):
-        out = self.instrument.write("pos?")
+        _bytes_written = self.instrument.write("pos?")
 
-        if out[1] == pyvisa.constants.StatusCode.success:
+        if self.instrument.last_status is pyvisa.constants.StatusCode.success:
 
             # First read the echo to clear the buffer.
             self.instrument.read()
@@ -48,18 +48,18 @@ class ThorlabsFW102C(FilterWheel):
             # Now read the filter position, and convert to an integer.
             return int(self.instrument.read())
         else:
-            raise Exception("Filter wheel " + self.config_id + " returned an unexpected response: " + out[1])
+            raise Exception(f"Filter wheel '{self.config_id}' returned an unexpected response: '{self.instrument.last_status}'")
 
     def set_position(self, new_position):
         command = "pos=" + str(new_position)
-        out = self.instrument.write(command)
+        _bytes_written = self.instrument.write(command)  # bytes_written := len(command) + 1 due to '\r'.
 
-        if out[1] == pyvisa.constants.StatusCode.success:
+        if self.instrument.last_status is pyvisa.constants.StatusCode.success:
             self.instrument.read()
             # Wait for wheel to move. Fairly arbitrary 3 s delay...
             time.sleep(3)
         else:
-            raise Exception("Filter wheel " + self.config_id + " returned an unexpected response: " + out[1])
+            raise Exception(f"Filter wheel '{self.config_id}' returned an unexpected response: '{self.instrument.last_status}'")
 
     def ask(self, write_string):
         self.instrument.write(write_string)

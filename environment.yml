@@ -22,7 +22,7 @@ dependencies:
   - pysnmp
   - pytest
   - python=3.7.6
-  - conda-forge::pyvisa
+  - conda-forge::pyvisa>=1.10
   - conda-forge::pyvisa-py
   - requests
   - scipy
