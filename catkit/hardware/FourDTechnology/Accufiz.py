@@ -21,19 +21,21 @@ class Accufiz(FizeauInterferometer):
 
     instrument_lib = requests
 
-    def initialize(self, local_path, server_path, mask="dm2_detector.mask", post_save_sleep=1):
+    def initialize(self, local_path, server_path, mask="dm2_detector.mask", post_save_sleep=1, file_mode=True):
         """
 
         :param local_path: str, The local path accessible from Python.
         :param server_path: str, The path accessible from the 4D server.
         :param mask: str, ?
         :param post_save_sleep: int, float, Seconds to sleep between saving and checking for success.
+        :param file_mode: bool, whether to save images to disk.
         """
         self.ip = CONFIG_INI.get(self.config_id, "ip")
         self.timeout = CONFIG_INI.getint(self.config_id, "timeout")
         self.html_prefix = f"http://{self.ip}/WebService4D/WebService4D.asmx"
         self.mask = mask
         self.post_save_sleep = post_save_sleep
+        self.file_mode = file_mode
 
         self.temp_dir = tempfile.TemporaryDirectory()
         self.local_path = os.path.join(local_path, self.temp_dir.name)
@@ -90,7 +92,9 @@ def _open(self):
 
         fits_local_file_path, fits_hdu = self.convert_h5_to_fits(local_file_path, rotate, fliplr)
 
-        if filepath:
+        if self.file_mode:
+            if not filepath:
+                raise ValueError("A filepath is required to write data to disk.")
             shutil.copyfile(fits_local_file_path, filepath)
 
         return fits_hdu
