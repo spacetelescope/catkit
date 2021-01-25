@@ -22,8 +22,8 @@ dependencies:
   - pysnmp
   - pytest
   - python=3.7.6
-  - pyvisa
-  - pyvisa-py
+  - conda-forge::pyvisa
+  - conda-forge::pyvisa-py
   - requests
   - scipy
   - sphinx
