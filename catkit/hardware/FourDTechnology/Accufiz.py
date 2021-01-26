@@ -1,117 +1,124 @@
 import h5py
-import time
-import requests
-import os
 import math
-import numpy as np
+import os
+import requests
+import tempfile
+import time
+import shutil
+import uuid
+
 from astropy.io import fits
-from scipy import ndimage
 from glob import glob
+import numpy as np
+from scipy import ndimage
 
 from catkit.interfaces.FizeauInterferometer import FizeauInterferometer
 import catkit.util
-from catkit.config import CONFIG_INI
 
 
 class Accufiz(FizeauInterferometer):
 
-    def initialize(self, mask="dm2_detector.mask", *args, **kwargs):
-        """Opens connection with interferometer and returns the camera manufacturer specific object."""
-        orig = time.time()
-        ip = CONFIG_INI.get(self.config_id, "ip")
-        timeout = CONFIG_INI.getint(self.config_id, "timeout")
+    instrument_lib = requests
 
+    def initialize(self, ip, local_path, server_path, timeout=60, mask="dm2_detector.mask", post_save_sleep=1,
+                   file_mode=True, calibration_data_package=""):
+        """
+        :param ip: str, IP of 4D machine.
+        :param local_path: str, The local path accessible from Python.
+        :param server_path: str, The path accessible from the 4D server.
+        :param: timeout: int, Timeout for communicating with 4D (seconds).
+        :param mask: str, ?
+        :param post_save_sleep: int, float, Seconds to sleep between saving and checking for success.
+        :param file_mode: bool, whether to save images to disk.
+        """
+        self.ip = ip
+        self.timeout = timeout
+        self.html_prefix = f"http://{self.ip}/WebService4D/WebService4D.asmx"
+        self.mask = mask
+        self.post_save_sleep = post_save_sleep
+        self.file_mode = file_mode
+        self.calibration_data_package = calibration_data_package
+
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.local_path = os.path.join(local_path, self.temp_dir.name)
+        self.server_path = os.path.join(server_path, self.temp_dir.name)
+
+    def _open(self):
         # Set the 4D timeout.
-        set_timeout_string = "http://{}/WebService4D/WebService4D.asmx/SetTimeout?timeOut={}".format(ip, timeout)
-        requests.get(set_timeout_string)
+        set_timeout_string = f"{self.html_prefix}/SetTimeout?timeOut={self.timeout}"
+        self.instrument_lib.get(set_timeout_string)
 
         # Set the Mask. This mask has to be local to the 4D computer in this directory.
-        # filemask = os.path.join("c:\\4Sight_masks", mask)
+        # filemask = os.path.join("c:\\4Sight_masks", self.mask)
         # typeofmask = "Detector"
         # parammask = {"maskType": typeofmask, "fileName": filemask}
         # set_mask_string = "http://{}/WebService4D/WebService4D.asmx/SetMask".format(ip)
         # resmask = requests.post(set_mask_string, data=parammask)
 
-    def close(self):
+        return True  # We're "open".
+
+    def _close(self):
         """Close interferometer connection?"""
+        pass
 
     def take_measurement(self,
-                         path,
                          num_frames=2,
-                         filename=None,
+                         filepath=None,
                          rotate=0,
                          fliplr=False,
                          exposure_set=""):
 
-        if path is None:
-           raise ValueError("Path must be defined.")
+        # Send request to take data.
+        measurement_resp = self.instrument_lib.post(f"{self.html_prefix}/AverageMeasure", data={"count": int(num_frames)})
+        if "success" not in measurement_resp.text:
+            raise RuntimeError(f"{self.config_id}: Failed to take data - {measurement_resp.text}.")
 
-        if filename is None:
-            filename = "4d_measurement"
+        filename = str(uuid.uuid4())
+        server_file_path = os.path.join(self.server_path, filename)
+        local_file_path = os.path.join(self.local_path, filename)
 
-        """Takes exposures and should be able to save fits and simply return the image data."""
-        ip = CONFIG_INI.get(self.config_id, "ip")
-        parammeas = {"count": int(num_frames)}
+        #  This line is here because when sent through webservice slashes tend
+        #  to disappear. If we sent in parameter a path with only one slash,
+        #  they disappear
+        server_file_path = server_file_path.replace('\\', '/')
+        server_file_path = server_file_path.replace('/', '\\\\')
 
-        try_counter = 0
-        tries = 10
-        while try_counter < tries:
-            measres = requests.post('http://{}/WebService4D/WebService4D.asmx/AverageMeasure'.format(ip), data=parammeas)
+        # Send request to save data.
+        _resp = self.instrument_lib.post(f"{self.html_prefix}/SaveMeasurement", data={"fileName": server_file_path})
+        time.sleep(self.post_save_sleep)
 
-            pathfile = os.path.join(path, filename)
+        if not glob(f"{local_file_path}.h5"):
+            raise RuntimeError(f"{self.config_id}: Failed to save measurement data to '{local_file_path}'.")
 
-            #  This line is here because when sent through webservice slashes tend
-            #  to disappear. If we sent in parameter a path with only one slash,
-            #  they disappear
-            pathfile = pathfile.replace('\\',
-                                        '/')
+        self.log.info(f"{self.config_id}: Succeeded to save measurement data to '{local_file_path}'")
 
-            pathfile = pathfile.replace('/',
-                                        '\\\\')
+        fits_local_file_path, fits_hdu = self.convert_h5_to_fits(local_file_path, rotate, fliplr)
 
-            paramsave = {"fileName": pathfile}
+        if self.file_mode:
+            if not filepath:
+                raise ValueError("A filepath is required to write data to disk.")
+            shutil.copyfile(fits_local_file_path, filepath)
 
-            if 'success' in measres.text:
-                if not os.path.exists(path):
-                    os.makedirs(path)
-                r = requests.post("http://{}/WebService4D/WebService4D.asmx/SaveMeasurement".format(ip), data=paramsave)
-                time.sleep(1)
-                if glob(pathfile + '.h5'):
-                    print('SUCCESS IN SAVING ' + pathfile)
-                    return self.__convert_h5_to_fits(path, pathfile, rotate, fliplr)
-                else:
-                    try_counter += 1
-                    print("FAIL IN SAVING MEASUREMENT " + pathfile + ".h5")
-                    if try_counter < tries:
-                        print("Trying again..")
-            else:
-                try_counter += 1
-                print("FAIL IN MEASUREMENT " + pathfile + ".h5")
-                print(measres.text)
-                if try_counter < tries:
-                    print("Trying again..")
+        return fits_hdu
 
-
-    @staticmethod
-    def __get_mask_path(mask):
-        calibration_data_package = CONFIG_INI.get("optics_lab", "calibration_data_package")
+    def __get_mask_path(self, mask):
+        calibration_data_package = self.calibration_data_package
         calibration_data_path = os.path.join(catkit.util.find_package_location(calibration_data_package),
                                              "hardware",
                                              "FourDTechnology")
         return os.path.join(calibration_data_path, mask)
 
     @staticmethod
-    def __convert_h5_to_fits(path, file, rotate, fliplr):
-        os.chdir(path)
+    def convert_h5_to_fits(filepath, rotate, fliplr, wavelength=632.8):
 
-        file = file if file.endswith(".h5") else file + ".h5"
-        pathfile = file
-        pathdifits = file[:-3] + '.fits'
+        filepath = filepath if filepath.endswith(".h5") else f"{filepath}.h5"
 
-        maskinh5 = np.array(h5py.File(pathfile, 'r').get('measurement0').get('Detectormask'))
-        image0 = np.array(h5py.File(pathfile, 'r').get('measurement0').get('genraw').get('data')) * maskinh5
+        fits_filepath = f"{os.path.splitext(filepath)[0]}.fits"
 
-        fits.PrimaryHDU(maskinh5).writeto(pathdifits, overwrite=True)
+        maskinh5 = np.array(h5py.File(filepath, 'r').get('measurement0').get('Detectormask'))
+        image0 = np.array(h5py.File(filepath, 'r').get('measurement0').get('genraw').get('data')) * maskinh5
+
+        fits.PrimaryHDU(maskinh5).writeto(fits_filepath, overwrite=True)
 
         radiusmask = np.int(np.sqrt(np.sum(maskinh5) / math.pi))
         center = ndimage.measurements.center_of_mass(maskinh5)
@@ -122,8 +129,9 @@ class Accufiz(FizeauInterferometer):
         # Apply the rotation and flips.
         image = catkit.util.rotate_and_flip_image(image, rotate, fliplr)
 
-        # Convert waves to nanometers (wavelength of 632.8).
-        image = image * 632.8
+        # Convert waves to nanometers.
+        image = image * wavelength
 
-        fits.PrimaryHDU(image).writeto(pathdifits, overwrite=True)
-        return pathdifits
+        fits_hdu = fits.PrimaryHDU(image)
+        fits_hdu.writeto(fits_filepath, overwrite=True)
+        return fits_filepath, fits_hdu
