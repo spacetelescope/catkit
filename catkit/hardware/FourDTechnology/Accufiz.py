@@ -14,24 +14,24 @@ from scipy import ndimage
 
 from catkit.interfaces.FizeauInterferometer import FizeauInterferometer
 import catkit.util
-from catkit.config import CONFIG_INI
 
 
 class Accufiz(FizeauInterferometer):
 
     instrument_lib = requests
 
-    def initialize(self, local_path, server_path, mask="dm2_detector.mask", post_save_sleep=1, file_mode=True):
+    def initialize(self, ip, local_path, server_path, timeout=60, mask="dm2_detector.mask", post_save_sleep=1, file_mode=True):
         """
-
+        :param ip: str, IP of 4D machine.
         :param local_path: str, The local path accessible from Python.
         :param server_path: str, The path accessible from the 4D server.
+        :param: timeout: int, Timeout for communicating with 4D (seconds).
         :param mask: str, ?
         :param post_save_sleep: int, float, Seconds to sleep between saving and checking for success.
         :param file_mode: bool, whether to save images to disk.
         """
-        self.ip = CONFIG_INI.get(self.config_id, "ip")
-        self.timeout = CONFIG_INI.getint(self.config_id, "timeout")
+        self.ip = ip
+        self.timeout = timeout
         self.html_prefix = f"http://{self.ip}/WebService4D/WebService4D.asmx"
         self.mask = mask
         self.post_save_sleep = post_save_sleep
