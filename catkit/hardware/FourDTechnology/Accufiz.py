@@ -41,9 +41,9 @@ class Accufiz(FizeauInterferometer):
         self.local_path = os.path.join(local_path, self.temp_dir.name)
         self.server_path = os.path.join(server_path, self.temp_dir.name)
 
-def _open(self):
+    def _open(self):
         # Set the 4D timeout.
-        self.set_timeout_string = f"{self.html_prefix}/SetTimeout?timeOut={self.timeout}"
+        set_timeout_string = f"{self.html_prefix}/SetTimeout?timeOut={self.timeout}"
         self.instrument_lib.get(set_timeout_string)
 
         # Set the Mask. This mask has to be local to the 4D computer in this directory.
