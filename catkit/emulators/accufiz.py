@@ -26,6 +26,7 @@ class PoppyAccufizEmulator:
         command = os.path.basename(url)
 
         if command == "AverageMeasure":
+            pass
             #self.data = optics.do_stuff()
         elif command == "SaveMeasurement":
             filepath = data["fileName"]

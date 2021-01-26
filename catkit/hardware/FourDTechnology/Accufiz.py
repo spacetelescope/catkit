@@ -20,7 +20,8 @@ class Accufiz(FizeauInterferometer):
 
     instrument_lib = requests
 
-    def initialize(self, ip, local_path, server_path, timeout=60, mask="dm2_detector.mask", post_save_sleep=1, file_mode=True):
+    def initialize(self, ip, local_path, server_path, timeout=60, mask="dm2_detector.mask", post_save_sleep=1,
+                   file_mode=True, calibration_data_package=""):
         """
         :param ip: str, IP of 4D machine.
         :param local_path: str, The local path accessible from Python.
@@ -36,6 +37,7 @@ class Accufiz(FizeauInterferometer):
         self.mask = mask
         self.post_save_sleep = post_save_sleep
         self.file_mode = file_mode
+        self.calibration_data_package = calibration_data_package
 
         self.temp_dir = tempfile.TemporaryDirectory()
         self.local_path = os.path.join(local_path, self.temp_dir.name)
@@ -86,7 +88,7 @@ class Accufiz(FizeauInterferometer):
         time.sleep(self.post_save_sleep)
 
         if not glob(f"{local_file_path}.h5"):
-            raise RunTimeException(f"{self.config_id}: Failed to save measurement data to '{local_file_path}'.")
+            raise RuntimeError(f"{self.config_id}: Failed to save measurement data to '{local_file_path}'.")
 
         self.log.info(f"{self.config_id}: Succeeded to save measurement data to '{local_file_path}'")
 
@@ -99,9 +101,8 @@ class Accufiz(FizeauInterferometer):
 
         return fits_hdu
 
-    @staticmethod
-    def __get_mask_path(mask):
-        calibration_data_package = CONFIG_INI.get("optics_lab", "calibration_data_package")
+    def __get_mask_path(self, mask):
+        calibration_data_package = self.calibration_data_package
         calibration_data_path = os.path.join(catkit.util.find_package_location(calibration_data_package),
                                              "hardware",
                                              "FourDTechnology")
@@ -131,5 +132,6 @@ class Accufiz(FizeauInterferometer):
         # Convert waves to nanometers.
         image = image * wavelength
 
-        fits.PrimaryHDU(image).writeto(fits_filepath, overwrite=True)
+        fits_hdu = fits.PrimaryHDU(image)
+        fits_hdu.writeto(fits_filepath, overwrite=True)
         return fits_filepath, fits_hdu
