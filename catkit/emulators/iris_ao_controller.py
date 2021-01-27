@@ -51,8 +51,8 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
             # x/y coordinate axes, so we need to feed what is called "tilt" on the IrisAO
             # into the "tip" argument from poppy and vice versa.
             piston = values[0] * u.um
-            tip = values[2] * u.mrad
-            tilt = values[1] * u.mrad
+            tip = -values[2] * u.mrad    # negative sign matches the hardware behavior
+            tilt = -values[1] * u.mrad   # negative sign matches the hardware behavior
             self.set_actuator(seg-1, piston, tip, tilt)    # offset by -1 for 0-based vs 1-based segment indices; see PR #147
 
     @staticmethod
