@@ -1,25 +1,68 @@
 """Interface for IrisAO segmented deformable mirror controller."""
 
+import ctypes
 import os
 import time
-
-import IrisAO_Python
 
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 from catkit.hardware.iris_ao.segmented_dm_command import SegmentedDmCommand
 from catkit.hardware.iris_ao import util
 
 
+class IrisAOCLib:
+    def __init__(self, dll_filepath):
+        self.dll_filePath = dll_filepath
+        self.dll = None
+        self.positions_initiated = False
+
+        try:
+            self.dll = ctypes.cdll.LoadLibrary(self.dll_filepath)
+        except Exception as error:
+            raise ImportError(f"Failed to load library '{self.dll_filepath}'.") from error
+
+        # Declare prototypes.
+        # void MirrorCommand (void* mirror, void* command);
+        self._MirrorCommand = self.dll.MirrorCommand
+        self._MirrorCommand.restype = None
+        self._MirrorCommand.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+        # void* MirrorConnect (char* mirror_serial, char* driver_serial, bool disabled);
+        self._MirrorConnect = self.dll.MirrorConnect
+        self._MirrorConnect.restype = ctypes.c_void_p
+        self._MirrorConnect.argtypes = [ctypes.c_char_p, ctypes.c_char_p, c_bool]
+
+        # void* MirrorRelease (void* mirror);
+        self._MirrorRelease = self.dll.MirrorConnect
+        self._MirrorRelease.restype = ctypes.c_void_p
+        self._MirrorRelease.argtypes = [ctypes.c_void_p]
+
+    def MirrorCommand(self, mirror):
+        if self.positions_initiated:
+            return self._MirrorConnect(mirror, self.instrument_lib.MirrorSendSettings)
+        else:
+            # TODO: What's the diff?
+            ret = self._MirrorConnect(mirror, self.instrument_lib.MirrorInitSettings)
+            self.positions_initiated = True
+            return ret
+
+    def MirrorConnect(self, mirror_serial, driver_serial, disabled):
+        return self._MirrorConnect(mirror_serial, driver_serial, disabled)
+
+    def MirrorRelease(self, mirror):
+        return self._MirrorRelease(mirror)
+
+
 class IrisAoDmController(DeformableMirrorController):
     """ Device class to control the IrisAO DM. """
 
-    instrument_lib = IrisAO_Python
+    instrument_lib = IrisAOCLib
 
     def initialize(self,
                    mirror_serial,
                    driver_serial,
                    mcf_filepath,
                    dcf_filepath,
+                   dll_filepath,
                    disable_hardware=False):
         """
         Initialize dm manufacturer specific object - this does not, nor should it, open a
@@ -28,13 +71,15 @@ class IrisAoDmController(DeformableMirrorController):
         :param mirror_serial: string, The mirror serial number. This corresponds to a .mcf file that MUST include the
                               driver serial number under "Smart Driver". See README.
         :param driver_serial: string, The driver serial number. This corresponds to a .dcf file. See README.
-        :param disable_hardware: bool, False := use hardware, True := all hardware APIs are NOOPs.
         :param mcf_filepath: string, Full path to .mcf file.
         :param dcf_filepath: string, Full path to .dcf file.
+        :param dll_filepath: string, Full path to IrisAO.Devices.dll (x64).
+        :param disable_hardware: bool, False := use hardware, True := all hardware APIs are NOOPs.
         """
 
-        self.log.info("Opening IrisAO connection")
-        # Create class attributes for storing an individual command.
+        self.dll_filepath = dll_filepath
+        self.instrument_lib = instrument_lib(dll_filepath)
+
         self.command_object = None
         self.mirror_serial = mirror_serial
         self.driver_serial = driver_serial
@@ -90,8 +135,7 @@ class IrisAoDmController(DeformableMirrorController):
 
     def _send_data(self, data):
         """
-        To send data to the IrisAO, you must write to the ConfigPTT.ini file
-        to send the command
+        To send data to the IrisAO.
 
         :param data: dict, the command to be sent to the DM
         """
@@ -101,14 +145,13 @@ class IrisAoDmController(DeformableMirrorController):
         if not isinstance(data, dict):
             raise TypeError(f"{self.config_id}: expected 'data' to be a dict and not '{type(data)}'.")
 
-        segments = list(data.keys())
-        ptt = list(data.values())
-
-        if len(segments) != len(ptt):
-            raise TypeError(f"{self.config_id}: Corrupt data - each segment must have a corresponding PTT and vice versa.")
-
         try:
-            self.instrument_lib._setPosition(self.instrument, segments, len(segments), ptt)
+            for segment, ptt in data.items():
+                # Pass values to connection handle (but not to driver box).
+                # void SetMirrorPosition (MirrorHandle mirror, SegmentNumber segment, float z, float xgrad, float ygrad);
+                self.instrument_lib.SetMirrorPosition(ctypes.byref(self.instrument), segment, ptt[0], ptt[1], ptt(2))
+            # Now send that data to driver box.
+            self.instrument_lib.MirrorCommand(ctypes.byref(self.instrument))
         except Exception as error:
             raise Exception(f"{self.config_id}: Failed to send command data to device.") from error
 
@@ -116,9 +159,9 @@ class IrisAoDmController(DeformableMirrorController):
         """Open a connection to the IrisAO"""
         hardware_enabled = not self.disable_hardware
         try:
-            self.instrument = self.instrument_lib._connect(self.mirror_serial.encode(),
-                                                           self.driver_serial.encode(),
-                                                           hardware_enabled)
+            self.instrument = self.instrument_lib.MirrorConnect(self.mirror_serial.encode(),
+                                                                self.driver_serial.encode(),
+                                                                hardware_enabled)
         except Exception as error:
             self.instrument = None  # Don't try closing
             raise Exception(f"{self.config_id}: Failed to connect to device.") from error
@@ -144,39 +187,10 @@ class IrisAoDmController(DeformableMirrorController):
     def _close(self):
         """Close connection safely."""
         try:
-            try:
-                # Set IrisAO to zero
-                self.zero()
-            finally:
-                self.instrument_lib._release(self.instrument)
+            self.instrument_lib.MirrorRelease(ctypes.byref(self.instrument))
         finally:
             self.instrument = None
             self._close_iris_controller_testbed_state()
-
-    def get_position(self, segments=None):
-        """ Read the PTT for the given segments from the device itself. """
-
-        if not self.instrument:
-            raise Exception(f"{self.config_id}: Open connection required.")
-
-        segments = segments if segments else iris_util.iris_pupil_numbering(self.num_segments)
-
-        # _getMirrorPosition() expects a list of segments
-        if not isinstance(segments, collections.Iterable):
-            segments = [segments]
-
-        if isinstance(segments, np.ndarray):
-            segments = segments.tolist()
-
-        try:
-            ptt, _locked, _reachable = self.instrument_lib._getMirrorPosition(self.instrument, segments, len(segments))
-        except Exception as error:
-            raise Exception(f"{self.config_id}: Failed to get command data from device.") from error
-
-        if len(segments) != len(ptt):
-            raise TypeError(f"{self.config_id}: Corrupt data - each segment must have a corresponding PTT and vice versa.")
-
-        return SegmentedDmCommand(dict(zip(segments, ptt)), flat_map=False)
 
     def apply_shape(self, dm_shape, dm_num=1):
         """
