@@ -11,32 +11,16 @@ from catkit.hardware.iris_ao import util
 
 
 class IrisAoDmController(DeformableMirrorController):
-    """
-    The low-level IrisAO API is written in C, and this class bridges to the compiled executable 'DM_Control.exe' stored
-    locally on the machine that controls the IrisAO mirror. The basic functionality is that the user creates a command
-    and stores it to an ini file called 'ConfigPTT.ini'. The executable then grabs that ini file and applies the piston,
-    tip, tilt (PTT) values in that file to the hardware.
-
-    The executable 'DM_Control.exe' is controlled by passing strings to it with stdin. E.g.:
-
-    dm.stdin.write('config\n')
-    dm.stdin.flush()
-
-    will load the PTT values in the file specified with the variable filename_ptt_dm.
-
-    Further details can be found in the linked PDF in this comment on GitHub:
-    https://github.com/spacetelescope/catkit/pull/71#discussion_r466536405
-    """
+    """ Device class to control the IrisAO DM. """
 
     instrument_lib = IrisAO_Python
 
     def initialize(self,
                    mirror_serial,
                    driver_serial,
-                   disable_hardware,
-                   path_to_dm_exe,
-                   filename_ptt_dm,
-                   path_to_custom_mirror_files=None):
+                   mcf_filepath,
+                   dcf_filepath,
+                   disable_hardware=False):
         """
         Initialize dm manufacturer specific object - this does not, nor should it, open a
         connection.
@@ -44,48 +28,65 @@ class IrisAoDmController(DeformableMirrorController):
         :param mirror_serial: string, The mirror serial number. This corresponds to a .mcf file that MUST include the
                               driver serial number under "Smart Driver". See README.
         :param driver_serial: string, The driver serial number. This corresponds to a .dcf file. See README.
-        :param disable_hardware: bool, If False, will run on hardware (always used on JOST this way). If True,
-                                 probably (!) just runs the GUI? We never used it with True, so not sure.
-        :param path_to_dm_exe: string, The path to the local directory that houses the DM_Control.exe file.
-        :param filename_ptt_dm: string, Full path including filename of the ini file that provides the PTT values to be
-                                loaded onto the hardware, e.g. ".../ConfigPTT.ini".
-        :param path_to_custom_mirror_files: string, Full path to mirror .ini files.
+        :param disable_hardware: bool, False := use hardware, True := all hardware APIs are NOOPs.
+        :param mcf_filepath: string, Full path to .mcf file.
+        :param dcf_filepath: string, Full path to .dcf file.
         """
 
         self.log.info("Opening IrisAO connection")
         # Create class attributes for storing an individual command.
         self.command_object = None
-
         self.mirror_serial = mirror_serial
         self.driver_serial = driver_serial
-
-        # For the suprocess call
         self.disable_hardware = disable_hardware
-        self.path_to_dm_exe = path_to_dm_exe
-        self.full_path_dm_exe = os.path.join(path_to_dm_exe, 'DM_Control.exe')
-        self.path_to_custom_mirror_files = path_to_custom_mirror_files
+        self.mcf_filepath = mcf_filepath
+        self.dcf_filepath = dcf_filepath
 
-        # Where to write ConfigPTT.ini file that gets read by the C++ code
-        self.filename_ptt_dm = filename_ptt_dm
-
-        # Determine filename paths for calibration/config files.
-        self.config_file_dir_path = os.path.abspath(config_file_dir_path)
-        if not os.path.isdir(self.config_file_dir_path):
-            raise FileNotFoundError(f"{self.config_id}: config_file_dir_path: '{self.config_file_dir_path}' not found.")
-        self.mirror_config_file_path = os.path.join(self.config_file_dir_path, self.mirror_serial + self.mirror_config_file_ext)
-        self.driver_config_file_path = os.path.join(self.config_file_dir_path, self.driver_serial + self.driver_config_file_ext)
-        if not os.path.isFile(self.mirror_config_file_path):
-            raise FileNotFoundError(f"{self.config_id}: '{self.mirror_config_file_path}' not found.")
-        if not os.path.isFile(self.driver_config_file_path):
-            raise FileNotFoundError(f"{self.config_id}: '{self.driver_config_file_path}' not found.")
+        # Check config files exist.
+        self.validate_config_files()
 
         # The IrisAO driver expects the .dcf and .mcf config files in the working dir.
         # Neither adding them to PATH nor PYTHONPATH worked.
         # This is a workaround.
         # These files remain copied until their refs go out of scope, i.e., when this class instance drops out of scope.
         cwd = os.path.abspath(os.getcwd())
-        self._mirror_config_file_copy = catkit.util.TempFileCopy(self.mirror_config_file_path, cwd)
-        self._driver_config_file_copy = catkit.util.TempFileCopy(self.driver_config_file_path, cwd)
+        self._mirror_config_file_copy = catkit.util.TempFileCopy(self.mcf_filepath, cwd)
+        self._driver_config_file_copy = catkit.util.TempFileCopy(self.dcf_filepath, cwd)
+
+    @staticmethod
+    def search_file(filepath, search_str, raise_exception=True):
+        with open(filepath, 'r') as open_file:
+            valid = False
+            while True:
+                line = open_file.readline()
+                if not line:  # EOF
+                    break
+                if search_str in line:
+                    valid = True
+                    break
+        if raise_exception:
+            if not valid:
+                raise ValueError(f"Couldn't find '{search_str}' in '{filepath}'.")
+        return valid
+
+    def validate_config_files(self):
+        """ Check config files are correct for given serial numbers. """
+
+        # Check files exist.
+        if not os.path.isFile(self.mirror_config_file_path):
+            raise FileNotFoundError(f"{self.config_id}: '{self.mirror_config_file_path}' not found.")
+        if not os.path.isFile(self.driver_config_file_path):
+            raise FileNotFoundError(f"{self.config_id}: '{self.driver_config_file_path}' not found.")
+
+        # Check correct SN# are baked into filenames.
+        if self.mirror_serial not in self.mcf_filepath:
+            raise ValueError(f"The mirror SN# '{self.mirror_serial}' doesn't match that of the .mcf file '{self.mcf_filepath}'.")
+        if self.driver_serial not in self.dcf_filepath:
+            raise ValueError(f"The driver SN# '{self.driver_serial}' doesn't match that of the .dcf file '{self.dcf_filepath}'.")
+
+        # Check SN# are fields within the files themselves. Only works for driver SN#.
+        self.search_file(filepath=self.dcf_filepath, search_str=f"[SN:{self.driver_serial}]")
+        self.search_file(filepath=self.mcf_filepath, search_str=f"// Smart Driver: {self.driver_serial}")
 
     def _send_data(self, data):
         """
