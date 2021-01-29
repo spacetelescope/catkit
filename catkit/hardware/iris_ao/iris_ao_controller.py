@@ -13,7 +13,6 @@ class IrisAOCLib:
     def __init__(self, dll_filepath):
         self.dll_filepath = dll_filepath
         self.dll = None
-        self.positions_initiated = False
 
         if not self.dll:
             try:
@@ -42,14 +41,8 @@ class IrisAOCLib:
         self._SetMirrorPosition.restype = None
         self._SetMirrorPosition.argtypes = [ctypes.c_char_p, ctypes.c_uint, ctypes.c_float, ctypes.c_float, ctypes.c_float]
 
-    def MirrorCommand(self, mirror):
-        if self.positions_initiated:
-            return self._MirrorConnect(mirror, self.instrument_lib.MirrorSendSettings)
-        else:
-            # TODO: What's the diff?
-            ret = self._MirrorConnect(mirror, self.instrument_lib.MirrorInitSettings)
-            self.positions_initiated = True
-            return ret
+    def MirrorCommand(self, mirror, command=self.instrument_lib.MirrorSendSettings):
+        return self._MirrorConnect(mirror, command)
 
     def MirrorConnect(self, mirror_serial, driver_serial, disabled):
         return self._MirrorConnect(mirror_serial, driver_serial, disabled)
@@ -168,7 +161,7 @@ class IrisAoDmController(DeformableMirrorController):
             raise Exception(f"{self.config_id}: Failed to connect to device.") from error
 
         # Initialize the Iris to zeros.
-        self.zero()
+        self.instrument_lib.MirrorCommand(self.instrument, command=self.instrument_lib.MirrorInitSettings)
 
         return self.instrument
 
