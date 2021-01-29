@@ -2,23 +2,24 @@
 
 import ctypes
 import os
-import time
 
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 from catkit.hardware.iris_ao.segmented_dm_command import SegmentedDmCommand
 from catkit.hardware.iris_ao import util
+import catkit.util
 
 
 class IrisAOCLib:
     def __init__(self, dll_filepath):
-        self.dll_filePath = dll_filepath
+        self.dll_filepath = dll_filepath
         self.dll = None
         self.positions_initiated = False
 
-        try:
-            self.dll = ctypes.cdll.LoadLibrary(self.dll_filepath)
-        except Exception as error:
-            raise ImportError(f"Failed to load library '{self.dll_filepath}'.") from error
+        if not self.dll:
+            try:
+                self.dll = ctypes.cdll.LoadLibrary(self.dll_filepath)
+            except Exception as error:
+                raise ImportError(f"Failed to load library '{self.dll_filepath}'.") from error
 
         # Declare prototypes.
         # void MirrorCommand (void* mirror, void* command);
@@ -29,12 +30,17 @@ class IrisAOCLib:
         # void* MirrorConnect (char* mirror_serial, char* driver_serial, bool disabled);
         self._MirrorConnect = self.dll.MirrorConnect
         self._MirrorConnect.restype = ctypes.c_void_p
-        self._MirrorConnect.argtypes = [ctypes.c_char_p, ctypes.c_char_p, c_bool]
+        self._MirrorConnect.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_bool]
 
         # void* MirrorRelease (void* mirror);
-        self._MirrorRelease = self.dll.MirrorConnect
+        self._MirrorRelease = self.dll.MirrorRelease
         self._MirrorRelease.restype = ctypes.c_void_p
         self._MirrorRelease.argtypes = [ctypes.c_void_p]
+
+        # void SetMirrorPosition (void* mirror, unsigned int segment, float z, float xgrad, float ygrad);
+        self._SetMirrorPosition = self.dll.SetMirrorPosition
+        self._SetMirrorPosition.restype = None
+        self._SetMirrorPosition.argtypes = [ctypes.c_char_p, ctypes.c_uint, ctypes.c_float, ctypes.c_float, ctypes.c_float]
 
     def MirrorCommand(self, mirror):
         if self.positions_initiated:
@@ -50,6 +56,9 @@ class IrisAOCLib:
 
     def MirrorRelease(self, mirror):
         return self._MirrorRelease(mirror)
+
+    def SetMirrorPosition(self, mirror, segment, z, xgrad, ygrad):
+        return self._SetMirrorPosition(mirror, segment, z, xgrad, ygrad)
 
 
 class IrisAoDmController(DeformableMirrorController):
@@ -78,7 +87,7 @@ class IrisAoDmController(DeformableMirrorController):
         """
 
         self.dll_filepath = dll_filepath
-        self.instrument_lib = instrument_lib(dll_filepath)
+        self.instrument_lib = self.instrument_lib(self.dll_filepath)
 
         self.command_object = None
         self.mirror_serial = mirror_serial
@@ -117,12 +126,6 @@ class IrisAoDmController(DeformableMirrorController):
     def validate_config_files(self):
         """ Check config files are correct for given serial numbers. """
 
-        # Check files exist.
-        if not os.path.isFile(self.mirror_config_file_path):
-            raise FileNotFoundError(f"{self.config_id}: '{self.mirror_config_file_path}' not found.")
-        if not os.path.isFile(self.driver_config_file_path):
-            raise FileNotFoundError(f"{self.config_id}: '{self.driver_config_file_path}' not found.")
-
         # Check correct SN# are baked into filenames.
         if self.mirror_serial not in self.mcf_filepath:
             raise ValueError(f"The mirror SN# '{self.mirror_serial}' doesn't match that of the .mcf file '{self.mcf_filepath}'.")
@@ -148,20 +151,18 @@ class IrisAoDmController(DeformableMirrorController):
         try:
             for segment, ptt in data.items():
                 # Pass values to connection handle (but not to driver box).
-                # void SetMirrorPosition (MirrorHandle mirror, SegmentNumber segment, float z, float xgrad, float ygrad);
-                self.instrument_lib.SetMirrorPosition(ctypes.byref(self.instrument), segment, ptt[0], ptt[1], ptt(2))
-            # Now send that data to driver box.
-            self.instrument_lib.MirrorCommand(ctypes.byref(self.instrument))
+                self.instrument_lib.SetMirrorPosition(self.instrument, segment, ptt[0], ptt[1], ptt[2])
+            # Now send the data to driver box.
+            self.instrument_lib.MirrorCommand(self.instrument)
         except Exception as error:
             raise Exception(f"{self.config_id}: Failed to send command data to device.") from error
 
     def _open(self):
         """Open a connection to the IrisAO"""
-        hardware_enabled = not self.disable_hardware
         try:
             self.instrument = self.instrument_lib.MirrorConnect(self.mirror_serial.encode(),
                                                                 self.driver_serial.encode(),
-                                                                hardware_enabled)
+                                                                self.disable_hardware)
         except Exception as error:
             self.instrument = None  # Don't try closing
             raise Exception(f"{self.config_id}: Failed to connect to device.") from error
@@ -186,11 +187,7 @@ class IrisAoDmController(DeformableMirrorController):
 
     def _close(self):
         """Close connection safely."""
-        try:
-            self.instrument_lib.MirrorRelease(ctypes.byref(self.instrument))
-        finally:
-            self.instrument = None
-            self._close_iris_controller_testbed_state()
+        self.instrument_lib.MirrorRelease(self.instrument)
 
     def apply_shape(self, dm_shape, dm_num=1):
         """

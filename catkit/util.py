@@ -1,14 +1,15 @@
 import importlib
-import os
 import logging
 import logging.handlers
+import os
 import signal
+import shutil
 import time
-from catkit.catkit_types import MetaDataEntry
 
 import numpy as np
 from astropy.io import fits
 
+from catkit.catkit_types import MetaDataEntry
 from catkit.catkit_types import quantity
 
 
