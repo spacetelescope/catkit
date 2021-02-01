@@ -70,14 +70,30 @@ class IrisAoDmController(DeformableMirrorController):
         self.filename_ptt_dm = filename_ptt_dm
 
     def _communicate(self, input):
+        # Poll in case it died.
+        if self.instrument.poll() is not None:
+            self.instrument = None  # If it died, there's nothing to close, so don't.
+            raise RuntimeError(f"{self.config_id} unexpectedly closed: ('{self.instrument.returncode}').")
+
+        # Write.
         try:
-            stdout, stderr = self.instrument.communicate(input=input, timeout=1)
-            if stdout:
-                self.log.info(stdout)
-            if stderr:
-                raise RuntimeError(stderr)
-        except subprocess.TimeoutExpired:
-            pass
+            self.instrument.stdin.write(input)
+            self.instrument.stdin.flush()
+        except Exception as error:
+            self.instrument = None  # If it died, there's nothing to close, so don't.
+            raise RuntimeError(f"{self.config_id} unexpectedly closed.") from error
+
+        # Poll in case it died (though the above flush would most likely catch this).
+        #if self.instrument.poll() is not None:
+        #    self.instrument = None  # If it died, there's nothing to close, so don't.
+        #    raise RuntimeError(f"{self.config_id} unexpectedly closed: ('{self.instrument.returncode}').")
+
+        # Read response.
+        self.log.info(f"{self.config_id}: Waiting for response...")
+        resp = self.instrument.stdout.readline().decode()
+        if "success" not in resp.lower():
+            raise RuntimeError(f"{self.config_id} error: {resp}")
+        self.log.info(f"{self.config_id}: {resp}")
 
     def send_data(self, data):
         """
