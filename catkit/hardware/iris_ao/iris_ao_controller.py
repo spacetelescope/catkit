@@ -69,6 +69,16 @@ class IrisAoDmController(DeformableMirrorController):
         # Where to write ConfigPTT.ini file that gets read by the C++ code
         self.filename_ptt_dm = filename_ptt_dm
 
+    def _communicate(self, input):
+        try:
+            stdout, stderr = self.instrument.stdin.communicate(input=input, timeout=1)
+        except TimeoutExpired:
+            pass
+        if stdout:
+            self.log.info(stdout)
+        if stderr:
+            raise RuntimeError(stderr)
+
     def send_data(self, data):
         """
         To send data to the IrisAO, you must write to the ConfigPTT.ini file
@@ -85,9 +95,7 @@ class IrisAoDmController(DeformableMirrorController):
                        driver_serial=self.driver_serial)
 
         # Apply the written .ini file to DM
-        self.instrument.stdin.write(b'config\n')
-        self.instrument.stdin.flush()
-        self.raise_on_error()
+        self._communicate(input=b'config\n')
 
     def _open(self):
         """Open a connection to the IrisAO"""
@@ -109,11 +117,6 @@ class IrisAoDmController(DeformableMirrorController):
         self.zero()
 
         return self.instrument
-
-    def raise_on_error(self):
-        error = self.instrument.stderr.read()
-        if error:
-            raise RuntimeError(error)
 
     def zero(self, return_zeros=False):
         """Put zeros on the DM. This does not correspond to a flattened DM.
@@ -141,9 +144,8 @@ class IrisAoDmController(DeformableMirrorController):
             #self.instrument.send_signal(signal.CTRL_C_EVENT)
 
             # However, the above no longer seems to work, see HICAT-948 & HICAT-947.
-            self.instrument.stdin.write(b'quit\n')
             try:
-                self.instrument.stdin.flush()
+                self._communicate(input=b'quit\n')
             except Exception:
                 pass
         finally:
