@@ -41,7 +41,9 @@ class IrisAOCLib:
         self._SetMirrorPosition.restype = None
         self._SetMirrorPosition.argtypes = [ctypes.c_char_p, ctypes.c_uint, ctypes.c_float, ctypes.c_float, ctypes.c_float]
 
-    def MirrorCommand(self, mirror, command=self.instrument_lib.MirrorSendSettings):
+    def MirrorCommand(self, mirror, command=None):
+        if command is None:
+            command = self.instrument_lib.MirrorSendSettings
         return self._MirrorConnect(mirror, command)
 
     def MirrorConnect(self, mirror_serial, driver_serial, disabled):
