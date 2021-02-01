@@ -71,13 +71,13 @@ class IrisAoDmController(DeformableMirrorController):
 
     def _communicate(self, input):
         try:
-            stdout, stderr = self.instrument.stdin.communicate(input=input, timeout=1)
-        except TimeoutExpired:
+            stdout, stderr = self.instrument.communicate(input=input, timeout=1)
+            if stdout:
+                self.log.info(stdout)
+            if stderr:
+                raise RuntimeError(stderr)
+        except subprocess.TimeoutExpired:
             pass
-        if stdout:
-            self.log.info(stdout)
-        if stderr:
-            raise RuntimeError(stderr)
 
     def send_data(self, data):
         """
@@ -86,8 +86,6 @@ class IrisAoDmController(DeformableMirrorController):
 
         :param data: dict, the command to be sent to the DM
         """
-        self.raise_on_error()
-
         # Write to ConfigPTT.ini
         self.log.info("Creating config file: %s", self.filename_ptt_dm)
         util.write_ini(data, path=self.filename_ptt_dm, dm_config_id=self.config_id,
@@ -144,10 +142,8 @@ class IrisAoDmController(DeformableMirrorController):
             #self.instrument.send_signal(signal.CTRL_C_EVENT)
 
             # However, the above no longer seems to work, see HICAT-948 & HICAT-947.
-            try:
-                self._communicate(input=b'quit\n')
-            except Exception:
-                pass
+            self._communicate(input=b'quit\n')
+            self.instrument.wait(timeout=2)
         finally:
             self.instrument = None
 
