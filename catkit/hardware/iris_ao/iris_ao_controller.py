@@ -76,6 +76,8 @@ class IrisAoDmController(DeformableMirrorController):
 
         :param data: dict, the command to be sent to the DM
         """
+        self.raise_on_error()
+
         # Write to ConfigPTT.ini
         self.log.info("Creating config file: %s", self.filename_ptt_dm)
         util.write_ini(data, path=self.filename_ptt_dm, dm_config_id=self.config_id,
@@ -85,6 +87,7 @@ class IrisAoDmController(DeformableMirrorController):
         # Apply the written .ini file to DM
         self.instrument.stdin.write(b'config\n')
         self.instrument.stdin.flush()
+        self.raise_on_error()
 
     def _open(self):
         """Open a connection to the IrisAO"""
@@ -106,6 +109,11 @@ class IrisAoDmController(DeformableMirrorController):
         self.zero()
 
         return self.instrument
+
+    def raise_on_error(self):
+        error = self.instrument.stderr.read()
+        if error:
+            raise RuntimeError(error)
 
     def zero(self, return_zeros=False):
         """Put zeros on the DM. This does not correspond to a flattened DM.
