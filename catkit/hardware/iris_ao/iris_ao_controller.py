@@ -69,6 +69,32 @@ class IrisAoDmController(DeformableMirrorController):
         # Where to write ConfigPTT.ini file that gets read by the C++ code
         self.filename_ptt_dm = filename_ptt_dm
 
+    def _communicate(self, input):
+        # Poll in case it died.
+        if self.instrument.poll() is not None:
+            self.instrument = None  # If it died, there's nothing to close, so don't.
+            raise RuntimeError(f"{self.config_id} unexpectedly closed: ('{self.instrument.returncode}').")
+
+        # Write.
+        try:
+            self.instrument.stdin.write(input)
+            self.instrument.stdin.flush()
+        except Exception as error:
+            self.instrument = None  # If it died, there's nothing to close, so don't.
+            raise RuntimeError(f"{self.config_id} unexpectedly closed.") from error
+
+        # Poll in case it died (though the above flush would most likely catch this).
+        #if self.instrument.poll() is not None:
+        #    self.instrument = None  # If it died, there's nothing to close, so don't.
+        #    raise RuntimeError(f"{self.config_id} unexpectedly closed: ('{self.instrument.returncode}').")
+
+        # Read response.
+        self.log.info(f"{self.config_id}: Waiting for response...")
+        resp = self.instrument.stdout.readline().decode()
+        if "success" not in resp.lower():
+            raise RuntimeError(f"{self.config_id} error: {resp}")
+        self.log.info(f"{self.config_id}: {resp}")
+
     def send_data(self, data):
         """
         To send data to the IrisAO, you must write to the ConfigPTT.ini file
@@ -83,8 +109,7 @@ class IrisAoDmController(DeformableMirrorController):
                        driver_serial=self.driver_serial)
 
         # Apply the written .ini file to DM
-        self.instrument.stdin.write(b'config\n')
-        self.instrument.stdin.flush()
+        self._communicate(input=b'config\n')
 
     def _open(self):
         """Open a connection to the IrisAO"""
@@ -133,11 +158,8 @@ class IrisAoDmController(DeformableMirrorController):
             #self.instrument.send_signal(signal.CTRL_C_EVENT)
 
             # However, the above no longer seems to work, see HICAT-948 & HICAT-947.
-            self.instrument.stdin.write(b'quit\n')
-            try:
-                self.instrument.stdin.flush()
-            except Exception:
-                pass
+            self._communicate(input=b'quit\n')
+            self.instrument.wait(timeout=2)
         finally:
             self.instrument = None
 
