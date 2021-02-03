@@ -134,6 +134,14 @@ class PoppyIrisAOEmulator:
     def flush(self):
         pass
 
+    def readline(self):
+        return b"success"
+
+    def poll(self):
+        pass
+
+    def wait(self, timeout=None):
+        pass
 
 class PoppyIrisAoDmController(SimInstrument, IrisAoDmController):
     instrument_lib = PoppyIrisAOEmulator
