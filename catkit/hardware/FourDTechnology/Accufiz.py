@@ -46,7 +46,7 @@ class Accufiz(FizeauInterferometer):
     def _open(self):
         # Set the 4D timeout.
         set_timeout_string = f"{self.html_prefix}/SetTimeout?timeOut={self.timeout}"
-        self.instrument_lib.get(set_timeout_string)
+        self.get(set_timeout_string)
 
         # Set the Mask. This mask has to be local to the 4D computer in this directory.
         # filemask = os.path.join("c:\\4Sight_masks", self.mask)
@@ -61,6 +61,19 @@ class Accufiz(FizeauInterferometer):
         """Close interferometer connection?"""
         pass
 
+    def get(self, url, params=None, **kwargs):
+        resp = self.instrument_lib.get(url, params=params, **kwargs)
+        if resp.status_code != 200:
+            raise RuntimeError(f"{self.config_id} GET error: {resp.status_code}: {resp.text}")
+        return resp
+
+    def post(self, url, data=None, json=None, **kwargs):
+        resp = self.instrument_lib.post(url, data=data, json=json, **kwargs)
+        if resp.status_code != 200:
+            raise RuntimeError(f"{self.config_id} POST error: {resp.status_code}: {resp.text}")
+        time.sleep(self.post_save_sleep)
+        return resp
+
     def take_measurement(self,
                          num_frames=2,
                          filepath=None,
@@ -69,9 +82,9 @@ class Accufiz(FizeauInterferometer):
                          exposure_set=""):
 
         # Send request to take data.
-        measurement_resp = self.instrument_lib.post(f"{self.html_prefix}/AverageMeasure", data={"count": int(num_frames)})
-        if "success" not in measurement_resp.text:
-            raise RuntimeError(f"{self.config_id}: Failed to take data - {measurement_resp.text}.")
+        resp = self.post(f"{self.html_prefix}/AverageMeasure", data={"count": int(num_frames)})
+        if "success" not in resp.text:
+            raise RuntimeError(f"{self.config_id}: Failed to take data - {resp.text}.")
 
         filename = str(uuid.uuid4())
         server_file_path = os.path.join(self.server_path, filename)
@@ -84,8 +97,7 @@ class Accufiz(FizeauInterferometer):
         server_file_path = server_file_path.replace('/', '\\\\')
 
         # Send request to save data.
-        _resp = self.instrument_lib.post(f"{self.html_prefix}/SaveMeasurement", data={"fileName": server_file_path})
-        time.sleep(self.post_save_sleep)
+        self.post(f"{self.html_prefix}/SaveMeasurement", data={"fileName": server_file_path})
 
         if not glob(f"{local_file_path}.h5"):
             raise RuntimeError(f"{self.config_id}: Failed to save measurement data to '{local_file_path}'.")
