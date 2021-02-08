@@ -10,14 +10,16 @@ from catkit.interfaces.Instrument import SimInstrument
 
 class PoppyAccufizEmulator:
 
-    def __init__(self, optics, *args, **kwargs):
+    def __init__(self, optics, *args, status_code=200, **kwargs):
         super().__init__(*args, **kwargs)
         self.data = None
         self.optics = optics
+        self.status_code = status_code,
 
     def get(self, url, params=None, **kwargs):
         resp = requests.Response()
         resp.text = "success"
+        resp.status_code = self.status_code
         return resp
 
     def post(self, url, data=None, json=None, **kwargs):
