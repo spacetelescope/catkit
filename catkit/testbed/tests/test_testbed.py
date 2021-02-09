@@ -126,3 +126,23 @@ def test_DeviceCache():
     with catkit.testbed.devices:
         device_c = Dev.NPOINT_C
         assert device_c.instrument
+
+
+def tes_mutable_enum():
+    class Dev(catkit.testbed.DeviceCacheEnum):
+        NPOINT_C = ("npoint a for test", "dummy_config_id")
+
+    with catkit.testbed.devices as devices:
+        assert Dev.NPOINT_C.instrument is True
+        Dev.NPOINT_C.instrument = "hahahah"
+        assert devices[Dev.NPOINT_C].instrument == "hahahah"
+
+
+def tes_immutable_enum():
+    class Dev(catkit.testbed.ImmutableDeviceCacheEnum):
+        NPOINT_C = ("npoint a for test", "dummy_config_id")
+
+    with catkit.testbed.devices as devices:
+        assert Dev.NPOINT_C.instrument is True
+        with pytest.raises(AttributeError):
+            Dev.NPOINT_C.instrument = "hahahah"

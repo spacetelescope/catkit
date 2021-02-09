@@ -220,6 +220,7 @@ class DeviceCacheEnum(Enum):
     def __init__(self, description, config_id):
         self.description = description
         self.config_id = config_id
+        self.__object_exists = True
 
     @classmethod
     def _missing_(cls, value):
@@ -235,6 +236,22 @@ class DeviceCacheEnum(Enum):
         member = self.__class__(config_id)
         device = devices[member]
         return device.__getattribute__(item)
+
+    def __setattr__(self, name, value):
+        if "_DeviceCacheEnum__object_exists" in self.__dict__:
+            config_id = object.__getattribute__(self, "config_id")
+            member = self.__class__(config_id)
+            device = devices[member]
+            device.__setattr__(name, value)
+        else:
+            object.__setattr__(self, name, value)
+
+
+class ImmutableDeviceCacheEnum(DeviceCacheEnum):
+    def __setattr__(self, name, value):
+        if "_DeviceCacheEnum__object_exists" in self.__dict__:
+            raise AttributeError("Attribute assignment prohibited.")
+        object.__setattr__(self, name, value)
 
 
 class RestrictedDeviceCache(DeviceCache):
