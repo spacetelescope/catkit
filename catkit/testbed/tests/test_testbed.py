@@ -128,21 +128,29 @@ def test_DeviceCache():
         assert device_c.instrument
 
 
-def tes_mutable_enum():
+def test_mutable_enum():
     class Dev(catkit.testbed.DeviceCacheEnum):
         NPOINT_C = ("npoint a for test", "dummy_config_id")
 
+    @catkit.testbed.devices.link(key=Dev.NPOINT_C)
+    def npoint_c():
+        return SimNPointLC400(config_id="npoint_tiptilt_lc_400", com_id="dummy")
+
     with catkit.testbed.devices as devices:
-        assert Dev.NPOINT_C.instrument is True
+        assert Dev.NPOINT_C.instrument
         Dev.NPOINT_C.instrument = "hahahah"
         assert devices[Dev.NPOINT_C].instrument == "hahahah"
 
 
-def tes_immutable_enum():
+def test_immutable_enum():
     class Dev(catkit.testbed.ImmutableDeviceCacheEnum):
         NPOINT_C = ("npoint a for test", "dummy_config_id")
 
-    with catkit.testbed.devices as devices:
-        assert Dev.NPOINT_C.instrument is True
+    @catkit.testbed.devices.link(key=Dev.NPOINT_C)
+    def npoint_c():
+        return SimNPointLC400(config_id="npoint_tiptilt_lc_400", com_id="dummy")
+
+    with catkit.testbed.devices:
+        assert Dev.NPOINT_C.instrument
         with pytest.raises(AttributeError):
             Dev.NPOINT_C.instrument = "hahahah"
