@@ -9,6 +9,7 @@ import catkit.hardware.iris_ao.segmented_dm_command as segmented_dm_command
 import catkit.hardware.iris_ao.util
 from catkit.interfaces.Instrument import SimInstrument
 import catkit.util
+from packaging.version import Version
 
 
 class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
@@ -50,9 +51,12 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
             # The IrisAO hardware component and the poppy hex DM object have flipped
             # x/y coordinate axes, so we need to feed what is called "tilt" on the IrisAO
             # into the "tip" argument from poppy and vice versa.
+            # Furthermore, depending on poppy version we may need to correct a sign inconsistency
+            sign = -1 if Version(poppy.__version__) < Version('1.0') else 1
+
             piston = values[0] * u.um
-            tip = values[2] * u.mrad
-            tilt = values[1] * u.mrad
+            tip = sign * values[2] * u.mrad
+            tilt = sign * values[1] * u.mrad
             self.set_actuator(seg-1, piston, tip, tilt)    # offset by -1 for 0-based vs 1-based segment indices; see PR #147
 
     @staticmethod
