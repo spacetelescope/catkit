@@ -19,7 +19,7 @@ config_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "con
 config = load_config_ini(config_filename)
 
 
-@pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
+@pytest.mark.usefixtures("dummy_config_ini")
 class TestPoppyBostonDMController:
     config_id = "boston_kilo952"
     number_of_actuators = 952
