@@ -10,39 +10,39 @@ config_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "con
 config = load_config_ini(config_filename)
 
 
-@pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
+@pytest.mark.usefixtures("dummy_config_ini")
 def test_all_on():
     switch = WebPowerSwitch(config_id="web_power_switch")
     switch.all_on()
 
 
-@pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
+@pytest.mark.usefixtures("dummy_config_ini")
 def test_all_off():
     switch = WebPowerSwitch(config_id="web_power_switch")
     switch.all_off()
 
 
-@pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
+@pytest.mark.usefixtures("dummy_config_ini")
 def test_individual_on():
     switch = WebPowerSwitch(config_id="web_power_switch")
     switch.turn_on("dm1_outlet")
 
 
-@pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
+@pytest.mark.usefixtures("dummy_config_ini")
 def test_individual_off():
     switch = WebPowerSwitch(config_id="web_power_switch")
     switch.turn_off("dm1_outlet")
 
 
 @pytest.mark.parametrize("on", (True, False))
-@pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
+@pytest.mark.usefixtures("dummy_config_ini")
 def test_switch(on):
     switch = WebPowerSwitch(config_id="web_power_switch")
     switch.switch(outlet_id=None, on=on, all=True)
 
 
 @pytest.mark.parametrize("on", (True, False))
-@pytest.mark.usefixtures("dummy_config_ini", "dummy_testbed_state")
+@pytest.mark.usefixtures("dummy_config_ini")
 def test_switch_lists(on):
     outlet_ids = ("dm1_outlet", "motor_controller_outlet")
 
