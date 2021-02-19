@@ -53,7 +53,7 @@ class ZwoEmulator(ZwoASI):
         return self
 
     def get_controls(self):
-        # only used for oepn behavior to 
+        # only used for oepn behavior to
         # get / set control values to default on open
         # needs to play nicely with calls to set_controls
         # this phony dict is set to have *some* accessible value (None) for
@@ -65,6 +65,9 @@ class ZwoEmulator(ZwoASI):
         if value is not None and not isinstance(value, accepted_types):
             raise ValueError(f"Expected type {accepted_types} got '{type(value)}'")
         self.control_values[control_type] = value
+
+    def start_video_capture(self):
+        pass
 
     def stop_video_capture(self):
         pass
@@ -79,6 +82,10 @@ class ZwoEmulator(ZwoASI):
     def capture(self, initial_sleep=0.01, poll=0.01, buffer=None, filename=None):
         pass
 
+    @abc.abstractmethod
+    def capture_video_frame(self, buffer=None, filename=None, timeout=None):
+        return self.capture(buffer=buffer, filename=filename)
+
     def close(self):
         pass
 
@@ -88,7 +95,7 @@ class ZwoEmulator(ZwoASI):
         # I *think* this can just return a dict with milquetoast values for this
         # took said milquetoast values from the __setup_control_values sim
         # function here
-        return {'MaxWidth': 4096, 'MaxHeight': 4096} 
+        return {'MaxWidth': 4096, 'MaxHeight': 4096}
         pass
 
     def set_id(self, id, id_str):
@@ -97,8 +104,8 @@ class ZwoEmulator(ZwoASI):
     def set_roi(self, start_x=None, start_y=None, width=None, height=None, bins=None, image_type=None):
         # sets region of interest
         # purpose : set_roi_format, set_roi_start_position
-        # set_roi_format --> _set_roi_format : 
-        # check for all the errors 
+        # set_roi_format --> _set_roi_format :
+        # check for all the errors
         # runs zwolib.ASISetROIFormat(id_, width, height, bins, image_type)
         # set_roi_start_position --> _set_start_position :
         # runs zwolib.ASISetStartPos(id_, start_x, start_y)
