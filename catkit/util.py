@@ -12,6 +12,15 @@ from astropy.io import fits
 from catkit.catkit_types import quantity
 
 
+simulation = False
+
+
+def sleep(seconds):
+    global simulation
+    if not simulation:
+        time.sleep(seconds)
+
+
 def find_package_location(package='catkit'):
     return importlib.util.find_spec(package).submodule_search_locations[0]
 
