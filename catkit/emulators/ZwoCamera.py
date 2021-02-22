@@ -82,7 +82,6 @@ class ZwoEmulator(ZwoASI):
     def capture(self, initial_sleep=0.01, poll=0.01, buffer=None, filename=None):
         pass
 
-    @abc.abstractmethod
     def capture_video_frame(self, buffer=None, filename=None, timeout=None):
         return self.capture(buffer=buffer, filename=filename)
 

@@ -172,16 +172,19 @@ class ZwoCamera(Camera):
         images : list of (np.array of floats)
             All captured images in a list.
         """
+        timeout_in_ms = timeout.to(units.millisecond).magnitude
+        images = []
+
         self.instrument.start_video_capture()
 
-        images = []
-        for i in range(num_exposures):
-            img = self.instrument.capture_video_frame(timeout=timeout.to(units.millisecond).magnitude)
+        try:
+            for i in range(num_exposures):
+                img = self.instrument.capture_video_frame(timeout=timeout_in_ms)
 
-            images.append(img.astype(np.dtype(np.float32)))
-
-        self.instrument.stop_video_capture()
-        self.instrument.stop_exposure()
+                images.append(img.astype(np.dtype(np.float32)))
+        finally:
+            self.instrument.stop_video_capture()
+            self.instrument.stop_exposure()
 
         return images
 
