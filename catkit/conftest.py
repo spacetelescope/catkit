@@ -3,6 +3,9 @@ import gc
 import pytest
 
 from catkit.testbed import devices
+import catkit.util
+
+catkit.util.simulation = True
 
 
 @pytest.fixture(scope="function", autouse=False)
