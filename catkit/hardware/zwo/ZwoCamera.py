@@ -183,6 +183,8 @@ class ZwoCamera(Camera):
 
                 images.append(img.astype(np.dtype(np.float32)))
         finally:
+            # Stop exposures. The stop_exposure() might not be necessary, but there's no
+            # harm in calling it anyway.
             self.instrument.stop_video_capture()
             self.instrument.stop_exposure()
 
@@ -262,7 +264,7 @@ class ZwoCamera(Camera):
         :param gain: Gain of ZWO camera (volts).
         :param full_image: Boolean for whether to take a full image.
         :param bins: Integer value for number of bins.
-        :param use_video_capture_mode: Boolean for whether to use video capture or snapshot mode.
+        :param use_video_capture_mode: Boolean for whether to use video capture or snapshot mode. Default is False.
         :return: Two parameters: Image list (numpy data or paths), Metadata list of MetaDataEntry objects.
         """
 
