@@ -2,10 +2,10 @@ import ctypes
 import glob
 import os
 import sys
-import time
 
 from catkit.config import CONFIG_INI
 from catkit.interfaces.TemperatureHumiditySensor import TemperatureHumiditySensor
+import catkit.util
 
 # WARNING - this is neither functionally complete, nor robust against 32b vs 64b nor against model revision of TSP01.
 # Some attempt has been made, however, I have been unable to load the Thorlabs TLTSP_<bit-length>.dll.
@@ -55,7 +55,7 @@ class TSP01(TemperatureHumiditySensor):
 
     def _open(self):
 
-        time.sleep(self.sleep_time_reset)
+        catkit.util.sleep(self.sleep_time_reset)
 
         self.instrument = ctypes.c_void_p(None)
 
@@ -125,7 +125,7 @@ class TSP01(TemperatureHumiditySensor):
             self.instrument = ctypes.c_void_p(None)
 
     def get_temp(self, channel):
-        time.sleep(self.sleep_time_read)
+        catkit.util.sleep(self.sleep_time_read)
         temp = ctypes.c_double(0)
         # int TLTSPB_getTemperatureData(void * connection, int channel, double * temp)
         status = self.instrument_lib.TLTSPB_measTemperature(self.instrument, int(channel), ctypes.byref(temp))
@@ -134,7 +134,7 @@ class TSP01(TemperatureHumiditySensor):
         return temp.value
 
     def get_humidity(self):
-        time.sleep(self.sleep_time_read)
+        catkit.util.sleep(self.sleep_time_read)
         humidity = ctypes.c_double(0)
         # int TLTSPB_getHumidityData(void * connection, ?, double * humidity)
         status = self.instrument_lib.TLTSPB_measHumidity(self.instrument, ctypes.byref(humidity))

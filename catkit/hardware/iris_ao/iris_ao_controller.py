@@ -7,7 +7,6 @@ import time
 
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 from catkit.hardware.iris_ao.segmented_dm_command import SegmentedDmCommand
-
 from catkit.hardware.iris_ao import util
 
 

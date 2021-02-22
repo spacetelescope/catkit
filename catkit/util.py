@@ -12,6 +12,15 @@ from astropy.io import fits
 from catkit.catkit_types import quantity
 
 
+simulation = False
+
+
+def sleep(seconds):
+    global simulation
+    if not simulation:
+        time.sleep(seconds)
+
+
 def find_package_location(package='catkit'):
     return importlib.util.find_spec(package).submodule_search_locations[0]
 
@@ -210,7 +219,7 @@ def soft_kill(process):
             win32api.GenerateConsoleCtrlEvent(win32con.CTRL_C_EVENT, 0)
             while process.is_alive():
                 log.info("Child process is still alive...")
-                time.sleep(1)
+                sleep(1)
             log.info("Child process softly killed.")
         except KeyboardInterrupt:
             log.exception("Main process: caught ctrl-c")
@@ -220,7 +229,7 @@ def soft_kill(process):
             os.kill(process.pid, signal.SIGINT)
             while process.is_alive():
                 log.info("Child process is still alive...")
-                time.sleep(1)
+                sleep(1)
             log.info("Child process softly killed.")
         except KeyboardInterrupt:
             log.exception("Main process: caught ctrl-c")

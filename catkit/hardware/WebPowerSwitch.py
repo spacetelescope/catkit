@@ -1,8 +1,8 @@
 from collections.abc import Iterable
 import logging
 import requests
-import time
 
+import catkit.util
 from catkit.config import CONFIG_INI
 from catkit.interfaces.RemotePowerSwitch import RemotePowerSwitch
 
@@ -113,4 +113,4 @@ class WebPowerSwitch(RemotePowerSwitch):
         # Now be explicit to catch some non HTTP errors status that we also don't want to deal with.
         if resp.status_code != 200:
             raise RuntimeError(f"{self.config_id} error: GET returned {resp.status_code} when 200 was expected.")
-        time.sleep(1)  # NOTE: This needs to match or exceed that set in the switch's web setup. See CATKIT-53.
+        catkit.util.sleep(1)  # NOTE: This needs to match or exceed that set in the switch's web setup. See CATKIT-53.

@@ -3,10 +3,10 @@ try:
 except Exception as error:  # Raises OSError if it can't open driver lib
     raise ImportError("Missing libftd2xx driver? Download from https://www.ftdichip.com/Drivers/D2XX.htm") from error
 import ftd2xx.defines as constants
-import time
 import logging
 from catkit.interfaces.FlipMotor import FlipMotor
 from catkit.config import CONFIG_INI
+import catkit.util
 
 """Implementation of the FlipMotor interface for the Thorlabs MFF101 Flip Mount."""
 
@@ -24,9 +24,9 @@ class ThorlabsMFF101(FlipMotor):
         motor = ftd2xx.openEx(bytes(serial, 'utf-8'))
         motor.setBaudRate(115200)
         motor.setDataCharacteristics(constants.BITS_8, constants.STOP_BITS_1, constants.PARITY_NONE)
-        time.sleep(.05)
+        catkit.util.sleep(.05)
         motor.purge()
-        time.sleep(.05)
+        catkit.util.sleep(.05)
         motor.resetDevice()
         motor.setFlowControl(constants.FLOW_RTS_CTS, 0, 0)
         motor.setRts()
@@ -53,7 +53,7 @@ class ThorlabsMFF101(FlipMotor):
         self.log.info(f"Moving to 'up' position, which is {inout_label} beam")
         up_command = b"\x6A\x04\x00\x01\x21\x01"
         self.motor.write(up_command)
-        time.sleep(1)
+        catkit.util.sleep(1)
 
     def move_to_position2(self):
         """Implements a move to "down" position """
@@ -62,7 +62,7 @@ class ThorlabsMFF101(FlipMotor):
         self.log.info(f"Moving to 'down' position, which is {inout_label} beam")
         down_command = b"\x6A\x04\x00\x02\x21\x01"
         self.motor.write(down_command)
-        time.sleep(1)
+        catkit.util.sleep(1)
 
     def blink_led(self):
         self.log.info(".blink.")

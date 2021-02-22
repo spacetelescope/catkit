@@ -8,6 +8,11 @@ from astropy.io import fits
 
 import catkit.util
 
+
+def test_simualtion_conftest():
+    assert catkit.util.simulation
+
+
 class TestSaveImages:
 
     def test_empty_image_list(self, tmpdir):

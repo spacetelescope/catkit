@@ -2,10 +2,10 @@ from ctypes import cdll
 import logging
 import os
 import re
-import time
 
 from catkit.interfaces.LaserSource import LaserSource
 from catkit.config import CONFIG_INI
+import catkit.util
 
 """Interface for a laser source."""
 
@@ -79,7 +79,7 @@ class ThorlabsMCLS1(LaserSource):
             current_command_string = "current={}\r".format(value).encode()
             self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
             if sleep:
-                time.sleep(self.SLEEP_TIME)
+                catkit.util.sleep(self.SLEEP_TIME)
 
     def get_current(self):
         """Returns the value of the laser's current."""
@@ -119,7 +119,7 @@ class ThorlabsMCLS1(LaserSource):
         self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
         if value == 1:
             self.log.info("Laser is enabling channel " + str(channel) + "...")
-            time.sleep(self.SLEEP_TIME)
+            catkit.util.sleep(self.SLEEP_TIME)
 
     def set_system_enable(self, value):
         """
@@ -129,7 +129,7 @@ class ThorlabsMCLS1(LaserSource):
         enable_command_string = "system={}\r".format(value).encode()
         self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
         if value == 1:
-            time.sleep(self.SLEEP_TIME)
+            catkit.util.sleep(self.SLEEP_TIME)
 
     def set_active_channel(self, channel):
         # Set Active Channel.
