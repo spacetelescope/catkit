@@ -12,7 +12,6 @@ According to the manual, this should hold for models:
 
 ## -- IMPORTS
 import functools
-import time
 
 from http.client import IncompleteRead
 import numpy as np
@@ -22,6 +21,7 @@ import urllib
 from urllib.parse import urlencode
 
 from catkit.interfaces.MotorController2 import MotorController2
+import catkit.util
 
 ## -- Let's go.
 
@@ -190,7 +190,7 @@ class NewportPicomotorController(MotorController2):
         # Keep in mind sometimes steps are negative
         # Default velocity is 2000 steps/second
         move_time = np.abs(value*self.sleep_per_step)
-        time.sleep(move_time)
+        catkit.util.sleep(move_time)
         
         set_value = float(self._send_message(get_message, 'get')) - float(initial_value)
         

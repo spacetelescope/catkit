@@ -4,12 +4,13 @@ from catkit.config import CONFIG_INI
 from catkit.catkit_types import units, quantity
 import catkit.util
 from astropy.io import fits
-from time import sleep
 import numpy as np
 import logging
 import os
 import requests
 import sys
+
+import catkit.util
 
 
 # implementation of a camera to run the SBIG STX-16803 Pupil Cam and KAF-1603ME/STT-1603M small cam
@@ -53,7 +54,7 @@ class SbigCamera(Camera):
         imager_status = self.__check_imager_state()
         if imager_status > self.IMAGER_STATE_IDLE:
             # work in progress, abort the exposure
-            sleep(self.min_delay)  # limit the rate at which requests go to the camera
+            catkit.util.sleep(self.min_delay)  # limit the rate at which requests go to the camera
             r = requests.get(self.base_url + "ImagerAbortExposure.cgi")
             # no data is returned, but an http error indicates if the abort failed
             r.raise_for_status()
@@ -308,7 +309,7 @@ class SbigCamera(Camera):
 
         # wait until imager has taken an image
         while imager_state > self.IMAGER_STATE_IDLE:
-            sleep(self.min_delay)  # limit the rate at which requests go to the camera
+            catkit.util.sleep(self.min_delay)  # limit the rate at which requests go to the camera
             imager_state = self.__check_imager_state()
             if imager_state == self.IMAGER_STATE_ERROR:
                 # an error has occurred

@@ -3,11 +3,10 @@
 import os
 import signal
 import subprocess
-import time
 
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 from catkit.hardware.iris_ao.segmented_dm_command import SegmentedDmCommand
-
+import catkit.util
 from catkit.hardware.iris_ao import util
 
 
@@ -125,7 +124,7 @@ class IrisAoDmController(DeformableMirrorController):
                                                     cwd=self.path_to_dm_exe,
                                                     bufsize=1,
                                                     creationflags=self.instrument_lib.CREATE_NEW_PROCESS_GROUP)
-        time.sleep(1)
+        catkit.util.sleep(1)
 
         # Initialize the Iris to zeros.
         self.zero()

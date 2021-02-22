@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
 import multiprocessing
-import time
 
 import catkit.util
 from catkit.testbed import devices
@@ -209,7 +208,7 @@ class Experiment(ABC):
         """
         sleep_count = 0
         while process.is_alive():
-            time.sleep(1)
+            catkit.util.sleep(1)
             sleep_count += 1
             if sleep_count == interval:
                 return True

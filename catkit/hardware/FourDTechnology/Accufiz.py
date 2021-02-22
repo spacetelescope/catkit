@@ -3,7 +3,6 @@ import math
 import os
 import requests
 import tempfile
-import time
 import shutil
 import uuid
 
@@ -71,7 +70,7 @@ class Accufiz(FizeauInterferometer):
         resp = self.instrument_lib.post(url, data=data, json=json, **kwargs)
         if resp.status_code != 200:
             raise RuntimeError(f"{self.config_id} POST error: {resp.status_code}: {resp.text}")
-        time.sleep(self.post_save_sleep)
+        catkit.util.sleep(self.post_save_sleep)
         return resp
 
     def take_measurement(self,
