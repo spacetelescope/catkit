@@ -338,7 +338,7 @@ class SegmentedDmCommand(object):
         :param filename: str, name of ini file to be written out
         :param out_dir: str, name of directory where ini file will be saved
         """
-        if not filename.endswith((".ini", ".ini")):
+        if not filename.endswith(".ini"):
             filename += ".ini"
 
         data = self.get_data()
