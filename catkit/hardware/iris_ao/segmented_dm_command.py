@@ -395,7 +395,7 @@ class SegmentedDmCommand(object):
             self.plot_psf(rotation_angle=psf_rotation_angle, vmin=vmin_psf, vmax=vmax_psf, figure_name_prefix=figure_name_prefix, out_dir=out_dir,
                           save_figure=save_figures)
 
-    def plot_wavefront(self, figure_name_prefix, out_dir, vmax, save_figure=True):
+    def plot_wavefront(self, figure_name_prefix, out_dir, vmax=0.5e-6*u.meter, save_figure=True):
         """
         Plot the deployed mirror state (wavefront error)
 
