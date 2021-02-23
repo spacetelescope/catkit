@@ -416,9 +416,9 @@ class SegmentedDmCommand(object):
             plt.show()
 
     @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
-    def plot_psf(self, wavelength=640*u.nm, figure_name_prefix=None, rotation_angle=0,  out_dir=None, vmin=10e-8,
+    def plot_psf(self, wavelength=640*u.nm, figure_name_prefix=None, rotation_angle=0,  out_dir=None, vmin=1e-8,
                  pixelscale=0.010, instrument_fov=1.0,
-                 vmax=10e-2, save_figure=True):
+                 vmax=1e-2, save_figure=True):
         """
         Plot the simulated PSF based on the mirror state. Optionally save figure to a file as well
 
