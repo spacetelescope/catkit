@@ -30,6 +30,9 @@ class IrisAoDmController(DeformableMirrorController):
 
     instrument_lib = subprocess
 
+    def _clear_state(self):
+        self.command_object = None
+
     def initialize(self,
                    mirror_serial,
                    driver_serial,
@@ -54,7 +57,7 @@ class IrisAoDmController(DeformableMirrorController):
 
         self.log.info("Opening IrisAO connection")
         # Create class attributes for storing an individual command.
-        self.command_object = None
+        self._clear_state()
 
         self.mirror_serial = mirror_serial
         self.driver_serial = driver_serial
@@ -112,6 +115,7 @@ class IrisAoDmController(DeformableMirrorController):
 
     def _open(self):
         """Open a connection to the IrisAO"""
+        self._clear_state()
         cmd = [self.full_path_dm_exe, str(self.disable_hardware)]
         if self.path_to_custom_mirror_files:
             cmd.append(self.path_to_custom_mirror_files)
@@ -161,6 +165,7 @@ class IrisAoDmController(DeformableMirrorController):
             self.instrument.wait(timeout=2)
         finally:
             self.instrument = None
+            self._clear_state()
 
     def apply_shape(self, dm_shape, dm_num=1):
         """
@@ -178,10 +183,15 @@ class IrisAoDmController(DeformableMirrorController):
         command = dm_shape.to_command()
 
         # Send array to DM.
-        self.send_data(command)
-
-        # Update the dm_command class attribute.
-        self.command_object = dm_shape
+        try:
+            self.send_data(command)
+        except Exception:
+            # We shouldn't guarantee the state of the DM
+            self._clear_state()
+            raise
+        else:
+            # Update the dm_command class attribute.
+            self.command_object = dm_shape
 
     def apply_shape_to_both(self, dm1_shape=None, dm2_shape=None):
         """Method only used by the BostonDmController"""
