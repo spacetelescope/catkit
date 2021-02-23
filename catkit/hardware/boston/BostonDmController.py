@@ -25,14 +25,17 @@ class BostonDmController(DeformableMirrorController):
 
     instrument_lib = bmc
 
-    def initialize(self, serial_number, command_length, dac_bit_width):
-        """ Initialize dm manufacturer specific object - this does not, nor should it, open a connection."""
-        self.log.info("Opening DM connection")
-        # Create class attributes for storing individual DM commands.
+    def _clear_state(self):
         self.dm1_command = None
         self.dm2_command = None
         self.dm1_command_object = None
         self.dm2_command_object = None
+
+    def initialize(self, serial_number, command_length, dac_bit_width):
+        """ Initialize dm manufacturer specific object - this does not, nor should it, open a connection."""
+        self.log.info("Opening DM connection")
+        # Create class attributes for storing individual DM commands.
+        self._clear_state()
         self.serial_num = serial_number
         self.command_length = command_length
         self.dac_bit_width = dac_bit_width
@@ -51,6 +54,7 @@ class BostonDmController(DeformableMirrorController):
                                                                   self.instrument.error_string(status)))
 
     def _open(self):
+        self._clear_state()
         dm = self.instrument_lib.BmcDm()
         status = dm.open_dm(self.serial_num)
         if status != self.instrument_lib.NO_ERR:
@@ -68,11 +72,15 @@ class BostonDmController(DeformableMirrorController):
 
         # Initialize the DM to zeros.
         zeros = np.zeros(self.command_length, dtype=float)
-        self.send_data(zeros)
-
-        # Store the current dm_command values in class attributes.
-        self.dm1_command = zeros
-        self.dm2_command = zeros.copy()  # dm 1 & 2 should NOT be using the same memory
+        try:
+            self.send_data(zeros)  # TODO: call self.apply_shape_to_both()
+        except Exception:
+            self._clear_state()
+            raise
+        else:
+            # Store the current dm_command values in class attributes.
+            self.dm1_command = zeros
+            self.dm2_command = zeros.copy()  # dm 1 & 2 should NOT be using the same memory
         self.dm_controller = self.instrument  # For legacy API purposes
 
         return self.instrument
@@ -91,6 +99,7 @@ class BostonDmController(DeformableMirrorController):
                 self.instrument.close_dm()
         finally:
             self.instrument = None
+            self._clear_state()
 
     def apply_shape_to_both(self, dm1_command_object, dm2_command_object):
         """Combines both commands and sends to the controller to produce a shape on each DM."""
@@ -106,13 +115,18 @@ class BostonDmController(DeformableMirrorController):
 
         # Add both arrays together (first half and second half) and send to DM.
         full_command = dm1_command + dm2_command
-        self.send_data(full_command)
-
-        # Update both dm_command class attributes.
-        self.dm1_command = dm1_command
-        self.dm2_command = dm2_command
-        self.dm1_command_object = dm1_command_object
-        self.dm2_command_object = dm2_command_object
+        try:
+            self.send_data(full_command)
+        except Exception:
+            # We shouldn't guarantee the state of the DM.
+            self._clear_state()
+            raise
+        else:
+            # Update both dm_command class attributes.
+            self.dm1_command = dm1_command
+            self.dm2_command = dm2_command
+            self.dm1_command_object = dm1_command_object
+            self.dm2_command_object = dm2_command_object
 
     def apply_shape(self, dm_command_object, dm_num):
         self.log.info("Applying shape to DM " + str(dm_num))
@@ -129,12 +143,17 @@ class BostonDmController(DeformableMirrorController):
 
         # Add both arrays together (first half and second half) and send to DM.
         full_command = dm_command + other_dm_command
-        self.send_data(full_command)
-
-        # Update the dm_command class attribute.
-        if dm_num == 1:
-            self.dm1_command = dm_command
-            self.dm1_command_object = dm_command_object
+        try:
+            self.send_data(full_command)
+        except Exception:
+            # We shouldn't guarantee the state of the DM.
+            self._clear_state()
+            raise
         else:
-            self.dm2_command = dm_command
-            self.dm2_command_object = dm_command_object
+            # Update the dm_command class attribute.
+            if dm_num == 1:
+                self.dm1_command = dm_command
+                self.dm1_command_object = dm_command_object
+            else:
+                self.dm2_command = dm_command
+                self.dm2_command_object = dm_command_object
