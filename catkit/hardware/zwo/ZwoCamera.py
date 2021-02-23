@@ -292,9 +292,9 @@ class ZwoCamera(Camera):
         # DATA MODE: Takes images and returns data and metadata (does not write anything to disk).
         if use_video_capture_mode:
             # Set timeout in ms to:
-            # 2 x exposure time + 0.5sec
-            # as per SDK recommendation
-            timeout = 2 * exposure_time + quantity(0.5, units.second) # ms
+            # 2 x exposure time + 10sec
+            # SDK recommends 2 x exposure time + 0.5sec, but we want to never trigger the timeout accidentally.
+            timeout = 2 * exposure_time + quantity(10, units.second) # ms
 
             img_list = self.__capture_video_and_orient(num_exposures, timeout, theta=self.theta, fliplr=self.fliplr)
         else:
