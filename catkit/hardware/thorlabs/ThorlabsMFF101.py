@@ -27,8 +27,10 @@ class ThorlabsMFF101(FlipMotor):
         self.serial = serial
         self.in_beam_position = in_beam_position
         self.out_of_beam_position = 1 if in_beam_position == 2 else 2
+        self.current_position = None
 
     def _open(self):
+        self.current_position = None
         # Open.
         self.instrument = self.instrument_lib.openEx(self.serial.encode())
 
@@ -49,6 +51,7 @@ class ThorlabsMFF101(FlipMotor):
     def _close(self):
         """Close dm connection safely."""
         self.instrument.close()
+        self.current_position = None
 
     def move_to_position(self, position):
         """ Calls move_to_position<position_number>(). """
@@ -70,6 +73,7 @@ class ThorlabsMFF101(FlipMotor):
         self.log.info(f"Moving to 'up' position (1), which is {'in' if is_in_beam else 'out of'} beam")
         self.instrument.write(self.Command.MOVE_TO_POSITION_1)
         catkit.util.sleep(1)
+        self.current_position = FlipMountPosition.IN_BEAM if is_in_beam else FlipMountPosition.OUT_OF_BEAM
 
     def move_to_position2(self):
         """ Implements a move to "down" position. """
@@ -78,6 +82,7 @@ class ThorlabsMFF101(FlipMotor):
         self.log.info(f"Moving to 'up' position (2), which is {'in' if is_in_beam else 'out of'} beam")
         self.instrument.write(self.Command.MOVE_TO_POSITION_2)
         catkit.util.sleep(1)
+        self.current_position = FlipMountPosition.IN_BEAM if is_in_beam else FlipMountPosition.OUT_OF_BEAM
 
     def blink_led(self):
         self.log.info(".blink.")
