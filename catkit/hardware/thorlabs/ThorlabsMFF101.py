@@ -4,6 +4,8 @@ try:
     import ftd2xx
 except Exception as error:  # Raises OSError if it can't open driver lib
     raise ImportError("Missing libftd2xx driver? Download from https://www.ftdichip.com/Drivers/D2XX.htm") from error
+
+from catkit.catkit_types import FlipMountPosition
 from catkit.interfaces.FlipMotor import FlipMotor
 import catkit.util
 
@@ -24,6 +26,7 @@ class ThorlabsMFF101(FlipMotor):
 
         self.serial = serial
         self.in_beam_position = in_beam_position
+        self.out_of_beam_position = 1 if in_beam_position == 2 else 2
 
     def _open(self):
         # Open.
@@ -47,12 +50,16 @@ class ThorlabsMFF101(FlipMotor):
         """Close dm connection safely."""
         self.instrument.close()
 
-    def move_to_position(self, position_number):
+    def move_to_position(self, position):
         """ Calls move_to_position<position_number>(). """
+
+        if isinstance(position, FlipMountPosition):
+            position = self.in_beam_position if position is FlipMountPosition.IN_BEAM else self.out_of_beam_position
+
         # return self.__getattribute__(f"move_to_position{position_number}")
-        if position_number == 1:
+        if position == 1:
             return self.move_to_position1()
-        elif position_number == 2:
+        elif position == 2:
             return self.move_to_position2()
         else:
             raise NotImplementedError
@@ -60,8 +67,7 @@ class ThorlabsMFF101(FlipMotor):
     def move_to_position1(self):
         """ Implements a move to the "up" position. """
         is_in_beam = self.in_beam_position == 1
-        inout_label = 'in' if is_in_beam else "out of"
-        self.log.info(f"Moving to 'up' position, which is {inout_label} beam")
+        self.log.info(f"Moving to 'up' position (1), which is {'in' if is_in_beam else 'out of'} beam")
         self.instrument.write(self.Command.MOVE_TO_POSITION_1)
         catkit.util.sleep(1)
 
@@ -69,7 +75,7 @@ class ThorlabsMFF101(FlipMotor):
         """ Implements a move to "down" position. """
         is_in_beam = self.in_beam_position == 2
         inout_label = 'in' if is_in_beam else "out of"
-        self.log.info(f"Moving to 'down' position, which is {inout_label} beam")
+        self.log.info(f"Moving to 'up' position (2), which is {'in' if is_in_beam else 'out of'} beam")
         self.instrument.write(self.Command.MOVE_TO_POSITION_2)
         catkit.util.sleep(1)
 
