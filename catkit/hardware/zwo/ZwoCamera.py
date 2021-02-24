@@ -15,7 +15,7 @@ import catkit.util
 
 
 class ZwoCamera(Camera):
-    
+
     instrument_lib = zwoasi
     __ZWO_ASI_LIB = 'ZWO_ASI_LIB'
 
@@ -78,7 +78,7 @@ class ZwoCamera(Camera):
         self.instrument = camera
         # Alias for backward compatibility.
         self.camera = self.instrument
-        
+
         # Get all of the camera controls.
         controls = self.instrument.get_controls()
 
@@ -100,7 +100,7 @@ class ZwoCamera(Camera):
 
         # Set image format to be RAW16, although camera is only 12-bit.
         self.instrument.set_image_type(self.instrument_lib.ASI_IMG_RAW16)
-        
+
         return self.instrument
 
     def __capture(self, initial_sleep):
@@ -110,13 +110,13 @@ class ZwoCamera(Camera):
 
         Parameters
         ----------
-        initial_sleep : int, float, Pint quantity
+        initial_sleep : Pint quantity
             How long to sleep until exposure is complete. I.e., initial_sleep >= exposure_time.
 
         Returns
         -------
-        image : np.array of ints
-            Array of integers making up the image.
+        image : np.array of floats
+            Array of floats making up the image.
         """
 
         # Passing the initial_sleep and poll values prevent crashes. DO NOT REMOVE!!!
@@ -132,7 +132,7 @@ class ZwoCamera(Camera):
         return image.astype(np.dtype(np.float32))
 
     def __capture_and_orient(self, initial_sleep, theta, fliplr):
-        """ Takes and image and flips according to theta and l/r input.
+        """ Takes an image and flips according to theta and l/r input.
 
         WARNING: This func does NOT set the exposure time!
 
@@ -147,14 +147,76 @@ class ZwoCamera(Camera):
 
         Returns
         -------
-        image : np.array of ints
-            Array of integers making up the image.
+        image : np.array of floats
+            Array of floats making up the image.
         """
 
         unflipped_image = self.__capture(initial_sleep=initial_sleep)
         image = catkit.util.rotate_and_flip_image(unflipped_image, theta, fliplr)
         return image
-    
+
+    def __capture_video(self, num_exposures, timeout):
+        """ Take a number of images.
+
+        WARNING: This func does NOT set the exposure time!
+
+        Parameters
+        ----------
+        num_exposures : int
+            The number of exposures to take.
+        timeout : Pint quantity
+            How long to wait for an image. Afterwards a timeout exception is raised.
+
+        Returns
+        -------
+        images : list of (np.array of floats)
+            All captured images in a list.
+        """
+        timeout_in_ms = timeout.to(units.millisecond).magnitude
+        images = []
+
+        self.instrument.start_video_capture()
+
+        try:
+            for i in range(num_exposures):
+                img = self.instrument.capture_video_frame(timeout=timeout_in_ms)
+
+                images.append(img.astype(np.dtype(np.float32)))
+        finally:
+            # Stop exposures. The stop_exposure() might not be necessary, but there's no
+            # harm in calling it anyway.
+            self.instrument.stop_video_capture()
+            self.instrument.stop_exposure()
+
+        return images
+
+    def __capture_video_and_orient(self, num_exposures, timeout, theta, fliplr):
+        """ Takes a number of images and flips each according to theta and l/r input.
+
+        WARNING: This func does NOT set the exposure time!
+
+        Parameters
+        ----------
+        num_exposures : int
+            The number of exposures to take.
+        timeout : Pint quantity
+            How long to wait for an image. Afterwards a timeout exception is raised.
+        theta : float
+            How many degrees to rotate the image.
+        fliplr : bool
+            Whether to flip left/right.
+
+        Returns
+        -------
+        images : list of (np.array of floats)
+            All captured images in a list.
+        """
+        images = self.__capture_video(num_exposures, timeout)
+
+        oriented_images = [catkit.util.rotate_and_flip_image(unflipped_image, theta, fliplr) for unflipped_image in images]
+
+        return oriented_images
+
     def _close(self):
         """Close camera connection"""
         self.log.info("Closing camera connection.")
@@ -188,7 +250,7 @@ class ZwoCamera(Camera):
     def just_take_exposures(self, exposure_time, num_exposures,
                             extra_metadata=None,
                             subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
-                            bins=None):
+                            bins=None, use_video_capture_mode=False):
         """
         Low level method to take exposures using a Zwo camera. By default keeps image data in.
 
@@ -202,6 +264,7 @@ class ZwoCamera(Camera):
         :param gain: Gain of ZWO camera (volts).
         :param full_image: Boolean for whether to take a full image.
         :param bins: Integer value for number of bins.
+        :param use_video_capture_mode: Boolean for whether to use video capture or snapshot mode. Default is False.
         :return: Two parameters: Image list (numpy data or paths), Metadata list of MetaDataEntry objects.
         """
 
@@ -227,11 +290,19 @@ class ZwoCamera(Camera):
                 meta_data.append(extra_metadata)
 
         # DATA MODE: Takes images and returns data and metadata (does not write anything to disk).
-        img_list = []
-        # Take exposures and add to list.
-        for i in range(num_exposures):
-            img = self.__capture_and_orient(initial_sleep=exposure_time, theta=self.theta, fliplr=self.fliplr)
-            img_list.append(img)
+        if use_video_capture_mode:
+            # Set timeout in ms to:
+            # 2 x exposure time + 10sec
+            # SDK recommends 2 x exposure time + 0.5sec, but we want to never trigger the timeout accidentally.
+            timeout = 2 * exposure_time + quantity(10, units.second) # ms
+
+            img_list = self.__capture_video_and_orient(num_exposures, timeout, theta=self.theta, fliplr=self.fliplr)
+        else:
+            img_list = []
+            # Take exposures and add to list.
+            for i in range(num_exposures):
+                img = self.__capture_and_orient(initial_sleep=exposure_time, theta=self.theta, fliplr=self.fliplr)
+                img_list.append(img)
 
         return img_list, meta_data
 
