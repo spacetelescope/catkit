@@ -54,35 +54,29 @@ class ThorlabsMFF101(FlipMotor):
         self.current_position = None
 
     def move_to_position(self, position):
-        """ Calls move_to_position<position_number>(). """
-
         if isinstance(position, FlipMountPosition):
             position = self.in_beam_position if position is FlipMountPosition.IN_BEAM else self.out_of_beam_position
 
-        # return self.__getattribute__(f"move_to_position{position_number}")
         if position == 1:
-            return self.move_to_position1()
+            command = self.Command.MOVE_TO_POSITION_1
         elif position == 2:
-            return self.move_to_position2()
+            command = self.Command.MOVE_TO_POSITION_2
         else:
             raise NotImplementedError
 
-    def move_to_position1(self):
-        """ Implements a move to the "up" position. """
-        is_in_beam = self.in_beam_position == 1
-        self.log.info(f"Moving to 'up' position (1), which is {'in' if is_in_beam else 'out of'} beam")
-        self.instrument.write(self.Command.MOVE_TO_POSITION_1)
+        is_in_beam = self.in_beam_position == position
+        self.log.info(f"Moving to 'up' position ({position}), which is {'in' if is_in_beam else 'out of'} beam")
+        self.instrument.write(command)
         catkit.util.sleep(1)
         self.current_position = FlipMountPosition.IN_BEAM if is_in_beam else FlipMountPosition.OUT_OF_BEAM
 
+    def move_to_position1(self):
+        """ Implements a move to the "up" position. """
+        self.move_to_position(1)
+
     def move_to_position2(self):
         """ Implements a move to "down" position. """
-        is_in_beam = self.in_beam_position == 2
-        inout_label = 'in' if is_in_beam else "out of"
-        self.log.info(f"Moving to 'up' position (2), which is {'in' if is_in_beam else 'out of'} beam")
-        self.instrument.write(self.Command.MOVE_TO_POSITION_2)
-        catkit.util.sleep(1)
-        self.current_position = FlipMountPosition.IN_BEAM if is_in_beam else FlipMountPosition.OUT_OF_BEAM
+        self.move_to_position(2)
 
     def blink_led(self):
         self.log.info(".blink.")
