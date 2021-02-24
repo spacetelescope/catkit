@@ -70,6 +70,9 @@ class ThorlabsMFF101(FlipMotor):
         catkit.util.sleep(1)
         self.current_position = FlipMountPosition.IN_BEAM if is_in_beam else FlipMountPosition.OUT_OF_BEAM
 
+    def move(self, position):
+        return self.move_to_position(position=position)
+
     def move_to_position1(self):
         """ Implements a move to the "up" position. """
         self.move_to_position(1)
