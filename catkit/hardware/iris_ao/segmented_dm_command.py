@@ -338,6 +338,9 @@ class SegmentedDmCommand(object):
         :param filename: str, name of ini file to be written out
         :param out_dir: str, name of directory where ini file will be saved
         """
+        if not filename.endswith(".ini"):
+            filename += ".ini"
+
         data = self.get_data()
         command = dict(zip(self.segments_in_pupil, data))
         path = os.path.join(out_dir, filename)
@@ -358,7 +361,7 @@ class SegmentedDmCommand(object):
                                           f"Piston/GradX/GradY applied for segment {seg}"))
         return metadata
 
-    def display(self, display_wavefront=True, display_psf=True, psf_rotation_angle=0.,
+    def display(self, display_wavefront=True, display_psf=True, psf_rotation_angle=0., vmax_opd=0.5e-6*u.meter, vmin_psf=1e-8, vmax_psf=1e-2,
                 save_figures=True, figure_name_prefix='', out_dir=''):
         """
         Display either the deployed mirror state ("wavefront") and/or the PSF created
@@ -390,9 +393,9 @@ class SegmentedDmCommand(object):
         if figure_name_prefix:
             figure_name_prefix = f'{figure_name_prefix}_'
         if display_wavefront:
-            self.plot_wavefront(figure_name_prefix, out_dir, save_figure=save_figures)
+            self.plot_wavefront(figure_name_prefix, out_dir, vmax=vmax_opd, save_figure=save_figures)
         if display_psf:
-            self.plot_psf(rotation_angle=psf_rotation_angle, figure_name_prefix=figure_name_prefix, out_dir=out_dir,
+            self.plot_psf(rotation_angle=psf_rotation_angle, vmin=vmin_psf, vmax=vmax_psf, figure_name_prefix=figure_name_prefix, out_dir=out_dir,
                           save_figure=save_figures)
 
     def plot_wavefront(self, figure_name_prefix, out_dir, vmax=0.5e-6*u.meter, save_figure=True):
@@ -416,9 +419,9 @@ class SegmentedDmCommand(object):
             plt.show()
 
     @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
-    def plot_psf(self, wavelength=640*u.nm, figure_name_prefix=None, rotation_angle=0,  out_dir=None, vmin=10e-8,
+    def plot_psf(self, wavelength=640*u.nm, figure_name_prefix=None, rotation_angle=0,  out_dir=None, vmin=1e-8,
                  pixelscale=0.010, instrument_fov=1.0,
-                 vmax=10e-2, save_figure=True):
+                 vmax=1e-2, save_figure=True):
         """
         Plot the simulated PSF based on the mirror state. Optionally save figure to a file as well
 
