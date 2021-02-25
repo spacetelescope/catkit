@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from catkit.hardware.thorlabs.ThorlabsMFF101 import ThorlabsMFF101
+import catkit.hardware.thorlabs.ThorlabsMFF101
 
 
 class MFF101Emulator(ABC):
@@ -49,11 +49,11 @@ class MFF101Emulator(ABC):
         pass
 
     def write(self, data):
-        if data == ThorlabsMFF101.Command.MOVE_TO_POSITION_1:
+        if data == catkit.hardware.thorlabs.ThorlabsMFF101.ThorlabsMFF101.Command.MOVE_TO_POSITION_1:
             self.move_to_position_1()
-        elif data == ThorlabsMFF101.Command.MOVE_TO_POSITION_2:
+        elif data == catkit.hardware.thorlabs.ThorlabsMFF101.ThorlabsMFF101.Command.MOVE_TO_POSITION_2:
             self.move_to_position_2()
-        elif data == ThorlabsMFF101.Command.BLINK_LED:
+        elif data == catkit.hardware.thorlabs.ThorlabsMFF101.ThorlabsMFF101.Command.BLINK_LED:
             pass
         else:
             raise NotImplementedError

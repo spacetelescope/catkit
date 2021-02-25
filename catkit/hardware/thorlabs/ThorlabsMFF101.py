@@ -2,8 +2,8 @@ from enum import Enum
 
 try:
     import ftd2xx
-except Exception as error:  # Raises OSError if it can't open driver lib
-    raise ImportError("Missing libftd2xx driver? Download from https://www.ftdichip.com/Drivers/D2XX.htm") from error
+except OSError as error:  # Raises OSError if it can't open driver lib
+    ftd2xx = error
 
 from catkit.catkit_types import FlipMountPosition
 from catkit.interfaces.FlipMotor import FlipMotor
@@ -15,6 +15,12 @@ import catkit.util
 class ThorlabsMFF101(FlipMotor):
 
     instrument_lib = ftd2xx
+
+    def __init__(self, *arg, **kwargs):
+        if isinstance(self.instrument_lib, BaseException):
+            error = self.instrument_lib
+            raise ImportError("Missing libftd2xx driver? Download from https://www.ftdichip.com/Drivers/D2XX.htm") from error
+        super().__init__(*arg, **kwargs)
 
     class Command(Enum):
         MOVE_TO_POSITION_1 = b"\x6A\x04\x00\x01\x21\x01"
