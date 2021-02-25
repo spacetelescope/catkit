@@ -72,7 +72,7 @@ class ThorlabsMFF101(FlipMotor):
 
         is_in_beam = self.in_beam_position == position
         self.log.info(f"Moving to 'up' position ({position}), which is {'in' if is_in_beam else 'out of'} beam")
-        self.instrument.write(command)
+        self.instrument.write(command.value)
         catkit.util.sleep(1)
         self.current_position = FlipMountPosition.IN_BEAM if is_in_beam else FlipMountPosition.OUT_OF_BEAM
 
@@ -89,4 +89,4 @@ class ThorlabsMFF101(FlipMotor):
 
     def blink_led(self):
         self.log.info(".blink.")
-        self.instrument.write(self.Command.BLINK_LED)
+        self.instrument.write(self.Command.BLINK_LED.value)

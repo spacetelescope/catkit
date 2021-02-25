@@ -49,11 +49,11 @@ class MFF101Emulator(ABC):
         pass
 
     def write(self, data):
-        if data == catkit.hardware.thorlabs.ThorlabsMFF101.ThorlabsMFF101.Command.MOVE_TO_POSITION_1:
+        if data == catkit.hardware.thorlabs.ThorlabsMFF101.ThorlabsMFF101.Command.MOVE_TO_POSITION_1.value:
             self.move_to_position_1()
-        elif data == catkit.hardware.thorlabs.ThorlabsMFF101.ThorlabsMFF101.Command.MOVE_TO_POSITION_2:
+        elif data == catkit.hardware.thorlabs.ThorlabsMFF101.ThorlabsMFF101.Command.MOVE_TO_POSITION_2.value:
             self.move_to_position_2()
-        elif data == catkit.hardware.thorlabs.ThorlabsMFF101.ThorlabsMFF101.Command.BLINK_LED:
+        elif data == catkit.hardware.thorlabs.ThorlabsMFF101.ThorlabsMFF101.Command.BLINK_LED.value:
             pass
         else:
             raise NotImplementedError
