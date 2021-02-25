@@ -1,7 +1,8 @@
+from enum import Enum
 import platform
-from catkit.config import CONFIG_INI
 import pyvisa
 
+from catkit.config import CONFIG_INI
 from catkit.interfaces.FilterWheel import FilterWheel
 import catkit.util
 
@@ -10,6 +11,10 @@ class ThorlabsFW102C(FilterWheel):
     """Abstract base class for filter wheels."""
 
     instrument_lib = pyvisa
+
+    class Commands(Enum):
+        GET_POSITION = "pos?"
+        SET_POSITION = "pos="
 
     def initialize(self, *args, **kwargs):
         """ Initializes class instance, but doesn't -- and shouldn't -- open a connection to the hardware."""
@@ -43,9 +48,9 @@ class ThorlabsFW102C(FilterWheel):
         self.current_position = None
 
     def get_position(self):
-        _bytes_written = self.instrument.write("pos?")
+        _bytes_written = self.instrument.write(self.Commands.GET_POSITION.value)
 
-        if self.instrument.last_status is pyvisa.constants.StatusCode.success:
+        if self.instrument.last_status is self.instrument_lib.constants.StatusCode.success:
 
             # First read the echo to clear the buffer.
             try:
@@ -61,11 +66,10 @@ class ThorlabsFW102C(FilterWheel):
             raise Exception(f"Filter wheel '{self.config_id}' returned an unexpected response: '{self.instrument.last_status}'")
 
     def set_position(self, new_position):
-        command = "pos=" + str(new_position)
         try:
-            _bytes_written = self.instrument.write(command)  # bytes_written := len(command) + 1 due to '\r'.
+            _bytes_written = self.instrument.write(f"{self.Commands.SET_POSITION.value}{new_position}")  # bytes_written := len(command) + 1 due to '\r'.
 
-            if self.instrument.last_status is pyvisa.constants.StatusCode.success:
+            if self.instrument.last_status is self.instrument_lib.constants.StatusCode.success:
                 self.instrument.read()
                 self.current_position = new_position
                 # Wait for wheel to move. Fairly arbitrary 3 s delay...
@@ -76,12 +80,5 @@ class ThorlabsFW102C(FilterWheel):
             self.current_position = None
             raise
 
-
-    def ask(self, write_string):
-        self.instrument.write(write_string)
-
     def read(self):
         return self.instrument.read()
-
-    def flush(self):
-        print(self.instrument.read_bytes(1))
