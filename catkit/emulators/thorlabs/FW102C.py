@@ -14,9 +14,9 @@ class FW102CEmulator(ABC):
         class StatusCode:
             success = pyvisa.constants.StatusCode.success
 
-    def __init__(self):
+    def __init__(self, initial_position=1):
         self.last_status = self.constants.StatusCode.success
-        self.position = 1
+        self.position = initial_position
 
     def ResourceManager(self, *args, **kwargs):
         return self
@@ -33,7 +33,9 @@ class FW102CEmulator(ABC):
         pass
 
     def write(self, data):
-        if self.Commands.GET_POSITION.value in data:
+        assert isinstance(data, str)
+
+        if data == self.Commands.GET_POSITION.value:
             return
         elif self.Commands.SET_POSITION.value in data:
             new_position = int(data.split(self.Commands.SET_POSITION.value)[1])

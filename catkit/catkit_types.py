@@ -4,6 +4,32 @@ from enum import Enum
 import astropy.units
 
 
+class ColorWheelFilter(Enum):
+    def __init__(self, filter_name, wavelength, position):
+        self.filter_name = filter_name
+        self.wavelength = wavelength
+        self.position = position
+
+    @classmethod
+    def _missing_(cls, value):
+        for item in cls:
+            if value in (item.filter_name, f"filter_{item.filter_name}", item.wavelength, str(item.wavelength), item.position):
+                return item
+
+
+class NDWheelFilter(Enum):
+    def __init__(self, filter_name, transmittance, position):
+        self.filter_name = filter_name
+        self.transmittance = transmittance
+        self.position = position
+
+    @classmethod
+    def _missing_(cls, value):
+        for item in cls:
+            if value in (item.filter_name, f"filter_{item.filter_name}", item.transmittance, item.position):
+                return item
+
+
 class FlipMountPosition(Enum):
     """
     Enum for the possible states of the Beam Dump.
