@@ -105,3 +105,6 @@ class ThorlabsFW102C(FilterWheel):
         self.current_position = new_position
         # Wait for wheel to move. Fairly arbitrary 3s delay...
         catkit.util.sleep(3)  # TODO: CATKIT-82 make the sleep a function of position change.
+
+    def move(self, position, force=False):
+        return self.set_position(new_position=position, force=force)
