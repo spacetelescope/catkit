@@ -85,26 +85,25 @@ class ThorlabsFW102C(FilterWheel):
         self.get_position()
         return self.current_filter
 
-    def set_position(self, new_position, force=False):
+    def set_position(self, position, force=False):
 
-        # Allow multiple types for `new_position` and normalize to `self.filter_type`.
-        if not isinstance(new_position, self.filter_type):
-            new_position = self.filter_type(new_position)
+        # Allow multiple formats for `position` and normalize to `self.filter_type`.
+        filter = position if isinstance(position, self.filter_type) else self.filter_type(position)
 
-        # convert to integer position.
-        new_position = new_position.position
+        # Convert to integer position.
+        position = filter.position
 
-        # Do nothing if already in desired position.
-        if not force and (new_position == self.current_position):
-            self.log.info(f"Filter wheel already at {new_position}")
+        # Do nothing if already in desired position (unless ``force is True``).
+        if not force and (position == self.current_position):
+            self.log.info(f"Filter wheel already at {position}")
             return
 
         # Move.
-        self.log.info(f"Configuring filter wheel to position: '{new_position}'...")
-        self.comm(f"{self.Commands.SET_POSITION.value}{new_position}")
-        self.current_position = new_position
+        self.log.info(f"Configuring filter wheel to position: '{position}'...")
+        self.comm(f"{self.Commands.SET_POSITION.value}{position}")
+        self.current_position = position
         # Wait for wheel to move. Fairly arbitrary 3s delay...
         catkit.util.sleep(3)  # TODO: CATKIT-82 make the sleep a function of position change.
 
     def move(self, position, force=False):
-        return self.set_position(new_position=position, force=force)
+        return self.set_position(position=position, force=force)
