@@ -85,10 +85,13 @@ class IrisAoDmController(DeformableMirrorController):
             self.instrument = None  # If it died, there's nothing to close, so don't.
             raise RuntimeError(f"{self.config_id} unexpectedly closed.") from error
 
-        # Poll in case it died (though the above flush would most likely catch this).
-        #if self.instrument.poll() is not None:
-        #    self.instrument = None  # If it died, there's nothing to close, so don't.
-        #    raise RuntimeError(f"{self.config_id} unexpectedly closed: ('{self.instrument.returncode}').")
+        # Poll in case it died after receiving the above commanding.
+        if self.instrument.poll() is not None:
+            self.instrument = None  # If it died, there's nothing to close, so don't.
+            raise RuntimeError(f"{self.config_id} unexpectedly closed: ('{self.instrument.returncode}').")
+
+        # WARNING!!! - even with the above poll() there's still scope for the process to have died in this gap.
+        # In which case, the below readline() will deadlock! See https://github.com/spacetelescope/catkit/pull/189.
 
         # Read response.
         self.log.info(f"{self.config_id}: Waiting for response...")
