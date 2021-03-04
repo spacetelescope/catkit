@@ -1,11 +1,12 @@
-from catkit.hardware.thorlabs.ThorlabsMCLS1 import ThorlabsMCLS1
+import catkit.hardware.thorlabs.ThorlabsMCLS1
+
 
 class MCSL1Emulator:
     """ Emulates UART comms library specifically for the MCLS1. """
 
     N_CHANNELS = 4  # The MCLS1 has only 4 channels.
 
-    Command = ThorlabsMCLS1.Command
+    Command = catkit.hardware.thorlabs.ThorlabsMCLS1.ThorlabsMCLS1.Command
 
     def __init__(self, device_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,6 +54,8 @@ class MCSL1Emulator:
         else:
             raise NotImplementedError
 
+        self.set_sim(command)  # Propagate changes through to simulator.
+
     def fnUART_LIBRARY_Get(self, command, buffer, *args, **kwargs):
         if not self.instrument_handle:
             raise RuntimeError("Connection closed")
@@ -77,3 +80,10 @@ class MCSL1Emulator:
 
     def fnUART_LIBRARY_list(self, buffer, size, *args, **kwargs):
         return f"0, {self.device_id}"  # Return port, ID.
+
+    def set_sim(self, command):
+        """ Override this to interface with simulator, e.g., a Poppy model. """
+
+
+class MCLS1(catkit.hardware.thorlabs.ThorlabsMCLS1.ThorlabsMCLS1):
+    instrument_lib = MCSL1Emulator
