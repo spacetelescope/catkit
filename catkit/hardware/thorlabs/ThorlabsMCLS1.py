@@ -9,7 +9,10 @@ import catkit.util
 """Interface for a laser source."""
 
 # Load Thorlabs uart lib, e.g., uart_library_win64.dll.
-UART_lib = cdll.LoadLibrary(os.environ.get('CATKIT_THORLABS_UART_LIB_PATH'))
+try:
+    UART_lib = cdll.LoadLibrary(os.environ.get('CATKIT_THORLABS_UART_LIB_PATH'))
+except Exception as error:
+    UART_lib = error
 
 
 class ThorlabsMCLS1(LaserSource):
@@ -39,6 +42,11 @@ class ThorlabsMCLS1(LaserSource):
         SET_STEP = "step="
         SAVE = "save"
         GET_STATUS = "statword"
+
+    def __init__(self, *args, **kwargs):
+        if isinstance(self.instrument_lib, BaseException):
+            raise self.instrument_lib
+        super().__init__(*args, **kwargs)
 
     def initialize(self,
                    device_id,
