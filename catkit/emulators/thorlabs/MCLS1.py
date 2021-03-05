@@ -1,4 +1,5 @@
 import catkit.hardware.thorlabs.ThorlabsMCLS1
+from catkit.interfaces.Instrument import SimInstrument
 
 
 class MCSL1Emulator:
@@ -39,7 +40,8 @@ class MCSL1Emulator:
         if "=" not in command:
             raise RuntimeError(f"Expected SET command ('=') but got '{command}'")
 
-        command, value = command.replace(self.Command.TERM_CHAR, '').split("=")
+        command, value = command.replace(self.Command.TERM_CHAR.value, '').split("=")
+        value = int(value)
         command += "="
         command = self.Command(command)
 
@@ -56,11 +58,11 @@ class MCSL1Emulator:
 
         self.set_sim(command)  # Propagate changes through to simulator.
 
-    def fnUART_LIBRARY_Get(self, command, buffer, *args, **kwargs):
+    def fnUART_LIBRARY_Get(self, handle, command, buffer, *args, **kwargs):
         if not self.instrument_handle:
             raise RuntimeError("Connection closed")
 
-        command = command.decode().replace(self.Command.TERM_CHAR, '')
+        command = command.decode().replace(self.Command.TERM_CHAR.value, '')
 
         if "?" not in command:
             raise RuntimeError(f"Expected GET command ('?') but got '{command}'")
@@ -76,14 +78,16 @@ class MCSL1Emulator:
         else:
             raise NotImplementedError
 
-        return str(resp).encode()
+        resp = str(resp).encode()
+        buffer[:len(resp)] = resp
 
     def fnUART_LIBRARY_list(self, buffer, size, *args, **kwargs):
-        return f"0, {self.device_id}"  # Return port, ID.
+        resp = f"0, {self.device_id}".encode()  # port, ID.
+        buffer[:len(resp)] = resp
 
     def set_sim(self, command):
         """ Override this to interface with simulator, e.g., a Poppy model. """
 
 
-class MCLS1(catkit.hardware.thorlabs.ThorlabsMCLS1.ThorlabsMCLS1):
+class MCLS1(SimInstrument, catkit.hardware.thorlabs.ThorlabsMCLS1.ThorlabsMCLS1):
     instrument_lib = MCSL1Emulator

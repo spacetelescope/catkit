@@ -26,12 +26,12 @@ class ThorlabsMCLS1(LaserSource):
         GET_ENABLE = "enable?"
         SET_ENABLE = "enable="
         SET_SYSTEM = "system="
+        GET_CHANNEL = "channel?"
         SET_CHANNEL = "channel="
 
         # The following are untested.
         GET_COMMANDS = "?"
         GET_ID = "id?"
-        GET_CHANNEL = "channel?"
         GET_TARGET_TEMP = "target?"
         SET_TARGET_TEMP = "target="
         GET_TEMP = "temp?"
@@ -103,11 +103,13 @@ class ThorlabsMCLS1(LaserSource):
             self.log.info("Power off on exit is False; leaving laser ON.")
 
     def get(self, command, channel=None):
-        self.set_active_channel(channel=channel)
-        command = command + self.Command.TERM_CHAR
-        response_buffer = ("0" * 255)
-        self.instrument_lib.fnUART_LIBRARY_Get(self.instrument, command.encode(), response_buffer.encode())
-        return response_buffer.decode()
+        if command not in (self.Command.GET_CHANNEL,):
+            self.set_active_channel(channel=channel)
+
+        command = command.value + self.Command.TERM_CHAR.value
+        response_buffer = bytearray(255)
+        self.instrument_lib.fnUART_LIBRARY_Get(self.instrument, command.encode(), response_buffer)
+        return response_buffer.rstrip(b"\x00").decode()
 
     def set(self, command, value, channel=None):
         if isinstance(value, bool):
@@ -119,7 +121,7 @@ class ThorlabsMCLS1(LaserSource):
         # WARNING! The device may have multiple connections and thus a race exits between setting the channel and
         # then commanding that channel. See HICAT-542.
 
-        command = f"{command}{value}{self.Command.TERM_CHAR}"
+        command = f"{command.value}{value}{self.Command.TERM_CHAR.value}"
         self.instrument_lib.fnUART_LIBRARY_Set(self.instrument, command.encode(), 32)
 
     def set_current(self, value, channel=None, sleep=True):
@@ -132,7 +134,7 @@ class ThorlabsMCLS1(LaserSource):
 
     def get_current(self, channel=None):
         """ Returns the value of the laser's current. """
-        return float(re.findall("\d+\.\d+", self.get(self.Command.GET_CURRENT, channel=channel))[0])
+        return float(re.findall("[0-9]+.[0-9]+", self.get(self.Command.GET_CURRENT, channel=channel))[0])
 
     @property
     def current(self):
@@ -144,13 +146,13 @@ class ThorlabsMCLS1(LaserSource):
         if not self.device_id:
             raise ValueError(f"{self.config_id}: requires a device ID to find a com port to connect to.")
 
-        response_buffer = ("0" * 255).encode()
+        response_buffer = bytearray(255)
         self.instrument_lib.fnUART_LIBRARY_list(response_buffer, 255)
         response_buffer = response_buffer.decode()
         split = response_buffer.split(",")
         for i, thing in enumerate(split):
             # The list has a format of "Port, Device, Port, Device". Once we find device named VCPO, minus 1 for port.
-            if thing == self.device_id:
+            if self.device_id in thing:
                 return split[i - 1]
 
         raise IOError(f"{self.config_id}: no port found for '{self.device_id}'")
@@ -175,5 +177,8 @@ class ThorlabsMCLS1(LaserSource):
         channel = channel if channel else self.channel
         self.set(self.Command.SET_CHANNEL, value=channel)
 
+    def get_active_channel(self):
+        return int(re.findall("[0-9]+", self.get(self.Command.GET_CHANNEL))[0])
+
     def is_channel_enabled(self, channel=None):
-        return bool(int(re.findall("\d+", self.get(self.Command.GET_ENABLE, channel=channel))[0]))
+        return bool(int(re.findall("[0-9]+", self.get(self.Command.GET_ENABLE, channel=channel))[0]))
