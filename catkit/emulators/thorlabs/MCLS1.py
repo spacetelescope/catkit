@@ -2,7 +2,7 @@ import catkit.hardware.thorlabs.ThorlabsMCLS1
 from catkit.interfaces.Instrument import SimInstrument
 
 
-class MCSL1Emulator:
+class MCLS1Emulator:
     """ Emulates UART comms library specifically for the MCLS1. """
 
     N_CHANNELS = 4  # The MCLS1 has only 4 channels.
@@ -90,4 +90,4 @@ class MCSL1Emulator:
 
 
 class MCLS1(SimInstrument, catkit.hardware.thorlabs.ThorlabsMCLS1.ThorlabsMCLS1):
-    instrument_lib = MCSL1Emulator
+    instrument_lib = MCLS1Emulator

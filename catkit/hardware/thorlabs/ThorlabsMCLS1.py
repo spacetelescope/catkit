@@ -55,12 +55,12 @@ class ThorlabsMCLS1(LaserSource):
                    power_off_on_exit=False,
                    sleep_time=2):
 
-        self.channel = channel #CONFIG_INI.getint(self.config_id, "channel")
-        self.nominal_current = nominal_current#CONFIG_INI.getint(self.config_id, "nominal_current")
+        self.channel = channel
+        self.nominal_current = nominal_current
         self.sleep_time = sleep_time  # Number of seconds to sleep after turning on laser or changing current.
         self.port = None
         self.power_off_on_exit = power_off_on_exit
-        self.device_id = device_id# if device_id else CONFIG_INI.get(config_id, "device_id")
+        self.device_id = device_id
 
     def _open(self):
         self.port = self.find_com_port()
