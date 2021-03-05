@@ -124,6 +124,15 @@ class ThorlabsMCLS1(LaserSource):
         command = f"{command.value}{value}{self.Command.TERM_CHAR.value}"
         self.instrument_lib.fnUART_LIBRARY_Set(self.instrument, command.encode(), 32)
 
+    def get_int(self, command, channel=None):
+        return float(re.findall("[0-9]+", self.get(command, channel=channel))[0])
+
+    def get_bool(self, command, channel=None):
+        return bool(self.get_int(command, channel=channel))
+
+    def get_float(self, command, channel=None):
+        return float(re.findall("[0-9]+.[0-9]+", self.get(command, channel=channel))[0])
+
     def set_current(self, value, channel=None, sleep=True):
         """Sets the current on a given channel."""
         if self.get_current(channel=channel) != value:
@@ -134,7 +143,7 @@ class ThorlabsMCLS1(LaserSource):
 
     def get_current(self, channel=None):
         """ Returns the value of the laser's current. """
-        return float(re.findall("[0-9]+.[0-9]+", self.get(self.Command.GET_CURRENT, channel=channel))[0])
+        return self.get_float(self.Command.GET_CURRENT, channel=channel)
 
     @property
     def current(self):
@@ -178,7 +187,7 @@ class ThorlabsMCLS1(LaserSource):
         self.set(self.Command.SET_CHANNEL, value=channel)
 
     def get_active_channel(self):
-        return int(re.findall("[0-9]+", self.get(self.Command.GET_CHANNEL))[0])
+        return self.get_int(self.Command.GET_CHANNEL)
 
     def is_channel_enabled(self, channel=None):
-        return bool(int(re.findall("[0-9]+", self.get(self.Command.GET_ENABLE, channel=channel))[0]))
+        return self.get_bool(self.Command.GET_ENABLE, channel=channel)
