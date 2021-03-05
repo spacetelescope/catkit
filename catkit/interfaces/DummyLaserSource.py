@@ -1,5 +1,3 @@
-import logging
-
 from catkit.interfaces.LaserSource import LaserSource
 
 
@@ -7,13 +5,14 @@ from catkit.interfaces.LaserSource import LaserSource
 
 
 class DummyLaserSource(LaserSource):
-    log = logging.getLogger(__name__)
-
     def initialize(self, *args, **kwargs):
         return self
 
-    def close(self):
+    def _close(self):
         self.log.info("Dummy Laser closed.")
+
+    def _open(self):
+        return self
 
     def set_current(self, value, sleep=True):
         self.log.info("Set Current being ignored.")
