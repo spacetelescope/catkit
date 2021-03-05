@@ -250,7 +250,7 @@ class ZwoCamera(Camera):
     def just_take_exposures(self, exposure_time, num_exposures,
                             extra_metadata=None,
                             subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
-                            bins=None, use_video_capture_mode=False):
+                            bins=None, use_video_capture_mode=True):
         """
         Low level method to take exposures using a Zwo camera. By default keeps image data in.
 
@@ -264,7 +264,7 @@ class ZwoCamera(Camera):
         :param gain: Gain of ZWO camera (volts).
         :param full_image: Boolean for whether to take a full image.
         :param bins: Integer value for number of bins.
-        :param use_video_capture_mode: Boolean for whether to use video capture or snapshot mode. Default is False.
+        :param use_video_capture_mode: Boolean for whether to use video capture or snapshot mode. Default is True.
         :return: Two parameters: Image list (numpy data or paths), Metadata list of MetaDataEntry objects.
         """
 
