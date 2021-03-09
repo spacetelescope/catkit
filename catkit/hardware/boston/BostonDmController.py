@@ -104,7 +104,7 @@ class BostonDmController(DeformableMirrorController):
             self._clear_state()
 
     def apply_shape_to_both(self, dm1_command_object, dm2_command_object,
-                            flat_map=False,
+                            flat_map=True,
                             bias=False,
                             as_voltage_percentage=False,
                             as_volts=False,
@@ -154,7 +154,7 @@ class BostonDmController(DeformableMirrorController):
             self.dm2_command_object = dm2_command_object
 
     def apply_shape(self, dm_command_object, dm_num,
-                    flat_map=False,
+                    flat_map=True,
                     bias=False,
                     as_voltage_percentage=False,
                     as_volts=False,
