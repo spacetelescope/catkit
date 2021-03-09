@@ -1,145 +1,203 @@
-from ctypes import cdll
-import logging
+import ctypes
+from enum import Enum
 import os
 import re
 
 from catkit.interfaces.LaserSource import LaserSource
-from catkit.config import CONFIG_INI
 import catkit.util
 
 """Interface for a laser source."""
 
+# Load Thorlabs uart lib, e.g., uart_library_win64.dll.
+try:
+    UART_lib = ctypes.cdll.LoadLibrary(os.environ.get('CATKIT_THORLABS_UART_LIB_PATH'))
+except Exception as error:
+    UART_lib = error
+
 
 class ThorlabsMCLS1(LaserSource):
-    SLEEP_TIME = 2  # Number of seconds to sleep after turning on laser or changing current.
-    log = logging.getLogger(__name__)
 
-    def __init__(self, config_id, device_id=None, power_off_on_exit=False, *args, **kwargs):
-        """
-        Child constructor to add a few hardware specific class attributes. Still calls the super.
-        """
-        self.channel = None
-        self.nominal_current = None
-        self.handle = None
+    instrument_lib = UART_lib
+
+    BUFFER_SIZE = 255
+    BAUD_RATE = 115200
+
+    class Command(Enum):
+        TERM_CHAR = "\r"
+        GET_CURRENT = "current?"  # float (mA)
+        SET_CURRENT = "current="
+        GET_ENABLE = "enable?"  # bool/int
+        SET_ENABLE = "enable="
+        SET_SYSTEM = "system="
+        GET_CHANNEL = "channel?"  # int
+        SET_CHANNEL = "channel="
+        GET_TARGET_TEMP = "target?"  # float (C)
+        SET_TARGET_TEMP = "target="
+        GET_TEMP = "temp?"  # float (C)
+        GET_POWER = "power?"  # float (mW)
+        GET_SYSTEM = "system?"  # bool
+
+        # The following are untested.
+        GET_COMMANDS = "?"
+        GET_ID = "id?"
+        GET_SPECS = "specs?"
+        GET_STEP = "step?"
+        SET_STEP = "step="
+        SAVE = "save"
+        GET_STATUS = "statword"
+
+    def __init__(self, *args, **kwargs):
+        if isinstance(self.instrument_lib, BaseException):
+            raise self.instrument_lib
+        super().__init__(*args, **kwargs)
+
+    def initialize(self,
+                   device_id,
+                   channel,
+                   nominal_current,
+                   power_off_on_exit=False,
+                   sleep_time=2):
+
+        self.channel = channel
+        self.nominal_current = nominal_current
+        self.sleep_time = sleep_time  # Number of seconds to sleep after turning on laser or changing current.
         self.port = None
         self.power_off_on_exit = power_off_on_exit
-        self.device_id = device_id if device_id else CONFIG_INI.get(config_id, "device_id")
-        self._library_path = None
-        super(ThorlabsMCLS1, self).__init__(config_id, *args, **kwargs)
+        self.device_id = device_id
+        self.instrument_handle = None
 
-
-    def initialize(self, *args, library_path=None, **kwargs):
-        """Starts laser at the nominal_current value from config.ini."""
-        self.channel = CONFIG_INI.getint(self.config_id, "channel")
-        self.nominal_current = CONFIG_INI.getint(self.config_id, "nominal_current")
-
-        # Load Thorlabs uart lib, e.g., uart_library_win64.dll.
-        self._library_path = os.environ.get('CATKIT_THORLABS_UART_LIB_PATH') if library_path is None else library_path
-        # noinspection PyArgumentList
-        self.laser = cdll.LoadLibrary(self._library_path)
+    def _open(self):
         self.port = self.find_com_port()
-        self.handle = self.laser.fnUART_LIBRARY_open(self.port.encode(), 115200, 3)
-        if self.handle < 0:
-            raise IOError("{} connection failure on port: '{}'".format(self.config_id, self.port))
+        # Open connection (handle).
+        self.instrument_handle = self.instrument_lib.fnUART_LIBRARY_open(self.port.encode(), self.BAUD_RATE, 3)
+        if self.instrument_handle < 0:
+            raise IOError(f"{self.config_id} connection failure on port: '{self.port}'")
+        self.instrument = True  # instrument_handle can be 0 which will result in _close() not being called.
 
         # Set the initial current to nominal_current and enable the laser.
         self.set_current(self.nominal_current, sleep=False)
-        self.set_channel_enable(self.channel, 1)
-        self.set_system_enable(1)
+        self.set_channel_enable(self.channel, True)
+        self.set_system_enable(True)
 
-        return self.laser
+        return self.instrument
 
-    def close(self):
+    def _close(self):
         """Close laser connection safely"""
-        if self.power_off_on_exit:
-            if self.laser.fnUART_LIBRARY_isOpen(self.port.encode()) == 1:
-                self.set_channel_enable(self.channel, 0)
+        try:
+            if self.power_off_on_exit:
+                if self.instrument_lib.fnUART_LIBRARY_isOpen(self.port.encode()) == 1:
+                    self.set_channel_enable(self.channel, False)
 
-                print("Checking to power off laser")
-                # Check if the other channels are enabled before turning off system enable.
-                turn_off_system_enable = True
-                for i in range(1, 5):
-                    if self.is_channel_enabled(i) == 1:
-                        turn_off_system_enable = False
+                    self.log.info("Checking whether other channels enable before powering off laser...")
+                    # Check if the other channels are enabled before turning off system enable.
+                    turn_off_system_enable = True
+                    for i in range(1, 5):
+                        if self.is_channel_enabled(i):
+                            turn_off_system_enable = False
+                            if i == self.channel:
+                                raise RuntimeError(f"Failed to disable channel: '{self.channel}")
+                            break
 
-                if turn_off_system_enable:
-                    self.set_system_enable(0)
-                self.laser.fnUART_LIBRARY_close(self.handle)
-        else:
-            print("Power off on exit is False; leaving laser ON.")
+                    if turn_off_system_enable:
+                        self.log.info("Powering off laser (system wide).")
+                        self.set_system_enable(False)
+                    else:
+                        self.log.info("Other channels enabled, NOT powering off laser (system wide).")
+            else:
+                self.log.info("Power off on exit is False; leaving laser ON.")
+        finally:
+            try:
+                self.instrument_lib.fnUART_LIBRARY_close(self.instrument_handle)
+            finally:
+                self.instrument_handle = None
 
-        self.handle = None
+    def get(self, command, channel=None):
+        if command not in (self.Command.GET_CHANNEL,):
+            self.set_active_channel(channel=channel)
 
-    def set_current(self, value, sleep=True):
+        command = command.value + self.Command.TERM_CHAR.value
+        response_buffer = ctypes.create_string_buffer(self.BUFFER_SIZE)
+        self.instrument_lib.fnUART_LIBRARY_Get(self.instrument_handle, command.encode(), response_buffer)
+        response_buffer = response_buffer.value
+        return response_buffer.rstrip(b"\x00").decode()
+
+    def set(self, command, value, channel=None):
+        if isinstance(value, bool):
+            value = int(value)
+
+        if command not in (self.Command.SET_CHANNEL, self.Command.SET_SYSTEM):
+            self.set_active_channel(channel=channel)
+
+        # WARNING! The device may have multiple connections and thus a race exits between setting the channel and
+        # then commanding that channel. See HICAT-542.
+
+        command = f"{command.value}{value}{self.Command.TERM_CHAR.value}"
+        self.instrument_lib.fnUART_LIBRARY_Set(self.instrument_handle, command.encode(), 32)
+
+    def get_int(self, command, channel=None):
+        return int(re.findall("[0-9]+", self.get(command, channel=channel))[0])
+
+    def get_bool(self, command, channel=None):
+        return bool(self.get_int(command, channel=channel))
+
+    def get_float(self, command, channel=None):
+        return float(re.findall("[0-9]+.[0-9]+", self.get(command, channel=channel))[0])
+
+    def set_current(self, value, channel=None, sleep=True):
         """Sets the current on a given channel."""
-
-        if self.get_current() != value:
+        if self.get_current(channel=channel) != value:
             self.log.info("Laser is changing amplitude...")
-            self.set_active_channel(self.channel)
-            current_command_string = "current={}\r".format(value).encode()
-            self.laser.fnUART_LIBRARY_Set(self.handle, current_command_string, 32)
+            self.set(self.Command.SET_CURRENT, value, channel=channel)
             if sleep:
-                catkit.util.sleep(self.SLEEP_TIME)
+                catkit.util.sleep(self.sleep_time)
 
-    def get_current(self):
-        """Returns the value of the laser's current."""
-        self.set_active_channel(self.channel)
-        command = "current?\r".encode()
-        response_buffer = ("0" * 255).encode()
-        self.laser.fnUART_LIBRARY_Get(self.handle, command, response_buffer)
-        response_buffer = response_buffer.decode()
-        # Use regex to find the float value in the response.
-        return float(re.findall("\d+\.\d+", response_buffer)[0])
+    def get_current(self, channel=None):
+        """ Returns the value of the laser's current. """
+        return self.get_float(self.Command.GET_CURRENT, channel=channel)
+
+    @property
+    def current(self):
+        # The laser can handle multiple connections and thus we can't mutex and store state locally so must query the device.
+        return self.get_current(channel=self.channel)
 
     def find_com_port(self):
         """Queries the dll for the list of all com devices."""
         if not self.device_id:
-            raise ValueError("{}: requires a device ID to find a com port to connect to.".format(self.config_id))
+            raise ValueError(f"{self.config_id}: requires a device ID to find a com port to connect to.")
 
-        response_buffer = ("0" * 255).encode()
-        self.laser.fnUART_LIBRARY_list(response_buffer, 255)
-        response_buffer = response_buffer.decode()
+        response_buffer = ctypes.create_string_buffer(self.BUFFER_SIZE)
+        self.instrument_lib.fnUART_LIBRARY_list(response_buffer, self.BUFFER_SIZE)
+        response_buffer = response_buffer.value.decode()
         split = response_buffer.split(",")
         for i, thing in enumerate(split):
-
             # The list has a format of "Port, Device, Port, Device". Once we find device named VCPO, minus 1 for port.
-            if thing == self.device_id:
+            if self.device_id in thing:
                 return split[i - 1]
 
-        raise IOError("{}: no port found for '{}'".format(self.config_id, self.device_id))
+        raise IOError(f"{self.config_id}: no port found for '{self.device_id}'")
 
     def set_channel_enable(self, channel, value):
-        """
-        Set the laser's channel enable.
+        """ Set the laser's channel enable.
         :param channel: Integer value for channel (1 - 4)
-        :param value: Integer value, 1 is enabled, and 0 is disabled.
+        :param value: Integer, bool value, 1 is enabled, and 0 is disabled.
         """
-        self.set_active_channel(channel)
-        enable_command_string = "enable={}\r".format(value).encode()
-        self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
-        if value == 1:
-            self.log.info("Laser is enabling channel " + str(channel) + "...")
-            catkit.util.sleep(self.SLEEP_TIME)
+        self.log.info(f"Laser is enabling channel '{channel}'...")
+        self.set(self.Command.SET_ENABLE, value, channel=channel)
+        if value:
+            catkit.util.sleep(self.sleep_time)
 
     def set_system_enable(self, value):
-        """
-        Set the laser's system enable.
-        :param value: Integer value, 1 is enabled, and 0 is disabled.
-        """
-        enable_command_string = "system={}\r".format(value).encode()
-        self.laser.fnUART_LIBRARY_Set(self.handle, enable_command_string, 32)
-        if value == 1:
-            catkit.util.sleep(self.SLEEP_TIME)
+        """ Set the laser's system enable. """
+        self.set(self.Command.SET_SYSTEM, value)
+        if value:
+            catkit.util.sleep(self.sleep_time)
 
-    def set_active_channel(self, channel):
-        # Set Active Channel.
-        active_command_string = "channel={}\r".format(channel).encode()
-        self.laser.fnUART_LIBRARY_Set(self.handle, active_command_string, 32)
+    def set_active_channel(self, channel=None):
+        channel = channel if channel else self.channel
+        self.set(self.Command.SET_CHANNEL, value=channel)
 
-    def is_channel_enabled(self, channel):
-        self.set_active_channel(channel)
-        command = "enable?\r".encode()
-        response_buffer = ("0" * 255).encode()
-        self.laser.fnUART_LIBRARY_Get(self.handle, command, response_buffer)
-        response_buffer = response_buffer.decode()
-        return bool(int(re.findall("\d+", response_buffer)[0]))
+    def get_active_channel(self):
+        return self.get_int(self.Command.GET_CHANNEL)
+
+    def is_channel_enabled(self, channel=None):
+        return self.get_bool(self.Command.GET_ENABLE, channel=channel)
