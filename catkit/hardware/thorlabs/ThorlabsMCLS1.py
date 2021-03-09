@@ -24,22 +24,22 @@ class ThorlabsMCLS1(LaserSource):
 
     class Command(Enum):
         TERM_CHAR = "\r"
-        GET_CURRENT = "current?"
+        GET_CURRENT = "current?"  # float (mA)
         SET_CURRENT = "current="
-        GET_ENABLE = "enable?"
+        GET_ENABLE = "enable?"  # bool/int
         SET_ENABLE = "enable="
         SET_SYSTEM = "system="
-        GET_CHANNEL = "channel?"
+        GET_CHANNEL = "channel?"  # int
         SET_CHANNEL = "channel="
+        GET_TARGET_TEMP = "target?"  # float (C)
+        SET_TARGET_TEMP = "target="
+        GET_TEMP = "temp?"  # float (C)
+        GET_POWER = "power?"  # float (mW)
+        GET_SYSTEM = "system?"  # bool
 
         # The following are untested.
         GET_COMMANDS = "?"
         GET_ID = "id?"
-        GET_TARGET_TEMP = "target?"
-        SET_TARGET_TEMP = "target="
-        GET_TEMP = "temp?"
-        GET_POWER = "power?"
-        GET_SYSTEM = "system?"
         GET_SPECS = "specs?"
         GET_STEP = "step?"
         SET_STEP = "step="
