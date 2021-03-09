@@ -61,14 +61,15 @@ class ThorlabsMCLS1(LaserSource):
         self.port = None
         self.power_off_on_exit = power_off_on_exit
         self.device_id = device_id
+        self.instrument_handle = None
 
     def _open(self):
         self.port = self.find_com_port()
         # Open connection (handle).
-        instrument = self.instrument_lib.fnUART_LIBRARY_open(self.port.encode(), 115200, 3)
-        if instrument < 0:
+        self.instrument_handle = self.instrument_lib.fnUART_LIBRARY_open(self.port.encode(), 115200, 3)
+        if self.instrument_handle < 0:
             raise IOError(f"{self.config_id} connection failure on port: '{self.port}'")
-        self.instrument = instrument
+        self.instrument = True  # instrument_handle can be 0 which will result in _close() not being called.
 
         # Set the initial current to nominal_current and enable the laser.
         self.set_current(self.nominal_current, sleep=False)
@@ -98,7 +99,7 @@ class ThorlabsMCLS1(LaserSource):
                     self.set_system_enable(False)
                 else:
                     self.log.info("Other channels enabled, NOT powering off laser (system wide).")
-                self.instrument_lib.fnUART_LIBRARY_close(self.instrument)
+                self.instrument_lib.fnUART_LIBRARY_close(self.instrument_handle)
         else:
             self.log.info("Power off on exit is False; leaving laser ON.")
 
@@ -108,7 +109,7 @@ class ThorlabsMCLS1(LaserSource):
 
         command = command.value + self.Command.TERM_CHAR.value
         response_buffer = bytearray(255)
-        self.instrument_lib.fnUART_LIBRARY_Get(self.instrument, command.encode(), response_buffer)
+        self.instrument_lib.fnUART_LIBRARY_Get(self.instrument_handle, command.encode(), response_buffer)
         return response_buffer.rstrip(b"\x00").decode()
 
     def set(self, command, value, channel=None):
@@ -122,7 +123,7 @@ class ThorlabsMCLS1(LaserSource):
         # then commanding that channel. See HICAT-542.
 
         command = f"{command.value}{value}{self.Command.TERM_CHAR.value}"
-        self.instrument_lib.fnUART_LIBRARY_Set(self.instrument, command.encode(), 32)
+        self.instrument_lib.fnUART_LIBRARY_Set(self.instrument_handle, command.encode(), 32)
 
     def get_int(self, command, channel=None):
         return float(re.findall("[0-9]+", self.get(command, channel=channel))[0])
