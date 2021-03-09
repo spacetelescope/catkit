@@ -80,28 +80,33 @@ class ThorlabsMCLS1(LaserSource):
 
     def _close(self):
         """Close laser connection safely"""
-        if self.power_off_on_exit:
-            if self.instrument_lib.fnUART_LIBRARY_isOpen(self.port.encode()) == 1:
-                self.set_channel_enable(self.channel, False)
+        try:
+            if self.power_off_on_exit:
+                if self.instrument_lib.fnUART_LIBRARY_isOpen(self.port.encode()) == 1:
+                    self.set_channel_enable(self.channel, False)
 
-                self.log.info("Checking whether other channels enable before powering off laser...")
-                # Check if the other channels are enabled before turning off system enable.
-                turn_off_system_enable = True
-                for i in range(1, 5):
-                    if self.is_channel_enabled(i):
-                        turn_off_system_enable = False
-                        if i == self.channel:
-                            raise RuntimeError(f"Failed to disable channel: '{self.channel}")
-                        break
+                    self.log.info("Checking whether other channels enable before powering off laser...")
+                    # Check if the other channels are enabled before turning off system enable.
+                    turn_off_system_enable = True
+                    for i in range(1, 5):
+                        if self.is_channel_enabled(i):
+                            turn_off_system_enable = False
+                            if i == self.channel:
+                                raise RuntimeError(f"Failed to disable channel: '{self.channel}")
+                            break
 
-                if turn_off_system_enable:
-                    self.log.info("Powering off laser (system wide).")
-                    self.set_system_enable(False)
-                else:
-                    self.log.info("Other channels enabled, NOT powering off laser (system wide).")
+                    if turn_off_system_enable:
+                        self.log.info("Powering off laser (system wide).")
+                        self.set_system_enable(False)
+                    else:
+                        self.log.info("Other channels enabled, NOT powering off laser (system wide).")
+            else:
+                self.log.info("Power off on exit is False; leaving laser ON.")
+        finally:
+            try:
                 self.instrument_lib.fnUART_LIBRARY_close(self.instrument_handle)
-        else:
-            self.log.info("Power off on exit is False; leaving laser ON.")
+            finally:
+                self.instrument_handle = None
 
     def get(self, command, channel=None):
         if command not in (self.Command.GET_CHANNEL,):
