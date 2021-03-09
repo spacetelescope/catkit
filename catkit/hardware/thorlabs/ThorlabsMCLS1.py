@@ -135,7 +135,7 @@ class ThorlabsMCLS1(LaserSource):
         self.instrument_lib.fnUART_LIBRARY_Set(self.instrument_handle, command.encode(), 32)
 
     def get_int(self, command, channel=None):
-        return float(re.findall("[0-9]+", self.get(command, channel=channel))[0])
+        return int(re.findall("[0-9]+", self.get(command, channel=channel))[0])
 
     def get_bool(self, command, channel=None):
         return bool(self.get_int(command, channel=channel))
