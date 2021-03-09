@@ -1,4 +1,4 @@
-from ctypes import cdll
+import ctypes
 from enum import Enum
 import os
 import re
@@ -10,7 +10,7 @@ import catkit.util
 
 # Load Thorlabs uart lib, e.g., uart_library_win64.dll.
 try:
-    UART_lib = cdll.LoadLibrary(os.environ.get('CATKIT_THORLABS_UART_LIB_PATH'))
+    UART_lib = ctypes.cdll.LoadLibrary(os.environ.get('CATKIT_THORLABS_UART_LIB_PATH'))
 except Exception as error:
     UART_lib = error
 
@@ -18,6 +18,9 @@ except Exception as error:
 class ThorlabsMCLS1(LaserSource):
 
     instrument_lib = UART_lib
+
+    BUFFER_SIZE = 255
+    BAUD_RATE = 115200
 
     class Command(Enum):
         TERM_CHAR = "\r"
@@ -66,7 +69,7 @@ class ThorlabsMCLS1(LaserSource):
     def _open(self):
         self.port = self.find_com_port()
         # Open connection (handle).
-        self.instrument_handle = self.instrument_lib.fnUART_LIBRARY_open(self.port.encode(), 115200, 3)
+        self.instrument_handle = self.instrument_lib.fnUART_LIBRARY_open(self.port.encode(), self.BAUD_RATE, 3)
         if self.instrument_handle < 0:
             raise IOError(f"{self.config_id} connection failure on port: '{self.port}'")
         self.instrument = True  # instrument_handle can be 0 which will result in _close() not being called.
@@ -113,8 +116,9 @@ class ThorlabsMCLS1(LaserSource):
             self.set_active_channel(channel=channel)
 
         command = command.value + self.Command.TERM_CHAR.value
-        response_buffer = bytearray(255)
+        response_buffer = ctypes.create_string_buffer(self.BUFFER_SIZE)
         self.instrument_lib.fnUART_LIBRARY_Get(self.instrument_handle, command.encode(), response_buffer)
+        response_buffer = response_buffer.value
         return response_buffer.rstrip(b"\x00").decode()
 
     def set(self, command, value, channel=None):
@@ -161,9 +165,9 @@ class ThorlabsMCLS1(LaserSource):
         if not self.device_id:
             raise ValueError(f"{self.config_id}: requires a device ID to find a com port to connect to.")
 
-        response_buffer = bytearray(255)
-        self.instrument_lib.fnUART_LIBRARY_list(response_buffer, 255)
-        response_buffer = response_buffer.decode()
+        response_buffer = ctypes.create_string_buffer(self.BUFFER_SIZE)
+        self.instrument_lib.fnUART_LIBRARY_list(response_buffer, self.BUFFER_SIZE)
+        response_buffer = response_buffer.value.decode()
         split = response_buffer.split(",")
         for i, thing in enumerate(split):
             # The list has a format of "Port, Device, Port, Device". Once we find device named VCPO, minus 1 for port.
