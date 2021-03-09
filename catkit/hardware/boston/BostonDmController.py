@@ -4,6 +4,8 @@ import sys
 import numpy as np
 
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
+from catkit.hardware.boston.DmCommand import DmCommand
+
 
 # BMC is Boston's library and it only works on windows.
 try:
@@ -101,9 +103,32 @@ class BostonDmController(DeformableMirrorController):
             self.instrument = None
             self._clear_state()
 
-    def apply_shape_to_both(self, dm1_command_object, dm2_command_object):
+    def apply_shape_to_both(self, dm1_command_object, dm2_command_object,
+                            flat_map=False,
+                            bias=False,
+                            as_voltage_percentage=False,
+                            as_volts=False,
+                            sin_specification=None):
         """Combines both commands and sends to the controller to produce a shape on each DM."""
         self.log.info("Applying shape to both DMs")
+
+        if not isinstance(dm1_command_object, DmCommand):
+            dm1_command_object = DmCommand(data=dm1_command_object,
+                                           dm_num=1,
+                                           flat_map=flat_map,
+                                           bias=bias,
+                                           as_voltage_percentage=as_voltage_percentage,
+                                           as_volts=as_volts,
+                                           sin_specification=sin_specification)
+
+        if not isinstance(dm2_command_object, DmCommand):
+            dm2_command_object = DmCommand(data=dm2_command_object,
+                                           dm_num=2,
+                                           flat_map=flat_map,
+                                           bias=bias,
+                                           as_voltage_percentage=as_voltage_percentage,
+                                           as_volts=as_volts,
+                                           sin_specification=sin_specification)
 
         # Ensure that the correct dm_num is set.
         dm1_command_object.dm_num = 1
@@ -128,9 +153,24 @@ class BostonDmController(DeformableMirrorController):
             self.dm1_command_object = dm1_command_object
             self.dm2_command_object = dm2_command_object
 
-    def apply_shape(self, dm_command_object, dm_num):
+    def apply_shape(self, dm_command_object, dm_num,
+                    flat_map=False,
+                    bias=False,
+                    as_voltage_percentage=False,
+                    as_volts=False,
+                    sin_specification=None):
         self.log.info("Applying shape to DM " + str(dm_num))
         """Forms a command for a single DM, and re-sends the existing shape to other DM."""
+
+        if not isinstance(dm_command_object, DmCommand):
+            dm_command_object = DmCommand(data=dm_command_object,
+                                          dm_num=dm_num,
+                                          flat_map=flat_map,
+                                          bias=bias,
+                                          as_voltage_percentage=as_voltage_percentage,
+                                          as_volts=as_volts,
+                                          sin_specification=sin_specification)
+
 
         # Ensure the dm_num is correct.
         dm_command_object.dm_num = dm_num

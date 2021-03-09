@@ -137,3 +137,25 @@ class TestPoppyBostonDMController:
         flat_dm1 = DmCommand(np.zeros(self.number_of_actuators), 1)
         with dm_controller as dm:
             dm.apply_shape(flat_dm1, 1)
+
+    def test_array_input(self):
+        dm_controller = catkit.emulators.boston_dm.PoppyBostonDMController(config_id="boston_kilo952",
+                                                                           serial_number="00CW000#000",
+                                                                           dac_bit_width=14,
+                                                                           num_actuators=self.number_of_actuators,
+                                                                           command_length=self.command_length,
+                                                                           dm1=self.poppy_dm1)
+        with dm_controller as dm:
+            dm.apply_shape(np.zeros(self.number_of_actuators), 1)
+
+    def test_array_input_for_bot(self):
+        dm_controller = catkit.emulators.boston_dm.PoppyBostonDMController(config_id="boston_kilo952",
+                                                                           serial_number="00CW000#000",
+                                                                           dac_bit_width=14,
+                                                                           num_actuators=self.number_of_actuators,
+                                                                           command_length=self.command_length,
+                                                                           dm1=self.poppy_dm1,
+                                                                           dm2=self.poppy_dm2)
+
+        with dm_controller as dm:
+            dm.apply_shape_to_both(np.zeros(self.number_of_actuators), np.zeros(self.number_of_actuators))
