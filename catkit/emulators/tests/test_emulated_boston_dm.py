@@ -146,9 +146,9 @@ class TestPoppyBostonDMController:
                                                                            command_length=self.command_length,
                                                                            dm1=self.poppy_dm1)
         with dm_controller as dm:
-            dm.apply_shape(np.zeros(self.number_of_actuators), 1)
+            dm.apply_shape(np.zeros(self.number_of_actuators), 1, flat_map=False)
 
-    def test_array_input_for_bot(self):
+    def test_array_input_for_both(self):
         dm_controller = catkit.emulators.boston_dm.PoppyBostonDMController(config_id="boston_kilo952",
                                                                            serial_number="00CW000#000",
                                                                            dac_bit_width=14,
@@ -158,4 +158,5 @@ class TestPoppyBostonDMController:
                                                                            dm2=self.poppy_dm2)
 
         with dm_controller as dm:
-            dm.apply_shape_to_both(np.zeros(self.number_of_actuators), np.zeros(self.number_of_actuators))
+            dm.apply_shape_to_both(np.zeros(self.number_of_actuators), np.zeros(self.number_of_actuators),
+                                   flat_map=False)
