@@ -108,7 +108,8 @@ class BostonDmController(DeformableMirrorController):
                             bias=False,
                             as_voltage_percentage=False,
                             as_volts=False,
-                            sin_specification=None):
+                            sin_specification=None,
+                            output_path=None):
         """Combines both commands and sends to the controller to produce a shape on each DM."""
         self.log.info("Applying shape to both DMs")
 
@@ -134,6 +135,10 @@ class BostonDmController(DeformableMirrorController):
         dm1_command_object.dm_num = 1
         dm2_command_object.dm_num = 2
 
+        if output_path is not None:
+            dm1_command_object.export_fits(output_path)
+            dm2_command_object.export_fits(output_path)
+
         # Use DmCommand class to format the commands correctly (with zeros for other DM).
         dm1_command = dm1_command_object.to_dm_command()
         dm2_command = dm2_command_object.to_dm_command()
@@ -158,9 +163,21 @@ class BostonDmController(DeformableMirrorController):
                     bias=False,
                     as_voltage_percentage=False,
                     as_volts=False,
-                    sin_specification=None):
+                    sin_specification=None,
+                    output_path=None):
+        """ Forms a command for a single DM, and re-sends the existing shape to other DM.
+        :param data: numpy array of the following shapes: 34x34, 1x952, 1x2048, 1x4096. Interpreted by default as
+                     the desired DM surface height in units of meters, but see parameters as_volts
+                     and as_voltage_percentage.
+        :param dm_num: Which DM to apply the shape to. Valid values are 1, 2.
+        :param flat_map: If true, add flat map correction to the data before outputting commands
+        :param bias: If true, add bias to the data before outputting commands
+        :param as_voltage_percentage: Interpret the data as a voltage percentage instead of meters; Deprecated.
+        :param as_volts: If true, interpret the data as volts instead of meters
+        :param sin_specification: Add this sine to the data
+        :param output_path: str, Path to save commands to if provided. Default `None` := don't save.
+        """
         self.log.info("Applying shape to DM " + str(dm_num))
-        """Forms a command for a single DM, and re-sends the existing shape to other DM."""
 
         if not isinstance(dm_command_object, DmCommand):
             dm_command_object = DmCommand(data=dm_command_object,
@@ -174,6 +191,11 @@ class BostonDmController(DeformableMirrorController):
 
         # Ensure the dm_num is correct.
         dm_command_object.dm_num = dm_num
+
+        if output_path is not None:
+            dm_command_object.export_fits(output_path)
+            other_dm_command_object = self.dm2_command_object if dm_num == 1 else self.dm1_command_object
+            other_dm_command_object.export_fits(output_path)
 
         # Use DmCommand class to format the single command correctly (with zeros for other DM).
         dm_command = dm_command_object.to_dm_command()
