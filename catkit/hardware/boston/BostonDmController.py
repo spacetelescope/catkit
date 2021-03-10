@@ -4,6 +4,8 @@ import sys
 import numpy as np
 
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
+from catkit.hardware.boston.DmCommand import DmCommand
+
 
 # BMC is Boston's library and it only works on windows.
 try:
@@ -101,17 +103,55 @@ class BostonDmController(DeformableMirrorController):
             self.instrument = None
             self._clear_state()
 
-    def apply_shape_to_both(self, dm1_command_object, dm2_command_object):
-        """Combines both commands and sends to the controller to produce a shape on each DM."""
+    def apply_shape_to_both(self, dm1_shape, dm2_shape,
+                            flat_map=True,
+                            bias=False,
+                            as_voltage_percentage=False,
+                            as_volts=False,
+                            sin_specification=None,
+                            output_path=None):
+        """ Combines both commands and sends to the controller to produce a shape on each DM.
+        :param dm<1|2>_shape: catkit.hardware.boston.DmCommand.DmCommand or numpy array of the following shapes: 34x34, 1x952,
+                         1x2048, 1x4096. Interpreted by default as the desired DM surface height in units of meters, but
+                         see parameters as_volts and as_voltage_percentage.
+        :param flat_map: If true, add flat map correction to the data before outputting commands
+        :param bias: If true, add bias to the data before outputting commands
+        :param as_voltage_percentage: Interpret the data as a voltage percentage instead of meters; Deprecated.
+        :param as_volts: If true, interpret the data as volts instead of meters
+        :param sin_specification: Add this sine to the data
+        :param output_path: str, Path to save commands to if provided. Default `None` := don't save.
+        """
         self.log.info("Applying shape to both DMs")
 
+        if not isinstance(dm1_shape, DmCommand):
+            dm1_shape = DmCommand(data=dm1_shape,
+                                  dm_num=1,
+                                  flat_map=flat_map,
+                                  bias=bias,
+                                  as_voltage_percentage=as_voltage_percentage,
+                                  as_volts=as_volts,
+                                  sin_specification=sin_specification)
+
+        if not isinstance(dm2_shape, DmCommand):
+            dm2_shape = DmCommand(data=dm2_shape,
+                                  dm_num=2,
+                                  flat_map=flat_map,
+                                  bias=bias,
+                                  as_voltage_percentage=as_voltage_percentage,
+                                  as_volts=as_volts,
+                                  sin_specification=sin_specification)
+
         # Ensure that the correct dm_num is set.
-        dm1_command_object.dm_num = 1
-        dm2_command_object.dm_num = 2
+        dm1_shape.dm_num = 1
+        dm2_shape.dm_num = 2
+
+        if output_path is not None:
+            dm1_shape.export_fits(output_path)
+            dm2_shape.export_fits(output_path)
 
         # Use DmCommand class to format the commands correctly (with zeros for other DM).
-        dm1_command = dm1_command_object.to_dm_command()
-        dm2_command = dm2_command_object.to_dm_command()
+        dm1_command = dm1_shape.to_dm_command()
+        dm2_command = dm2_shape.to_dm_command()
 
         # Add both arrays together (first half and second half) and send to DM.
         full_command = dm1_command + dm2_command
@@ -125,18 +165,50 @@ class BostonDmController(DeformableMirrorController):
             # Update both dm_command class attributes.
             self.dm1_command = dm1_command
             self.dm2_command = dm2_command
-            self.dm1_command_object = dm1_command_object
-            self.dm2_command_object = dm2_command_object
+            self.dm1_command_object = dm1_shape
+            self.dm2_command_object = dm2_shape
 
-    def apply_shape(self, dm_command_object, dm_num):
+    def apply_shape(self, dm_shape, dm_num,
+                    flat_map=True,
+                    bias=False,
+                    as_voltage_percentage=False,
+                    as_volts=False,
+                    sin_specification=None,
+                    output_path=None):
+        """ Forms a command for a single DM, and re-sends the existing shape to other DM.
+        :param dm_shape: catkit.hardware.boston.DmCommand.DmCommand or numpy array of the following shapes: 34x34, 1x952,
+                     1x2048, 1x4096. Interpreted by default as the desired DM surface height in units of meters, but
+                     see parameters as_volts and as_voltage_percentage.
+        :param dm_num: Which DM to apply the shape to. Valid values are 1, 2.
+        :param flat_map: If true, add flat map correction to the data before outputting commands
+        :param bias: If true, add bias to the data before outputting commands
+        :param as_voltage_percentage: Interpret the data as a voltage percentage instead of meters; Deprecated.
+        :param as_volts: If true, interpret the data as volts instead of meters
+        :param sin_specification: Add this sine to the data
+        :param output_path: str, Path to save commands to if provided. Default `None` := don't save.
+        """
         self.log.info("Applying shape to DM " + str(dm_num))
-        """Forms a command for a single DM, and re-sends the existing shape to other DM."""
+
+        if not isinstance(dm_shape, DmCommand):
+            dm_shape = DmCommand(data=dm_shape,
+                                 dm_num=dm_num,
+                                 flat_map=flat_map,
+                                 bias=bias,
+                                 as_voltage_percentage=as_voltage_percentage,
+                                 as_volts=as_volts,
+                                 sin_specification=sin_specification)
+
 
         # Ensure the dm_num is correct.
-        dm_command_object.dm_num = dm_num
+        dm_shape.dm_num = dm_num
+
+        if output_path is not None:
+            dm_shape.export_fits(output_path)
+            other_dm_command_object = self.dm2_command_object if dm_num == 1 else self.dm1_command_object
+            other_dm_command_object.export_fits(output_path)
 
         # Use DmCommand class to format the single command correctly (with zeros for other DM).
-        dm_command = dm_command_object.to_dm_command()
+        dm_command = dm_shape.to_dm_command()
 
         # Grab the other DM's currently applied shape.
         other_dm_command = self.dm2_command if dm_num == 1 else self.dm1_command
@@ -153,7 +225,7 @@ class BostonDmController(DeformableMirrorController):
             # Update the dm_command class attribute.
             if dm_num == 1:
                 self.dm1_command = dm_command
-                self.dm1_command_object = dm_command_object
+                self.dm1_command_object = dm_shape
             else:
                 self.dm2_command = dm_command
-                self.dm2_command_object = dm_command_object
+                self.dm2_command_object = dm_shape
