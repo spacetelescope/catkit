@@ -226,7 +226,7 @@ class DeviceCacheEnum(Enum):
     def _missing_(cls, value):
         """ Allow lookup by config_id, such that DeviceCacheEnum(config_id) returns its matching member. """
         for item in cls:
-            if value == item.config_id:
+            if value in (item.config_id, item.description):
                 return item
 
     def __getattr__(self, item):
