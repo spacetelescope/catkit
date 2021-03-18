@@ -10,7 +10,9 @@ from catkit.interfaces.MotorController import MotorController
 
 # Import XPS Q8 driver
 try:
-    sys.path.append(os.environ.get('CATKIT_NEWPORT_LIB_PATH'))
+    library_path = os.environ.get('CATKIT_NEWPORT_LIB_PATH')
+    if library_path:
+        sys.path.append(library_path)
     import XPS_Q8_drivers
 except Exception as error:
     XPS_Q8_drivers = error
