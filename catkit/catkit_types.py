@@ -42,8 +42,8 @@ class FpmPosition(Enum):
     """
     Enum for the possible states for the focal plane mask.
     """
-    coron = 1
-    direct = 2
+    IN_BEAM = 1
+    OUT_OF_BEAM = 2
 
 
 class LyotStopPosition(Enum):
