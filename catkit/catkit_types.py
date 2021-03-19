@@ -42,16 +42,16 @@ class FpmPosition(Enum):
     """
     Enum for the possible states for the focal plane mask.
     """
-    coron = 1
-    direct = 2
+    IN_BEAM = "coron"
+    OUT_OF_BEAM = "direct"
 
 
 class LyotStopPosition(Enum):
     """
     Enum for the possible states for the lyot stop.
     """
-    in_beam = 1
-    out_of_beam = 2
+    IN_BEAM = 1
+    OUT_OF_BEAM = 2
 
 
 class ImageCentering(Enum):
