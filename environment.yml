@@ -28,6 +28,4 @@ dependencies:
   - scipy
   - sphinx
   - pip:
-    - --no-binary
-    - --no-build-isolation
     - -r file:requirements.txt
