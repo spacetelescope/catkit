@@ -15,7 +15,6 @@ dependencies:
   - flake8
   - h5py
   - matplotlib
-  - conda-forge::photutils
   - pip
   - psutil
   - pyserial
