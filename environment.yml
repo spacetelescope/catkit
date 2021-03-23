@@ -10,8 +10,8 @@
 name: catkit
 dependencies:
   - astropy>=1.3
-  - numpy>=1.15.0
-  - numexpr  # See CATKIT-91
+  - conda-forge::numpy>=1.15.0  # See CATKIT-91
+  - conda-forge::numexpr  # See CATKIT-91
   - conda-forge::pyusb
   - flake8
   - future  # See CATKIT-91
@@ -27,7 +27,7 @@ dependencies:
   - conda-forge::pyvisa>=1.10
   - conda-forge::pyvisa-py
   - requests
-  - scipy
+  - conda-forge::scipy  # See CATKIT-91
   - sphinx
   - conda-forge::xxhash  # See CATKIT-91
   - pip:
