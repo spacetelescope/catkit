@@ -17,7 +17,7 @@ dependencies:
   - future  # See CATKIT-91
   - h5py
   - matplotlib
-  - conda-forge::photutils
+  - conda-forge::photutils=1.0.2  # See CATKIT-91
   - pip
   - psutil
   - pyserial
