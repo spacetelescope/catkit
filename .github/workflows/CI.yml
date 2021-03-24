@@ -68,7 +68,7 @@ jobs:
       max-parallel: 1
       matrix:
         python-version: [3.7]
-        os: [windows-latest, ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
     steps:
     - uses: actions/checkout@v1
       with:
@@ -110,7 +110,7 @@ jobs:
       max-parallel: 1
       matrix:
         python-version: [3.7]
-        os: [windows-latest, ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
     steps:
     - uses: actions/checkout@v1
       with:
