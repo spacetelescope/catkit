@@ -84,16 +84,7 @@ jobs:
       run: |
         sed -E 's/[ \t]*-[ \t]*python[=<>0-9.,]*/  - python=${{ matrix.python-version }}/' environment.yml > environment2.yml
         conda env create --name ci-env --file environment2.yml
-        cd ../
-        git clone https://${{secrets.GITHUB_USER}}:${{secrets.TOKEN}}@github.com/spacetelescope/hicat-package
-        cd hicat-package
-        git checkout develop
-        git describe --dirty --long
-        sed -E 's/[ \t]*-[ \t]*python[=<>0-9.,]*/  - python=${{ matrix.python-version }}/' environment.yml > environment2.yml
-        conda env update --name ci-env --file environment2.yml
         conda activate ci-env
-        python setup.py develop
-        cd ../catkit
         python setup.py develop
       shell: bash -l {0}
     - name: Test with pytest
