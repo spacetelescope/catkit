@@ -1,6 +1,5 @@
-- --no-binary :all:
-- photutils
 - zwoasi>=0.0.21 # Requires additional manual install of driver(s) from https://astronomy-imaging-camera.com/software-drivers
 - ftd2xx # Requires additional manual install of driver from https://www.ftdichip.com/Drivers/D2XX.htm
 - hcipy
 - git+https://github.com/spacetelescope/poppy.git@v0.9.2
+- photutils --install-option="--no-binary :all:"
