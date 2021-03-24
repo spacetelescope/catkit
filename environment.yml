@@ -15,7 +15,7 @@ dependencies:
   - flake8
   - h5py
   - matplotlib
-  - conda-forge::photutils==0.7.2
+  - http://ssb.stsci.edu/astroconda::photutils==0.7.2
   - pip
   - psutil
   - pyserial
