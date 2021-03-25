@@ -59,9 +59,18 @@ class ThorlabsMFF101(FlipMotor):
         self.instrument.close()
         self.current_position = None
 
-    def move_to_position(self, position):
+    def move_to_position(self, position, force=False):
         if isinstance(position, FlipMountPosition):
+            beam_position = position
             position = self.in_beam_position if position is FlipMountPosition.IN_BEAM else self.out_of_beam_position
+        else:
+            assert position in (1, 2)
+            beam_position = FlipMountPosition.IN_BEAM if position == self.in_beam_position else FlipMountPosition.OUT_OF_BEAM
+
+        if not force and beam_position is not None and beam_position is self.current_position:
+            # Already in desired position.
+            self.log.info(f"Not moving '{self.config_id}' as it's already '{beam_position}' (position='{position}').")
+            return
 
         if position == 1:
             command = self.Command.MOVE_TO_POSITION_1
@@ -70,14 +79,13 @@ class ThorlabsMFF101(FlipMotor):
         else:
             raise NotImplementedError
 
-        is_in_beam = self.in_beam_position == position
-        self.log.info(f"Moving to 'up' position ({position}), which is {'in' if is_in_beam else 'out of'} beam")
+        self.log.info(f"Moving to '{beam_position}' (position='{position}')...")
         self.instrument.write(command.value)
         catkit.util.sleep(1)
-        self.current_position = FlipMountPosition.IN_BEAM if is_in_beam else FlipMountPosition.OUT_OF_BEAM
+        self.current_position = beam_position
 
-    def move(self, position):
-        return self.move_to_position(position=position)
+    def move(self, position, force=False):
+        return self.move_to_position(position=position, force=force)
 
     def move_to_position1(self):
         """ Implements a move to the "up" position. """
