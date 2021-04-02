@@ -13,3 +13,7 @@ class LaserSource(Instrument):
     @abstractmethod
     def get_current(self):
         """Returns the value of the laser's current."""
+
+    @property
+    def current(self):
+        return self.get_current()
