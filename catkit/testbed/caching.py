@@ -1,9 +1,11 @@
 from abc import abstractmethod, ABC
 from collections import namedtuple, UserDict
 from enum import Enum
+from multiprocess.managers import AcquirerProxy, DictProxy
 import warnings
 
 from catkit.interfaces.Instrument import Instrument
+from catkit.multiprocessing import DEFAULT_SHARED_MEMORY_SERVER_ADDRESS, DEFAULT_TIMEOUT, Mutex, SharedMemoryManager
 
 
 class UserCache(UserDict, ABC):
@@ -19,6 +21,9 @@ class UserCache(UserDict, ABC):
         else:
             return item
 
+    class Proxy(DictProxy):
+        pass
+
 
 class ContextCache(UserCache):
     """ Cache of context managed items (non device/instrument). """
@@ -26,14 +31,47 @@ class ContextCache(UserCache):
         pass
 
     def __delitem__(self, key):
-        try:
-            self.data[key].__exit__(None, None, None)
-        except Exception:
-            warnings.warn(f"{key} failed to exit.")
+        if getattr(self.data[key], "__exit__", None):
+            try:
+                self.data[key].__exit__(None, None, None)
+            except Exception:
+                warnings.warn(f"{key} failed to exit.")
         del self.data[key]
 
     def __del__(self):
         self.clear()
+
+
+class MutexedCache(Mutex, UserCache):
+    """ The use of locks isn't necessary to mutex access to `self.data`, that is handled by the manager.
+        However, it is necessary if wanting to mutex multiple accesses from the caller.
+    """
+
+    def load(self, key, *args, **kwargs):
+        """ Func to load non-existent cache entries. """
+        # This is abstract for the base class but we'll make it concrete here. It ca be overridden if desired.
+        raise KeyError(key)
+
+    def __getitem__(self, item):
+        with self:
+            return super().__getitem__(item)
+
+    def __setitem__(self, key, value):
+        with self:
+            super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        with self:
+            super().__delitem__(key)
+
+    class Proxy(AcquirerProxy, DictProxy):
+        _exposed_ = ('__contains__', '__delitem__', '__getitem__', '__iter__', '__len__', '__setitem__', 'clear',
+                     'copy', 'get', 'has_key', 'items', 'keys', 'pop', 'popitem', 'setdefault', 'update', 'values',
+                     'acquire', 'release')
+        pass
+
+
+SharedMemoryManager.register("MutexedCache", callable=MutexedCache, proxytype=MutexedCache.Proxy)
 
 
 # This will get nuked once all hardware adheres to the Instrument interface.
@@ -286,6 +324,60 @@ class RestrictedDeviceCache(DeviceCache):
     def __del__(self):
         super().__setattr__("__lock", False)
         self.clear()
+
+
+class SharedState:
+    """ Container for SharedMemoryManager and (default) SharedMemoryManager().SharedState().
+
+    Parameters
+    ----------
+    address : tuple
+        A tuple of the following `(IP, port)` to start the shared server on.
+    timeout : float, int
+        Default timeout for mutexing access.
+    own : bool
+        True: Use from parent to "own" and thus start the server. Will also shutdown when deleted.
+        False: (default) Use from clients to connect to an already started server.
+    """
+
+    def __init__(self, *args, address=DEFAULT_SHARED_MEMORY_SERVER_ADDRESS,
+                 timeout=DEFAULT_TIMEOUT,
+                 own=False,
+                 namespace="SharedState",
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        self._own = own  # Whether to start and thus later shutdown, or just connect to ab existing server.
+        self._manager = None  # The shared memory manager.
+        self._shared_state = None
+
+        self._manager = SharedMemoryManager(address=address, own=own)  # Instantiate the shared memory manager.
+        # Either start it or just connect to an existing one.
+        if self._own:
+            self._manager.start()  # Shutdown in __del__().
+        else:
+            self._manager.connect()
+
+        self._shared_state = getattr(self._manager, namespace)(timeout=timeout)
+
+    def __enter__(self):
+        return self._shared_state.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self._shared_state.__exit__(exc_type, exc_val, exc_tb)
+
+    def __getattr__(self, name):
+        if name[0] == '_':
+            return object.__getattribute__(self, name)
+        return self._shared_state.__getattr__(name)
+
+    def __setattr__(self, name, value):
+        if name[0] == '_':
+            return object.__setattr__(self, name, value)
+        return self._shared_state.__setattr__(name, value)
+
+    def __del__(self):
+        if self._own:
+            self._manager.shutdown()
 
 
 # Restrict the device cache such that only linking is allowed. Once run_experiment() is called this gets swapped

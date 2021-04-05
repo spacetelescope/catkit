@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 import logging
-import multiprocessing
 import time
 
 import catkit.util
 from catkit.testbed import devices
 from catkit import datalogging
+from catkit.multiprocessing import Process
 
 
 class SafetyTest(ABC):
@@ -28,7 +28,6 @@ class Experiment(ABC):
     need to implement a function called "experiment()", which is designated as an abstractmethod here.
     """
     name = None
-    multiprocessing_start_method = "spawn"
 
     log = logging.getLogger(__name__)
     data_log = datalogging.get_logger(__name__)
@@ -107,8 +106,7 @@ class Experiment(ABC):
 
             self.log.info("Creating separate process to run experiment...")
             # Spin off and start the process to run the experiment.
-            ctx = multiprocessing.get_context(self.multiprocessing_start_method)
-            experiment_process = ctx.Process(target=self.run_experiment)
+            experiment_process = Process(target=self.run_experiment)
             experiment_process.start()
             self.log.info(self.name + " process started")
 
@@ -140,6 +138,9 @@ class Experiment(ABC):
                     # Experiment ended before the next check interval, exit the while loop.
                     break
                     self.log.info("Experment ended before check interval; exiting.")
+
+            # Explicitly join even though experiment_process.is_alive() will call join() if it's no longer alive.
+            experiment_process.join()  # This will raise any child exceptions.
         except KeyboardInterrupt:
             self.log.exception("Parent process: caught ctrl-c, raising exception.")
             raise
