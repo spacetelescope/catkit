@@ -1,4 +1,7 @@
 import time
+import io
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -32,7 +35,7 @@ def _matplotlib_figure_to_image(fig, dpi=None):
     ndarray
         The image of of the Matplotlib figure.
     '''
-   if dpi is not None:
+    if dpi is not None:
         fig.dpi = dpi
 
     buf = io.BytesIO()
@@ -189,7 +192,7 @@ class DataLogger(object):
             The y-value of the curve. This will be casted to a
             Numpy ndarray.
         '''
-        self.log(tag, {'x': np.array(x), 'y': np.array(y)})
+        self.log(tag, {'x': np.array(x), 'y': np.array(y)}, 'curve')
 
     def log_figure(self, tag, fig=None, dpi=None, close=False):
         '''Add a Matplotlib figure to the data log.
@@ -222,6 +225,6 @@ class DataLogger(object):
         tag : string
             An identifier for the logged value.
         uri : string
-            The path to the fits file relative to the experiment directory.
+            The path to the fits file relative to the current working directory or an absolute path.
         '''
-        self.log(tag, uri, 'fits_file')
+        self.log(tag, os.path.abspath(uri), 'fits_file')

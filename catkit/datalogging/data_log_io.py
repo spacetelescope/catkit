@@ -1,5 +1,7 @@
 import os
 import io
+import copy
+import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -69,10 +71,15 @@ def _proto_to_numpy(tensor):
 class SerializableEvent(Event):
     '''A serializable version of an Event.
     '''
-    def serialize(self):
+    def serialize(self, log_dir):
         '''Serialize an Event to a tree and binary blob.
 
         The binary blob is created using protobuffers.
+
+        Parameters
+        ----------
+        log_dir : string
+            The log directory. This is used to resolve absolute paths into relative paths.
 
         Returns
         -------
@@ -104,7 +111,16 @@ class SerializableEvent(Event):
 
             event_proto.figure.png = buf.getvalue()
         elif self.value_type == 'fits_file':
-            event_proto.fits_file.uri = self.value
+            start = os.path.abspath(log_dir)
+
+            if self._log_dir is None:
+                # The value is an absolute path.
+                path = self._value
+            else:
+                # The value is a path relative to the log directory.
+                path = os.path.abspath(os.path.join(self._log_dir, self._value))
+
+            event_proto.fits_file.uri = os.path.relpath(path, start=start)
         else:
             tree['value'] = self.value
 
@@ -114,7 +130,7 @@ class SerializableEvent(Event):
         return tree, serialized_bytes
 
     @classmethod
-    def deserialize(cls, tree, binary_file, offset, load_in_memory=False):
+    def deserialize(cls, tree, binary_file, offset, log_dir, load_in_memory=False):
         '''Load a SerializableEvent from a tree and a binary file.
 
         Parameters
@@ -125,9 +141,11 @@ class SerializableEvent(Event):
             The file containing the binary data for this event.
         offset : integer
             The offset inside the `binary_file` where the binary data is located.
+        log_dir : string
+            The log directory. This is used to resolve absolute paths into relative paths.
         load_in_memory : boolean
-            Whether to load big values in memory. If this is False, any non-tensor values
-            are loaded in memory.
+            Whether to load big values in memory. If this is False, only small (anything that
+            is not a tensor or fits file) values are loaded in memory.
 
         Returns
         -------
@@ -139,6 +157,7 @@ class SerializableEvent(Event):
         event._binary_file = binary_file
         event._offset = offset
         event._serialized_length = tree['serialized_length']
+        event._log_dir = log_dir
 
         if 'value' in tree:
             # The value is not contained in the binary file. This also releases the binary file handle.
@@ -146,7 +165,8 @@ class SerializableEvent(Event):
         else:
             event._value = None
 
-            if load_in_memory or self.value_type != 'tensor':
+            # Convert relative filenames to absolute filenames.
+            if load_in_memory or event.value_type not in ['tensor', 'fits_file']:
                 # This loads the event value in memory and releases the binary file handle.
                 event.value = event.value
 
@@ -177,11 +197,12 @@ class SerializableEvent(Event):
             elif self.value_type == 'figure':
                 return imageio.imread(event.figure.png)
             elif self.value_type == 'fits_file':
-                return fits.open(event.fits_file.uri)
+                with fits.open(os.path.join(self._log_dir, event.fits_file.uri)) as hdu_list:
+                    hdu_list_copy = copy.deepcopy(hdu_list)
+                return hdu_list_copy
             else:
                 return tree['value']
         else:
-            # Return the set value.
             return self._value
 
     @value.setter
@@ -192,6 +213,7 @@ class SerializableEvent(Event):
         self._binary_file = None
         self._offset = None
         self._serialized_length = None
+        self._log_dir = None
 
 class DataLogWriter(object):
     '''A writer to write events to a binary log file.
@@ -218,15 +240,18 @@ class DataLogWriter(object):
         if index_fname is None:
             index_fname = _INDEX_FNAME
 
-        if os.path.exists(os.path.join(log_dir, index_fname)):
+        self.index_path = os.path.join(log_dir, index_fname)
+
+        if os.path.exists(self.index_path):
             raise ValueError('A data log file already exists in this directory.')
 
         self.index_file = asdf.AsdfFile({'events': {}, 'binary_fname': _BINARY_FNAME})
-        self.index_file.write_to(os.path.join(log_dir, index_fname))
+        self.index_file.write_to(self.index_path)
 
         self.binary_file = open(os.path.join(log_dir, _BINARY_FNAME), 'wb')
 
         self._n = 0
+        self._closed = False
 
     def log(self, wall_time, tag, value, value_type):
         '''Add an event to the log file.
@@ -241,14 +266,22 @@ class DataLogWriter(object):
             The value to be written to the log.
         value_type : string
             A string identifying the data type of value.
+
+        Raises
+        ------
+        RuntimeError
+            If attempted to log to a closed DataLogWriter.
         '''
+        if self._closed:
+            raise RuntimeError('Cannot add events to a closed DataLogWriter.')
+
         event = SerializableEvent(wall_time, tag, value, value_type)
-        tree, serialized_bytes = event.serialize()
+        tree, serialized_bytes = event.serialize(os.path.dirname(self.index_path))
 
         if tag not in self.index_file.tree['events']:
             event_dict = {'wall_time': np.array([], dtype='float'),
                           'value_type': value_type,
-                          'offset_in_data_file': np.array([], dtype='int'),
+                          'offset_in_binary_file': np.array([], dtype='int'),
                           'serialized_length': np.array([], dtype='int')}
 
             if 'value' in tree:
@@ -262,13 +295,13 @@ class DataLogWriter(object):
             raise ValueError('A tag must always have the same value type.')
 
         records['wall_time'] = np.append(records['wall_time'], event.wall_time)
-        records['offset_in_data_file'] = np.append(records['offset_in_data_file'], self.data_file.tell())
+        records['offset_in_binary_file'] = np.append(records['offset_in_binary_file'], self.binary_file.tell())
         records['serialized_length'] = np.append(records['serialized_length'], len(serialized_bytes))
 
         if 'value' in tree:
             records['values'].append(value)
 
-        self.data_file.write(serialized_bytes)
+        self.binary_file.write(serialized_bytes)
 
         self._n += 1
         if self._n >= self.flush_every:
@@ -281,17 +314,22 @@ class DataLogWriter(object):
         to ensure that no data is lost in case the program crashes.
         '''
         if self._n > 0:
-            self.index_file.write_to(self.index_fname)
-            self.data_file.flush()
+            self.index_file.write_to(self.index_path)
+            self.binary_file.flush()
 
         self._n = 0
 
     def close(self):
         '''Closes the data log.
 
-        This flushes all files.
+        This flushes all files and closes the binary file.
         '''
         self.flush()
+
+        self.binary_file.close()
+        self.binary_file = None
+
+        self._closed = True
 
 class DataLogReader(object):
     '''A reader for data log files produced by `DataLogWriter`.
@@ -307,7 +345,7 @@ class DataLogReader(object):
         index filename will be used (preferred).
     '''
     def __init__(self, log_dir, load_in_memory=False, index_fname=None):
-        if index_fname is not None:
+        if index_fname is None:
             index_fname = _INDEX_FNAME
 
         self.log_dir = log_dir
@@ -346,7 +384,7 @@ class DataLogReader(object):
 
             for tag, events_for_tag in f.tree['events'].items():
                 wall_times = events_for_tag['wall_time']
-                offsets = events_for_tag['offset_in_data_file']
+                offsets = events_for_tag['offset_in_binary_file']
                 lengths = events_for_tag['serialized_length']
                 value_type = events_for_tag['value_type']
 
@@ -361,12 +399,14 @@ class DataLogReader(object):
                     if 'values' in events_for_tag:
                         ev['value'] = events_for_tag['values'][i]
 
-                    SerializableEvent.deserialize(ev, binary_file, offset, load_in_memory=self.load_in_memory)
+                    event = SerializableEvent.deserialize(ev, binary_file, offset,
+                                                          os.path.dirname(self.index_path),
+                                                          load_in_memory=self.load_in_memory)
                     event_objects.append(event)
 
                 self.events[tag] = event_objects
 
-        self._last_modified = os.path.getmtime(self.index_fname)
+        self._last_modified = os.path.getmtime(self.index_path)
 
     def get(self, tag, indices=slice(None), wall_time_min=0, wall_time_max=np.inf):
         '''Get all events for 'tag' with indices `indices` and within the specified time interval.
@@ -408,3 +448,9 @@ class DataLogReader(object):
         wall_time = wall_time[mask]
 
         return wall_time, values
+
+    def close(self):
+        '''Close the log reader.
+        '''
+        self.events = {}
+        self._last_modified = 0
