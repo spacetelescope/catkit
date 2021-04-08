@@ -201,7 +201,7 @@ class SerializableEvent(Event):
                     hdu_list_copy = copy.deepcopy(hdu_list)
                 return hdu_list_copy
             else:
-                return tree['value']
+                raise RuntimeError('No value was present. This should never happen.')
         else:
             return self._value
 
