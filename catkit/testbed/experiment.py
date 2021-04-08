@@ -169,7 +169,7 @@ class Experiment(ABC):
 
             # Set up data log writer
             data_log_writer = datalogging.DataLogWriter(self.output_path)
-            datalogging.DataLogger.add_writer(writer)
+            datalogging.DataLogger.add_writer(data_log_writer)
 
             # De-restrict device cache access.
             global devices
