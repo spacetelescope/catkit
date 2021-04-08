@@ -29,6 +29,7 @@ dependencies:
   - sphinx
   - protobuf
   - conda-forge::asdf
+  - conda-forge::imageio
   - pip:
     - zwoasi>=0.0.21 # Requires additional manual install of driver(s) from https://astronomy-imaging-camera.com/software-drivers
     - ftd2xx # Requires additional manual install of driver from https://www.ftdichip.com/Drivers/D2XX.htm
