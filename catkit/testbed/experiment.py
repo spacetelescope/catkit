@@ -5,6 +5,7 @@ import time
 
 import catkit.util
 from catkit.testbed import devices
+from catkit import datalogging
 
 
 class SafetyTest(ABC):
@@ -30,6 +31,7 @@ class Experiment(ABC):
     multiprocessing_start_method = "spawn"
 
     log = logging.getLogger(__name__)
+    data_log = datalogging.get_logger(__name__)
 
     def __del__(self):
         self.clear_cache()
@@ -159,9 +161,15 @@ class Experiment(ABC):
         Do not override.
         """
 
+        data_log_writer = None
+
         # NOTE: This try/finally IS THE context manager for any cache cleared by self.clear_cache().
         try:
             self.init_experiment_log()
+
+            # Set up data log writer
+            data_log_writer = datalogging.DataLogWriter(self.output_path)
+            datalogging.DataLogger.add_writer(data_log_writer)
 
             # De-restrict device cache access.
             global devices
@@ -189,6 +197,11 @@ class Experiment(ABC):
             raise
         finally:
             self.clear_cache()
+
+            # Release data log writer
+            if data_log_writer:
+                datalogging.DataLogger.remove_writer(data_log_writer)
+                data_log_writer.close()
 
     @abstractmethod
     def clear_cache(self):
