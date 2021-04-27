@@ -98,7 +98,7 @@ class TLPM(PowerMeter):
             if status:
                 raise ImportError("TLPM: Failed when trying to find connected devices - '{}'".format(cls.get_error_message(status)))
 
-            available_devices.append(buffer.value.decode())
+            available_devices.append(resource_name.value.decode())
 
         print(available_devices)
 
@@ -121,4 +121,4 @@ class TLPM(PowerMeter):
         if status:
             raise RuntimeError("TLPM: Failed to get power - '{}'".format(self.get_error_message(status)))
 
-        return temp.value
+        return power.value
