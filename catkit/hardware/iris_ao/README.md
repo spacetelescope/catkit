@@ -24,6 +24,13 @@ As an example: if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L,
 segments to build your aperture and will not include the center segment, when passing in a custom command, your command 
 will be given in the order as seen in Figure 3.
 
+A common point for confusion is the inclusion or non-inclusion of the center segment in the numbering of the segments. 
+As you can see in Fig. 3, we decided to include an extra switch in the IrisAO config setup (see below) which lets you 
+toggle between having an active center segment included in your commands or not (e.g. if it is obscured by a mask). This 
+will influence the segment numbering: if you include the center segment, it will be indexed by 0. If you do not include 
+the center segment, we do not address it at all and the first segment on the "top" of the first ring will be segment 
+number 0.
+
 ![Figure 3: JWST aperture on a PTT111/PTT111L](figures/jwst_on_iris_ao_ptt111.jpg)
 
 ## Input formats
