@@ -24,6 +24,13 @@ As an example: if you are projecting a JWST aperture on a IrisAO PTT111/PTT111L,
 segments to build your aperture and will not include the center segment, when passing in a custom command, your command 
 will be given in the order as seen in Figure 3.
 
+A common point for confusion is the inclusion or non-inclusion of the center segment in the numbering of the segments. 
+As you can see in Fig. 3, we decided to include an extra switch in the IrisAO config setup (see below) which lets you 
+toggle between having an active center segment included in your commands or not (e.g. if it is obscured by a mask). This 
+will influence the segment numbering: if you include the center segment, it will be indexed by 0. If you do not include 
+the center segment, we do not address it at all and the first segment on the "top" of the first ring will be segment 
+number 0.
+
 ![Figure 3: JWST aperture on a PTT111/PTT111L](figures/jwst_on_iris_ao_ptt111.jpg)
 
 ## Input formats
@@ -59,19 +66,19 @@ command with POPPY using global coefficients.
 
 As with the other hardware in `catkit`, you can open and close a connection to the Iris AO as a context manager.
 
-Note that catkit.hardware.iris_ao.segmented_dm_command and catkit.hardware.iris_ao.util pull from CONFIG_INI any time 
+Note that `catkit.hardware.iris_ao.segmented_dm_command` and `catkit.hardware.iris_ao.util` pull from CONFIG_INI any time 
 you use either one, so you must import your local CONFIG_INI at the top of your module even if you do not explicitly 
 use it in that module, this will ensure that you are grabbing the correct parameters for *your* testbed.
 
 ### Example:
 If putting *only* the flat map on the Iris AO:
-    ```python
-    from catkit.hardware.iris_ao.segmented_dm_command import load_command
+```python
+from catkit.hardware.iris_ao.segmented_dm_command import load_command
 
-    with testbed.segmented_dm() as iris:
-        iris_command = load_command(None, flat_map=True, dm_config_id='iris_ao')
-        iris.apply_shape(iris_command)
-    ```
+with testbed.segmented_dm() as iris:
+iris_command = load_command(None, flat_map=True, dm_config_id='iris_ao')
+iris.apply_shape(iris_command)
+```
 
 
 ## `config.ini` additions
@@ -89,14 +96,14 @@ Important hardware information:
 IrisAO DM information:
 * `total_number_of_segments`: The total number of segments in your Iris AO DM hardware (including any non-functioning segments).
 * `active_number_of_segments`: (Optional) The number of segments in your specific pupil. This parameter is only necessary if the number of segments used in the aperture is is less than `total_number_of_segments`.
-* `active_segment_list`: (Optional) This parameter only needs to be provided if `active_number_of_segments` is less than `total_number_of_segments`. This will be a list of the segment numbers associated with the segments that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20 (see figures 1 and 2). For example, if your pupil is centered on segment 3, and you want to command the center segment, and is only one ring, then active_segment_list = [3, 9, 2, 1, 4, 11, 10]
+* `active_segment_list`: (Optional) This parameter only needs to be provided if `active_number_of_segments` is less than `total_number_of_segments`. This allows you to center your active pupil off the physical center of the IrisAO. This will be a list of the segment numbers associated with the segments that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20 (see figures 1 and 2). For example, if your pupil is centered on segment 3, and you want to command the center segment, and is only one ring, then active_segment_list = [3, 9, 2, 1, 4, 11, 10]
 
 File locations:
 * `custom_flat_file_ini`: The location of the custom flat .ini file for your specific Iris AO DM. Note that this file will likely never be changed by the user.  
-* `config_ptt_file`: The location of the ConfigPTT.ini file which is the file that contains whatever command you want to put on the DM.
+* `config_ptt_file`: The location of the ConfigPTT.ini file which is the file that contains whatever command you want to put on the DM as it is periodically updated by the controller.
 * `path_to_dm_exe`: The path to the directory that houses the DM_Control.exe file
 
-If using segmented_dm_command.PoppySegmentedCommand or segmented_dm_command.DisplayCommand, you will need to include the following parameters:
+If using `segmented_dm_command.PoppySegmentedCommand`, you will need to include the following parameters:
 * `flat_to_flat_mm`: The flat side to flat side diameter of each segment in units of mm
 * `gap_um`: The size of the gap between segments in units of um
 * `dm_ptt_units`: A list of the units for the PTT that are internal to the DM. For IrisAO DMs, this will be: [um, mrad, mrad]
@@ -115,23 +122,23 @@ Mixing a .mcf file with a .dcf file that *does not match* the driver serial numb
 ---
 
 ### Example:
-    ```ini
-    [iris_ao]
+```ini
+[iris_ao]
 
-    mirror_serial = 'PWA##-##-##-####'
-    driver_serial = '########'
-    total_number_of_segments = 37
-    active_number_of_segments = 18
-    active_segment_list = [9, 2, 1, 4, 11, 10, 21, 8, 19, 7, 6, 5, 13, 12, 25, 24, 23, 22]
-    custom_flat_file_ini = ${optics_lab:local_repo_path}/DM/MirrorControlFiles/CustomFLAT.ini
-    config_ptt_file = ${optics_lab:local_repo_path}/DM/MirrorControlFiles/ConfigPTT.ini
-    path_to_dm_exe = ${optics_lab:local_repo_path}Control DM/Code/release
-    flat_to_flat_mm = 1.4
-    gap_um = 10
-    dm_ptt_units = um,mrad,mrad
-    include_center_segment = false
-    include_outer_ring_corners = true
-    ```
+mirror_serial = 'PWA##-##-##-####'
+driver_serial = '########'
+total_number_of_segments = 37
+active_number_of_segments = 18
+active_segment_list = [9, 2, 1, 4, 11, 10, 21, 8, 19, 7, 6, 5, 13, 12, 25, 24, 23, 22]
+custom_flat_file_ini = ${optics_lab:local_repo_path}/DM/MirrorControlFiles/CustomFLAT.ini
+config_ptt_file = ${optics_lab:local_repo_path}/DM/MirrorControlFiles/ConfigPTT.ini
+path_to_dm_exe = ${optics_lab:local_repo_path}Control DM/Code/release
+flat_to_flat_mm = 1.4
+gap_um = 10
+dm_ptt_units = um,mrad,mrad
+include_center_segment = false
+include_outer_ring_corners = true
+```
 
 Note that the code expects to find the `DM_Control.exe` file in `path_to_dm_exe`.
 
@@ -140,10 +147,10 @@ Note that the code expects to find the `DM_Control.exe` file in `path_to_dm_exe`
 The `iris_ao_controller` will update your `testbed_state.py` file with the current command being applied to the Iris AO. 
 In order to allow this, you will need to add the following to your file:
 
-    ```python
-    # IrisAO command object currently being applied.
-    iris_command_object = None
-    ```
+```python
+# IrisAO command object currently being applied.
+iris_command_object = None
+```
 
 When there is no command on the the Iris AO, this variable will be changed back to `None`.
 
@@ -151,28 +158,28 @@ When there is no command on the the Iris AO, this variable will be changed back 
 You also need to make sure you can open and close your Iris AO like other hardware, as a context manager. To do this, 
 add the following block of code (edited as necessary for your testbed) to your `testbed.py` file
 
-    ```python
-    from catkit.hardware.iris_ao.iris_ao_controller import IrisAoDmController # Iris AO
+```python
+from catkit.hardware.iris_ao.iris_ao_controller import IrisAoDmController # Iris AO
 
-    def segmented_dm_controller():
-        """
-        Proper way to control the segmented deformable mirror controller. Using this function
-        keeps the scripts future-proof. Use the "with" keyword to take advantage of the built-in
-        context manager for safely closing the connection. The controller gives you the ability
-        to send shapes to the segmented DM.
+def segmented_dm_controller():
+    """
+    Proper way to control the segmented deformable mirror controller. Using this function
+    keeps the scripts future-proof. Use the "with" keyword to take advantage of the built-in
+    context manager for safely closing the connection. The controller gives you the ability
+    to send shapes to the segmented DM.
 
-        :return: An instance of the DeformableMirrorController.py interface.
-        """
-        config_id = "iris_ao"
-        mirror_serial = CONFIG_INI.getint(config_id, "mirror_serial")
-        driver_serial = CONFIG_INI.getint(config_id, "driver_serial")
-        path_to_dm_exe = CONFIG_INI.get(config_id, "path_to_dm_exe")
-        filename_ptt_dm = CONFIG_INI.get(config_id, 'config_ptt_file')
+    :return: An instance of the DeformableMirrorController.py interface.
+    """
+    config_id = "iris_ao"
+    mirror_serial = CONFIG_INI.getint(config_id, "mirror_serial")
+    driver_serial = CONFIG_INI.getint(config_id, "driver_serial")
+    path_to_dm_exe = CONFIG_INI.get(config_id, "path_to_dm_exe")
+    filename_ptt_dm = CONFIG_INI.get(config_id, 'config_ptt_file')
 
-        return IrisAoDmController(config_id=config_id,
-                                    mirror_serial=mirror_serial,
-                                    driver_serial=driver_serial,
-                                    disable_hardware="false",
-                                    path_to_dm_exe=path_to_dm_exe,
-                                    filename_ptt_dm=filename_ptt_dm)
-      ```
+    return IrisAoDmController(config_id=config_id,
+                                mirror_serial=mirror_serial,
+                                driver_serial=driver_serial,
+                                disable_hardware="false",
+                                path_to_dm_exe=path_to_dm_exe,
+                                filename_ptt_dm=filename_ptt_dm)
+  ```
