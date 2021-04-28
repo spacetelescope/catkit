@@ -96,11 +96,11 @@ Important hardware information:
 IrisAO DM information:
 * `total_number_of_segments`: The total number of segments in your Iris AO DM hardware (including any non-functioning segments).
 * `active_number_of_segments`: (Optional) The number of segments in your specific pupil. This parameter is only necessary if the number of segments used in the aperture is is less than `total_number_of_segments`.
-* `active_segment_list`: (Optional) This parameter only needs to be provided if `active_number_of_segments` is less than `total_number_of_segments`. This will be a list of the segment numbers associated with the segments that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20 (see figures 1 and 2). For example, if your pupil is centered on segment 3, and you want to command the center segment, and is only one ring, then active_segment_list = [3, 9, 2, 1, 4, 11, 10]
+* `active_segment_list`: (Optional) This parameter only needs to be provided if `active_number_of_segments` is less than `total_number_of_segments`. This allows you to center your active pupil off the physical center of the IrisAO. This will be a list of the segment numbers associated with the segments that are used in your pupil. The first segment is the center segment, then the following segments are in order from "up" to the next ring, and then clockwise. Note that "up" for the Iris hardware is in the direction of segment number 20 (see figures 1 and 2). For example, if your pupil is centered on segment 3, and you want to command the center segment, and is only one ring, then active_segment_list = [3, 9, 2, 1, 4, 11, 10]
 
 File locations:
 * `custom_flat_file_ini`: The location of the custom flat .ini file for your specific Iris AO DM. Note that this file will likely never be changed by the user.  
-* `config_ptt_file`: The location of the ConfigPTT.ini file which is the file that contains whatever command you want to put on the DM.
+* `config_ptt_file`: The location of the ConfigPTT.ini file which is the file that contains whatever command you want to put on the DM as it is periodically updated by the controller.
 * `path_to_dm_exe`: The path to the directory that houses the DM_Control.exe file
 
 If using `segmented_dm_command.PoppySegmentedCommand` or `segmented_dm_command.DisplayCommand`, you will need to include the following parameters:
