@@ -103,7 +103,7 @@ File locations:
 * `config_ptt_file`: The location of the ConfigPTT.ini file which is the file that contains whatever command you want to put on the DM as it is periodically updated by the controller.
 * `path_to_dm_exe`: The path to the directory that houses the DM_Control.exe file
 
-If using `segmented_dm_command.PoppySegmentedCommand` or `segmented_dm_command.DisplayCommand`, you will need to include the following parameters:
+If using `segmented_dm_command.PoppySegmentedCommand`, you will need to include the following parameters:
 * `flat_to_flat_mm`: The flat side to flat side diameter of each segment in units of mm
 * `gap_um`: The size of the gap between segments in units of um
 * `dm_ptt_units`: A list of the units for the PTT that are internal to the DM. For IrisAO DMs, this will be: [um, mrad, mrad]
