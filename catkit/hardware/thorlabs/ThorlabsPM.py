@@ -8,16 +8,19 @@ from catkit.interfaces.PowerMeter import PowerMeter
 import catkit.util
 
 
-class ThorlabsPMInstrumentMeta(type):
-    # Forward any call to a function to the PM library. Autoload the library upon first call.
+class LazyLoadLibraryMeta(type):
+    # Forward any call to a function to the library. Autoload the library upon first call.
     def __getattr__(cls, name):
         lib = cls.load_library()
 
         return getattr(lib, name)
 
 
-class ThorlabsPMInstrument(metaclass=ThorlabsPMInstrumentMeta):
+class ThorlabsPMInstrument(metaclass=LazyLoadLibraryMeta):
     _library = None
+
+    # The class is not an abstract method.
+    __isabstractmethod__ = False
 
     @classmethod
     def load_library(cls):

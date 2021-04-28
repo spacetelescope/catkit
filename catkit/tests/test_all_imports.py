@@ -26,7 +26,6 @@ for item in all_files:
 exclude_exceptions_containing = ["zwoas",
                                  "bmc",
                                  "TSP01",
-                                 "ThorlabsPM",
                                  "test_testbed"]
 
 
