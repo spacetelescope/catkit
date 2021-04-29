@@ -225,18 +225,14 @@ class ZwoCamera(Camera):
                        subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
                        bins=None):
         """ Wrapper to take exposures and also save them if `file_mode` is used. """
-        images = []
-        meta = None
 
-        for img, meta in self.just_take_exposures(exposure_time=exposure_time,
-                                                  num_exposures=num_exposures,
-                                                  extra_metadata=extra_metadata,
-                                                  full_image=full_image, subarray_x=subarray_x, subarray_y=subarray_y,
-                                                  width=width, height=height,
-                                                  gain=gain,
-                                                  bins=bins):
-            images.append(img)
-            meta = meta
+        images, meta = self.just_take_exposures(exposure_time=exposure_time,
+                                                num_exposures=num_exposures,
+                                                extra_metadata=extra_metadata,
+                                                full_image=full_image, subarray_x=subarray_x, subarray_y=subarray_y,
+                                                width=width, height=height,
+                                                gain=gain,
+                                                bins=bins)
 
         if file_mode:
             catkit.util.save_images(images, meta, path=path, base_filename=filename, raw_skip=raw_skip)
@@ -247,12 +243,12 @@ class ZwoCamera(Camera):
         else:
             return images
 
-    def just_take_exposures(self, exposure_time, num_exposures,
-                            extra_metadata=None,
-                            subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
-                            bins=None, use_video_capture_mode=True):
+    def stream_exposures(self, exposure_time, num_exposures,
+                         extra_metadata=None,
+                         subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
+                         bins=None, use_video_capture_mode=True):
         """
-        Low level method to take exposures using a Zwo camera. By default keeps image data in.
+        Take exposures and return them using a generator.
 
         :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
         :param num_exposures: Number of exposures.
@@ -265,7 +261,7 @@ class ZwoCamera(Camera):
         :param full_image: Boolean for whether to take a full image.
         :param bins: Integer value for number of bins.
         :param use_video_capture_mode: Boolean for whether to use video capture or snapshot mode. Default is True.
-        :return: Two parameters: Image list (numpy data or paths), Metadata list of MetaDataEntry objects.
+        :yield: Two parameters: Image (numpy data), Metadata list of MetaDataEntry objects.
         """
 
         # Convert exposure time to contain units if not already a Pint quantity.
@@ -304,6 +300,27 @@ class ZwoCamera(Camera):
                 img = self.__capture_and_orient(initial_sleep=exposure_time, theta=self.theta, fliplr=self.fliplr)
 
                 yield img, meta_data
+
+    def just_take_exposures(self, exposure_time, num_exposures,
+                            extra_metadata=None,
+                            subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
+                            bins=None, use_video_capture_mode=True):
+        """ Takes images and stores them in a list. """
+        images = []
+        metadata = None
+
+        for img, meta in self.stream_exposures(exposure_time=exposure_time,
+                                               num_exposures=num_exposures,
+                                               extra_metadata=extra_metadata,
+                                               full_image=full_image, subarray_x=subarray_x, subarray_y=subarray_y,
+                                               width=width, height=height,
+                                               gain=gain,
+                                               bins=bins,
+                                               use_video_capture_mode=use_video_capture_mode):
+            images.append(img)
+            metadata = meta
+
+        return images, metadata
 
     def flash_id(self, new_id):
         """
