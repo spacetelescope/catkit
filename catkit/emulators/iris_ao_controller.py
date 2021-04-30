@@ -54,7 +54,7 @@ class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
             # Furthermore, depending on poppy version we may need to correct a sign inconsistency
             sign = -1 if Version(poppy.__version__) < Version('1.0') else 1
 
-            piston = values[0] * u.um
+            piston = sign * values[0] * u.um
             tip = sign * values[2] * u.mrad
             tilt = sign * values[1] * u.mrad
             self.set_actuator(seg-1, piston, tip, tilt)    # offset by -1 for 0-based vs 1-based segment indices; see PR #147
