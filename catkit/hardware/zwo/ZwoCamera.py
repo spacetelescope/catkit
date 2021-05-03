@@ -167,10 +167,10 @@ class ZwoCamera(Camera):
         timeout : Pint quantity
             How long to wait for an image. Afterwards a timeout exception is raised.
 
-        Returns
+        Yields
         -------
-        images : list of (np.array of floats)
-            All captured images in a list.
+        image : np.array of floats
+            Each of the captured images.
         """
         timeout_in_ms = timeout.to(units.millisecond).magnitude
         images = []
@@ -180,15 +180,14 @@ class ZwoCamera(Camera):
         try:
             for i in range(num_exposures):
                 img = self.instrument.capture_video_frame(timeout=timeout_in_ms)
+                img = img.astype(np.dtype(np.float32))
 
-                images.append(img.astype(np.dtype(np.float32)))
+                yield img
         finally:
             # Stop exposures. The stop_exposure() might not be necessary, but there's no
             # harm in calling it anyway.
             self.instrument.stop_video_capture()
             self.instrument.stop_exposure()
-
-        return images
 
     def __capture_video_and_orient(self, num_exposures, timeout, theta, fliplr):
         """ Takes a number of images and flips each according to theta and l/r input.
@@ -206,16 +205,13 @@ class ZwoCamera(Camera):
         fliplr : bool
             Whether to flip left/right.
 
-        Returns
+        Yields
         -------
-        images : list of (np.array of floats)
-            All captured images in a list.
+        image : np.array of floats
+            Each captured image.
         """
-        images = self.__capture_video(num_exposures, timeout)
-
-        oriented_images = [catkit.util.rotate_and_flip_image(unflipped_image, theta, fliplr) for unflipped_image in images]
-
-        return oriented_images
+        for img in self.__capture_video(num_exposures, timeout):
+            yield catkit.util.rotate_and_flip_image(img, theta, fliplr)
 
     def _close(self):
         """Close camera connection"""
@@ -247,12 +243,12 @@ class ZwoCamera(Camera):
         else:
             return images
 
-    def just_take_exposures(self, exposure_time, num_exposures,
-                            extra_metadata=None,
-                            subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
-                            bins=None, use_video_capture_mode=True):
+    def stream_exposures(self, exposure_time, num_exposures,
+                         extra_metadata=None,
+                         subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
+                         bins=None, use_video_capture_mode=True):
         """
-        Low level method to take exposures using a Zwo camera. By default keeps image data in.
+        Take exposures and return them using a generator.
 
         :param exposure_time: Pint quantity for exposure time, otherwise in microseconds.
         :param num_exposures: Number of exposures.
@@ -265,7 +261,7 @@ class ZwoCamera(Camera):
         :param full_image: Boolean for whether to take a full image.
         :param bins: Integer value for number of bins.
         :param use_video_capture_mode: Boolean for whether to use video capture or snapshot mode. Default is True.
-        :return: Two parameters: Image list (numpy data or paths), Metadata list of MetaDataEntry objects.
+        :yield: Two parameters: Image (numpy data), Metadata list of MetaDataEntry objects.
         """
 
         # Convert exposure time to contain units if not already a Pint quantity.
@@ -296,15 +292,35 @@ class ZwoCamera(Camera):
             # SDK recommends 2 x exposure time + 0.5sec, but we want to never trigger the timeout accidentally.
             timeout = 2 * exposure_time + quantity(10, units.second) # ms
 
-            img_list = self.__capture_video_and_orient(num_exposures, timeout, theta=self.theta, fliplr=self.fliplr)
+            for img in self.__capture_video_and_orient(num_exposures, timeout, theta=self.theta, fliplr=self.fliplr):
+                yield img, meta_data
         else:
-            img_list = []
             # Take exposures and add to list.
             for i in range(num_exposures):
                 img = self.__capture_and_orient(initial_sleep=exposure_time, theta=self.theta, fliplr=self.fliplr)
-                img_list.append(img)
 
-        return img_list, meta_data
+                yield img, meta_data
+
+    def just_take_exposures(self, exposure_time, num_exposures,
+                            extra_metadata=None,
+                            subarray_x=None, subarray_y=None, width=None, height=None, gain=None, full_image=None,
+                            bins=None, use_video_capture_mode=True):
+        """ Takes images and stores them in a list. """
+        images = []
+        metadata = None
+
+        for img, meta in self.stream_exposures(exposure_time=exposure_time,
+                                               num_exposures=num_exposures,
+                                               extra_metadata=extra_metadata,
+                                               full_image=full_image, subarray_x=subarray_x, subarray_y=subarray_y,
+                                               width=width, height=height,
+                                               gain=gain,
+                                               bins=bins,
+                                               use_video_capture_mode=use_video_capture_mode):
+            images.append(img)
+            metadata = meta
+
+        return images, metadata
 
     def flash_id(self, new_id):
         """
