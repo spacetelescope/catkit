@@ -45,7 +45,7 @@ class Process(CONTEXT.Process):
             except Exception:
                  pass
             if exception:
-                raise exception
+                raise Exception(f"Exception raised on process '{self.name}' (PID: {self.pid})") from exception
 
 
 class Mutex:

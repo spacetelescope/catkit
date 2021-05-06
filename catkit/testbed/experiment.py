@@ -106,7 +106,7 @@ class Experiment(ABC):
 
             self.log.info("Creating separate process to run experiment...")
             # Spin off and start the process to run the experiment.
-            experiment_process = Process(target=self.run_experiment)
+            experiment_process = Process(target=self.run_experiment, name=self.name)
             experiment_process.start()
             self.log.info(self.name + " process started")
 
@@ -151,7 +151,7 @@ class Experiment(ABC):
             safety_exception = SafetyException("Monitoring process caught an unexpected problem: ", e)
             self.log.exception(safety_exception)
             # Shut down the experiment (but allow context managers to exit properly).
-            if experiment_process is not None:
+            if experiment_process is not None and experiment_process.is_alive():
                 catkit.util.soft_kill(experiment_process)
             # must return SafetyException type specifically to signal queue to stop in typical calling scripts
             raise safety_exception

@@ -212,6 +212,11 @@ def soft_kill(process):
     wait until the process closes.  Uses a console ctrl event for windows, and signal.SIGINT for linux/mac.
     :param process: A multiprocessing.Process object.
     """
+
+    # The process may not have even started...
+    if not process or process.pid is None or not process.is_alive():
+        return
+
     log = logging.getLogger()
     if os.name == "nt":
         import win32api
