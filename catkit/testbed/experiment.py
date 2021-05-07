@@ -155,6 +155,10 @@ class Experiment(ABC):
             # must return SafetyException type specifically to signal queue to stop in typical calling scripts
             raise safety_exception
 
+        experiment_process.join()
+        if experiment_process.exitcode:
+            raise Exception(f"Child process ('{self.name}' with pid: '{experiment_process.pid}') exited with non-zero exitcode: '{experiment_process.exitcode}'")
+
     def run_experiment(self):
         """
         Wrapper for experiment to catch the softkill function's KeyboardInterrupt signal more gracefully.
