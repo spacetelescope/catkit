@@ -36,16 +36,23 @@ class Process(CONTEXT.Process):
             This is executed on the parent process.
         """
         super().join()
-        if self.exitcode:
-            exception = None
-            try:  # Manager may not have been started. TODO: possibly remove this.
-                manager = SharedMemoryManager()
-                manager.connect()
-                exception = manager.get_exception(self.pid)
-            except Exception:
-                 pass
-            if exception:
-                raise Exception(f"Exception raised on process '{self.name}' (PID: {self.pid})") from exception
+        if not self.exitcode:
+            return
+
+        exception = Exception(f"Child process ('{self.name}' with pid: '{self.pid}') exited with non-zero exitcode: '{self.exitcode}'")
+
+        child_exception = None
+        try:  # Manager may not have been started.
+            manager = SharedMemoryManager()
+            manager.connect()
+            exception = manager.get_exception(self.pid)
+        except Exception:
+             pass
+
+        if child_exception:
+            raise exception from child_exception
+        else:
+            raise exception
 
 
 class Mutex:

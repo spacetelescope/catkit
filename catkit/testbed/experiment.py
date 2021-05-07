@@ -138,9 +138,6 @@ class Experiment(ABC):
                     # Experiment ended before the next check interval, exit the while loop.
                     break
                     self.log.info("Experment ended before check interval; exiting.")
-
-            # Explicitly join even though experiment_process.is_alive() will call join() if it's no longer alive.
-            experiment_process.join()  # This will raise any child exceptions.
         except KeyboardInterrupt:
             self.log.exception("Parent process: caught ctrl-c, raising exception.")
             raise
@@ -156,9 +153,8 @@ class Experiment(ABC):
             # must return SafetyException type specifically to signal queue to stop in typical calling scripts
             raise safety_exception
 
-        experiment_process.join()
-        if experiment_process.exitcode:
-            raise Exception(f"Child process ('{self.name}' with pid: '{experiment_process.pid}') exited with non-zero exitcode: '{experiment_process.exitcode}'")
+        # Explicitly join even though experiment_process.is_alive() will call join() if it's no longer alive.
+        experiment_process.join()  # This will raise any child exceptions.
 
     def run_experiment(self):
         """
