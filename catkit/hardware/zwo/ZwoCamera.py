@@ -175,12 +175,29 @@ class ZwoCamera(Camera):
         timeout_in_ms = timeout.to(units.millisecond).magnitude
         images = []
 
+        width, height, bins, image_type = self.instrument.get_roi_format()
+
+        s = width * height
+        shape = [width, height]
+        dtype = np.uint8
+
+        if bins == self.instrument_lib.ASI_IMG_RAW16:
+            s *= 2
+            dtype = np.uint16
+        elif bins == self.instrument_lib.ASI_IMG_RGB24:
+            s *= 3
+            shape.append(3)
+
+        buf = bytearray(s)
+
         self.instrument.start_video_capture()
 
         try:
             for i in range(num_exposures):
-                img = self.instrument.capture_video_frame(timeout=timeout_in_ms)
-                img = img.astype(np.dtype(np.float32))
+                data = self.instrument.get_video_data(timeout=timeout_in_ms, buffer_=buf)
+                img = self.np.frombuffer(data, dtype=dtype)
+
+                img = img.reshape(shape).astype(np.float32)
 
                 yield img
         finally:
