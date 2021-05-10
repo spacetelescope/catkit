@@ -83,6 +83,23 @@ class DmCommand(object):
     def get_data(self):
         return self.data
 
+    _flat_map_volts_dm1 = None
+    _flat_map_volts_dm2 = None
+
+    @property
+    def flat_map_volts_dm1(self):
+        if self.__class__._flat_map_volts_dm1 is None:
+            flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
+            self.__class__._flat_map_volts_dm1 = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
+        return self.__class__._flat_map_volts_dm1
+
+    @property
+    def flat_map_volts_dm2(self):
+        if self.__class__._flat_map_volts_dm2 is None:
+            flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
+            self.__class__._flat_map_volts_dm2 = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
+        return self.__class__._flat_map_volts_dm2
+
     def to_dm_command(self):
         """ Output DM command suitable for sending to the hardware driver
 
@@ -108,13 +125,13 @@ class DmCommand(object):
             # OR apply Flat Map (which is itself biased).
             elif self.flat_map:
                 if self.dm_num == 1:
-                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-                    flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
-                    dm_command += flat_map_volts[0].data
+                    #flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
+                    #flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
+                    dm_command += self.flat_map_volts_dm1[0].data
                 else:
-                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-                    flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
-                    dm_command += flat_map_volts[0].data
+                    #flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
+                    #flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
+                    dm_command += self.flat_map_volts_dm2[0].data
 
             # Convert between 0-1.
             dm_command /= self.max_volts
@@ -275,19 +292,15 @@ def convert_dm_command_to_image(dm_command):
 
 
 def convert_dm_image_to_command(dm_image, path_to_save=None):
-    # Flatten the gain_map using index952
-    mask = catkit.util.get_dm_mask()
-    index952 = np.flatnonzero(mask)
-
     # Parse using index952.
-    image_1d = np.ndarray.flatten(dm_image)
-    dm_command = image_1d[index952]
+    dm_command = dm_image[convert_dm_image_to_command.mask]
 
     # Write new image as fits file
     if path_to_save is not None:
         catkit.util.write_fits(dm_command, path_to_save)
     return dm_command
 
+convert_dm_image_to_command.mask = catkit.util.get_dm_mask().astype('bool')
 
 def create_flatmap_from_dm_command(dm_command_path, output_path, file_name=None, dm_num=1):
     """

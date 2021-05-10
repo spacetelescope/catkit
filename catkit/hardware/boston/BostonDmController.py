@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 import numpy as np
 
@@ -50,7 +51,9 @@ class BostonDmController(DeformableMirrorController):
         if data_min < 0 or data_max > 1:
             self.log.warning(f"DM command out of range and will be clipped by hardware. min:{data_min}, max:{data_max}")
 
+        #print('send_data before:', time.clock())
         status = self.instrument.send_data(data)
+        #print('send_data after:', time.clock())
         if status != self.instrument_lib.NO_ERR:
             raise Exception("{}: Failed to send data - {}".format(self.config_id,
                                                                   self.instrument.error_string(status)))
@@ -121,7 +124,7 @@ class BostonDmController(DeformableMirrorController):
         :param sin_specification: Add this sine to the data
         :param output_path: str, Path to save commands to if provided. Default `None` := don't save.
         """
-        self.log.info("Applying shape to both DMs")
+        #self.log.info("Applying shape to both DMs")
 
         if not isinstance(dm1_shape, DmCommand):
             dm1_shape = DmCommand(data=dm1_shape,
