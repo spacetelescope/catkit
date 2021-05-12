@@ -12,6 +12,8 @@ import catkit.util
 m_per_volt_map1 = None  # for caching the conversion factor, to avoid reading from disk each time
 m_per_volt_map2 = None  # for caching the conversion factor, to avoid reading from disk each time
 
+flat_map_dm1 = None  # for caching the conversion factor, to avoid reading from disk each time
+flat_map_dm2 = None  # for caching the conversion factor, to avoid reading from disk each time
 
 class DmCommand(object):
     def __init__(self, data, dm_num, flat_map=False, bias=False, as_voltage_percentage=False,
@@ -107,14 +109,7 @@ class DmCommand(object):
 
             # OR apply Flat Map (which is itself biased).
             elif self.flat_map:
-                if self.dm_num == 1:
-                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-                    flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
-                    dm_command += flat_map_volts[0].data
-                else:
-                    flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-                    flat_map_volts = fits.open(os.path.join(self.calibration_data_path, flat_map_file_name))
-                    dm_command += flat_map_volts[0].data
+                dm_command += get_flat_map_volts(self.dm_num)
 
             # Convert between 0-1.
             dm_command /= self.max_volts
@@ -191,14 +186,18 @@ def get_flat_map_volts(dm_num):
     calibration_data_path = os.path.join(catkit.util.find_package_location(calibration_data_package),
                                          "hardware",
                                          "boston")
-    if dm_num == 1:
-        flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-        flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
-        return flat_map_volts[0].data
-    else:
-        flat_map_file_name = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-        flat_map_volts = fits.open(os.path.join(calibration_data_path, flat_map_file_name))
-        return flat_map_volts[0].data
+
+    global flat_map_dm1, flat_map_dm2
+
+    if flat_map_dm1 is None:
+        fname = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
+        flat_map_dm1 = fits.getdata(os.path.join(calibration_data_path, fname))
+
+    if flat_map_dm2 is None:
+        fname = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
+        flat_map_dm2 = fits.getdata(os.path.join(calibration_data_path, fname))
+
+    return flat_map_dm1 if dm_num == 1 else flat_map_dm2
 
 
 def get_m_per_volt_map(dm_num):
@@ -275,13 +274,8 @@ def convert_dm_command_to_image(dm_command):
 
 
 def convert_dm_image_to_command(dm_image, path_to_save=None):
-    # Flatten the gain_map using index952
-    mask = catkit.util.get_dm_mask()
-    index952 = np.flatnonzero(mask)
-
-    # Parse using index952.
-    image_1d = np.ndarray.flatten(dm_image)
-    dm_command = image_1d[index952]
+    # Take actuators corresponding to the DM mask
+    dm_command = dm_image[catkit.util.get_dm_mask().astype('bool')]
 
     # Write new image as fits file
     if path_to_save is not None:
