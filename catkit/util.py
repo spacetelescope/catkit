@@ -32,7 +32,7 @@ def find_repo_location(package='catkit'):
 def get_dm_mask():
     if get_dm_mask.mask is None:
         mask_path = os.path.join(find_package_location("catkit"), "hardware", "boston", "kiloCdm_2Dmask.fits")
-        mask = fits.getdata(mask_path)
+        get_dm_mask.mask = fits.getdata(mask_path)
 
     return get_dm_mask.mask
 
