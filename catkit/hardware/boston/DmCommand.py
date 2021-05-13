@@ -182,6 +182,11 @@ def load_dm_command(path, dm_num=1, flat_map=False, bias=False, as_volts=False):
 
 
 def get_flat_map_volts(dm_num):
+    """
+    Get the flat map for a given dm. The flat map is in volts for each actuator.
+    :param dm_num: Which DM to lead the command for.
+    :return: flat map for the selected DM. This function caches the map to avoid multiple disk access.
+    """
     calibration_data_package = CONFIG_INI.get("optics_lab", "calibration_data_package")
     calibration_data_path = os.path.join(catkit.util.find_package_location(calibration_data_package),
                                          "hardware",
@@ -189,15 +194,21 @@ def get_flat_map_volts(dm_num):
 
     global flat_map_dm1, flat_map_dm2
 
-    if flat_map_dm1 is None:
-        fname = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
-        flat_map_dm1 = fits.getdata(os.path.join(calibration_data_path, fname))
+    if dm_num == 1:
+        if flat_map_dm1 is None:
+            fname = CONFIG_INI.get("boston_kilo952", "flat_map_dm1")
+            flat_map_dm1 = fits.getdata(os.path.join(calibration_data_path, fname))
 
-    if flat_map_dm2 is None:
-        fname = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
-        flat_map_dm2 = fits.getdata(os.path.join(calibration_data_path, fname))
+        return flat_map_dm1
 
-    return flat_map_dm1 if dm_num == 1 else flat_map_dm2
+    if dm_num == 2:
+        if flat_map_dm2 is None:
+            fname = CONFIG_INI.get("boston_kilo952", "flat_map_dm2")
+            flat_map_dm2 = fits.getdata(os.path.join(calibration_data_path, fname))
+
+        return flat_map_dm2
+
+    raise ValueError('dm_num should be either 1 or 2.')
 
 
 def get_m_per_volt_map(dm_num):
@@ -212,14 +223,22 @@ def get_m_per_volt_map(dm_num):
                                          "boston")
 
     global m_per_volt_map1, m_per_volt_map2
-    if m_per_volt_map1 is None:
-        m_per_volt_map1 = fits.getdata(os.path.join(calibration_data_path,
-                                               CONFIG_INI.get("boston_kilo952", "gain_map_dm1")))
-    if m_per_volt_map2 is None:
-        m_per_volt_map2 = fits.getdata(os.path.join(calibration_data_path,
-                                               CONFIG_INI.get("boston_kilo952", "gain_map_dm2")))
 
-    return m_per_volt_map1 if dm_num == 1 else m_per_volt_map2
+    if dm_num == 1:
+        if m_per_volt_map1 is None:
+            fname = CONFIG_INI.get("boston_kilo952", "gain_map_dm1")
+            m_per_volt_map1 = fits.getdata(os.path.join(calibration_data_path, fname))
+
+        return m_per_volt_map1
+
+    if dm_num == 2:
+        if m_per_volt_map2 is None:
+            fname = CONFIG_INI.get("boston_kilo952", "gain_map_dm2")
+            m_per_volt_map2 = fits.getdata(os.path.join(calibration_data_path, fname))
+
+        return m_per_volt_map2
+
+    raise ValueError('dm_num should be either 1 or 2.')
 
 
 def convert_volts_to_m(data, dm_num, meter_to_volt_map=None):
