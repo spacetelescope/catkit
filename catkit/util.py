@@ -25,14 +25,16 @@ def find_package_location(package='catkit'):
     return importlib.util.find_spec(package).submodule_search_locations[0]
 
 
-def find_repo_location(package='cakit'):
+def find_repo_location(package='catkit'):
     return os.path.abspath(os.path.join(find_package_location(package), os.pardir))
 
 
 def get_dm_mask():
-    mask_path = os.path.join(find_package_location("catkit"), "hardware", "boston", "kiloCdm_2Dmask.fits")
-    mask = fits.open(mask_path)[0].data
-    return mask
+    if not hasattr(get_dm_mask, 'mask'):
+        mask_path = os.path.join(find_package_location("catkit"), "hardware", "boston", "kiloCdm_2Dmask.fits")
+        get_dm_mask.mask = fits.getdata(mask_path)
+
+    return get_dm_mask.mask
 
 
 # Does numpy gotchu?
