@@ -4,6 +4,7 @@ import time
 
 from multiprocess.context import TimeoutError
 from multiprocess.managers import State
+import numpy as np
 import pytest
 
 from catkit.multiprocessing import Process, SharedMemoryManager
@@ -80,7 +81,7 @@ def client_barrier(sleep, parties, l, name_mangle=False):
     t0 = time.time()
     time.sleep(sleep)
     barrier.wait(timeout=TIMEOUT)  # NOTE: The barrier release order is not guaranteed.
-    l.append(int(time.time() - t0))
+    l.append(np.rint(time.time() - t0))
 
 
 def test_single_barrier():

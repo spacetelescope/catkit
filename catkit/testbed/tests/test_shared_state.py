@@ -165,12 +165,15 @@ def test_mutex():
     assert shared_state.client2 == 2
 
 
-def test_UserCache():
-    class MyCache(UserCache):
-        def load(self, key, *args, **kwargs):
-            self.data[key] = f"auto populated_{os.getpid()}_{uuid.uuid4()}"
+class MyCache(UserCache):
+    def load(self, key, *args, **kwargs):
+        self.data[key] = f"auto populated_{os.getpid()}_{uuid.uuid4()}"
 
-    SharedMemoryManager.register("MyCache", callable=MyCache, proxytype=MyCache.Proxy)
+
+SharedMemoryManager.register("MyCache", callable=MyCache, proxytype=MyCache.Proxy)
+
+
+def test_UserCache():
 
     def client_func(item_from_parent):
         shared_state = SharedState(own=False)
