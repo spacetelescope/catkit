@@ -23,7 +23,7 @@ SELECTIONS=E9,E4,E7,W6,F821,F822
 IGNORE=W605
 
 # Only run test when pushing to original, i.e., not fork.
-if [[ $URL = *github.com[//:]spacetelescope* ]]; then
+if [[ $URL = *github.com[/:]spacetelescope* ]]; then
     echo Running flake8 linter tests...
     TEST_RESULTS=$(flake8 . --max-line-length=127 --count --statistics --exclude=$EXCLUDE_DIRS --select=$SELECTIONS --ignore=$IGNORE)
     RETURN_VALUE=$?
