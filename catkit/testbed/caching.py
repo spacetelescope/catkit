@@ -31,7 +31,7 @@ class ContextCache(UserCache):
         pass
 
     def __delitem__(self, key):
-        if getattr(self.data[key], "__exit__", None):
+        if hasattr(self.data[key], "__exit__"):
             try:
                 self.data[key].__exit__(None, None, None)
             except Exception:

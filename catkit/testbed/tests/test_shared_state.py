@@ -319,7 +319,7 @@ def test_hdu_list_update():
     client.join()
 
 
-class TestbedState(SharedState):
+class HicatTestbedState(SharedState):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -336,7 +336,7 @@ class TestbedState(SharedState):
 def test_TestbedState():
 
     def client1_func():
-        shared_state = TestbedState()
+        shared_state = HicatTestbedState()
         with shared_state:
             assert shared_state.mode == "initial mode", shared_state.mode
             shared_state.mode = "client1 mode"
@@ -349,7 +349,7 @@ def test_TestbedState():
             assert shared_state.pid != shared_state._manager.getpid()
 
     def client2_func():
-        shared_state = TestbedState()
+        shared_state = HicatTestbedState()
         with shared_state:
             assert shared_state.mode == "client1 mode", shared_state.mode
 
@@ -361,7 +361,7 @@ def test_TestbedState():
             assert shared_state.pid == os.getpid()
             assert shared_state.pid != shared_state._manager.getpid()
 
-    shared_state = TestbedState(own=True)
+    shared_state = HicatTestbedState(own=True)
     assert shared_state.mode is None
     shared_state.mode = "initial mode"
     assert shared_state.mode == "initial mode"
