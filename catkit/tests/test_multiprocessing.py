@@ -73,7 +73,7 @@ def test_locks():
             client.join()
 
 
-def client_barrier(sleep, parties, l, name_mangle=False):
+def client_barrier(sleep, parties, a_list, name_mangle=False):
     manager = SharedMemoryManager()
     manager.connect()
     name = f"test_barrier_{sleep}" if name_mangle else "test_barrier"
@@ -81,16 +81,16 @@ def client_barrier(sleep, parties, l, name_mangle=False):
     t0 = time.time()
     time.sleep(sleep)
     barrier.wait(timeout=TIMEOUT)  # NOTE: The barrier release order is not guaranteed.
-    l.append(np.rint(time.time() - t0))
+    a_list.append(np.rint(time.time() - t0))
 
 
 def test_single_barrier():
     with SharedMemoryManager() as manager:
-        l = manager.list()
+        a_list = manager.list()
 
-        clients = [Process(target=client_barrier, args=(6, 3, l)),
-                   Process(target=client_barrier, args=(0, 3, l)),
-                   Process(target=client_barrier, args=(0, 3, l))]
+        clients = [Process(target=client_barrier, args=(6, 3, a_list)),
+                   Process(target=client_barrier, args=(0, 3, a_list)),
+                   Process(target=client_barrier, args=(0, 3, a_list))]
 
         for client in clients:
             client.start()
@@ -99,16 +99,16 @@ def test_single_barrier():
             client.join()
 
         # We Expect to see that the timer wrapping the sleep and the barrier for each client to be that of the longest.
-        assert l._getvalue() == [6, 6, 6], l._getvalue()
+        assert a_list._getvalue() == [6, 6, 6], a_list._getvalue()
 
 
 def test_multiple_barriers():
     with SharedMemoryManager() as manager:
-        l = manager.list()
+        a_list = manager.list()
 
-        clients = [Process(target=client_barrier, args=(6, 1, l, True)),
-                   Process(target=client_barrier, args=(0, 1, l, True)),
-                   Process(target=client_barrier, args=(0, 1, l, True))]
+        clients = [Process(target=client_barrier, args=(6, 1, a_list, True)),
+                   Process(target=client_barrier, args=(0, 1, a_list, True)),
+                   Process(target=client_barrier, args=(0, 1, a_list, True))]
 
         for client in clients:
             client.start()
@@ -117,15 +117,15 @@ def test_multiple_barriers():
             client.join()
 
         # We Expect to see that the timer wrapping the sleep and the barrier for each client to be that of their sleep.
-        assert l._getvalue() == [0, 0, 6], l._getvalue()
+        assert a_list._getvalue() == [0, 0, 6], a_list._getvalue()
 
 
 def test_broken_barrier():
     with SharedMemoryManager() as manager:
-        l = manager.list()
+        a_list = manager.list()
 
         # More parties than process will cause barrier.wait() to timeout.
-        client = Process(target=client_barrier, args=(6, 3, l))
+        client = Process(target=client_barrier, args=(6, 3, a_list))
         client.start()
         with pytest.raises(BrokenBarrierError):
             client.join()
