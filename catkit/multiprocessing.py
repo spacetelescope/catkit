@@ -39,20 +39,20 @@ class Process(CONTEXT.Process):
         if not self.exitcode:
             return
 
-        exception = Exception(f"Child process ('{self.name}' with pid: '{self.pid}') exited with non-zero exitcode: '{self.exitcode}'")
-
         child_exception = None
         try:  # Manager may not have been started.
             manager = SharedMemoryManager()
             manager.connect()
-            exception = manager.get_exception(self.pid)
+            child_exception = manager.get_exception(self.pid)
         except Exception:
              pass
 
         if child_exception:
-            raise exception from child_exception
+            # Raise the child exception rather than chaining, to facilitate better options for subsequent exception
+            # handling.
+            raise child_exception
         else:
-            raise exception
+            raise Exception(f"Child process ('{self.name}' with pid: '{self.pid}') exited with non-zero exitcode: '{self.exitcode}'")
 
 
 class Mutex:
