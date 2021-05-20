@@ -80,11 +80,11 @@ def test_with_stmnt(derestricted_device_cache):
     with npoint_a() as npoint_a2:
         assert device_a is npoint_a2
         assert device_a.instrument
+    assert device_a.instrument
     assert device_a is catkit.testbed.devices["npoint_a"]
     assert device_a is npoint_a()
-    assert device_a.instrument  # Connection did NOT persist.
     del catkit.testbed.devices["npoint_a"]
-    assert not device_a.instrument  # Connection was closed.
+    assert not device_a.is_open()  # Connection was closed.
 
 
 def test_with_stmnt_2(derestricted_device_cache):
@@ -94,6 +94,15 @@ def test_with_stmnt_2(derestricted_device_cache):
     assert device_a is not catkit.testbed.devices["npoint_a"]
     assert device_a is not npoint_a()
     assert not device_a.instrument
+
+
+def test_nested_with_stmnts(derestricted_device_cache):
+    with npoint_a() as device_a:
+        assert device_a.instrument
+        with device_a as dev_a:
+            assert device_a is dev_a
+        assert device_a.instrument, "Inner with stmnt closed the device when it shouldn't have."
+    assert not device_a.instrument, "Outer with stmnt didn't close the device when it should have."
 
 
 def test_pop(derestricted_device_cache):
@@ -138,8 +147,8 @@ def test_mutable_enum():
 
     with catkit.testbed.devices as devices:
         assert Dev.NPOINT_C.instrument
-        Dev.NPOINT_C.instrument = "hahahah"
-        assert devices[Dev.NPOINT_C].instrument == "hahahah"
+        Dev.NPOINT_C.test_attr = "hahahah"
+        assert devices[Dev.NPOINT_C].test_attr == "hahahah"
 
 
 def test_immutable_enum():
@@ -154,3 +163,18 @@ def test_immutable_enum():
         assert Dev.NPOINT_C.instrument
         with pytest.raises(AttributeError):
             Dev.NPOINT_C.instrument = "hahahah"
+
+
+def test_enum_is_open():
+    class Dev(catkit.testbed.DeviceCacheEnum):
+        NPOINT_C = ("npoint a for test", "dummy_config_id")
+
+    @catkit.testbed.devices.link(key=Dev.NPOINT_C)
+    def npoint_c():
+        return SimNPointLC400(config_id="npoint_tiptilt_lc_400", com_id="dummy")
+
+    with catkit.testbed.devices:
+        assert not Dev.NPOINT_C.is_open()
+        assert not Dev.NPOINT_C.is_open(), "is_open() isn't free of side-effects."
+        Dev.NPOINT_C()
+        assert Dev.NPOINT_C.is_open()

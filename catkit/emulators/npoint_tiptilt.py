@@ -30,7 +30,7 @@ class PyvisaNpointEmulator:
         can read values, this is where we'll initialize some value stores that
         will get sent in emulated messages. """
 
-        self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
+        self.log = logging.getLogger()
         self.initialize()
 
     def initialize(self):

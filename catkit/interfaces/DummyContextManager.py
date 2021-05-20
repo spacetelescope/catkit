@@ -3,7 +3,7 @@ import logging
 
 class DummyContextManager(object):
 
-    log = logging.getLogger(__name__)
+    log = logging.getLogger()
 
     def __init__(self, config_id):
         self.config_id = config_id

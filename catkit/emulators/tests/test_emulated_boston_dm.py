@@ -77,7 +77,7 @@ class TestPoppyBostonDMController:
         with self.instantiate_dm_controller() as dm:
             dm.apply_shape_to_both(flat_dm1, flat_dm2)
 
-        assert dm.instrument is None
+        assert not dm.is_open()
 
     def test_subsequent_with(self):
         flat_dm1 = DmCommand(np.zeros(self.number_of_actuators), 1)
@@ -85,13 +85,13 @@ class TestPoppyBostonDMController:
         with self.instantiate_dm_controller() as dm:
             dm.apply_shape_to_both(flat_dm1, flat_dm2)
 
-        assert dm.instrument is None
+        assert not dm.is_open()
 
         assert dm
         with dm:
             dm.apply_shape_to_both(flat_dm1, flat_dm2)
 
-        assert dm.instrument is None
+        assert not dm.is_open()
 
     def test_access_after_with(self):
         flat_dm1 = DmCommand(np.zeros(self.number_of_actuators), 1)
@@ -117,7 +117,7 @@ class TestPoppyBostonDMController:
 
         dm.apply_shape_to_both(flat_dm1, flat_dm2)
         dm._Instrument__close()
-        assert dm.instrument is None
+        assert not dm.is_open()
         assert not dm._Instrument__keep_alive
 
     def test_del(self):

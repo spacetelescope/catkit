@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 import inspect
 import logging
 
+from catkit.multiprocessing import MutexedNamespaceAutoProxy, MutexedNamespace, SharedMemoryManager
+
 _not_permitted_error = "Positional args are not permitted. Call with explicit keyword args only.\n"\
                        "E.g., def func(a, b) called as func(1, 2) -> func(a=1, b=2)"
 
@@ -27,7 +29,7 @@ def call_with_correct_args(func, object=None, kwargs_to_assign=None, **kwargs):
     return func(**func_kwargs)
 
 
-class Instrument(ABC):
+class Instrument(MutexedNamespace, ABC):
     """ This is the abstract base class intended to to be inherited and ultimately implemented
     by all of our hardware classes (actual or emulated/simulated).
     This is not pure and is not intended to be, such that restrictions can be imposed to safely
@@ -55,7 +57,9 @@ class Instrument(ABC):
     def __init__(self, config_id, *not_permitted, **kwargs):
         if not_permitted:
             raise TypeError(_not_permitted_error)
-        self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
+
+        self._context_counter = 0  # Used to count __enter__ & __exit__ paired usage.
+        self.log = logging.getLogger()
         self.instrument = None  # Make local, intentionally shadowing class member.
         self.__keep_alive = False  # Back door - DO NOT USE!!!
         self.config_id = config_id
@@ -64,19 +68,26 @@ class Instrument(ABC):
         self.log.info("Initialized '{}' (but connection is not open)".format(config_id))
 
     # Context manager Enter function, gets called automatically when the "with" statement is used.
+    # Only the outer most `with` does anything, all others are NOOPs.
     def __enter__(self):
-        # Attempt to force the use of ``with`` by only opening here and not in __init__().
-        self.__open()
+        if self._context_counter == 0:
+            # Attempt to force the use of ``with`` by only opening here and not in __init__().
+            self.__open()
+
+        self._context_counter += 1
         return self
 
     # Context manager Exit function, gets called automatically the code exits the context of the "with" statement.
+    # Only the outer most `with` does anything, all others are NOOPs.
     def __exit__(self, exception_type, exception_value, exception_traceback):
-        try:
-            if not self.__keep_alive:
-                self.__close()
-        finally:
-            # Reset, single use basis only.
-            self.__keep_alive = False
+        self._context_counter -= 1
+        if self._context_counter < 1:
+            try:
+                if not self.__keep_alive:
+                    self.__close()
+            finally:
+                # Reset, single use basis only.
+                self.__keep_alive = False
 
     def __del__(self):
         self.__close()
@@ -92,7 +103,7 @@ class Instrument(ABC):
             self.instrument = self._open()
             self.log.info("Opened connection to '{}'".format(self.config_id))
         except Exception:
-            self.__close()
+            #self.__close()
             raise
 
     def __close(self):
@@ -116,6 +127,40 @@ class Instrument(ABC):
     @abstractmethod
     def _close(self):
         """Close connection to self.instrument. Must be a NOOP if self.instrument is None"""
+
+    def get_instrument_lib(self):
+        return self.instrument_lib
+
+    def is_open(self):
+        return self.instrument is not None
+
+    class Proxy(MutexedNamespaceAutoProxy):
+        _method_to_typeid_ = {"__enter__": "InstrumentProxy",
+                              "get_instrument_lib": "MutexedNamespaceAutoProxy",
+                              **MutexedNamespaceAutoProxy._method_to_typeid_}
+
+        # MutexedNamespaceAutoProxy.__enter__ calls acquire rather than letting the base __enter__ call acquire.
+        # We thus want to revert their proxy semantics to an open & close context.
+        def __enter__(self):
+            return self._callmethod("__enter__")
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            # NOTE: Tracebacks can't be pickled (currently), so pass exc_tb as None instead.
+            return self._callmethod("__exit__", args=(exc_type, exc_val, None))
+
+        def get_instrument_lib(self):
+            return self._callmethod("get_instrument_lib")
+
+        @property
+        def instrument_lib(self):
+            return self.get_instrument_lib()
+
+        @property
+        def instrument(self):
+            raise AttributeError("The attribute `instrument` is not accessible from a client.")
+
+
+SharedMemoryManager.register("InstrumentProxy", proxytype=Instrument.Proxy, create_method=False)
 
 
 class SimInstrument(Instrument, ABC):
