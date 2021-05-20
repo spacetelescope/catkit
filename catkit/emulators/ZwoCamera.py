@@ -27,7 +27,7 @@ class ZwoEmulator(ZwoASI):
         return camera_mappings
 
     def __init__(self, config_id):
-        self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger()
 
         self.config_id = config_id
         self.image_type = None

@@ -6,7 +6,7 @@ class NewportMotorControllerEmulator:
 
     def __init__(self):
         self.current_position = {}
-        self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger()
 
     def XPS(self, *args, **kwargs):
         return self

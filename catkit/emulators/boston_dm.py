@@ -9,9 +9,10 @@ import catkit.util
 import catkit.hardware.boston.DmCommand
 from catkit.hardware.boston.BostonDmController import BostonDmController
 from catkit.interfaces.Instrument import SimInstrument
+from catkit.multiprocessing import MutexedNamespace
 
 
-class PoppyBostonDM(poppy.dms.ContinuousDeformableMirror):
+class PoppyBostonDM(MutexedNamespace, poppy.dms.ContinuousDeformableMirror):
     """
     Wraps `poppy.dms.ContinuousDeformableMirror` so as to encapsulate the additional DM
     attributes required to describe a typical Boston Micromachines DM.
@@ -52,7 +53,7 @@ class PoppyBmcEmulator:
     NO_ERR = 0
 
     def __init__(self, num_actuators, command_length, dac_bit_width, dm1, dm2=None):
-        self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
+        self.log = logging.getLogger()
         self._num_actuators = num_actuators
         self._command_length = command_length
         self._dac_bit_width = dac_bit_width
@@ -60,9 +61,9 @@ class PoppyBmcEmulator:
         self.dm2 = dm2
 
         # As the class name suggests, the design only works with ``poppy.dms.ContinuousDeformableMirror``.
-        assert isinstance(dm1, PoppyBostonDM)
-        if dm2 is not None:
-            assert isinstance(dm2, PoppyBostonDM)
+        # assert isinstance(dm1, (PoppyBostonDM, PoppyBostonDM.Proxy)), type(dm1)
+        # if dm2 is not None:
+        #     assert isinstance(dm2, (PoppyBostonDM, PoppyBostonDM.Proxy))
 
     def BmcDm(self):
         return self

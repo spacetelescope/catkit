@@ -240,6 +240,8 @@ class DataLogWriter(object):
         if index_fname is None:
             index_fname = _INDEX_FNAME
 
+        os.makedirs(self.log_dir, exist_ok=False)
+
         self.index_path = os.path.join(log_dir, index_fname)
 
         if os.path.exists(self.index_path):

@@ -15,7 +15,7 @@ import functools
 
 from http.client import IncompleteRead
 import numpy as np
-from photutils import centroid_1dg, centroid_2dg
+from photutils.centroids import centroid_1dg, centroid_2dg
 from requests.exceptions import HTTPError
 import urllib
 from urllib.parse import urlencode

@@ -19,7 +19,7 @@ class WebPowerSwitch(RemotePowerSwitch):
     instrument_lib = requests
 
     def initialize(self, user=None, password=None, ip=None, outlet_list={}):
-        self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger()
 
         # Given the specificity of the script numbering I'm not sure that it really makes sense
         # to pass in these values, but hey.
