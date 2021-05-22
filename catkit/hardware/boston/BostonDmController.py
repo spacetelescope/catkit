@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 
 import numpy as np
 
@@ -18,7 +19,7 @@ try:
 except ImportError:
     bmc = None
 
-"""Interface for Boston Micro-machines deformable mirror controller that can control 2 DMs.  
+"""Interface for Boston Micro-machines deformable mirror controller that can control 2 DMs.
    It does so by interpreting the first half of the command for DM1, and the second for DM2.
    This controller cannot control the two DMs independently, it will always send a command to both."""
 
@@ -32,6 +33,9 @@ class BostonDmController(DeformableMirrorController):
         self.dm2_command = None
         self.dm1_command_object = None
         self.dm2_command_object = None
+
+        self.channels = {}
+        self.lock = threading.Lock()
 
     def initialize(self, serial_number, command_length, dac_bit_width):
         """ Initialize dm manufacturer specific object - this does not, nor should it, open a connection."""
@@ -109,7 +113,8 @@ class BostonDmController(DeformableMirrorController):
                             as_voltage_percentage=False,
                             as_volts=False,
                             sin_specification=None,
-                            output_path=None):
+                            output_path=None,
+                            channel=None):
         """ Combines both commands and sends to the controller to produce a shape on each DM.
         :param dm<1|2>_shape: catkit.hardware.boston.DmCommand.DmCommand or numpy array of the following shapes: 34x34, 1x952,
                          1x2048, 1x4096. Interpreted by default as the desired DM surface height in units of meters, but
@@ -120,53 +125,68 @@ class BostonDmController(DeformableMirrorController):
         :param as_volts: If true, interpret the data as volts instead of meters
         :param sin_specification: Add this sine to the data
         :param output_path: str, Path to save commands to if provided. Default `None` := don't save.
+        :param channel: str or None, the DM channel on which to write this shape. Default `None` := set the entire shape.
         """
         self.log.info("Applying shape to both DMs")
 
-        if not isinstance(dm1_shape, DmCommand):
-            dm1_shape = DmCommand(data=dm1_shape,
-                                  dm_num=1,
-                                  flat_map=flat_map,
-                                  bias=bias,
-                                  as_voltage_percentage=as_voltage_percentage,
-                                  as_volts=as_volts,
-                                  sin_specification=sin_specification)
+        with self.lock:
+            if channel is not None:
+                if isinstance(dm1_shape, DmCommand) or isinstance(dm2_shape, DmCommand):
+                    raise ValueError('DM shapes cannot be DmCommands when using channels.')
 
-        if not isinstance(dm2_shape, DmCommand):
-            dm2_shape = DmCommand(data=dm2_shape,
-                                  dm_num=2,
-                                  flat_map=flat_map,
-                                  bias=bias,
-                                  as_voltage_percentage=as_voltage_percentage,
-                                  as_volts=as_volts,
-                                  sin_specification=sin_specification)
+                self.channels[channel] = (dm1_shape, dm2_shape)
 
-        # Ensure that the correct dm_num is set.
-        dm1_shape.dm_num = 1
-        dm2_shape.dm_num = 2
+                dm1_shape = 0
+                dm2_shape = 0
 
-        if output_path is not None:
-            dm1_shape.export_fits(output_path)
-            dm2_shape.export_fits(output_path)
+                for dm1, dm2 in self.channels.values():
+                    dm1_shape += dm1
+                    dm2_shape += dm2
 
-        # Use DmCommand class to format the commands correctly (with zeros for other DM).
-        dm1_command = dm1_shape.to_dm_command()
-        dm2_command = dm2_shape.to_dm_command()
+            if not isinstance(dm1_shape, DmCommand):
+                dm1_shape = DmCommand(data=dm1_shape,
+                                    dm_num=1,
+                                    flat_map=flat_map,
+                                    bias=bias,
+                                    as_voltage_percentage=as_voltage_percentage,
+                                    as_volts=as_volts,
+                                    sin_specification=sin_specification)
 
-        # Add both arrays together (first half and second half) and send to DM.
-        full_command = dm1_command + dm2_command
-        try:
-            self.send_data(full_command)
-        except Exception:
-            # We shouldn't guarantee the state of the DM.
-            self._clear_state()
-            raise
-        else:
-            # Update both dm_command class attributes.
-            self.dm1_command = dm1_command
-            self.dm2_command = dm2_command
-            self.dm1_command_object = dm1_shape
-            self.dm2_command_object = dm2_shape
+            if not isinstance(dm2_shape, DmCommand):
+                dm2_shape = DmCommand(data=dm2_shape,
+                                    dm_num=2,
+                                    flat_map=flat_map,
+                                    bias=bias,
+                                    as_voltage_percentage=as_voltage_percentage,
+                                    as_volts=as_volts,
+                                    sin_specification=sin_specification)
+
+            # Ensure that the correct dm_num is set.
+            dm1_shape.dm_num = 1
+            dm2_shape.dm_num = 2
+
+            if output_path is not None:
+                dm1_shape.export_fits(output_path)
+                dm2_shape.export_fits(output_path)
+
+            # Use DmCommand class to format the commands correctly (with zeros for other DM).
+            dm1_command = dm1_shape.to_dm_command()
+            dm2_command = dm2_shape.to_dm_command()
+
+            # Add both arrays together (first half and second half) and send to DM.
+            full_command = dm1_command + dm2_command
+            try:
+                self.send_data(full_command)
+            except Exception:
+                # We shouldn't guarantee the state of the DM.
+                self._clear_state()
+                raise
+            else:
+                # Update both dm_command class attributes.
+                self.dm1_command = dm1_command
+                self.dm2_command = dm2_command
+                self.dm1_command_object = dm1_shape
+                self.dm2_command_object = dm2_shape
 
     def apply_shape(self, dm_shape, dm_num,
                     flat_map=True,
