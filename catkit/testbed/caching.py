@@ -344,13 +344,14 @@ class SharedState:
                  timeout=DEFAULT_TIMEOUT,
                  own=False,
                  namespace="SharedState",
+                 auto_port=False,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self._own = own  # Whether to start and thus later shutdown, or just connect to ab existing server.
         self._manager = None  # The shared memory manager.
         self._shared_state = None
 
-        self._manager = SharedMemoryManager(address=address, own=own)  # Instantiate the shared memory manager.
+        self._manager = SharedMemoryManager(address=address, own=own, auto_port=auto_port)  # Instantiate the shared memory manager.
         # Either start it or just connect to an existing one.
         if self._own:
             self._manager.start()  # Shutdown in __del__().

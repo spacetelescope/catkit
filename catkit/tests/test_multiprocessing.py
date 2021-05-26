@@ -129,3 +129,23 @@ def test_broken_barrier():
         client.start()
         with pytest.raises(BrokenBarrierError):
             client.join()
+
+
+def test_auto_port_off():
+    with SharedMemoryManager(auto_port=False) as manager:
+        with pytest.raises(EOFError):
+            with SharedMemoryManager(auto_port=False)  as manager2:
+                pass
+
+
+def test_auto_port_on():
+    with SharedMemoryManager(auto_port=False) as manager1:
+        with SharedMemoryManager(auto_port=True) as manager2:
+            assert manager1._address != manager2._address
+
+
+def test_auto_port_on_with_connect():
+    with SharedMemoryManager(auto_port=False):
+        with SharedMemoryManager(auto_port=True):
+            pass
+

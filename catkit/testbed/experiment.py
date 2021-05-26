@@ -79,7 +79,7 @@ class Experiment(ABC):
         """ This is called immediately AFTER self.experiment()."""
         pass
 
-    def start(self):
+    def start(self, *args, **kwargs):
         """
         This function starts the experiment on a separate process and monitors power and humidity while active.
         Do not override.
@@ -106,7 +106,7 @@ class Experiment(ABC):
 
             self.log.info("Creating separate process to run experiment...")
             # Spin off and start the process to run the experiment.
-            experiment_process = Process(target=self.run_experiment, name=self.name)
+            experiment_process = Process(target=self.run_experiment, name=self.name, args=args, kwargs=kwargs)
             experiment_process.start()
             self.log.info(self.name + " process started")
 

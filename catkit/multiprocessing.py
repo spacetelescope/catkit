@@ -195,17 +195,27 @@ class SharedMemoryManager(SyncManager):
     ----------
     address : tuple
         A tuple of the following `(IP, port)` to start the shared server on.
+    auto_port :  bool
+        `False` will explicitly use passed/default address port, otherwise, the passed/default will tried and
+        incremented until a free port is found. The successful address is stored in `self._address` and returned from `start()`.
     timeout : float, int
         Default timeout for mutexing access.
     own : bool
         If True, shutdown() will get called upon deletion.
     """
 
-    def __init__(self, *args, address=DEFAULT_SHARED_MEMORY_SERVER_ADDRESS, timeout=DEFAULT_TIMEOUT, own=False, **kwargs):
+    def __init__(self, *args,
+                 address=DEFAULT_SHARED_MEMORY_SERVER_ADDRESS,
+                 timeout=DEFAULT_TIMEOUT,
+                 own=False,
+                 auto_port=False,
+                 **kwargs):
         super().__init__(*args, address=address, **kwargs)
+        assert self._address == address
         self.log = get_logger()
         self.server_pid = None
         self.own = own
+        self.auto_port = auto_port
 
         # Server-side non-shared non-reentrant lock to protect against any possible server-side threading.
         self.master_lock = Mutex(lock=threading.Lock(), timeout=timeout)
@@ -251,10 +261,20 @@ class SharedMemoryManager(SyncManager):
         return self._get_exception(pid)._getvalue()
 
     def start(self, *args, **kwargs):
-        ret = super().start(*args, **kwargs)
+        try:
+            super().start(*args, **kwargs)  # Doesn't return anything.
+        except EOFError:
+            if not self.auto_port:
+                raise
+            else:
+                # Recurse to find a free port.
+                self._address = (self._address[0], self._address[1] + 1)
+                # TODO: Is this safe or does state also need resetting? Maybe loop instead capped at max attempts?
+                return self.start(*args, **kwargs)
+
         self.server_pid = self.getpid()
-        self.log.info(f"Shared memory manager started on PID: '{self.server_pid}'")
-        return ret
+        self.log.info(f"Shared memory manager started on '{self._address}' with PID '{self.server_pid}'")
+        return self._address
 
     def shutdown(self):
         # Whilst super().shutdown() can be called multiple times, the method doesn't even exist until
