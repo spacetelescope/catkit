@@ -6,6 +6,7 @@ import numpy as np
 from catkit.interfaces.Camera import Camera
 from catkit.catkit_types import MetaDataEntry, units, quantity
 import catkit.util
+from catkit.config import CONFIG_INI
 
 
 class LazyLoadLibraryMeta(type):
@@ -84,13 +85,9 @@ class FlirCamera(Camera):
             cls._system.ReleaseInstance()
             cls._system = None
 
-    def __init__(self, serial_number):
-        self.serial_number = serial_number
-        self.config_id = 'a'
-
+    def initialize(self):
         self.log = logging.getLogger(__name__)
 
-    def initialize(self):
         # Set up enum dictionaries
         self.pixel_format_enum = {'mono8': self.instrument_lib.PixelFormat_Mono8,
                                   'mono12p': self.instrument_lib.PixelFormat_Mono12p,
@@ -102,12 +99,18 @@ class FlirCamera(Camera):
                                    '14bit': self.instrument_lib.AdcBitDepth_Bit14}
 
     def _open(self):
+        serial_number = CONFIG_INI.get(self.config_id, 'serial_number')
+
         # Obtain singleton Flir system object
         self._create_system()
 
         self.cam_list = self._system.GetCameras()
-        self.cam = self.cam_list.GetBySerial(self.serial_number)
-        self.cam.Init()
+        self.cam = self.cam_list.GetBySerial(serial_number)
+
+        try:
+            self.cam.Init()
+        except:
+            raise RuntimeError(f'Error during intialization of {self.config_id}. Is the camera connected?')
 
         # Make sure that the camera is stopped.
         self.cam.BeginAcquisition()
@@ -129,10 +132,19 @@ class FlirCamera(Camera):
         # Turn off triggering
         self.cam.TriggerMode.SetValue(self.instrument_lib.TriggerMode_Off)
 
-        self.pixel_format = 'mono12p'
-        self.adc_bit_depth = '12bit'
+        self.width = int(CONFIG_INI.get(self.config_id, 'width'))
+        self.height = int(CONFIG_INI.get(self.config_id, 'height'))
+        self.offset_x = int(CONFIG_INI.get(self.config_id, 'offset_x'))
+        self.offset_y = int(CONFIG_INI.get(self.config_id, 'offset_y'))
+
+        self.pixel_format = CONFIG_INI.get(self.config_id, 'pixel_format')
+        self.adc_bit_depth = CONFIG_INI.get(self.config_id, 'adc_bit_depth')
+
+        self.exposure_time = float(CONFIG_INI.get(self.config_id, 'exposure_time'))
+        self.gain = float(CONFIG_INI.get(self.config_id, 'gain'))
 
         # Do not return self.cam, due to reference counting by PySpin.
+        return None
 
     def _close(self):
         try:
@@ -176,7 +188,7 @@ class FlirCamera(Camera):
         self.exposure_time = exposure_time_us
 
         meta_data = [MetaDataEntry("Exposure Time", "EXP_TIME", exposure_time_us, "microseconds")]
-        meta_data.append(MetaDataEntry("Camera", "CAMERA", self.config_id, "Camera model, correlates to entry in ini"))
+        meta_data.append(MetaDataEntry("Camera", "CAMERA", self.device_name, "Camera model, correlates to entry in ini"))
         meta_data.append(MetaDataEntry("Gain", "GAIN", self.gain, "Gain for camera"))
 
         if extra_metadata is not None:
