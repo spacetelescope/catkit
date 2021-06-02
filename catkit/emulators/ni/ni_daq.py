@@ -7,7 +7,7 @@ import numpy as np
 from catkit.config import CONFIG_INI
 
 
-class NiDaqEmulator:
+class NiDaqEmulator(ABC):
     """ Emulates the NI-DAQ device """
 
     def __init__(self, config_id):
