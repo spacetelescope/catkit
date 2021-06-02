@@ -77,7 +77,7 @@ class NiDaq(DataAcquisitionDevice):
         channels = channels_string.split(',')
         channels = [ch.strip() for ch in channels]
 
-        return [ch if len(ch) > 0]
+        return [ch for ch in channels if len(ch) > 0]
 
     def _close(self):
         pass
@@ -127,7 +127,7 @@ class NiDaq(DataAcquisitionDevice):
         ValueError
             In case the number of elements in `values` is not correct.
         '''
-        if len(values) != len(self.channels):
+        if len(values) != len(self.output_channels):
             raise ValueError(f'The values should have the same length as the number of output channels ({len(self.output_channels)}) .')
 
         with self.instrument_lib.Task() as task:

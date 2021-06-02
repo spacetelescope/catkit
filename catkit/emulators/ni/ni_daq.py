@@ -12,9 +12,9 @@ class NiDaqEmulator(ABC):
 
     def __init__(self, config_id):
         self.config_id = config_id
-        self.System = self.EmulatedSystem(self)
 
         self.device_name = CONFIG_INI.get(self.config_id, 'device_name')
+        self.System = self.EmulatedSystem(self.device_name)
 
         self.voltages = {}
 
@@ -23,7 +23,7 @@ class NiDaqEmulator(ABC):
         channels = channels_string.split(',')
         channels = [ch.strip() for ch in channels]
 
-        return [ch if len(ch) > 0]
+        return [ch for ch in channels if len(ch) > 0]
 
     class ChannelList:
         def __init__(self):
@@ -43,19 +43,22 @@ class NiDaqEmulator(ABC):
         def __init__(self, ni_daq_emulator):
             self.ni_daq_emulator = ni_daq_emulator
 
-            self.ai_channels = ChannelList()
-            self.ao_channels = ChannelList()
+            self.ai_channels = ni_daq_emulator.ChannelList()
+            self.ao_channels = ni_daq_emulator.ChannelList()
 
         def __enter__(self):
-            pass
+            return self
 
-        def __exit__(self):
+        def __exit__(self, *args, **kwargs):
             pass
 
         def read(self):
             self.ni_daq_emulator._read(self.ai_channels.channel_names)
 
         def write(self, values):
+            if np.isscalar(values):
+                values = np.array([values])
+
             self.ni_daq_emulator._write(self.ao_channels.channel_names, values)
 
     def _read(self, channels):
@@ -71,10 +74,12 @@ class NiDaqEmulator(ABC):
         return np.array(res)
 
     def _write(self, channels, values):
+        values = np.array(values)
+
         for channel, value in zip(channels, values):
             self.voltages[channel] = value
 
-        self.sim_update_voltage(self.device_name, channel, value)
+        self.sim_update_voltages(channels, values)
 
     class EmulatedSystem:
         def __init__(self, device_name):
@@ -86,5 +91,5 @@ class NiDaqEmulator(ABC):
         Device = namedtuple("Device", "name")
 
     @abstractmethod
-    def sim_update_voltage(self, device_name, channel_name, voltage):
+    def sim_update_voltages(self, channel_names, voltages):
         """ Update the simulator with this new voltage. """
