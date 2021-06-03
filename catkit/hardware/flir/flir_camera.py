@@ -144,7 +144,7 @@ class FlirCamera(Camera):
         self.gain = float(CONFIG_INI.get(self.config_id, 'gain'))
 
         # Do not return self.cam, due to reference counting by PySpin.
-        return None
+        return True
 
     def _close(self):
         try:
@@ -238,7 +238,7 @@ class FlirCamera(Camera):
         for img, meta in self.stream_exposures(exposure_time, num_exposures, extra_metadata):
             images.append(img)
 
-        if file_mode:
+        if path is not None:
             catkit.util.save_images(images, meta, path=path, base_filename=filename, raw_skip=raw_skip)
 
         # TODO: Nuke this and always return both, eventually returning a HDUList (HICAT-794).
