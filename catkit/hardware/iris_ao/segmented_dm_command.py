@@ -494,6 +494,9 @@ def round_ptt_list(ptt_list, decimals=3):
 
 
 def convert_ptt_units(ptt_list, tip_factor, tilt_factor, starting_units, ending_units):
+    # TODO: this should follow the logic from here: https://github.com/spacetelescope/catkit/blob/8c1e22e8f96d51f4453bba27c4710d27da5d37c5/catkit/emulators/iris_ao_controller.py#L50
+    # This is used in display, where it's not super important, and it's used in the global Zernike commands, so those
+    # are not super reliable at this point.
     """
     Convert the PTT list to or from Poppy units and the segmented DM units.
 
