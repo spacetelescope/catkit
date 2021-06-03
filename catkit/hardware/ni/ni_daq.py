@@ -27,6 +27,7 @@ class NiDaqLibrary(metaclass=LazyLoadLibraryMeta):
             return cls._library
 
         cls._library = importlib.import_module('nidaqmx')
+        cls.system = importlib.import_module('nidaqmx', 'system')
 
         return cls._library
 
@@ -55,15 +56,30 @@ class NiDaq(DataAcquisitionDevice):
         self.volt_limit_min = CONFIG_INI.getfloat(self.config_id, 'volt_limit_min', fallback=-np.inf)
         self.volt_limit_max = CONFIG_INI.getfloat(self.config_id, 'volt_limit_max', fallback=np.inf)
 
+        # Create task.
+        self.task = self.instrument_lib.Task()
+
+        # Add all requested channels.
+        for channel in self.input_channels:
+            channel_name = self.device_name + '/' + channel
+            self.task.ai_channels.add_ao_voltage_chan(channel_name)
+
+        for channel in self.output_channels:
+                channel_name = self.device_name + '/' + channel
+                self.task.ai_channels.add_ao_voltage_chan(channel_name)
+
+        # Start the task so that it does not restart every time a sample is written.
+        self.task.start()
+
         # Make sure this device name is connected.
-        system = self.instrument_lib.System.local()
+        system = self.instrument_lib.system.System.local()
         for device in system.devices:
             if self.device_name == device.name:
-                break
+               break
         else:
             raise ValueError(f'Device {self.device_name} is not connected.')
 
-        return True
+        return self.task
 
     @staticmethod
     def parse_channels(channels_string):
@@ -85,7 +101,9 @@ class NiDaq(DataAcquisitionDevice):
         return [ch for ch in channels if len(ch) > 0]
 
     def _close(self):
-        pass
+        self.instrument.stop()
+        self.instrument.close()
+        self.instrument = None
 
     def read_multichannel(self):
         '''Read voltages from all configured input channels.
@@ -95,10 +113,7 @@ class NiDaq(DataAcquisitionDevice):
         ndarray
             The voltages for each of the channels.
         '''
-        with self.instrument_lib.Task() as task:
-            for channel in self.input_channels:
-                channel_name = self.device_name + '/' + channel
-                task.ai_channels.add_ao_voltage_chan(channel_name)
+        return self.task.read()
 
     def read_singlechannel(self, channel):
         '''Read voltages for a specific named channel.
@@ -142,12 +157,7 @@ class NiDaq(DataAcquisitionDevice):
 
         values = np.clip(self.volt_limit_min, self.volt_limit_max, values)
 
-        with self.instrument_lib.Task() as task:
-            for channel in self.output_channels:
-                channel_name = self.device_name + '/' + channel
-                task.ao_channels.add_ao_voltage_chan(channel_name)
-
-            task.write(values)
+        self.task.write(values)
 
     def write_singlechannel(self, value, channel):
         '''Write a voltage to a specific named channel.
