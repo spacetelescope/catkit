@@ -129,6 +129,11 @@ class FlirCamera(Camera):
         self.cam.AcquisitionMode.SetValue(self.instrument_lib.AcquisitionMode_Continuous)
         #self.cam.StreamBufferHandlingMode.SetValue(self.instrument_lib.StreamBufferHandlingMode_NewestOnly)
 
+        nodemap = self.cam.GetTLStreamNodeMap()
+        node = self.instrument_lib.CEnumerationPtr(nodemap.GetNode('StreamBufferHandlingMode'))
+        newest_only = node.GetEntryByName('NewestOnly')
+        node.SetIntValue(newest_only.GetValue())
+
         # Turn off triggering
         self.cam.TriggerMode.SetValue(self.instrument_lib.TriggerMode_Off)
 
