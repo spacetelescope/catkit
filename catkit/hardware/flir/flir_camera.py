@@ -125,15 +125,9 @@ class FlirCamera(Camera):
         self.cam.GainAuto.SetValue(self.instrument_lib.GainAuto_Off)
         self.cam.GammaEnable.SetValue(False)
         self.cam.BlackLevelClampingEnable.SetValue(True)
-        self.cam.BlackLevel.SetValue(5)
+        self.cam.BlackLevel.SetValue(5 / 255 * 100)
         self.cam.AcquisitionMode.SetValue(self.instrument_lib.AcquisitionMode_Continuous)
         self.cam.TLStream.StreamBufferHandlingMode.SetValue(self.instrument_lib.StreamBufferHandlingMode_NewestOnly)
-        #self.cam.StreamBufferHandlingMode.SetValue(self.instrument_lib.StreamBufferHandlingMode_NewestOnly)
-
-        #nodemap = self.cam.GetTLStreamNodeMap()
-        #node = self.instrument_lib.CEnumerationPtr(nodemap.GetNode('StreamBufferHandlingMode'))
-        #newest_only = node.GetEntryByName('NewestOnly')
-        #node.SetIntValue(newest_only.GetValue())
 
         # Turn off triggering
         self.cam.TriggerMode.SetValue(self.instrument_lib.TriggerMode_Off)
@@ -180,6 +174,9 @@ class FlirCamera(Camera):
 
     pixel_format = _create_enum_property('PixelFormat', 'pixel_format_enum')
     adc_bit_depth = _create_enum_property('AdcBitDepth', 'adc_bit_depth_enum')
+
+    acquisition_frame_rate = _create_property('AcquisitionFrameRateEnable')
+    acquisition_frame_rate_enable = _create_property('AcquisitionFrameRate')
 
     @property
     def device_name(self):
