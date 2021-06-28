@@ -127,12 +127,13 @@ class FlirCamera(Camera):
         self.cam.BlackLevelClampingEnable.SetValue(True)
         self.cam.BlackLevel.SetValue(5)
         self.cam.AcquisitionMode.SetValue(self.instrument_lib.AcquisitionMode_Continuous)
+        self.cam.TLStream.StreamBufferHandlingMode.SetValue(self.instrument_lib.StreamBufferHandlingMode_NewestOnly)
         #self.cam.StreamBufferHandlingMode.SetValue(self.instrument_lib.StreamBufferHandlingMode_NewestOnly)
 
-        nodemap = self.cam.GetTLStreamNodeMap()
-        node = self.instrument_lib.CEnumerationPtr(nodemap.GetNode('StreamBufferHandlingMode'))
-        newest_only = node.GetEntryByName('NewestOnly')
-        node.SetIntValue(newest_only.GetValue())
+        #nodemap = self.cam.GetTLStreamNodeMap()
+        #node = self.instrument_lib.CEnumerationPtr(nodemap.GetNode('StreamBufferHandlingMode'))
+        #newest_only = node.GetEntryByName('NewestOnly')
+        #node.SetIntValue(newest_only.GetValue())
 
         # Turn off triggering
         self.cam.TriggerMode.SetValue(self.instrument_lib.TriggerMode_Off)
