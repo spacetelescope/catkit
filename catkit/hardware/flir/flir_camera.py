@@ -175,8 +175,8 @@ class FlirCamera(Camera):
     pixel_format = _create_enum_property('PixelFormat', 'pixel_format_enum')
     adc_bit_depth = _create_enum_property('AdcBitDepth', 'adc_bit_depth_enum')
 
-    acquisition_frame_rate = _create_property('AcquisitionFrameRateEnable')
-    acquisition_frame_rate_enable = _create_property('AcquisitionFrameRate')
+    acquisition_frame_rate = _create_property('AcquisitionFrameRate')
+    acquisition_frame_rate_enable = _create_property('AcquisitionFrameRateEnable')
 
     @property
     def device_name(self):
