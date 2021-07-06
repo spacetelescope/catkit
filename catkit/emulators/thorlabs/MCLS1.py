@@ -41,16 +41,15 @@ class MCLS1Emulator:
             raise RuntimeError(f"Expected SET command ('=') but got '{command}'")
 
         command, value = command.replace(self.Command.TERM_CHAR.value, '').split("=")
-        value = int(value)
         command += "="
         command = self.Command(command)
 
         if command is self.Command.SET_SYSTEM:
-            self.system_enabled = bool(value)
+            self.system_enabled = bool(int(value))
         elif command is self.Command.SET_CHANNEL:
             self.active_channel = int(value)
         elif command is self.Command.SET_ENABLE:
-            self.channel_enabled[self.active_channel-1] = bool(value)
+            self.channel_enabled[self.active_channel-1] = bool(int(value))
         elif command is self.Command.SET_CURRENT:
             self.current[self.active_channel-1] = float(value)
         else:
