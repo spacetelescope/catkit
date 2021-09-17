@@ -627,16 +627,6 @@ class SharedMemoryManager(SyncManager):
 
     _Server = CatkitServer
 
-    # @classmethod
-    # def _run_server(cls, registry, address, authkey, serializer, writer, initializer=None, initargs=()):
-    #     """ This is run as process.target, i.e., on the server process. """
-    #     # NOTE: Explicitly ref SharedMemoryManager rather than cls such that derived classes mutate their base attrs.
-    #     SharedMemoryManager.is_a_server_process = True
-    #     SharedMemoryManager.server_address = address
-    #     SharedMemoryManager.server_pid = os.getpid()
-    #     return super()._run_server(registry, address, authkey, serializer, writer, initializer=initializer,
-    #                                initargs=initargs)
-
     def __init__(self, *args, address=None, timeout=DEFAULT_TIMEOUT, own=False, **kwargs):
         self.own = own  # Accessed by __del__ so hoist to here.
 
