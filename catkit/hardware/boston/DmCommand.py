@@ -323,4 +323,5 @@ def create_flatmap_from_dm_command(dm_command_path, output_path, file_name=None,
     # Convert the dm command units to volts.
     max_volts = CONFIG_INI.getint("boston_kilo952", "max_volts")
     dm_command_data *= max_volts
-    catkit.util.write_fits(dm_command_data, output_path)
+    catkit.util.write_fits(dm_command_data, os.path.join(output_path, file_name))
+    print('flatmaps written to ', os.path.join(output_path, file_name))
