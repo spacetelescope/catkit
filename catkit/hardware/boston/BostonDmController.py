@@ -5,7 +5,7 @@ import threading
 import numpy as np
 
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
-from catkit.hardware.boston.DmCommand import DmCommand
+from catkit.hardware.boston.DmCommand import DmCommand, convert_dm_image_to_command
 
 
 # BMC is Boston's library and it only works on windows.
@@ -114,11 +114,13 @@ class BostonDmController(DeformableMirrorController):
                             as_volts=False,
                             sin_specification=None,
                             output_path=None,
-                            channel=None):
+                            channel=None
+                            do_logging=True):
         """ Combines both commands and sends to the controller to produce a shape on each DM.
         :param dm<1|2>_shape: catkit.hardware.boston.DmCommand.DmCommand or numpy array of the following shapes: 34x34, 1x952,
                          1x2048, 1x4096. Interpreted by default as the desired DM surface height in units of meters, but
-                         see parameters as_volts and as_voltage_percentage.
+                         see parameters as_volts and as_voltage_percentage. When using channels, this should be a numpy array,
+                         and they should have the same shape for each channel.
         :param flat_map: If true, add flat map correction to the data before outputting commands
         :param bias: If true, add bias to the data before outputting commands
         :param as_voltage_percentage: Interpret the data as a voltage percentage instead of meters; Deprecated.
@@ -126,16 +128,30 @@ class BostonDmController(DeformableMirrorController):
         :param sin_specification: Add this sine to the data
         :param output_path: str, Path to save commands to if provided. Default `None` := don't save.
         :param channel: str or None, the DM channel on which to write this shape. Default `None` := set the entire shape.
+        :param do_logging: boolean. Whether to emit a logging message. In fast (>100Hz) loops, the logs can be overwhelmed by
+                           log messages from the DM. Setting this to False doesn't emit a log message. Default: True.
         """
-        self.log.info("Applying shape to both DMs")
+        if do_logging:
+            if channel is None:
+                self.log.info("Applying shape to both DMs")
+            else:
+                self.log.info(f'Applying shape to both DMs in channel {channel}.')
 
         with self.lock:
             if channel is not None:
                 if isinstance(dm1_shape, DmCommand) or isinstance(dm2_shape, DmCommand):
+                    # DmCommand objects cannot be added together, yet.
                     raise ValueError('DM shapes cannot be DmCommands when using channels.')
+
+                # Check if dm{1,2}_shape is 2D, then convert to 1D.
+                if dm1_shape.ndim == 2:
+                    dm1_shape = convert_dm_image_to_command(dm1_shape)
+                if dm2_shape.ndim == 2:
+                    dm2_shape = convert_dm_image_to_command(dm2_shape)
 
                 self.channels[channel] = (dm1_shape, dm2_shape)
 
+                # Add contributions for each channel, and use that as the dm command.
                 dm1_shape = 0
                 dm2_shape = 0
 
