@@ -114,7 +114,7 @@ class BostonDmController(DeformableMirrorController):
                             as_volts=False,
                             sin_specification=None,
                             output_path=None,
-                            channel=None
+                            channel=None,
                             do_logging=True):
         """ Combines both commands and sends to the controller to produce a shape on each DM.
         :param dm<1|2>_shape: catkit.hardware.boston.DmCommand.DmCommand or numpy array of the following shapes: 34x34, 1x952,
