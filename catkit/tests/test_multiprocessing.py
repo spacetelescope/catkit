@@ -3,7 +3,7 @@ import os
 from threading import BrokenBarrierError, Thread
 import time
 
-from multiprocess.context import TimeoutError
+from multiprocess.context import AuthenticationError, TimeoutError
 from multiprocess.managers import BaseProxy, NamespaceProxy, State
 import pytest
 
@@ -47,6 +47,47 @@ def test_pid():
 
         for client in clients:
             client.join()
+
+
+def test_authentication():
+    authkey = os.urandom(128)
+
+    def client_func():
+        manager = SharedMemoryManager(authkey=authkey)
+        manager.connect()
+
+    client = Process(target=client_func)
+
+    with SharedMemoryManager(authkey=authkey):
+        client.start()
+        client.join()
+
+
+def test_authentication_from_address():
+    address = ("127.0.0.1", 7777, os.urandom(128))
+
+    def client_func():
+        manager = SharedMemoryManager(address=address)
+        manager.connect()
+
+    client = Process(target=client_func)
+
+    with SharedMemoryManager(address=address):
+        client.start()
+        client.join()
+
+
+def test_failed_authentication():
+    def client_func():
+        manager = SharedMemoryManager(authkey=os.urandom(128))
+        with pytest.raises(AuthenticationError):
+            manager.connect()
+
+    client = Process(target=client_func)
+
+    with SharedMemoryManager(authkey=os.urandom(128)):
+        client.start()
+        client.join()
 
 
 def test_no_persistent_server():

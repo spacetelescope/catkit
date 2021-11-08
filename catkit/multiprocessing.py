@@ -609,7 +609,7 @@ class SharedMemoryManager(SyncManager):
     Parameters
     ----------
     address : tuple
-        A tuple of the following `(IP, port)` to start the shared server on.
+        A tuple of either the following `(IP, port)` or `(IP, port, authkey)` to start the shared server on.
     timeout : float, int
         Default timeout for mutexing access.
     own : bool
@@ -627,14 +627,23 @@ class SharedMemoryManager(SyncManager):
 
     _Server = CatkitServer
 
-    def __init__(self, *args, address=None, timeout=DEFAULT_TIMEOUT, own=False, **kwargs):
+    def __init__(self, *args, address=None, authkey=None, timeout=DEFAULT_TIMEOUT, own=False, **kwargs):
         self.own = own  # Accessed by __del__ so hoist to here.
 
         if address is None:
             address = self.ADDRESS if hasattr(self, "ADDRESS") else DEFAULT_SHARED_MEMORY_SERVER_ADDRESS
 
+        # For the simplicity of passing around args, by design, we allow the authkey to belong to the address tuple.
+        # Parse out authkey.
+        if len(address) == 3:
+            if authkey is not None:
+                raise ValueError("The authkey cannot be passed in by both the address and as a kwarg.")
+
+            authkey = address[2]
+            address = address[:2]
+
         # NOTE: The context is set here.
-        super().__init__(*args, address=address, ctx=CONTEXT, **kwargs)
+        super().__init__(*args, address=address, authkey=authkey, ctx=CONTEXT, **kwargs)
         self.log = logging.getLogger()
         self.server_pid = None
         self.timeout = timeout
