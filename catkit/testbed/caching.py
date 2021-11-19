@@ -363,7 +363,6 @@ class SharedSingletonDeviceCache(MutexedNamespaceSingleton, DeviceCache):
                               **DictProxy._method_to_typeid_}
         _exposed_ = (*MutexedNamespaceSingleton.Proxy._exposed_, *DictProxy._exposed_)
 
-        #@lru_cache(maxsize=None)
         def __getitem__(self, item):
             # We don't want to send the enum member as it contains a ref to the cache
             item = item.name if isinstance(item, DeviceCacheEnum) else item
@@ -406,7 +405,6 @@ class DeviceCacheEnum(Enum):
 
         # Local cache for caching proxies when using shared memory.
         self.using_shared_memory = False#isinstance(self.cache_type, SharedSingletonDeviceCache)
-        self.local_proxy_cache = {} if self.using_shared_memory else None
 
         # Needs to be last entry to this code block.
         # It prevents __getattr__ and __setattr__ pointing through to the cache prior to this line.
@@ -428,20 +426,16 @@ class DeviceCacheEnum(Enum):
         global devices
         return devices
 
+    # Cache the results from the device cache to avoid checking for cache activation and rebuilding proxies etc.
+    # NOTE: It's possible that the proxy has been removed from the remote cache.
+    @lru_cache(maxsize=None)
     def get_device(self, name):
         object.__getattribute__(self, "activate_cache")()
         cache = object.__getattribute__(self, "cache")
-        if self.using_shared_memory:
-            # NOTE: It's possible that the proxy has been removed from the remote cache.
-            device = self.local_proxy_cache.get(name, None)
-            if not device:
-                device = cache[name]
-                self.local_proxy_cache[name] = device
-        else:
-            device = cache[name]
-        return device
+        return cache[name]
 
     @classmethod
+    @lru_cache(maxsize=None)
     def _missing_(cls, value):
         """ Allow lookup by config_id, such that DeviceCacheEnum(config_id) returns its matching member. """
         if isinstance(value, DeviceCacheEnum):
@@ -518,9 +512,6 @@ class DeviceCacheEnum(Enum):
     def reset(cls):
         for member in cls:
             object.__setattr__(member, "cache", None)
-            local_proxy_cache = object.__getattribute__(member, "local_proxy_cache")
-            if local_proxy_cache:
-                local_proxy_cache.clear()
 
     # NOTES on __getattr__ & __setattr__:
     # The functionality of poking through the enum to the cache needs to be delayed beyond enum creation such that the

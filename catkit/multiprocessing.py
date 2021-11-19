@@ -1,9 +1,9 @@
 from collections import UserDict
 import logging
 import os
+import socket
 import sys
 import threading
-
 
 # NOTE: "multiprocess" is a 3rd party package and not Python's own "multiprocessing".
 # https://github.com/uqfoundation/multiprocess is a fork of multiprocessing that uses "dill" instead of "pickle".
@@ -21,6 +21,16 @@ EXCEPTION_SERVER_ADDRESS = ("127.0.0.1", 6001)  # IP, port.
 
 CONTEXT_METHOD = "spawn"
 CONTEXT = get_context(CONTEXT_METHOD)
+
+
+class CatkitSocket(socket.socket):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if sys.platform == 'win32':
+            self.ioctl(socket.SIO_LOOPBACK_FAST_PATH, True)
+
+
+socket.socket = CatkitSocket
 
 
 class CatkitServer(Server):
@@ -281,7 +291,6 @@ class Mutex:
     def get_mutex_id(self):
         return self._catkit_mutex_id
 
-    #@lru_cache(maxsize=None)
     def clobber(self, new_mutex):
         old_mutex = self._catkit_mutex
         with old_mutex:  # Acquire to ensure nothing else has it before we clobber it.
