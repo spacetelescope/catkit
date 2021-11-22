@@ -30,7 +30,7 @@ class CatkitSocket(socket.socket):
             self.ioctl(socket.SIO_LOOPBACK_FAST_PATH, True)
 
 
-socket.socket = CatkitSocket
+#socket.socket = CatkitSocket
 
 
 class CatkitServer(Server):
