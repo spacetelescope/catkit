@@ -1,11 +1,9 @@
 import gc
-import os
 
 import pytest
 
-from catkit.emulators.npoint_tiptilt import SimNPointLC400
 from catkit.testbed import devices
-from catkit.testbed.caching import DeviceCacheEnum, SharedSingletonDeviceCache
+from catkit.testbed.caching import DeviceCacheEnum
 import catkit.util
 from catkit.multiprocessing import EXCEPTION_SERVER_ADDRESS, SharedMemoryManager
 
@@ -35,3 +33,9 @@ def exception_handler(request):
             yield
     else:
         yield
+
+
+@pytest.fixture(scope="function", autouse=True)
+def clear_lru_cache():
+    DeviceCacheEnum.get_device.cache_clear()
+    DeviceCacheEnum._missing_.cache_clear()

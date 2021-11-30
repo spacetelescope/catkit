@@ -1,7 +1,7 @@
 from collections import namedtuple, UserDict
 from enum import Enum
 from functools import lru_cache
-from multiprocess.managers import AcquirerProxy, BaseProxy, DictProxy
+from multiprocess.managers import AcquirerProxy, DictProxy
 import warnings
 
 from catkit.interfaces.Instrument import Instrument
@@ -402,9 +402,6 @@ class DeviceCacheEnum(Enum):
         # Use the default cache identifier if None.
         self.cache = self.default_cache() if cache is None else cache
         self.cache_type = self.cache if isinstance(self.cache, type) else type(self.cache)
-
-        # Local cache for caching proxies when using shared memory.
-        self.using_shared_memory = False#isinstance(self.cache_type, SharedSingletonDeviceCache)
 
         # Needs to be last entry to this code block.
         # It prevents __getattr__ and __setattr__ pointing through to the cache prior to this line.

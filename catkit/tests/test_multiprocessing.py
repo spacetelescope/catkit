@@ -1,6 +1,6 @@
 import copy
 import os
-from threading import BrokenBarrierError, Thread
+from threading import BrokenBarrierError
 import time
 
 from multiprocess.context import AuthenticationError, TimeoutError

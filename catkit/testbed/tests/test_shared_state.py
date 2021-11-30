@@ -1,4 +1,5 @@
 import os
+import sys
 import threading
 import time
 import uuid
@@ -563,27 +564,68 @@ def test_access_time(reset_HicatTestbedState):
     with SharedMemoryManager(address=SHARED_STATE_ADDRESS) as manager:
         shared_state = HicatTestbedState()
 
-        n = 50
+        n = 100
+        t_set = [0]*n
+        t_get = [0]*n
 
-        t0_all = time.time()
+        for i in range(n):
+            t0 = time.perf_counter_ns()
+            shared_state.m = i
+            t1 = time.perf_counter_ns()
+            t_set[i] = (t1 - t0)*1e-3
+
+            t0 = time.perf_counter_ns()
+            _resp = shared_state.m
+            t1 = time.perf_counter_ns()
+            t_get[i] = (t1 - t0)*1e-3
+
+            print(f"{i}: {t_set[i]:.2f}us {t_get[i]:.2f}us")
+
+        mean_get = np.mean(t_get)
+        mean_set = np.mean(t_set)
+        round_trip = mean_set + mean_get
+        print(f"Mean access times: GET: {mean_get:.2f}us, SET: {mean_set:.2f}us (round trip: {round_trip:.2f}us)")
+
+        limit = 600  # Adhoc (achievable when test was first added (run on Late 2013 MacPro)).
+        assert round_trip < 600, f"mean rt for sequential set & get: {round_trip:.2f} > {limit}"
+        assert False
+
+
+# shape, limit = (712, 712), 50  # Image.
+# shape, limit = ((34, 34, 2)), 1000  # Double Boston Dm command.
+@pytest.mark.parametrize(("shape", "limit"), (((712, 712), 50), ((34, 34, 2), 1000)))
+def test_Mbps(reset_HicatTestbedState, shape, limit):
+    with SharedMemoryManager(address=SHARED_STATE_ADDRESS) as manager:
+        shared_state = HicatTestbedState()
+
+        n = 100
+        dtype = np.float64
+        data = np.zeros(shape, dtype=dtype)
+        n_Mb = sys.getsizeof(data)*8/1e6
+
+        t_set = [0]*n
+        t_get = [0]*n
+
         for i in range(n):
             t0 = time.time()
-            #shared_state.background_cache[i] = i
-            shared_state.m = i
-            t_set = time.time()
-            #shared_state.background_cache[i]
-            shared_state.m
-            t_get = time.time()
+            shared_state.m = data
+            t1 = time.time()
+            t_set[i] = t1 - t0
 
-            t_exp_set = (t_set - t0)*1e6
-            t_exp_get = (t_get - t_set)*1e6
-            print(i, t_exp_set, t_exp_get)
-        t_all = (time.time() - t0_all)*1e6
-        print("total (us)", t_all, t_all/n)
-        mean_time = t_all/n
-        limit = 600  # Adhoc.
-        assert mean_time < 600, f"mean rt for sequential set & get: {mean_time} < {limit}"
-        #assert False
+            t0 = time.time()
+            _resp = shared_state.m
+            t1 = time.time()
+            t_get[i] = t1 - t0
+
+            print(f"{i}: {n_Mb/t_set[i]:.2f}Mbps {n_Mb/t_get[i]:.2f}Mbps")
+        mean_get_mbps = n_Mb/np.mean(t_get)
+        mean_set_mbps = n_Mb/np.mean(t_set)
+        mean_rate = 1/np.mean(t_get)
+
+        print(f"Mean perf: GET: {mean_get_mbps:.2f}Mbps, SET: {mean_set_mbps:.2f}Mbps")
+        print(f"Mean rate for image transfer of {shape} ({dtype}): {mean_rate:.2f}Hz")
+        assert mean_rate > limit
+        # assert False
 
 
 def test_nested_dict(reset_HicatTestbedState):

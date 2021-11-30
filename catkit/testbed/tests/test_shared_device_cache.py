@@ -9,7 +9,7 @@ import time
 
 from catkit.emulators.npoint_tiptilt import SimNPointLC400
 from catkit.multiprocessing import MutexedNamespace, Process, SharedMemoryManager
-from catkit.testbed.caching import DeviceCache, DeviceCacheEnum, SharedSingletonDeviceCache
+from catkit.testbed.caching import DeviceCacheEnum, SharedSingletonDeviceCache
 
 
 TIMEOUT = 2

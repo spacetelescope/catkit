@@ -1,8 +1,8 @@
 import copy
 import logging
 
+from multiprocess.managers import BaseProxy
 import numpy as np
-
 import poppy.dms
 
 import catkit.util
@@ -61,9 +61,9 @@ class PoppyBmcEmulator:
         self.dm2 = dm2
 
         # As the class name suggests, the design only works with ``poppy.dms.ContinuousDeformableMirror``.
-        # assert isinstance(dm1, (PoppyBostonDM, PoppyBostonDM.Proxy)), type(dm1)
-        # if dm2 is not None:
-        #     assert isinstance(dm2, (PoppyBostonDM, PoppyBostonDM.Proxy))
+        assert isinstance(dm1, (PoppyBostonDM, BaseProxy)), type(dm1)
+        if dm2 is not None:
+            assert isinstance(dm2, (PoppyBostonDM, BaseProxy)), type(dm2)
 
     def BmcDm(self):
         return self
