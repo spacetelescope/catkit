@@ -1,6 +1,7 @@
 import os
 
 import astropy.units as u
+from multiprocess.managers import BaseProxy
 import numpy as np
 import poppy
 
@@ -95,7 +96,7 @@ class PoppyIrisAOEmulator:
 
         self.driver_serial = driver_serial
 
-        # assert isinstance(dm, PoppyIrisAODM)
+        assert isinstance(dm, (PoppyIrisAODM, BaseProxy)), type(dm)
         self.dm = dm  # An instance of PoppyIrisAODM.
 
     def Popen(self,

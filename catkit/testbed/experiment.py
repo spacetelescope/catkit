@@ -3,7 +3,6 @@ import logging
 import os
 import _thread
 import threading
-import uuid
 
 from catkit import datalogging
 from catkit.multiprocessing import DEFAULT_TIMEOUT, EXCEPTION_SERVER_ADDRESS, Process, SharedMemoryManager
