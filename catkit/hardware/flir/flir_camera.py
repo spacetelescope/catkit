@@ -34,6 +34,21 @@ class FlirLibrary(metaclass=LazyLoadLibraryMeta):
 
 
 def _create_property(flir_property_name, read_only=False):
+    '''Helper for creating non-enum PySpin properties.
+
+    Parameters
+    ----------
+    flir_property_name : string
+        The name of the PySpin property. This property must be accessible from
+        the PySpin Camera object.
+    read_only : boolean
+        Whether to make the property read-only or not.
+
+    Returns
+    -------
+    property
+        The created Python property.
+    '''
     def getter(self):
         return getattr(self.cam, flir_property_name).GetValue()
 
@@ -47,6 +62,21 @@ def _create_property(flir_property_name, read_only=False):
 
 
 def _create_enum_property(flir_property_name, enum_name):
+    '''Helper for creating enum PySpin properties.
+
+    Parameters
+    ----------
+    flir_property_name : string
+        The name of the PySpin property. This property must be accessible from
+        the PySpin Camera object.
+    enum_name : dictionary
+        A dictionary describing the mapping from string (key) to PySpin enum value (value).
+
+    Returns
+    -------
+    property
+        The created Python property.
+    '''
     def getter(self):
         value = getattr(self.cam, flir_property_name).GetValue()
 
@@ -72,6 +102,8 @@ class FlirCamera(Camera):
 
     @classmethod
     def _create_system(cls):
+        '''Create the PySpin system instance and keep ref count for tidy release.
+        '''
         if cls._system is None:
             cls._system = cls.instrument_lib.System.GetInstance()
 
@@ -79,6 +111,9 @@ class FlirCamera(Camera):
 
     @classmethod
     def _destroy_system(cls):
+        '''Destroy our reference to the PySpin system instance and release it if there
+        are no references to it anymore.
+        '''
         cls._system_ref_count -= 1
 
         if cls._system_ref_count == 0:
@@ -162,6 +197,7 @@ class FlirCamera(Camera):
 
         self._destroy_system()
 
+    # Exposure time in us.
     exposure_time = _create_property('ExposureTime')
     gain = _create_property('Gain')
 
@@ -170,19 +206,50 @@ class FlirCamera(Camera):
     offset_x = _create_property('OffsetX')
     offset_y = _create_property('OffsetY')
 
+    # Temperature of the internal temperature sensor in degrees Celsius.
     temperature = _create_property('DeviceTemperature', read_only=True)
 
+    # Pixel format (for the transport of data from the camera to the computer)
     pixel_format = _create_enum_property('PixelFormat', 'pixel_format_enum')
+
+    # Bit depth of the ADC (8bit, 12bit, etc...)
     adc_bit_depth = _create_enum_property('AdcBitDepth', 'adc_bit_depth_enum')
 
+    # Allows for modifying the duty cycle of the camera. If disabled, the camera runs
+    # at 100% duty cycle (excluding sensor readout), regardless of the value of
+    # `acquisition_frame_rate`.
     acquisition_frame_rate = _create_property('AcquisitionFrameRate')
     acquisition_frame_rate_enable = _create_property('AcquisitionFrameRateEnable')
 
     @property
     def device_name(self):
+        '''The model of the camera (eg. "BFS-U3-04S2M-C").
+        '''
         return self.cam.TLDevice.DeviceModelName.GetValue()
 
     def stream_exposures(self, exposure_time, num_exposures, extra_metadata=None):
+        '''Stream exposures from the camera.
+
+        Note: contrary to the ZWO camera, all subarray settings must be set on the
+        camera before this generator is called.
+
+        Parameters
+        ----------
+        exposure time : scalar or pint quantity
+            The exposure time for each frame (in us if this is a scalar).
+        num_exposures : int
+            The number of exposures to yield. It is safe to stop this generator before
+            this number of exposures is reached.
+        extra_metadata : list of MetaDataEntry objects
+            The metadata to attach to each output frame.
+
+        Yields
+        ------
+        img : ndarray
+            Each camera frame separately.
+        meta_data : list of MetaDataEntry objects
+            The metadata for each frame.
+        '''
         if not type(exposure_time) in [int, float]:
             exposure_time_us = exposure_time.to(units.microsecond).m
         else:
@@ -191,7 +258,8 @@ class FlirCamera(Camera):
         self.exposure_time = exposure_time_us
 
         meta_data = [MetaDataEntry("Exposure Time", "EXP_TIME", exposure_time_us, "microseconds")]
-        meta_data.append(MetaDataEntry("Camera", "CAMERA", self.device_name, "Camera model, correlates to entry in ini"))
+        meta_data.append(MetaDataEntry("Camera", "CAMERA", self.config_id, "Camera name, correlates to entry in ini"))
+        meta_data.append(MetaDataEntry("CameraModel", "MODEL", self.device_name, "Camera model name"))
         meta_data.append(MetaDataEntry("Gain", "GAIN", self.gain, "Gain for camera"))
 
         if extra_metadata is not None:
@@ -200,10 +268,12 @@ class FlirCamera(Camera):
             else:
                 meta_data.append(extra_metadata)
 
+        # try-finally shuts down the camera if the generator is stopped.
         try:
             self.cam.BeginAcquisition()
             frame_count = 0
 
+            # Get the pixel format to interpret the raw data.
             if self.pixel_format == 'mono8':
                 pixel_format = self.instrument_lib.PixelFormat_Mono8
             else:
@@ -211,6 +281,7 @@ class FlirCamera(Camera):
 
             while frame_count < num_exposures:
                 try:
+                    # Wait for image with timeout (in ms).
                     image_result = self.cam.GetNextImage(100)
                 except self.instrument_lib.SpinnakerException as e:
                     if e.errorcode == -1011:
@@ -221,12 +292,15 @@ class FlirCamera(Camera):
                         break
                     raise
 
+                # Guard against incomplete images (when the controller received less data than expected).
                 if image_result.IsIncomplete():
                     continue
 
+                # Convert image data to float32 in the correct shape.
                 img = image_result.Convert(pixel_format).GetData().astype(np.float32)
                 img = img.reshape((image_result.GetHeight(), image_result.GetWidth()))
 
+                # Yield image to caller and release image afterwards.
                 try:
                     yield img, meta_data
                     frame_count += 1
@@ -236,6 +310,37 @@ class FlirCamera(Camera):
             self.cam.EndAcquisition()
 
     def take_exposures(self, exposure_time, num_exposures, path=None, filename=None, return_metadata=False, raw_skip=0, extra_metadata=None):
+        '''Take exposures and potentially save them to disk.
+
+        Note: contrary to the ZWO camera, all subarray settings must be set on the
+        camera before this generator is called.
+
+        Parameters
+        ----------
+        exposure time : scalar or pint quantity
+            The exposure time for each frame (in us if this is a scalar).
+        num_exposures : int
+            The number of exposures to return.
+        path : string or None
+            Where to save the images. This is passed to catkit.util.save_images(). If
+            this is None, no files will be written.
+        filename : string or None
+            The base filename of the written files. This is passed to catkit.util.save_images().
+        return_metadata : boolean
+            Whether to return metadata or not.
+        raw_skip : int
+            Number of frames to skip between frames written to disk. This is passed
+            to catkit.util.save_images().
+        extra_metadata : list of MetaDataEntry objects
+            The metadata to attach to each output frame.
+
+        Returns
+        -------
+        images : list of np.ndarray objects
+            The taken images.
+        meta : list of MetaDataEntry objects.
+            The metadata for the taken images. This is only returned if `return_metadata` is True.
+        '''
         images = []
 
         for img, meta in self.stream_exposures(exposure_time, num_exposures, extra_metadata):
