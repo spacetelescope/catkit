@@ -29,7 +29,7 @@ class CatkitSocket(socket.socket):
         if sys.platform == 'win32':
             self.ioctl(socket.SIO_LOOPBACK_FAST_PATH, True)
 
-
+# FAIL: This pattern doesn't work as this module won't be imported by native server code on their spawned processes.
 #socket.socket = CatkitSocket
 
 
