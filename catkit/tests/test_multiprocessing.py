@@ -1,13 +1,17 @@
 import copy
 import os
+import sys
 from threading import BrokenBarrierError
 import time
 
+
 from multiprocess.context import AuthenticationError, TimeoutError
 from multiprocess.managers import BaseProxy, NamespaceProxy, State
+import numpy as np
 import pytest
 
 from catkit.emulators.npoint_tiptilt import SimNPointLC400
+from catkit.interfaces.Instrument import Instrument
 from catkit.multiprocessing import Mutex, Process, SharedMemoryManager
 
 TIMEOUT = 5  # Use a shorter timeout for testing.
@@ -344,3 +348,64 @@ def test_instrument_property():
         obj = manager.InstrumentWithProperty(config_id="npoint_tiptilt_lc_400", com_id="dummy", timeout=TIMEOUT)
         assert isinstance(obj, BaseProxy)
         assert obj.position == "this is a property"
+
+
+class DummyInst(Instrument):
+    instrument_lib = None
+
+    def initialize(self, *args, **kwargs):
+        self.data = None
+
+    def _open(self):
+        return self
+
+    def _close(self):
+        pass
+
+    def set_data(self, data, n_bytes, do_copy):
+        self.data = copy.deepcopy(data) if do_copy else data
+        assert sys.getsizeof(self.data) == n_bytes
+
+    def get_data(self):
+        return self.data
+
+
+SharedMemoryManager.register("DummyInst", callable=DummyInst, proxytype=DummyInst.Proxy, create_method=True)
+
+
+# shape, limit = (712, 712), 50  # Image.
+# shape, limit = ((34, 34, 2)), 900  # Double Boston Dm command.
+@pytest.mark.parametrize(("shape", "limit"), (((712, 712), 50), ((34, 34, 2), 900)))
+def test_Mbps(shape, limit):
+    with SharedMemoryManager(address=("127.0.0.1", 6060)) as manager:
+        n = 100
+        dtype = np.float64
+        data = np.zeros(shape, dtype=dtype)
+        n_B = sys.getsizeof(data)
+        n_Mb = n_B*8/1e6
+
+        t_set = [0]*n
+        t_get = [0]*n
+
+        with manager.DummyInst("dummy") as dev:
+            for i in range(n):
+                t0 = time.perf_counter_ns()
+                dev.set_data(data, n_B, True)
+                t1 = time.perf_counter_ns()
+                t_set[i] = (t1 - t0)*1e-9
+
+                t0 = time.perf_counter_ns()
+                _resp = dev.get_data()
+                t1 = time.perf_counter_ns()
+                t_get[i] = (t1 - t0)*1e-9
+
+                print(f"{i}: {n_Mb/t_set[i]:.2f}Mbps {n_Mb/t_get[i]:.2f}Mbps")
+
+        mean_get_mbps = n_Mb/np.mean(t_get)
+        mean_set_mbps = n_Mb/np.mean(t_set)
+        mean_rate = 1/np.mean(t_get)
+
+        print(f"Mean perf: GET: {mean_get_mbps:.2f}Mbps, SET: {mean_set_mbps:.2f}Mbps")
+        print(f"Mean rate for image transfer of {shape} ({dtype}): {mean_rate:.2f}Hz")
+        assert mean_rate > limit
+        # assert False

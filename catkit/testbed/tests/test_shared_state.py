@@ -607,15 +607,15 @@ def test_Mbps(reset_HicatTestbedState, shape, limit):
         t_get = [0]*n
 
         for i in range(n):
-            t0 = time.time()
+            t0 = time.perf_counter_ns()
             shared_state.m = data
-            t1 = time.time()
-            t_set[i] = t1 - t0
+            t1 = time.perf_counter_ns()
+            t_set[i] = (t1 - t0)*1e-9
 
-            t0 = time.time()
+            t0 = time.perf_counter_ns()
             _resp = shared_state.m
-            t1 = time.time()
-            t_get[i] = t1 - t0
+            t1 = time.perf_counter_ns()
+            t_get[i] = (t1 - t0)*1e-9
 
             print(f"{i}: {n_Mb/t_set[i]:.2f}Mbps {n_Mb/t_get[i]:.2f}Mbps")
         mean_get_mbps = n_Mb/np.mean(t_get)
