@@ -547,6 +547,11 @@ class MutexedNamespaceAutoProxy:
         assert False
 
     def __new__(cls, *args, **kwargs):
+        # NOTE: AutoProxy() returns an instance (not a type) but whose type is dynamically created at runtime. It is for
+        # this reason (and others) that all of the following lives here in ``new`` and not in a metaclass.
+        # There's also no easy way to split out AutoProxy() and multiprocess.managers.MakeProxyType().
+        # Because of this, this class allows only partial inheritance because it doesn't call ``super().__new__()`` and
+        # is incredibly hacky.
         proxy_obj = AutoProxy(*args, **kwargs)
         proxy_type = type(proxy_obj)
 

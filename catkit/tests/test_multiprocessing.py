@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from catkit.emulators.npoint_tiptilt import SimNPointLC400
-from catkit.interfaces.Instrument import Instrument
+from catkit.interfaces.Instrument import Instrument, InstrumentBaseProxy
 from catkit.multiprocessing import Mutex, Process, SharedMemoryManager
 
 TIMEOUT = 5  # Use a shorter timeout for testing.
@@ -369,8 +369,19 @@ class DummyInst(Instrument):
     def get_data(self):
         return self.data
 
+    class WaferThinProxy(InstrumentBaseProxy):
+        _method_to_typeid_ = {"__enter__": "FastDummyInstProxy", **InstrumentBaseProxy._method_to_typeid_}
+
+        def set_data(self, *args, **kwargs):
+            return self._callmethod("set_data", args=args, kwds=kwargs)
+
+        def get_data(self, *args, **kwargs):
+            return self._callmethod("get_data", args=args, kwds=kwargs)
+
 
 SharedMemoryManager.register("DummyInst", callable=DummyInst, proxytype=DummyInst.Proxy, create_method=True)
+SharedMemoryManager.register("FastDummyInst", callable=DummyInst, proxytype=DummyInst.WaferThinProxy, create_method=True)
+SharedMemoryManager.register("FastDummyInstProxy", proxytype=DummyInst.WaferThinProxy, create_method=False)
 
 
 # shape, limit = (712, 712), 50  # Image.
@@ -387,19 +398,23 @@ def test_Mbps(shape, limit):
         t_set = [0]*n
         t_get = [0]*n
 
-        with manager.DummyInst("dummy") as dev:
-            for i in range(n):
-                t0 = time.perf_counter_ns()
-                dev.set_data(data, n_B, True)
-                t1 = time.perf_counter_ns()
-                t_set[i] = (t1 - t0)*1e-9
+        device = manager.DummyInst("dummy")
+        # device = manager.FastDummyInst("dummy")
 
-                t0 = time.perf_counter_ns()
-                _resp = dev.get_data()
-                t1 = time.perf_counter_ns()
-                t_get[i] = (t1 - t0)*1e-9
+        with device as dev:
+            with dev.get_mutex():
+                for i in range(n):
+                    t0 = time.perf_counter_ns()
+                    dev.set_data(data, n_B, True)
+                    t1 = time.perf_counter_ns()
+                    t_set[i] = (t1 - t0)*1e-9
 
-                print(f"{i}: {n_Mb/t_set[i]:.2f}Mbps {n_Mb/t_get[i]:.2f}Mbps")
+                    t0 = time.perf_counter_ns()
+                    _resp = dev.get_data()
+                    t1 = time.perf_counter_ns()
+                    t_get[i] = (t1 - t0)*1e-9
+
+                    print(f"{i}: {n_Mb/t_set[i]:.2f}Mbps {n_Mb/t_get[i]:.2f}Mbps")
 
         mean_get_mbps = n_Mb/np.mean(t_get)
         mean_set_mbps = n_Mb/np.mean(t_set)

@@ -588,7 +588,7 @@ def test_access_time(reset_HicatTestbedState):
 
         limit = 600  # Adhoc (achievable when test was first added (run on Late 2013 MacPro)).
         assert round_trip < 600, f"mean rt for sequential set & get: {round_trip:.2f} > {limit}"
-        assert False
+        # assert False
 
 
 # shape, limit = (712, 712), 50  # Image.

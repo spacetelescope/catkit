@@ -24,12 +24,11 @@ shared. With the original framework, this is achieved only by passing the proxie
 ``multiprocessing.Process`` when concurrent client processes are instantiated.  This requires all proxies to exist
 up-front and before any and all processes are started, thus completely limiting any dynamic object creation.
 
-In addition to this, the original framework provides for only the narrowest of critical sections of referent attribute
-access, i.e., just a single attribute access. Catkit provides some base types with mutexes exposed to the client such
-that multiple accesses can be mutexed thus allowing for arbitrarily wider critical sections. This functionality is
-essential for inter-dependent hardware control operations where the state of the testbed needs to be guaranteed not to
-have been altered by a concurrent process.
-
+In addition to this, the original framework doesn't guarantee atomic access to shared objects (only object creation is
+guaranteed to be atomic). Catkit provides some base proxies that mutex both attribute access and method calls. Such
+mutexes are also exposed to the client such that multiple accesses can be mutexed thus allowing for arbitrarily wider
+critical sections. This functionality is essential for inter-dependent hardware control operations where the state of
+the testbed needs to be guaranteed not to have been altered by a concurrent process.
 
 
 ## Core classes:

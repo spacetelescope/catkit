@@ -2,7 +2,9 @@ from abc import ABC, abstractmethod
 import inspect
 import logging
 
-from catkit.multiprocessing import MutexedNamespaceAutoProxy, MutexedNamespace, SharedMemoryManager
+from multiprocess.managers import AcquirerProxy
+
+from catkit.multiprocessing import Mutex, MutexedNamespaceAutoProxy, MutexedNamespace, SharedMemoryManager
 
 _not_permitted_error = "Positional args are not permitted. Call with explicit keyword args only.\n"\
                        "E.g., def func(a, b) called as func(1, 2) -> func(a=1, b=2)"
@@ -27,6 +29,41 @@ def call_with_correct_args(func, object=None, kwargs_to_assign=None, **kwargs):
             else:
                 object.__dict__[key] = value
     return func(**func_kwargs)
+
+
+class InstrumentBaseProxy(AcquirerProxy):
+    """ self._callmethod() isn't mutexed.
+
+        WARNING: This is NOT implicitly mutexed on a per call basis and is therefore not implicitly thread safe.
+                 To make thread safe the user must suitably call ``self.acquire()`` from the client - don't forget
+                 to call ``release()`` when done. Alternatively, context management can be used as the following
+                 ``with self.get_mutex():``.
+
+        NOTE: The child class must define ``_method_to_typeid_`` such that "__enter__" returns the correct
+        registered child proxy.
+
+        E.g.,
+
+        ``_method_to_typeid_ = {"__enter__": "registered_name_of_child_proxy", **InstrumentBaseProxy._method_to_typeid_}``
+    """
+    # NOTE: We inherit from AcquirerProxy and not Mutex.Proxy to avoid conditionals in NamespaceProxy (which Mutex.Proxy
+    # is a child of). However, we still want the functionality of Mutex.Proxy.get_mutex().
+
+    _method_to_typeid_ = {"get_mutex": "MutexProxy"}
+
+    def get_mutex(self):
+        return self._callmethod("get_mutex")
+
+    def is_open(self):
+        return self._callmethod("is_open")
+
+    # AcquirerProxy.__enter__ calls acquire. We want to override their semantics to an open & close context.
+    def __enter__(self, *args, **kwargs):
+        return self._callmethod("__enter__", args=args, kwds=kwargs)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # NOTE: Tracebacks can't be pickled (currently), so pass exc_tb as None instead.
+        return self._callmethod("__exit__", args=(exc_type, exc_val, None))
 
 
 class Instrument(MutexedNamespace, ABC):
@@ -135,18 +172,17 @@ class Instrument(MutexedNamespace, ABC):
         return self.instrument is not None
 
     class Proxy(MutexedNamespaceAutoProxy):
+
         _method_to_typeid_ = {"__enter__": "InstrumentProxy",
                               "get_instrument_lib": "MutexedNamespaceAutoProxy",
                               **MutexedNamespaceAutoProxy._method_to_typeid_}
 
         # MutexedNamespaceAutoProxy.__enter__ calls acquire rather than letting the base __enter__ call acquire.
         # We thus want to revert their proxy semantics to an open & close context.
-        def __enter__(self):
-            return self._callmethod("__enter__")
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            # NOTE: Tracebacks can't be pickled (currently), so pass exc_tb as None instead.
-            return self._callmethod("__exit__", args=(exc_type, exc_val, None))
+        # NOTE: Ideally we would just inherit from InstrumentBaseProxy, however, MutexedNamespaceAutoProxy doesn't
+        # support this.
+        __enter__ = InstrumentBaseProxy.__enter__
+        __exit__ = InstrumentBaseProxy.__exit__
 
         def get_instrument_lib(self):
             return self._callmethod("get_instrument_lib")
