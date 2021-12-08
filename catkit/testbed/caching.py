@@ -507,6 +507,8 @@ class DeviceCacheEnum(Enum):
 
     @classmethod
     def reset(cls):
+        cls.get_device.cache_clear()
+        cls._missing_.cache_clear()
         for member in cls:
             object.__setattr__(member, "cache", None)
 

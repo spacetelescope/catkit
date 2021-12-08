@@ -5,6 +5,7 @@ import numpy as np
 
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
 from catkit.hardware.boston.DmCommand import DmCommand
+from catkit.multiprocessing import SharedMemoryManager
 
 
 # BMC is Boston's library and it only works on windows.
@@ -229,3 +230,17 @@ class BostonDmController(DeformableMirrorController):
             else:
                 self.dm2_command = dm_command
                 self.dm2_command_object = dm_shape
+
+    class PerformantProxy(DeformableMirrorController.PerformantProxy):
+        @property
+        def dm1_command_object(self):
+            return self._callmethod("__getattribute__", args=("dm1_command_object",))
+
+        @property
+        def dm2_command_object(self):
+            return self._callmethod("__getattribute__", args=("dm2_command_object",))
+
+
+SharedMemoryManager.register("BostonDMPerformantProxy",
+                             proxytype=BostonDmController.PerformantProxy,
+                             create_method=False)
