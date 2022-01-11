@@ -4,12 +4,13 @@ import os
 import socket
 import sys
 import threading
+import warnings
 
 # NOTE: "multiprocess" is a 3rd party package and not Python's own "multiprocessing".
 # https://github.com/uqfoundation/multiprocess is a fork of multiprocessing that uses "dill" instead of "pickle".
 import multiprocess.util as util
 from multiprocess import get_context, TimeoutError
-from multiprocess.managers import AcquirerProxy, AutoProxy, BarrierProxy, DictProxy, EventProxy, \
+from multiprocess.managers import AcquirerProxy, AutoProxy, BarrierProxy, BaseProxy, DictProxy, EventProxy, \
     NamespaceProxy, Server, State, SyncManager, ValueProxy, Token, format_exc
 
 
@@ -182,6 +183,16 @@ class Process(CONTEXT.Process):
             This is executed on the parent process.
         """
         pid = self.pid
+
+        # Guard against user error.
+        if self.daemon:
+            message = "Joining a daemonic process defeats the point of it being daemonic."
+            if timeout:
+                warnings.warn(message)
+            else:
+                timeout = DEFAULT_TIMEOUT
+                warnings.warn(f"{message} A default timeout of {timeout}s is being enforced.")
+
         super().join(timeout)
         exitcode = self.exitcode
         if exitcode == 0:
@@ -194,7 +205,7 @@ class Process(CONTEXT.Process):
             manager = SharedMemoryManager(address=EXCEPTION_SERVER_ADDRESS)
             try:  # Manager may not have been started.
                 manager.connect()
-            except Exception:
+            except BaseException:
                 pass
             else:
                 child_exception = manager.get_exception(pid)  # Returns None if pid not in dict.
@@ -257,6 +268,9 @@ class Mutex:
     def __eq__(self, other):
         other = other.get_mutex_id() if isinstance(other, (Mutex, Mutex.Proxy)) else id(other)
         return self.get_mutex_id() == other
+
+    def __hash__(self):
+        return hash(self._catkit_mutex_id)
 
     def acquire(self, timeout=None, raise_on_fail=True):
         """
@@ -597,7 +611,7 @@ class MutexedNamespaceAutoProxy:
 
         proxy_obj.__class__._callmethod = _callmethod
 
-        # Inheritance.
+        # Incredibly hacky & weak inheritance (WIP).
         if cls is not MutexedNamespaceAutoProxy:
             cls_dict = cls.__dict__.copy()
             if "_exposed_" in cls_dict:
@@ -608,6 +622,18 @@ class MutexedNamespaceAutoProxy:
                  setattr(proxy_obj.__class__, key, value)
 
         return proxy_obj
+
+
+class NamedEvent(threading.Event):
+    """ Created for debugging purposes only. """
+    def __init__(self, name, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.name = name
+
+    def wait(self, *args, **kwargs):
+        """ For debugging, uncomment below `print`. """
+        # print(f"Waiting for '{self.name}' Event (on PID: {os.getpid()})...")
+        return super().wait(*args, **kwargs)
 
 
 class SharedMemoryManager(SyncManager):
@@ -757,7 +783,7 @@ class SharedMemoryManager(SyncManager):
 
         with self.event_cache:
             if name not in self.event_cache:
-                event_proxy = self.Event()
+                event_proxy = self.NamedEvent(name)
                 self.event_cache.update({name: event_proxy})
                 return event_proxy
             else:
@@ -806,12 +832,14 @@ class _ExceptionCache(_PseudoMutexedDictSingleton):
     instance = None
 
 
+
 # Registered types intended for internal use only.
 SharedMemoryManager.register("_LockCache", callable=_LockCache, proxytype=_LockCache.Proxy, create_method=True)
 SharedMemoryManager.register("_BarrierCache", callable=_BarrierCache, proxytype=_BarrierCache.Proxy, create_method=True)
 SharedMemoryManager.register("_EventCache", callable=_EventCache, proxytype=_EventCache.Proxy, create_method=True)
 SharedMemoryManager.register("_ExceptionCache", callable=_ExceptionCache, proxytype=_ExceptionCache.Proxy, create_method=True)
 SharedMemoryManager.register("_getpid", callable=os.getpid, proxytype=ValueProxy)
+SharedMemoryManager.register("NamedEvent", callable=NamedEvent, proxytype=EventProxy, create_method=True)
 
 # Register shared types.
 SharedMemoryManager.register("Mutex", callable=Mutex, proxytype=Mutex.Proxy, create_method=True)

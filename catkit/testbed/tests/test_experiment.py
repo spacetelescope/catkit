@@ -20,7 +20,10 @@ class ExperimentTest(Experiment):
         self.test_sleep = sleep
 
     def experiment(self, *args, **kwargs):
+        t0 = time.time()
         interruptible_sleep(self.test_sleep)
+        t1 = time.time()
+        assert t1 - t0 < self.test_sleep * 1.1  # 10%
 
 
 class NonFailingSafetyTest(SafetyTest):
@@ -55,17 +58,16 @@ class DelayedFailingSafetyTest(SafetyTest):
 
     def check(self):
         self.call_counter += 1
-        if self.call_counter > 1:
+        if self.call_counter > 2:
             raise SafetyException(f"FAILING (on {self.call_counter} fail)")
 
 
 @pytest.mark.dont_own_exception_handler
 def test_safety_fail_during_run(tmpdir):
-    experiment = ExperimentTest(sleep=10, output_path=tmpdir)
-    t0 = time.time()
-    with pytest.raises(SafetyException, match="FAILING \\(on [0-9]+ fail\\)"):
-        with Testbed(safety_tests=[DelayedFailingSafetyTest], output_path=tmpdir, safety_check_interval=3):
+    sleep = 10
+    experiment = ExperimentTest(sleep=sleep, output_path=tmpdir)
+    with pytest.raises(SafetyException, match="FAILING \\(on 3 fail\\)"):
+        with Testbed(safety_tests=[DelayedFailingSafetyTest], output_path=tmpdir, safety_check_interval=1):
             experiment.start()
-            experiment.join()
-
-    assert time.time() - t0 < 10*1.1  # 10%
+            with pytest.raises(SafetyException, match="Event monitor detected a SAFETY event before experiment completed"):
+                experiment.join()

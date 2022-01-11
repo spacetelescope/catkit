@@ -8,9 +8,10 @@ from catkit import datalogging
 from catkit.multiprocessing import DEFAULT_TIMEOUT, EXCEPTION_SERVER_ADDRESS, Process, SharedMemoryManager
 
 
-STOP_EVENT = "hicat_stop_event"
-SAFETY_EVENT = "hicat_safety_event"
-SAFETY_BARRIER = "hicat_safety_barrier"
+STOP_EVENT = "catkit_stop_event"
+FINISH_EVENT = "catkit_soft_stop_event"
+SAFETY_EVENT = "catkit_safety_event"
+SAFETY_BARRIER = "catkit_safety_barrier"
 
 
 class SafetyException(Exception):
@@ -80,6 +81,7 @@ class Testbed:
 
         self.exception_manager = SharedMemoryManager(address=EXCEPTION_SERVER_ADDRESS, own=True)
         self.stop_event = None
+        self.finish_event = None
         self.safety_event = None
         self.barrier = None
 
@@ -134,6 +136,7 @@ class Testbed:
         # Start server to catch and manage exceptions from parallel processes.
         self.exception_manager.start()  # NOTE: This is joined in self._teardown().
         self.stop_event = self.exception_manager.get_event(STOP_EVENT)
+        self.finish_event = self.exception_manager.get_event(FINISH_EVENT)
         self.safety_event = self.exception_manager.get_event(SAFETY_EVENT)
         self.barrier = self.exception_manager.get_barrier(SAFETY_BARRIER, parties=2)
 
@@ -146,6 +149,7 @@ class Testbed:
                 # NOTE: This order is critical such that self.safety_event is set before self.stop_event.wait() wakes.
                 self.safety_event.set()
                 self.stop_event.set()
+                # self.finish_event.set()  # This is set in self._teardown().
                 raise
 
         self.log.info("All Safety tests passed!")
@@ -158,11 +162,10 @@ class Testbed:
 
         barrier.wait()
 
-        while not self.stop_event.is_set():
+        while not self.stop_event.wait(self.safety_check_interval):
             # NOTE: Upon failure, self.check_safety(), sets both self.safety_event and self.stop_event, and raises a
             # SafetyException (in that order).
             self.check_safety()
-            self.stop_event.wait(self.safety_check_interval)
 
     def _teardown(self):
         """ Override this to stop/join/shutdown any and all other servers started by setup(). """
@@ -173,9 +176,10 @@ class Testbed:
                         self.log.info(" Cleaning up (teardown)...")
                 finally:
                     # Stop the safety monitor process so that it can be joined.
-                    # NOTE: This will also stop EVERYTHING else - no safety := no experiment.
+                    # NOTE: This will also stop EVERYTHING else - no safety := no experiment(s).
                     if self.stop_event:
                         self.stop_event.set()
+                        self.finish_event.set()
             finally:
                 if self.safety_process:
                     self.safety_process.join(DEFAULT_TIMEOUT)
@@ -202,13 +206,13 @@ class Experiment:
     Base class that instills safety monitoring into any class that inherits it.  Subclasses
     need to implement a function called "experiment()".
     """
-    name = "Base Experiment"
+    name = None
 
     log = logging.getLogger()
     data_log = datalogging.get_logger(__name__)
 
     def __init__(self, output_path=None, suffix=None, stop_all_on_exception=True, run_forever=False,
-                 disable_shared_memory=False):
+                 disable_shared_memory=False, daemon=None):
         """ Initialize attributes common to all Experiments.
         All child classes should implement their own __init__ and call this via super()
 
@@ -229,19 +233,38 @@ class Experiment:
         disable_shared_memory : bool, optional
             Disable shared memory. When True some peripheral shared memory will still exist and the main
             experiment will run on the parent process. When False, the main experiment is run on a child process.
+        daemon : bool, optional
+            Passed to underlying Process that experiment is run on. See multiprocessing.Process for details.
         """
+        if self.name is None:
+            self.name = self.__class__.__name__
+
         self.output_path = output_path
         self.suffix = suffix
         self.stop_all_on_exception = stop_all_on_exception
         self.run_forever = run_forever
         self.disable_shared_memory = disable_shared_memory
+        self.daemon = daemon
 
         self.exception_manager = SharedMemoryManager(address=EXCEPTION_SERVER_ADDRESS, own=False)
         self.experiment_process = None
-        self.stop_event = None
         self.safety_event = None
         self._event_monitor_barrier = None
         self._kill_event_monitor_event = None
+
+        # NOTE: STOP_EVENT uses a KeyboardInterrupt (SIGINT) to stop the experiment in its tracks, i.e., effectively
+        # immediately. Doing so, however, will most likely cause a cascade of other errors, e.g., if something is
+        # interrupted whilst communicating with a server which may result in the server itself shutting down thus
+        # stopping any subsequent communications with it. That being said, an immediate stop of other experiments may be
+        # desired to ensure the resultant state of the testbed, e.g., before calling post_experiment etc.
+        # All devices will still be safely closed by their server contexts.
+        self.stop_event = None
+
+        # NOTE: For more of a "soft stop" wait on the following event for synchronising when experiments should finish.
+        # This is NOT waited upon anywhere in this base class. It is only set upon exception. Check for this event in
+        # outer loops and break if set. Here "soft" just means that it may not stop immediately but instead wait for the
+        # rest of the loop to finish first.
+        self.finish_event = None
 
         self.pre_experiment_return = None
         self.experiment_return = None
@@ -254,6 +277,13 @@ class Experiment:
         if self.experiment_process:
             self.experiment_process.join(*args, **kwargs)
 
+    def set_all_events(self):
+        """ Set all stop events. This will remove some contrived deadlock scenarios.
+            This can be overridden and custom events added, however, don't forget to call this func via super().
+        """
+        self.stop_event.set()
+        self.finish_event.set()
+
     def start(self):
         """ Start the experiment on a separate process and then returns (is non-blocking, it does not wait).
             It works like multiprocessing.Process.start(), a join() is thus required.
@@ -262,6 +292,7 @@ class Experiment:
         self.exception_manager.connect()  # Needs to have already been started.
         self.stop_event = self.exception_manager.get_event(STOP_EVENT)
         self.safety_event = self.exception_manager.get_event(SAFETY_EVENT)
+        self.finish_event = self.exception_manager.get_event(FINISH_EVENT)
 
         try:
             if self.disable_shared_memory:
@@ -270,13 +301,13 @@ class Experiment:
             else:
                 # Start the process to run the experiment.
                 self.log.info("Creating separate process to run experiment...")
-                self.experiment_process = Process(target=self.run_experiment, name=self.name)
+                self.experiment_process = Process(target=self.run_experiment, name=self.name, daemon=self.daemon)
                 self.experiment_process.start()
                 # print(f" ### Child experiment process on PID: {self.experiment_process.pid}")
                 self.log.info(f"{self.name} process started on PID: {self.experiment_process.pid}")
         except Exception:
             if self.stop_all_on_exception:
-                self.stop_event.set()
+                self.set_all_events()
             raise
 
     def __enter__(self):
@@ -284,7 +315,8 @@ class Experiment:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.join()
+        if not self.daemon:
+            self.join()
 
     def event_monitor(self):
         """ This is run on a thread on the child process running self.experiment(). It monitors events and then raises
@@ -292,7 +324,6 @@ class Experiment:
             NOTE: It doesn't explicitly stop the parent process, it will implicitly stop the parent process if it's
             waiting in a join() (which it needs to be).
         """
-
         try:  # This must always be running, so stop main thread upon exception.
             self._event_monitor_barrier.wait()  # Used to sync with the main thread so that it doesn't proceed without being monitored.
 
@@ -340,37 +371,37 @@ class Experiment:
                 datalogging.DataLogger.add_writer(data_log_writer)
 
                 # Run pre-experiment code, e.g., open devices, run calibrations, etc.
-                self.log.info("Experiment.pre_experiment() running...")
+                self.log.info(f"'{self.__class__.__name__}': Experiment.pre_experiment() running...")
                 self.pre_experiment_return = self.pre_experiment()
-                self.log.info("Experiment.pre_experiment() completed.")
+                self.log.info(f"'{self.__class__.__name__}': Experiment.pre_experiment() completed.")
 
                 # Run the core experiment.
-                self.log.info("Experiment.experiment() running...")
+                self.log.info(f"'{self.__class__.__name__}': Experiment.experiment() running...")
                 self.experiment_return = self.experiment()
-                self.log.info("Experiment.experiment() completed.")
+                self.log.info(f"'{self.__class__.__name__}': Experiment.experiment() completed.")
 
                 # Run any post-experiment analysis, etc.
-                self.log.info("Experiment.post_experiment() running...")
+                self.log.info(f"'{self.__class__.__name__}': Experiment.post_experiment() running...")
                 self.post_experiment_return = self.post_experiment()
-                self.log.info("Experiment.post_experiment() completed.")
+                self.log.info(f"'{self.__class__.__name__}': Experiment.post_experiment() completed.")
             except KeyboardInterrupt:
                 if self.safety_event.is_set():
-                    raise SafetyException("Event monitor detected a SAFETY event before experiment completed (join root experiment and/or call teardown to retrieve safety exception).")
-                elif self.safety_event.is_set():
-                    raise StopException("Event monitor detected a STOP event before experiment completed (join root experiment and/or call teardown to retrieve safety exception).")
+                    raise SafetyException(f"'{self.__class__.__name__}': Event monitor detected a SAFETY event before experiment completed (join root experiment and/or call teardown to retrieve safety exception).")
+                elif self.stop_event.is_set():
+                    raise StopException(f"'{self.__class__.__name__}': Event monitor detected a STOP event before experiment completed (join root experiment and/or call teardown to retrieve safety exception).")
                 else:
                     # An actual ctrl-c like interrupt occurred.
                     raise
         except (Exception, KeyboardInterrupt):  # KeyboardInterrupt inherits from BaseException not Exception.
-            self.log.exception("Exception caught during Experiment.run_experiment().")
+            self.log.exception(f"'{self.__class__.__name__}': Exception caught during Experiment.run_experiment().")
             if self.stop_all_on_exception:
-                # NOTE: An exception has been raised by the experiment and NOT by the event monitor. We now won't to
+                # NOTE: When an exception is raised by the experiment and NOT by the event monitor we now won't to
                 # kill the event monitor without it calling _thread.interrupt_main(). We do this by setting
                 # self. _kill_event_monitor_event BEFORE setting self.stop_event. Otherwise, setting stop_event would
                 # cause the event monitor to call _thread.interrupt_main() thus killing the main child thread, possibly
                 # before Process.run has a chance to set the exception on the exception manager server.
                 self._kill_event_monitor_event.set()
-                self.stop_event.set()
+                self.set_all_events()
             raise
         finally:
             # Stop the event monitor.

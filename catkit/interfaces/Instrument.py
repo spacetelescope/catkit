@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 import inspect
 import logging
 
-from multiprocess.managers import AcquirerProxy
+
+from multiprocessing.managers import AcquirerProxy
 
 from catkit.multiprocessing import Mutex, MutexedNamespaceAutoProxy, MutexedNamespace, SharedMemoryManager
 
@@ -142,6 +143,22 @@ class Instrument(MutexedNamespace, ABC):
         except Exception:
             #self.__close()
             raise
+
+    def _forced_safe_close(self):
+        """ Bypass mutex and close device.
+
+            It's possible for a client mutex to deadlock or just fail to release thus blocking all access to the
+            device, including the ability to close it - which can not happen. To resolve this we hijack the mutex by
+            replacing it with another and then close as normal.
+
+            NOTE: This can cause an original ``release()`` to raise since the underlying mutex has changed. However,
+            for this occur something has already gone wrong and closing the device is more important than worrying about
+            exceptions amongst exceptions.
+        """
+        mutex = Mutex()
+        with mutex:
+            object.__setattr__(self, "_catkit_mutex", mutex)
+            return self.__close()
 
     def __close(self):
         # __func() can't be overridden without also overriding those that call it.
