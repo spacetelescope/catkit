@@ -172,18 +172,11 @@ class DeviceCache(MutexedDict):
 
     def __delitem__(self, key):
         key = key.name if isinstance(key, DeviceCacheEnum) else key
+        obj = self[key]
 
         # Deleting the device won't close it if external references exist, this must be done explicitly.
-        obj = self[key]
-        set_keep_alive(obj, False)
-
-        # Explicitly reset context counter to force closure.
-        if hasattr(obj, "_context_counter"):
-            obj._context_counter = 0
-
-        # Close.
         try:
-            obj.__exit__(None, None, None)
+            object.__getattribute__(obj, "_forced_safe_close")()
         except Exception:
             raise
             # Don't raise so that other devices can exit.
