@@ -1,4 +1,5 @@
 from collections import namedtuple, UserDict
+from contextlib import contextmanager
 from enum import Enum
 from functools import lru_cache
 from multiprocess.managers import AcquirerProxy, DictProxy
@@ -477,20 +478,22 @@ class DeviceCacheEnum(Enum):
     # However, for example, if acquire() and release() are classmethods of the enum, __getattribute__() will never call
     # __getattr__ and thus enum.member.acquire() := enum.acquire() as enum.member.acquire() won't poke through to call
     # Instrument.Proxy.acquire(). This equivalence would be grossly misleading and thus prevents us from having a
-    # classmethod of this nature at all, as enum.member.acquire() would act on the entire class (see below commented out
-    # implementation.
+    # classmethod of this nature at all, as enum.member.acquire() would act on the entire class.
 
-    # @classmethod
-    # def acquire(cls, *args, **kwargs):
-    #     all_locked = True
-    #     for member in cls:
-    #         all_locked &= member.cache.acquire(*args, **kwargs)
-    #     return all_locked
-    #
-    # @classmethod
-    # def release(cls):
-    #     for member in cls:
-    #         member.cache.release()
+    @classmethod
+    @contextmanager
+    def lock_all(cls, *args, **kwargs):
+        locked_members = []
+        try:
+            all_locked = True
+            for member in cls:
+                is_locked = member.acquire(*args, **kwargs)
+                locked_members.append(member)
+                all_locked &= is_locked
+            yield all_locked
+        finally:
+            for member in locked_members:
+                member.release()
 
     def activate_cache(self, *args, **kwargs):
         cache = object.__getattribute__(self, "cache")

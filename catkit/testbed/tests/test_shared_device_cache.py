@@ -506,6 +506,23 @@ def test_enum_api_from_child_process(remote_caching):
         assert RemoteDevice.DEV_A.child_attr == client_pid
 
 
+def test_enum_api_lock_all(remote_caching):
+    with SharedMemoryManager(address=RemoteDeviceCache.address, timeout=TIMEOUT):
+
+        RemoteDevice.DEV_A.parent_attr = os.getpid()
+
+        client = Process(target=client_lock_timeout, args=(os.getpid(),))
+        with RemoteDevice.lock_all() as all_locked:
+            assert all_locked
+            client.start()
+            client.join()
+
+        # Test all were released.
+        client = Process(target=client_lock, args=(os.getpid(),))
+        client.start()
+        client.join()
+
+
 def test_enum_mutual_cache(remote_caching):
     with SharedMemoryManager(address=RemoteDeviceCache.address, timeout=TIMEOUT):
         RemoteDevice.DEV_A.attr1 = 1234567
