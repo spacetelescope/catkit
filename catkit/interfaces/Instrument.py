@@ -59,6 +59,10 @@ class InstrumentBaseProxy(AcquirerProxy):
         return self._callmethod("is_open")
 
     # AcquirerProxy.__enter__ calls acquire. We want to override their semantics to an open & close context.
+    # NOTE: If accessing via catkit.testbed.caching.DeviceCacheEnum, this is reverted back to acquire semantics.
+    # E.g.,
+    #      DeviceCacheEnum.MEMBER.__enter__() => Instrument.acquire()
+    #      DeviceCacheEnum.MEMBER().__enter__() => Instrument.__enter__()
     def __enter__(self, *args, **kwargs):
         return self._callmethod("__enter__", args=args, kwds=kwargs)
 
