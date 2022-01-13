@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 import logging
 import os
-import _thread
+import signal
 import threading
 
 from catkit import datalogging
 from catkit.multiprocessing import DEFAULT_TIMEOUT, EXCEPTION_SERVER_ADDRESS, Process, SharedMemoryManager
-
+from catkit.util import raise_signal
 
 STOP_EVENT = "catkit_stop_event"
 FINISH_EVENT = "catkit_soft_stop_event"
@@ -341,8 +341,7 @@ class Experiment:
             if self._kill_event_monitor_event.is_set():
                 return
             # Interrupt the main thread with a KeyboardInterrupt exception.
-            # NOTE: This won't interrupt time.sleep(). See https://docs.python.org/3/library/time.html#time.sleep
-            _thread.interrupt_main()
+            raise_signal(signal.SIGINT)
 
     def run_experiment(self):
         """ Code executed on the child process. """
