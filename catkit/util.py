@@ -217,13 +217,13 @@ def soft_kill(process):
     if not process or process.pid is None or not process.is_alive():
         return
 
+    signum = signal.SIGINT
+
     log = logging.getLogger()
     if os.name == "nt":
-        import win32api
-        import win32con
         try:
             log.info("Sending ctrl-c event...")
-            win32api.GenerateConsoleCtrlEvent(win32con.CTRL_C_EVENT, 0)
+            raise_signal(signum)
             while process.is_alive():
                 log.info("Child process is still alive...")
                 sleep(1)
@@ -233,10 +233,26 @@ def soft_kill(process):
     else:
         try:
             log.info("Sending ctrl-c event...")
-            os.kill(process.pid, signal.SIGINT)
+            raise_signal(signum)
             while process.is_alive():
                 log.info("Child process is still alive...")
                 sleep(1)
             log.info("Child process softly killed.")
         except KeyboardInterrupt:
             log.exception("Main process: caught ctrl-c")
+
+
+def raise_signal(signum):
+    """ Send SIGINT to current process. """
+    # NOTE: This should be used instead of `_thread.interrupt_main()` as that doesn't interrupt sleep() and wait().
+
+    if signum is not signal.SIGINT:
+        raise NotImplementedError()
+    # TODO: With Python 3.8 signal.raise_signal(signal.SIGINT) can be used instead.
+    if os.name == "nt":
+        # TODO: `os.kill()` is documented as available on windows so the following shouldn't be needed.
+        import win32api
+        import win32con
+        win32api.GenerateConsoleCtrlEvent(win32con.CTRL_C_EVENT, 0)
+    else:
+        os.kill(os.getpid(), signal.SIGINT)
