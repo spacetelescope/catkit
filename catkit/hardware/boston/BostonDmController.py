@@ -1,10 +1,11 @@
 import os
 import sys
+import threading
 
 import numpy as np
 
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
-from catkit.hardware.boston.DmCommand import DmCommand
+from catkit.hardware.boston.DmCommand import DmCommand, convert_dm_image_to_command
 
 
 # BMC is Boston's library and it only works on windows.
@@ -18,7 +19,7 @@ try:
 except ImportError:
     bmc = None
 
-"""Interface for Boston Micro-machines deformable mirror controller that can control 2 DMs.  
+"""Interface for Boston Micro-machines deformable mirror controller that can control 2 DMs.
    It does so by interpreting the first half of the command for DM1, and the second for DM2.
    This controller cannot control the two DMs independently, it will always send a command to both."""
 
@@ -33,6 +34,8 @@ class BostonDmController(DeformableMirrorController):
         self.dm1_command_object = None
         self.dm2_command_object = None
 
+        self.channels = {}
+
     def initialize(self, serial_number, command_length, dac_bit_width):
         """ Initialize dm manufacturer specific object - this does not, nor should it, open a connection."""
         self.log.info("Opening DM connection")
@@ -41,6 +44,8 @@ class BostonDmController(DeformableMirrorController):
         self.serial_num = serial_number
         self.command_length = command_length
         self.dac_bit_width = dac_bit_width
+
+        self.lock = threading.Lock()
 
     def send_data(self, data):
 
@@ -109,64 +114,116 @@ class BostonDmController(DeformableMirrorController):
                             as_voltage_percentage=False,
                             as_volts=False,
                             sin_specification=None,
-                            output_path=None):
+                            output_path=None,
+                            channel=None,
+                            do_logging=True):
         """ Combines both commands and sends to the controller to produce a shape on each DM.
+
+        The concept of channels is optional. If no channel is supplied, the DM shapes are applied directly
+        onto the DM. However, if channels are used, each channel acts as an independent contribution to the
+        total shape that is on the DM. Each contribution will be updated (= replaced) by calling apply_shape_to_both()
+        with the name of that channel. In this way, the current contribution from each channel can be read out
+        using the BOSTON_DM.channels[channel_name] attribute.
+
+        While individual contributions can be added as delta contributions to a running total, this approach was
+        not taken for code clarity. This comes at the cost of a few microseconds of runtime for each sent DM command.
+
+        Note: if channels are used, the dm shapes are required to be numpy arrays. In this case, DmCommand objects are
+        not allowed. A TypeError will be thrown is this is the case.
+
         :param dm<1|2>_shape: catkit.hardware.boston.DmCommand.DmCommand or numpy array of the following shapes: 34x34, 1x952,
                          1x2048, 1x4096. Interpreted by default as the desired DM surface height in units of meters, but
-                         see parameters as_volts and as_voltage_percentage.
+                         see parameters as_volts and as_voltage_percentage. When using channels, this should be a numpy array,
+                         and they should have the same shape for each channel.
         :param flat_map: If true, add flat map correction to the data before outputting commands
         :param bias: If true, add bias to the data before outputting commands
         :param as_voltage_percentage: Interpret the data as a voltage percentage instead of meters; Deprecated.
         :param as_volts: If true, interpret the data as volts instead of meters
         :param sin_specification: Add this sine to the data
         :param output_path: str, Path to save commands to if provided. Default `None` := don't save.
+        :param channel: str or None, the DM channel on which to write this shape. Default `None` := set the entire shape.
+        :param do_logging: boolean. Whether to emit a logging message. In fast (>100Hz) loops, the logs can be overwhelmed by
+                           log messages from the DM. Setting this to False doesn't emit a log message. Default: True.
         """
-        self.log.info("Applying shape to both DMs")
+        with self.lock:
+            if do_logging:
+                if channel is None:
+                    self.log.info("Applying shape to both DMs")
+                else:
+                    self.log.info(f'Applying shape to both DMs in channel {channel}.')
 
-        if not isinstance(dm1_shape, DmCommand):
-            dm1_shape = DmCommand(data=dm1_shape,
-                                  dm_num=1,
-                                  flat_map=flat_map,
-                                  bias=bias,
-                                  as_voltage_percentage=as_voltage_percentage,
-                                  as_volts=as_volts,
-                                  sin_specification=sin_specification)
+            if channel is None:
+                if self.channels:
+                    self.log.warn('A channel was not supplied while channels were used previously. ' +
+                        'All channels will be reset. This may not be what you want.')
 
-        if not isinstance(dm2_shape, DmCommand):
-            dm2_shape = DmCommand(data=dm2_shape,
-                                  dm_num=2,
-                                  flat_map=flat_map,
-                                  bias=bias,
-                                  as_voltage_percentage=as_voltage_percentage,
-                                  as_volts=as_volts,
-                                  sin_specification=sin_specification)
+                    self.channels = {}
+            else:
+                if isinstance(dm1_shape, DmCommand) or isinstance(dm2_shape, DmCommand):
+                    # DmCommand objects cannot be added together, yet.
+                    raise TypeError('DM shapes cannot be DmCommands when using channels.')
 
-        # Ensure that the correct dm_num is set.
-        dm1_shape.dm_num = 1
-        dm2_shape.dm_num = 2
+                # Check if dm{1,2}_shape is 2D, then convert to 1D.
+                # This standardizes the shape stored in the channels attribute.
+                if dm1_shape.ndim == 2:
+                    dm1_shape = convert_dm_image_to_command(dm1_shape)
+                if dm2_shape.ndim == 2:
+                    dm2_shape = convert_dm_image_to_command(dm2_shape)
 
-        if output_path is not None:
-            dm1_shape.export_fits(output_path)
-            dm2_shape.export_fits(output_path)
+                self.channels[channel] = (dm1_shape, dm2_shape)
 
-        # Use DmCommand class to format the commands correctly (with zeros for other DM).
-        dm1_command = dm1_shape.to_dm_command()
-        dm2_command = dm2_shape.to_dm_command()
+                # Add contributions for each channel, and use that as the dm command.
+                dm1_shape = 0
+                dm2_shape = 0
 
-        # Add both arrays together (first half and second half) and send to DM.
-        full_command = dm1_command + dm2_command
-        try:
-            self.send_data(full_command)
-        except Exception:
-            # We shouldn't guarantee the state of the DM.
-            self._clear_state()
-            raise
-        else:
-            # Update both dm_command class attributes.
-            self.dm1_command = dm1_command
-            self.dm2_command = dm2_command
-            self.dm1_command_object = dm1_shape
-            self.dm2_command_object = dm2_shape
+                for dm1, dm2 in self.channels.values():
+                    dm1_shape += dm1
+                    dm2_shape += dm2
+
+            if not isinstance(dm1_shape, DmCommand):
+                dm1_shape = DmCommand(data=dm1_shape,
+                                    dm_num=1,
+                                    flat_map=flat_map,
+                                    bias=bias,
+                                    as_voltage_percentage=as_voltage_percentage,
+                                    as_volts=as_volts,
+                                    sin_specification=sin_specification)
+
+            if not isinstance(dm2_shape, DmCommand):
+                dm2_shape = DmCommand(data=dm2_shape,
+                                    dm_num=2,
+                                    flat_map=flat_map,
+                                    bias=bias,
+                                    as_voltage_percentage=as_voltage_percentage,
+                                    as_volts=as_volts,
+                                    sin_specification=sin_specification)
+
+            # Ensure that the correct dm_num is set.
+            dm1_shape.dm_num = 1
+            dm2_shape.dm_num = 2
+
+            if output_path is not None:
+                dm1_shape.export_fits(output_path)
+                dm2_shape.export_fits(output_path)
+
+            # Use DmCommand class to format the commands correctly (with zeros for other DM).
+            dm1_command = dm1_shape.to_dm_command()
+            dm2_command = dm2_shape.to_dm_command()
+
+            # Add both arrays together (first half and second half) and send to DM.
+            full_command = dm1_command + dm2_command
+            try:
+                self.send_data(full_command)
+            except Exception:
+                # We shouldn't guarantee the state of the DM.
+                self._clear_state()
+                raise
+            else:
+                # Update both dm_command class attributes.
+                self.dm1_command = dm1_command
+                self.dm2_command = dm2_command
+                self.dm1_command_object = dm1_shape
+                self.dm2_command_object = dm2_shape
 
     def apply_shape(self, dm_shape, dm_num,
                     flat_map=True,
