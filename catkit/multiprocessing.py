@@ -8,11 +8,16 @@ import warnings
 
 # NOTE: "multiprocess" is a 3rd party package and not Python's own "multiprocessing".
 # https://github.com/uqfoundation/multiprocess is a fork of multiprocessing that uses "dill" instead of "pickle".
+import multiprocess
 import multiprocess.util as util
 from multiprocess import get_context, TimeoutError
 from multiprocess.managers import AcquirerProxy, AutoProxy, BarrierProxy, BaseProxy, DictProxy, EventProxy, \
     NamespaceProxy, Server, State, SyncManager, ValueProxy, Token, format_exc
 
+# A global auth key is needed to allow processes of separate groups to connect to one another.
+# See https://bugs.python.org/msg214582
+GLOBAL_AUTH_KEY = b"a super secure password"
+multiprocess.current_process().authkey = GLOBAL_AUTH_KEY
 
 DEFAULT_TIMEOUT = 60
 
