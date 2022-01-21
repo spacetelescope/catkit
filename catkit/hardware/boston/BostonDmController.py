@@ -35,7 +35,6 @@ class BostonDmController(DeformableMirrorController):
         self.dm2_command_object = None
 
         self.channels = {}
-        self.lock = threading.Lock()
 
     def initialize(self, serial_number, command_length, dac_bit_width):
         """ Initialize dm manufacturer specific object - this does not, nor should it, open a connection."""
@@ -45,6 +44,8 @@ class BostonDmController(DeformableMirrorController):
         self.serial_num = serial_number
         self.command_length = command_length
         self.dac_bit_width = dac_bit_width
+
+        self.lock = threading.Lock()
 
     def send_data(self, data):
 
@@ -117,6 +118,19 @@ class BostonDmController(DeformableMirrorController):
                             channel=None,
                             do_logging=True):
         """ Combines both commands and sends to the controller to produce a shape on each DM.
+
+        The concept of channels is optional. If no channel is supplied, the DM shapes are applied directly
+        onto the DM. However, if channels are used, each channel acts as an independent contribution to the
+        total shape that is on the DM. Each contribution will be updated (= replaced) by calling apply_shape_to_both()
+        with the name of that channel. In this way, the current contribution from each channel can be read out
+        using the BOSTON_DM.channels[channel_name] attribute.
+
+        While individual contributions can be added as delta contributions to a running total, this approach was
+        not taken for code clarity. This comes at the cost of a few microseconds of runtime for each sent DM command.
+
+        Note: if channels are used, the dm shapes are required to be numpy arrays. In this case, DmCommand objects are
+        not allowed. A TypeError will be thrown is this is the case.
+
         :param dm<1|2>_shape: catkit.hardware.boston.DmCommand.DmCommand or numpy array of the following shapes: 34x34, 1x952,
                          1x2048, 1x4096. Interpreted by default as the desired DM surface height in units of meters, but
                          see parameters as_volts and as_voltage_percentage. When using channels, this should be a numpy array,
@@ -131,19 +145,26 @@ class BostonDmController(DeformableMirrorController):
         :param do_logging: boolean. Whether to emit a logging message. In fast (>100Hz) loops, the logs can be overwhelmed by
                            log messages from the DM. Setting this to False doesn't emit a log message. Default: True.
         """
-        if do_logging:
-            if channel is None:
-                self.log.info("Applying shape to both DMs")
-            else:
-                self.log.info(f'Applying shape to both DMs in channel {channel}.')
-
         with self.lock:
-            if channel is not None:
+            if do_logging:
+                if channel is None:
+                    self.log.info("Applying shape to both DMs")
+                else:
+                    self.log.info(f'Applying shape to both DMs in channel {channel}.')
+
+            if channel is None:
+                if self.channels:
+                    self.log.warn('A channel was not supplied while channels were used previously. ' +
+                        'All channels will be reset. This may not be what you want.')
+
+                    self.channels = {}
+            else:
                 if isinstance(dm1_shape, DmCommand) or isinstance(dm2_shape, DmCommand):
                     # DmCommand objects cannot be added together, yet.
-                    raise ValueError('DM shapes cannot be DmCommands when using channels.')
+                    raise TypeError('DM shapes cannot be DmCommands when using channels.')
 
                 # Check if dm{1,2}_shape is 2D, then convert to 1D.
+                # This standardizes the shape stored in the channels attribute.
                 if dm1_shape.ndim == 2:
                     dm1_shape = convert_dm_image_to_command(dm1_shape)
                 if dm2_shape.ndim == 2:
