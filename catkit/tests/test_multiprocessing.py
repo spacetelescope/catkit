@@ -422,5 +422,5 @@ def test_Mbps(shape, limit):
 
         print(f"Mean perf: GET: {mean_get_mbps:.2f}Mbps, SET: {mean_set_mbps:.2f}Mbps")
         print(f"Mean rate for image transfer of {shape} ({dtype}): {mean_rate:.2f}Hz")
-        assert mean_rate > limit
+        assert False#mean_rate > limit
         # assert False

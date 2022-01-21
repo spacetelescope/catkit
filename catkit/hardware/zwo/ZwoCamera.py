@@ -13,11 +13,41 @@ import catkit.util
 
 """Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
 
-
+import time
 class ZwoCamera(Camera):
 
     instrument_lib = zwoasi
     __ZWO_ASI_LIB = 'ZWO_ASI_LIB'
+
+    def experiment(self, *args, **kwargs):
+
+        last_img = None
+        cam = self
+
+        temp_timestamps = []
+        temp_signals = []
+
+        counter = 0
+        for img, meta in cam.stream_exposures(exposure_time=5000, num_exposures=self.n_samples):
+            t = time.perf_counter_ns()
+
+            if last_img is not None:
+                signal = np.sqrt(np.sum((img - last_img)**2))
+
+                temp_signals.append(signal)
+                temp_timestamps.append(t)
+                if signal > 0.4e6:
+                    self.update_dm.set()
+
+            last_img = img
+            counter += 1
+
+        # for item in temp_timestamps:
+        #     self.cam_timestamps.append(item)
+        # for item in temp_signals:
+        #     self.cam_signals.append(item)
+
+
 
     @classmethod
     def load_asi_lib(cls):

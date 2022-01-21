@@ -8,6 +8,7 @@ from catkit.hardware.boston.DmCommand import DmCommand
 from catkit.multiprocessing import SharedMemoryManager
 
 
+
 # BMC is Boston's library and it only works on windows.
 try:
     sdk_path = os.environ.get('CATKIT_BOSTON_SDK_PATH')
@@ -23,10 +24,47 @@ except ImportError:
    It does so by interpreting the first half of the command for DM1, and the second for DM2.
    This controller cannot control the two DMs independently, it will always send a command to both."""
 
-
+import time
 class BostonDmController(DeformableMirrorController):
 
     instrument_lib = bmc
+
+    def experiment(self, *args, **kwargs):
+        num_actuators_pupil = 34#CONFIG_INI.getint(self.config_id, 'dm_length_actuators')
+        dm = self
+
+        # time.sleep(1)
+        dm1_data = [
+            np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9,
+            np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9
+        ]
+
+        dm2_data = [
+            np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9,
+            np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9
+        ]
+
+        i = 0
+
+        temp_stamps = []
+
+        self.go_barrier.wait()
+
+        while not self.shutdown_flag.is_set():
+            t = time.perf_counter_ns()
+            temp_stamps.append(t)
+            dm.apply_shape_to_both(dm1_data[i % 2], dm2_data[i % 2])
+
+            i += 1
+
+            # Waste time
+            # self.update_dm.wait()
+            # self.update_dm.clear()
+            time.sleep(0.1)
+
+        # for item in temp_stamps:
+        #     self.dm_timestamps.append(item)
+
 
     def _clear_state(self):
         self.dm1_command = None
