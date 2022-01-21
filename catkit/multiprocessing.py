@@ -23,7 +23,7 @@ DEFAULT_TIMEOUT = 60
 
 # TODO: When using servers across networked machines, the loopback IP won't be viable.
 DEFAULT_SHARED_MEMORY_SERVER_ADDRESS = ("127.0.0.1", 6000)  # IP, port.
-EXCEPTION_SERVER_ADDRESS = ("127.0.0.1", 6001)  # IP, port.
+EXCEPTION_SERVER_ADDRESS = ("127.0.0.1", 6001)#, b"a really secure password")  # IP, port.
 
 CONTEXT_METHOD = "spawn"
 CONTEXT = get_context(CONTEXT_METHOD)

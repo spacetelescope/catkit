@@ -7,7 +7,7 @@ from catkit.interfaces.DeformableMirrorController import DeformableMirrorControl
 from catkit.hardware.boston.DmCommand import DmCommand
 from catkit.multiprocessing import SharedMemoryManager
 
-
+import threading
 
 # BMC is Boston's library and it only works on windows.
 try:
@@ -29,42 +29,46 @@ class BostonDmController(DeformableMirrorController):
 
     instrument_lib = bmc
 
-    def experiment(self, *args, **kwargs):
-        num_actuators_pupil = 34#CONFIG_INI.getint(self.config_id, 'dm_length_actuators')
-        dm = self
 
-        # time.sleep(1)
-        dm1_data = [
-            np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9,
-            np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9
-        ]
+    def experiment(self, sleep_interval, shutdown_flag):
+        def runner():
+            num_actuators_pupil = 34#CONFIG_INI.getint(self.config_id, 'dm_length_actuators')
+            dm = self
 
-        dm2_data = [
-            np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9,
-            np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9
-        ]
+            # time.sleep(1)
+            dm1_data = [
+                np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9,
+                np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9
+            ]
 
-        i = 0
+            dm2_data = [
+                np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9,
+                np.random.randn(num_actuators_pupil, num_actuators_pupil) * 3e-9
+            ]
 
-        temp_stamps = []
+            i = 0
 
-        self.go_barrier.wait()
+            self.temp_stamps = []
 
-        while not self.shutdown_flag.is_set():
-            t = time.perf_counter_ns()
-            temp_stamps.append(t)
-            dm.apply_shape_to_both(dm1_data[i % 2], dm2_data[i % 2])
+            # self.go_barrier.wait()
 
-            i += 1
+            while not shutdown_flag.is_set():
+                t = time.perf_counter_ns()
+                self.temp_stamps.append(t)
+                dm.apply_shape_to_both(dm1_data[i % 2], dm2_data[i % 2])
 
-            # Waste time
-            # self.update_dm.wait()
-            # self.update_dm.clear()
-            time.sleep(0.1)
+                i += 1
 
-        # for item in temp_stamps:
-        #     self.dm_timestamps.append(item)
+                # Waste time
+                # self.update_dm.wait()
+                # self.update_dm.clear()
+                time.sleep(sleep_interval)
 
+            # for item in temp_stamps:
+            #     self.dm_timestamps.append(item)
+
+        self.runner_thread = threading.Thread(target=runner, daemon=True)
+        self.runner_thread.start()
 
     def _clear_state(self):
         self.dm1_command = None

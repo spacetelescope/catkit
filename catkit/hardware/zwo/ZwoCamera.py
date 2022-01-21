@@ -12,41 +12,44 @@ import catkit.util
 
 
 """Implementation of Hicat.Camera ABC that provides interface and context manager for using ZWO cameras."""
-
+import threading
 import time
 class ZwoCamera(Camera):
 
     instrument_lib = zwoasi
     __ZWO_ASI_LIB = 'ZWO_ASI_LIB'
 
-    def experiment(self, *args, **kwargs):
+    def experiment(self, exposure_time, n_exposures):
+        def runner():
+            last_img = None
+            cam = self
 
-        last_img = None
-        cam = self
+            self.temp_timestamps = []
+            self.temp_signals = []
 
-        temp_timestamps = []
-        temp_signals = []
+            counter = 0
+            for img, meta in cam.stream_exposures(exposure_time=exposure_time, num_exposures=n_exposures):
+                t = time.perf_counter_ns()
 
-        counter = 0
-        for img, meta in cam.stream_exposures(exposure_time=5000, num_exposures=self.n_samples):
-            t = time.perf_counter_ns()
+                if last_img is not None:
+                    signal = np.sqrt(np.sum((img - last_img)**2))
 
-            if last_img is not None:
-                signal = np.sqrt(np.sum((img - last_img)**2))
+                    self.temp_signals.append(signal)
+                    self.temp_timestamps.append(t)
+                    if signal > 0.4e6:
+                        self.update_dm.set()
 
-                temp_signals.append(signal)
-                temp_timestamps.append(t)
-                if signal > 0.4e6:
-                    self.update_dm.set()
+                last_img = img
+                counter += 1
 
-            last_img = img
-            counter += 1
+            # for item in temp_timestamps:
+            #     self.cam_timestamps.append(item)
+            # for item in temp_signals:
+            #     self.cam_signals.append(item)
 
-        # for item in temp_timestamps:
-        #     self.cam_timestamps.append(item)
-        # for item in temp_signals:
-        #     self.cam_signals.append(item)
-
+        runner()
+        # self.runner_thread = threading.Thread(target=runner, daemon=True)
+        # self.runner_thread.start()
 
 
     @classmethod
