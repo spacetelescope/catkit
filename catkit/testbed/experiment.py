@@ -54,6 +54,9 @@ class SafetyTest(ABC):
 
 class Testbed:
     """ Class for owning testbed infrastructure such as any shared memory servers and running safety checks. """
+    
+    # NOTE: The following event isn't implicitly used nor waited upon, it's hosted here such that it can be imported.
+    STOP_EVENT = "stop the testbed running"
 
     def __init__(self, safety_tests, output_path=None, suffix=None,
                  safety_check_interval=60):
