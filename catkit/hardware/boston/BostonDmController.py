@@ -90,8 +90,8 @@ class BostonDmController(DeformableMirrorController):
         # The DM controller expects the command to be unitless (normalized Volts): 0.0 - 1.0, where 1.0 := max_volts
         data_min = np.min(data)
         data_max = np.max(data)
-        if data_min < 0 or data_max > 1:
-            self.log.warning(f"DM command out of range and will be clipped by hardware. min:{data_min}, max:{data_max}")
+        # if data_min < 0 or data_max > 1:
+        #     self.log.warning(f"DM command out of range and will be clipped by hardware. min:{data_min}, max:{data_max}")
 
         status = self.instrument.send_data(data)
         if status != self.instrument_lib.NO_ERR:
@@ -164,7 +164,7 @@ class BostonDmController(DeformableMirrorController):
         :param sin_specification: Add this sine to the data
         :param output_path: str, Path to save commands to if provided. Default `None` := don't save.
         """
-        self.log.info("Applying shape to both DMs")
+        # self.log.info("Applying shape to both DMs")
 
         if not isinstance(dm1_shape, DmCommand):
             dm1_shape = DmCommand(data=dm1_shape,
@@ -230,7 +230,7 @@ class BostonDmController(DeformableMirrorController):
         :param sin_specification: Add this sine to the data
         :param output_path: str, Path to save commands to if provided. Default `None` := don't save.
         """
-        self.log.info("Applying shape to DM " + str(dm_num))
+        # self.log.info("Applying shape to DM " + str(dm_num))
 
         if not isinstance(dm_shape, DmCommand):
             dm_shape = DmCommand(data=dm_shape,
