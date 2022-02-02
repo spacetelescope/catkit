@@ -104,17 +104,17 @@ class McPherson747(Instrument):  # TODO: Write interface.
         rm = self.instrument_lib.ResourceManager('@py')
 
         # Open connection.
-        self.instrument = rm.open_resource(self.visa_id,
-                                           baud_rate=self.BAUD_RATE,
-                                           data_bits=self.DATA_BITS,
-                                           flow_control=self.FLOW_CONTROL,
-                                           parity=self.PARITY,
-                                           stop_bits=self.STOP_BITS,
-                                           encoding=self.ENCODING,
-                                           timeout=self.timeout,
-                                           # TODO: Check the following for correctness.
-                                           write_termination='\r',
-                                           read_termination='\r')
+        return rm.open_resource(self.visa_id,
+                                baud_rate=self.BAUD_RATE,
+                                data_bits=self.DATA_BITS,
+                                flow_control=self.FLOW_CONTROL,
+                                parity=self.PARITY,
+                                stop_bits=self.STOP_BITS,
+                                encoding=self.ENCODING,
+                                timeout=self.timeout,
+                                # TODO: Check the following for correctness.
+                                write_termination='\r',
+                                read_termination='\r')
 
     def _close(self):
         # TODO: Do we want to set everything back to a specific state or just leave as is?
