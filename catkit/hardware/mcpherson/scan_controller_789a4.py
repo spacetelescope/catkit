@@ -154,15 +154,18 @@ class McPherson789A4(Instrument):  # TODO: Write interface.
     def poll_motion(self, break_conditions, timeout=DEFAULT_POLL_TIMEOUT, poll=DEFAULT_POLL):
         return self.poll_status(break_conditions, self.get_motion_status, timeout=timeout, poll=poll)
 
+    def await_stop(self, timeout=DEFAULT_POLL_TIMEOUT, poll=DEFAULT_POLL):
+        self.poll_motion((MotionStatus.STOPPED,), timeout=timeout, poll=poll)
+
     def soft_stop(self, timeout=DEFAULT_POLL_TIMEOUT, poll=DEFAULT_POLL):
         """ Send command to stop motor then wait on confirmation that it has actually stopped. """
         self.command(ASCIIControlCodes.SOFT_STOP)
-        self.poll_motion((MotionStatus.STOPPED,), timeout=timeout, poll=poll)
+        self.await_stop(timeout=timeout, poll=poll)
 
     def stop(self, timeout=DEFAULT_POLL_TIMEOUT, poll=DEFAULT_POLL):
         """ Send command to stop motor then wait on confirmation that it has actually stopped. """
         self.command(ASCIIControlCodes.RESET)
-        self.poll_motion((MotionStatus.STOPPED,), timeout=timeout, poll=poll)
+        self.await_stop(timeout=timeout, poll=poll)
 
     def scan(self, steps_per_second):
         """ Constantly velocity motion until either hitting a limit or motion explicitly stopped.

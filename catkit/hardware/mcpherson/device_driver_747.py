@@ -79,7 +79,7 @@ class McPherson747(Instrument):  # TODO: Write interface.
     def set_current_position(self, device_number):
         ...
 
-    def is_in_motion(self, device_number=None):
+    def is_moving(self, device_number=None):
         """ Bits 16-20. Bit 16 := status for all 4 devices. Bits 17-20 correspond to devices 0-4 respectively.
             (1 := moving, 0 := not moving).
         """
