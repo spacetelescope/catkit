@@ -1,4 +1,8 @@
+# TODO: This doesn't belong in catkit.
+
 import enum
+import time
+import warnings
 
 from catkit.interfaces.Instrument import Instrument
 from catkit.hardware.mcpherson.device_driver_747 import McPherson747
@@ -62,11 +66,17 @@ class StufMonochromator(Instrument):
         steps = nm * steps_per_nm
         steps_per_second = nm_per_second * steps_per_nm
 
-        self.scan_controller.relative_move(steps=steps, steps_per_second=steps_per_second)
+        t0 = time.perf_counter()
+        self.scan_controller.slew(steps=steps, steps_per_second=steps_per_second)
 
         if wait:
             duration = nm / nm_per_second
             self.scan_controller.await_stop(timeout=duration * 1.5)
+            t1 = time.perf_counter()
+
+            tol = 0.1
+            if t1 - t0 > duration * (1 + tol):
+                warnings.warn(f"Scan duration {tol*100:.2f}% longer than expected ({t1 - t0 - duration:.2f}s > {duration:.2f}s).")
 
     def is_moving(self):
         return self.scan_controller.is_moving() or self.grating_controller.is_moving()
