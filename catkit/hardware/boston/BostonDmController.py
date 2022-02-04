@@ -5,7 +5,7 @@ import threading
 import numpy as np
 
 from catkit.interfaces.DeformableMirrorController import DeformableMirrorController
-from catkit.hardware.boston.DmCommand import DmCommand
+from catkit.hardware.boston.DmCommand import DmCommand, convert_dm_image_to_command
 from catkit.multiprocessing import SharedMemoryManager
 
 
