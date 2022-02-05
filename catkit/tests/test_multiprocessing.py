@@ -14,6 +14,8 @@ from catkit.emulators.npoint_tiptilt import SimNPointLC400
 from catkit.interfaces.Instrument import Instrument, InstrumentBaseProxy
 from catkit.multiprocessing import Mutex, Process, SharedMemoryManager
 
+CI = os.environ.get('CI') in ('True', 'true')
+
 TIMEOUT = 5  # Use a shorter timeout for testing.
 
 
@@ -386,6 +388,7 @@ SharedMemoryManager.register("FastDummyInstProxy", proxytype=DummyInst.WaferThin
 
 # shape, limit = (712, 712), 50  # Image.
 # shape, limit = ((34, 34, 2)), 900  # Double Boston Dm command.
+@pytest.mark.skipif(CI, reason="Perf tests")
 @pytest.mark.parametrize(("shape", "limit"), (((712, 712), 50), ((34, 34, 2), 900)))
 def test_Mbps(shape, limit):
     with SharedMemoryManager(address=("127.0.0.1", 6060)) as manager:

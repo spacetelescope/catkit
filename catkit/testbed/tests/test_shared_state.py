@@ -13,6 +13,7 @@ import pytest
 from catkit.testbed.caching import MutexedDict, UserCache
 from catkit.multiprocessing import MutexedNamespaceSingleton, Process, SharedMemoryManager, SharedState, SHARED_STATE_ADDRESS
 
+CI = os.environ.get('CI') in ('True', 'true')
 
 TIMEOUT = 2  # Use a shorter timeout for testing.
 
@@ -560,6 +561,7 @@ def test_co_mutex(reset_HicatTestbedState):
         client1.join()
 
 
+@pytest.mark.skipif(CI, reason="Perf tests")
 def test_access_time(reset_HicatTestbedState):
     with SharedMemoryManager(address=SHARED_STATE_ADDRESS) as manager:
         shared_state = HicatTestbedState()
@@ -593,6 +595,7 @@ def test_access_time(reset_HicatTestbedState):
 
 # shape, limit = (712, 712), 50  # Image.
 # shape, limit = ((34, 34, 2)), 1000  # Double Boston Dm command.
+@pytest.mark.skipif(CI, reason="Perf tests")
 @pytest.mark.parametrize(("shape", "limit"), (((712, 712), 50), ((34, 34, 2), 1000)))
 def test_Mbps(reset_HicatTestbedState, shape, limit):
     with SharedMemoryManager(address=SHARED_STATE_ADDRESS) as manager:
