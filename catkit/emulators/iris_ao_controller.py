@@ -1,6 +1,7 @@
 import os
 
 import astropy.units as u
+from multiprocess.managers import BaseProxy
 import numpy as np
 import poppy
 
@@ -9,10 +10,11 @@ import catkit.hardware.iris_ao.segmented_dm_command as segmented_dm_command
 import catkit.hardware.iris_ao.util
 from catkit.interfaces.Instrument import SimInstrument
 import catkit.util
+from catkit.multiprocessing import MutexedNamespace
 from packaging.version import Version
 
 
-class PoppyIrisAODM(poppy.dms.HexSegmentedDeformableMirror):
+class PoppyIrisAODM(MutexedNamespace, poppy.dms.HexSegmentedDeformableMirror):
 
     @property
     def number_of_segments(self):
@@ -94,7 +96,7 @@ class PoppyIrisAOEmulator:
 
         self.driver_serial = driver_serial
 
-        assert isinstance(dm, PoppyIrisAODM)
+        assert isinstance(dm, (PoppyIrisAODM, BaseProxy)), type(dm)
         self.dm = dm  # An instance of PoppyIrisAODM.
 
     def Popen(self,

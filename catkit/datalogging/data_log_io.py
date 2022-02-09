@@ -215,6 +215,7 @@ class SerializableEvent(Event):
         self._serialized_length = None
         self._log_dir = None
 
+
 class DataLogWriter(object):
     '''A writer to write events to a binary log file.
 
@@ -240,6 +241,8 @@ class DataLogWriter(object):
         if index_fname is None:
             index_fname = _INDEX_FNAME
 
+        os.makedirs(self.log_dir, exist_ok=True)
+
         self.index_path = os.path.join(log_dir, index_fname)
 
         if os.path.exists(self.index_path):
@@ -252,6 +255,14 @@ class DataLogWriter(object):
 
         self._n = 0
         self._closed = False
+
+    def __enter__(self):
+        # TODO: Should/can this ADD itself to catkit.datalogging?
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # TODO: Should/can this REMOVE itself to catkit.datalogging?
+        return self.close()
 
     def log(self, wall_time, tag, value, value_type):
         '''Add an event to the log file.
@@ -331,6 +342,7 @@ class DataLogWriter(object):
 
         self._closed = True
 
+
 class DataLogReader(object):
     '''A reader for data log files produced by `DataLogWriter`.
 
@@ -358,6 +370,12 @@ class DataLogReader(object):
         self._last_modified = 0
 
         self.reload()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self.close()
 
     def reload(self, force=False):
         '''Reload the data log from disk.

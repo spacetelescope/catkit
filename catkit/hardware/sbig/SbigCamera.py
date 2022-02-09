@@ -29,7 +29,7 @@ class SbigCamera(Camera):
     NO_IMAGE_AVAILABLE = 0
     IMAGE_AVAILABLE = 1
 
-    log = logging.getLogger(__name__)
+    log = logging.getLogger()
 
     def initialize(self, *args, **kwargs):
         """Loads the SBIG config information and verifies that the camera is idle.

@@ -12,7 +12,7 @@ jobs:
     name: flake8 (syntax only) on Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 2
+      max-parallel: 1
       matrix:
         python-version: [3.7]
     env:

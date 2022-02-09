@@ -2,6 +2,11 @@ from abc import ABC, abstractmethod
 import inspect
 import logging
 
+
+from multiprocessing.managers import AcquirerProxy
+
+from catkit.multiprocessing import Mutex, MutexedNamespaceAutoProxy, MutexedNamespace, SharedMemoryManager
+
 _not_permitted_error = "Positional args are not permitted. Call with explicit keyword args only.\n"\
                        "E.g., def func(a, b) called as func(1, 2) -> func(a=1, b=2)"
 
@@ -27,7 +32,46 @@ def call_with_correct_args(func, object=None, kwargs_to_assign=None, **kwargs):
     return func(**func_kwargs)
 
 
-class Instrument(ABC):
+class InstrumentBaseProxy(AcquirerProxy):
+    """ self._callmethod() isn't mutexed.
+
+        WARNING: This is NOT implicitly mutexed on a per call basis and is therefore not implicitly thread safe.
+                 To make thread safe the user must suitably call ``self.acquire()`` from the client - don't forget
+                 to call ``release()`` when done. Alternatively, context management can be used as the following
+                 ``with self.get_mutex():``.
+
+        NOTE: The child class must define ``_method_to_typeid_`` such that "__enter__" returns the correct
+        registered child proxy.
+
+        E.g.,
+
+        ``_method_to_typeid_ = {"__enter__": "registered_name_of_child_proxy", **InstrumentBaseProxy._method_to_typeid_}``
+    """
+    # NOTE: We inherit from AcquirerProxy and not Mutex.Proxy to avoid conditionals in NamespaceProxy (which Mutex.Proxy
+    # is a child of). However, we still want the functionality of Mutex.Proxy.get_mutex().
+
+    _method_to_typeid_ = {"get_mutex": "MutexProxy"}
+
+    def get_mutex(self):
+        return self._callmethod("get_mutex")
+
+    def is_open(self):
+        return self._callmethod("is_open")
+
+    # AcquirerProxy.__enter__ calls acquire. We want to override their semantics to an open & close context.
+    # NOTE: If accessing via catkit.testbed.caching.DeviceCacheEnum, this is reverted back to acquire semantics.
+    # E.g.,
+    #      DeviceCacheEnum.MEMBER.__enter__() => Instrument.acquire()
+    #      DeviceCacheEnum.MEMBER().__enter__() => Instrument.__enter__()
+    def __enter__(self, *args, **kwargs):
+        return self._callmethod("__enter__", args=args, kwds=kwargs)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # NOTE: Tracebacks can't be pickled (currently), so pass exc_tb as None instead.
+        return self._callmethod("__exit__", args=(exc_type, exc_val, None))
+
+
+class Instrument(MutexedNamespace, ABC):
     """ This is the abstract base class intended to to be inherited and ultimately implemented
     by all of our hardware classes (actual or emulated/simulated).
     This is not pure and is not intended to be, such that restrictions can be imposed to safely
@@ -55,7 +99,9 @@ class Instrument(ABC):
     def __init__(self, config_id, *not_permitted, **kwargs):
         if not_permitted:
             raise TypeError(_not_permitted_error)
-        self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__qualname__}")
+
+        self._context_counter = 0  # Used to count __enter__ & __exit__ paired usage.
+        self.log = logging.getLogger()
         self.instrument = None  # Make local, intentionally shadowing class member.
         self.__keep_alive = False  # Back door - DO NOT USE!!!
         self.config_id = config_id
@@ -64,19 +110,26 @@ class Instrument(ABC):
         self.log.info("Initialized '{}' (but connection is not open)".format(config_id))
 
     # Context manager Enter function, gets called automatically when the "with" statement is used.
+    # Only the outer most `with` does anything, all others are NOOPs.
     def __enter__(self):
-        # Attempt to force the use of ``with`` by only opening here and not in __init__().
-        self.__open()
+        if self._context_counter == 0:
+            # Attempt to force the use of ``with`` by only opening here and not in __init__().
+            self.__open()
+
+        self._context_counter += 1
         return self
 
     # Context manager Exit function, gets called automatically the code exits the context of the "with" statement.
+    # Only the outer most `with` does anything, all others are NOOPs.
     def __exit__(self, exception_type, exception_value, exception_traceback):
-        try:
-            if not self.__keep_alive:
-                self.__close()
-        finally:
-            # Reset, single use basis only.
-            self.__keep_alive = False
+        self._context_counter -= 1
+        if self._context_counter < 1:
+            try:
+                if not self.__keep_alive:
+                    self.__close()
+            finally:
+                # Reset, single use basis only.
+                self.__keep_alive = False
 
     def __del__(self):
         self.__close()
@@ -92,8 +145,24 @@ class Instrument(ABC):
             self.instrument = self._open()
             self.log.info("Opened connection to '{}'".format(self.config_id))
         except Exception:
-            self.__close()
+            #self.__close()
             raise
+
+    def _forced_safe_close(self):
+        """ Bypass mutex and close device.
+
+            It's possible for a client mutex to deadlock or just fail to release thus blocking all access to the
+            device, including the ability to close it - which can not happen. To resolve this we hijack the mutex by
+            replacing it with another and then close as normal.
+
+            NOTE: This can cause an original ``release()`` to raise since the underlying mutex has changed. However,
+            for this occur something has already gone wrong and closing the device is more important than worrying about
+            exceptions amongst exceptions.
+        """
+        mutex = Mutex()
+        with mutex:
+            object.__setattr__(self, "_catkit_mutex", mutex)
+            return self.__close()
 
     def __close(self):
         # __func() can't be overridden without also overriding those that call it.
@@ -116,6 +185,39 @@ class Instrument(ABC):
     @abstractmethod
     def _close(self):
         """Close connection to self.instrument. Must be a NOOP if self.instrument is None"""
+
+    def get_instrument_lib(self):
+        return self.instrument_lib
+
+    def is_open(self):
+        return self.instrument is not None
+
+    class Proxy(MutexedNamespaceAutoProxy):
+
+        _method_to_typeid_ = {"__enter__": "InstrumentProxy",
+                              "get_instrument_lib": "MutexedNamespaceAutoProxy",
+                              **MutexedNamespaceAutoProxy._method_to_typeid_}
+
+        # MutexedNamespaceAutoProxy.__enter__ calls acquire rather than letting the base __enter__ call acquire.
+        # We thus want to revert their proxy semantics to an open & close context.
+        # NOTE: Ideally we would just inherit from InstrumentBaseProxy, however, MutexedNamespaceAutoProxy doesn't
+        # support this.
+        __enter__ = InstrumentBaseProxy.__enter__
+        __exit__ = InstrumentBaseProxy.__exit__
+
+        def get_instrument_lib(self):
+            return self._callmethod("get_instrument_lib")
+
+        @property
+        def instrument_lib(self):
+            return self.get_instrument_lib()
+
+        @property
+        def instrument(self):
+            raise AttributeError("The attribute `instrument` is not accessible from a client.")
+
+
+SharedMemoryManager.register("InstrumentProxy", proxytype=Instrument.Proxy, create_method=False)
 
 
 class SimInstrument(Instrument, ABC):

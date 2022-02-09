@@ -8,7 +8,7 @@ from catkit.interfaces.BackupPower import BackupPower
 
 class SnmpUps(BackupPower):
 
-    log = logging.getLogger(__name__)
+    log = logging.getLogger()
 
     def __init__(self, config_id, ip, snmp_oid, pass_status, port=161, community="public"):
         self.config_id = config_id
