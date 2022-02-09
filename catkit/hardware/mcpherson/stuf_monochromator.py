@@ -9,6 +9,15 @@ from catkit.hardware.mcpherson.device_driver_747 import McPherson747
 from catkit.hardware.mcpherson.scan_controller_789a4 import McPherson789A4WithLimitSwitches
 
 
+# STUF model: 234/302
+# STUF gratings: 355-107853-1 1200 g/mm concave corrected grating, Al+MgF2 coated, master holographic
+#                355-110987-1 600 g/mm concave corrected grating, Al+MgF2 coated, master holographic
+
+# For 234/302:
+# 600 g/mm => 4nm/rev
+# 1200 g/mm => 2nm/rev
+
+
 class Grating(enum.Enum):
     def __init__(self, g_per_mm, nm_rev, position):
         self.g_per_mm = g_per_mm
