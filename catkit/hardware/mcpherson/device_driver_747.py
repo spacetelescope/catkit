@@ -60,6 +60,8 @@ class McPherson747(PyVisaInstrument):
     ENCODING = "ascii"
     QUERY_TIMEOUT = 800  # ms
     HEADER_TIMEOUT = 20000  # ms
+    WRITE_TERMINATION = ''
+    READ_TERMINATION = '\r'
 
     def initialize(self, visa_id, timeout=1):
         self.visa_id = visa_id
@@ -80,14 +82,13 @@ class McPherson747(PyVisaInstrument):
                                            stop_bits=self.STOP_BITS,
                                            encoding=self.ENCODING,
                                            timeout=self.timeout,
-                                           write_termination='',
-                                           read_termination='\r')
+                                           write_termination=self.WRITE_TERMINATION,
+                                           read_termination=self.READ_TERMINATION)
 
         self.await_stop()
         return self.instrument
 
     def _close(self):
-        # TODO: Do we want to set everything back to a specific state or just leave as is?
         if self.instrument:
             self.instrument.close()
 
