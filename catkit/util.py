@@ -256,3 +256,65 @@ def raise_signal(signum):
         win32api.GenerateConsoleCtrlEvent(win32con.CTRL_C_EVENT, 0)
     else:
         os.kill(os.getpid(), signal.SIGINT)
+
+
+def bit_check(data, bit):
+    mask = (data >> (bit - 1))
+    return mask & 1
+
+
+def bit_set(data, bit):
+    """ Note: This is NOT in place. """
+    mask = (data << (bit - 1))
+    return mask | data
+
+
+def poll_status(break_states, func, timeout=60, poll_interval=0):
+    """ Used to poll status whilst motor is in motion.
+    This polls the device by calling `func` at intervals of self.QUERY_DELAY until `func() is in break_states`.
+    :param break_states: iterable of states - Stop polling when func() returns a value matching that in break_states.
+    :param func: callable - The function called to query the device status.
+    :param timeout: int, float (optional) - Raise TimeoutError if break_states are not met within timeout seconds.
+    :returns: Returns the last value returned from func().
+    """
+
+    timeout = timeout * 1e9  # Convert s -> ns.
+
+    status = None
+    counter = 0
+    while counter < timeout:
+        t0 = time.perf_counter_ns()
+        status = func()
+
+        if poll_interval:
+            time.sleep(poll_interval)
+
+        t = time.perf_counter_ns() - t0
+
+        if status in break_states:
+            break
+
+        # NOTE: There's no need to sleep between iterations as there is already a query delay effectively doing the
+        # same thing.
+        if timeout is not None and timeout > 0:
+            counter += t
+
+    if counter >= timeout:
+        raise TimeoutError(f"Motor failed to complete operation within {timeout}s")
+
+    return status
+
+
+def to_ascii_hex_pair(x):
+    y = f"{x:X}"
+    if len(y) % 2 != 0:
+        # pad leading 0
+        y = "0" + y
+    return y
+
+
+def lrc(msg):
+    lrc = 0
+    for byte in msg.encode("ascii"):
+        lrc ^= byte
+    return lrc

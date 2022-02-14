@@ -1,7 +1,7 @@
 import enum
-import time
 
-from catkit.interfaces.Instrument import Instrument
+from catkit.hardware.pyvisa_instrument import PyVisaInstrument, CommandEchoError
+import catkit.util
 import pyvisa
 
 
@@ -48,14 +48,7 @@ class AddressSpace(enum.Enum):
     DESTINATION_POSITION_DEV_4 = 0o2253
 
 
-# TODO: Move to base class.
-class CommandEchoError(IOError):
-    def __init__(self, cmd, echo):
-        msg = f"The device responded with a command different from that sent. Expected: '{cmd}' got '{echo}'"
-        super().__init__(msg)
-
-
-class McPherson747(Instrument):  # TODO: Write interface.
+class McPherson747(PyVisaInstrument):
 
     instrument_lib = pyvisa
 
@@ -98,22 +91,9 @@ class McPherson747(Instrument):  # TODO: Write interface.
         if self.instrument:
             self.instrument.close()
 
-    # TODO: Move to utils.
-    @staticmethod
-    def to_ascii_hex_pair(x):
-        y = f"{x:X}"
-        if len(y) % 2 != 0:
-            # pad leading 0
-            y = "0" + y
-        return y
-
-    # TODO: Move to utils.
     @staticmethod
     def lrc(msg):
-        lrc = 0
-        for byte in msg.encode("ascii"):
-            lrc ^= byte
-        return McPherson747.to_ascii_hex_pair(lrc)
+        return catkit.util.to_ascii_hex_pair(catkit.util.lrc(msg))
 
     @staticmethod
     def format_header(address, read):
@@ -296,89 +276,6 @@ class McPherson747(Instrument):  # TODO: Write interface.
         if echo != cmd:
             raise CommandEchoError(cmd, echo)
 
-    # TODO: Move read_all() and read_all_bytes() to a base class that both this class and read_all_bytes inherit from.
-    def read_all(self):
-        """ Helper func for when read/writes are out of sync - consume all waiting reads until buffer is empty.
-        :return list of read data.
-        """
-
-        data = []
-        try:
-            while True:
-                data.append(self.instrument.read())
-        except pyvisa.VisaIOError:
-            pass
-        return data
-
-    def read_all_bytes(self):
-        """ Helper func for when read/writes are out of sync - consume all waiting reads until buffer is empty.
-        :return list of read data.
-        """
-
-        data = []
-        try:
-            while True:
-                data.append(self.instrument.read_bytes(1))
-        except pyvisa.VisaIOError:
-            pass
-        return data
-
-    # TODO: move to catkit.util
-    @staticmethod
-    def bit_check(data, bit):
-        mask = (data >> (bit - 1))
-        return mask & 1
-
-    # TODO: move to catkit.util
-    @staticmethod
-    def bit_set(data, bit):
-        """ Note: This is NOT in place. """
-        mask = (data << (bit - 1))
-        return mask | data
-
-    # TODO: move to catkit.util
-    def poll_status(self, break_states, func, timeout=DEFAULT_POLL_TIMEOUT, poll_interval=0):
-        """ Used to poll status whilst motor is in motion.
-        This polls the device by calling `func` at intervals of self.QUERY_DELAY until `func() is in break_states`.
-        :param break_states: iterable of states - Stop polling when func() returns a value matching that in break_states.
-        :param func: callable - The function called to query the device status.
-        :param timeout: int, float (optional) - Raise TimeoutError if break_states are not met within timeout seconds.
-        :returns: Returns the last value returned from func().
-        """
-
-        timeout = timeout * 1e9  # Convert s -> ns.
-
-        status = None
-        counter = 0
-        while counter < timeout:
-            t0 = time.perf_counter_ns()
-            status = func()
-
-            if poll_interval:
-                time.sleep(poll_interval)
-
-            t = time.perf_counter_ns() - t0
-
-            if status in break_states:
-                break
-
-            # NOTE: There's no need to sleep between iterations as there is already a query delay effectively doing the
-            # same thing.
-            if timeout is not None and timeout > 0:
-                counter += t
-
-        if counter >= timeout:
-            raise TimeoutError(f"Motor failed to complete operation within {timeout}s")
-
-        return status
-
-    def await_stop(self, timeout=DEFAULT_POLL_TIMEOUT, poll_interval=0):
-        """ Wait for device to indicate it has stopped moving.
-        :param timeout: int, float (optional) - Raise TimeoutError if the devices hasn't stopped within timeout seconds.
-                                                0, None, & negative values => infinite timeout.
-        """
-        self.poll_status((False,), self.is_moving, timeout=timeout, poll_interval=poll_interval)
-
     def initialize_device(self, device_number):
         raise NotImplementedError()
 
@@ -390,7 +287,7 @@ class McPherson747(Instrument):  # TODO: Write interface.
             return False
 
         # TODO: This isn't working, data from device doesn't match pattern in manual.
-        return self.bit_check(int(data), device_number) == 0
+        return catkit.util.bit_check(ord(data), device_number) == 0
 
     def check_error_flag(self):
         raise NotImplementedError()
@@ -424,9 +321,16 @@ class McPherson747(Instrument):  # TODO: Write interface.
         """
         resp = ord(self.read_request(address=AddressSpace.MOTION_FLAG.value)[1])
 
-        any_in_motion = bool(self.bit_check(resp, 1))
+        any_in_motion = bool(catkit.util.bit_check(resp, 1))
 
         if device_number is None or not any_in_motion:
             return any_in_motion
         else:
-            return bool(self.bit_check(resp, device_number + 1))
+            return bool(catkit.util.bit_check(resp, device_number + 1))
+
+    def await_stop(self, timeout=DEFAULT_POLL_TIMEOUT, poll_interval=0):
+        """ Wait for device to indicate it has stopped moving.
+        :param timeout: int, float (optional) - Raise TimeoutError if the devices hasn't stopped within timeout seconds.
+                                                0, None, & negative values => infinite timeout.
+        """
+        catkit.util.poll_status((False,), self.is_moving, timeout=timeout, poll_interval=poll_interval)
