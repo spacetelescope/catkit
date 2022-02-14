@@ -41,7 +41,7 @@ class ASCIIControlCodes(enum.Enum):
 
 class LimitSwitchStatus(enum.Enum):
     # NOTE: It's possible to be both HOME & LOW as the HOME region is wide enough to include the LOW limit.
-    NO_LIMIT = 0  # Not at any of the below. NOTE: Could be HOME but requires home switch to be enabled.
+    INBETWEEN = 0  # Not at any of the below. NOTE: Could be HOME but requires home switch to be enabled.
     HOME = 32  # NOTE: Requires home switch to be enabled.
     HIGH = 64
     LOW = 128
@@ -462,7 +462,7 @@ class McPherson789A4WithLimitSwitches(McPherson789A4):
     def get_limit_status(self):
         """ Query the device for limit status.
 
-        :return: LimitSwitchStatus.LOW, LimitSwitchStatus.HIGH, LimitSwitchStatus.NO_LIMIT. NOTE: This does not return
+        :return: LimitSwitchStatus.LOW, LimitSwitchStatus.HIGH, LimitSwitchStatus.INBETWEEN. NOTE: This does not return
                  LimitSwitchStatus.HOME for that equivalent functionality call self.is_home().
         """
         resp = np.int32(self.command(ASCIIControlCodes.GET_LIMIT_SWITCH_STATUS))
@@ -478,7 +478,7 @@ class McPherson789A4WithLimitSwitches(McPherson789A4):
 
     def poll_limit_status(self, break_conditions, *args, **kwargs):
         """ Poll device for limit status. See self.poll_status() for more info. """
-        return self.poll_status(break_conditions, *args, **kwargs)
+        return self.poll_status(break_conditions, self.get_limit_status, *args, **kwargs)
 
     def is_home(self, toggle_home_switch=True):
         """ Query whether the device is in the HOME position/region.
