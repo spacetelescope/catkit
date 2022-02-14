@@ -5,6 +5,8 @@ import time
 import warnings
 
 from catkit.interfaces.Instrument import Instrument
+from catkit.hardware.pyvisa_instrument import PyVisaInstrument, CommandEchoError
+import catkit.util
 import numpy as np
 import pyvisa
 
@@ -60,7 +62,7 @@ class Parameters(enum.Enum):
     SCAN_SPEED = ASCIIControlCodes.SCAN_SPEED.value
 
 
-class McPherson789A4(Instrument):
+class McPherson789A4(PyVisaInstrument):
     """ Base class for Mcpherson 789A-4 scan controller.
         NOTE: This class has no homing functionality, for that use McPherson789A4WithLimitSwitches.
     """
@@ -210,7 +212,7 @@ class McPherson789A4(Instrument):
         resp = self.instrument.query(cmd)
 
         if resp[0] != cmd:
-            raise RuntimeError(f"The device responded with a command different from that sent. Expected: '{cmd}' got '{resp[0]}'")
+            raise CommandEchoError(cmd, resp[0])
 
         resp = resp[1:]  # The first char is the mirrored cmd 'X' so remove it from data before parsing.
         resp = re.findall("[A-Z]+=[ ]*[0-9]+", resp)  # Example: resp = "K= 50 I= 1000 V= 61440"
@@ -250,7 +252,7 @@ class McPherson789A4(Instrument):
         if message_sent != cmd_resp:
             # The controller replies back with the written cmd, failing to read this will cause communication to become out
             # of sync and thus cause future commands to fail to work (without raising an error).
-            raise RuntimeError(f"The device responded with a command different from that sent. Expected: '{message_sent}' got '{cmd_resp}'")
+            raise CommandEchoError(message_sent, cmd_resp)
 
         return resp_data
 
@@ -286,32 +288,6 @@ class McPherson789A4(Instrument):
 
         return actual_scan_speed
 
-    def read_all(self):
-        """ Helper func for when read/writes are out of sync - consume all waiting reads until buffer is empty.
-
-        :return list of read data.
-        """
-
-        data = []
-        try:
-            while True:
-                data.append(self.instrument.read())
-        except pyvisa.VisaIOError:
-            pass
-
-    def read_all_bytes(self):
-        """ Helper func for when read/writes are out of sync - consume all waiting reads until buffer is empty.
-
-        :return list of read data.
-        """
-
-        data = []
-        try:
-            while True:
-                data.append(self.instrument.read_bytes(1))
-        except pyvisa.VisaIOError:
-            pass
-
     def get_motion_status(self):
         """ This never returns MotionStatus.Moving, if it is moving is returns in which
             mode it is moving.
@@ -334,37 +310,9 @@ class McPherson789A4(Instrument):
         """ Returns bool. """
         return self.get_motion_status() is not MotionStatus.STOPPED
 
-    def poll_status(self, break_states, func, timeout=DEFAULT_POLL_TIMEOUT):
-        """ Used to poll status whilst motor is in motion.
-        This polls the device by calling `func` at intervals of self.QUERY_DELAY until `func() is in break_states`.
-
-        :param break_states: iterable of states - Stop polling when func() returns a value matching that in break_states.
-        :param func: callable - The function called to query the device status.
-        :param timeout: int, float (optional) - Raise TimeoutError if break_states are not met within timeout seconds.
-
-        :returns: Returns the last value returned from func().
-        """
-
-        status = None
-        counter = 0
-        while counter < timeout:
-            status = func()
-            if status in break_states:
-                break
-
-            # NOTE: There's no need to sleep between iterations as there is already a query delay effectively doing the
-            # same thing.
-            if timeout is not None and timeout > 0:
-                counter += self.QUERY_DELAY
-
-        if counter >= timeout:
-            raise TimeoutError(f"Motor failed to complete operation within {timeout}s")
-
-        return status
-
     def poll_motion(self, break_conditions, *args, **kwargs):
-        """ Poll device for motion status. See self.poll_status() for more info. """
-        return self.poll_status(break_conditions, self.get_motion_status, *args, **kwargs)
+        """ Poll device for motion status. See catkit.util.poll_status() for more info. """
+        return catkit.util.poll_status(break_conditions, self.get_motion_status, *args, **kwargs)
 
     def await_stop(self, timeout=DEFAULT_POLL_TIMEOUT):
         """ Wait for device to indicate it has stopped moving. Poll the device at intervals of self.QUERY_DELAY until
@@ -477,8 +425,8 @@ class McPherson789A4WithLimitSwitches(McPherson789A4):
         return status
 
     def poll_limit_status(self, break_conditions, *args, **kwargs):
-        """ Poll device for limit status. See self.poll_status() for more info. """
-        return self.poll_status(break_conditions, self.get_limit_status, *args, **kwargs)
+        """ Poll device for limit status. See catkit.util.poll_status() for more info. """
+        return catkit.util.poll_status(break_conditions, self.get_limit_status, *args, **kwargs)
 
     def is_home(self, toggle_home_switch=True):
         """ Query whether the device is in the HOME position/region.
@@ -512,7 +460,7 @@ class McPherson789A4WithLimitSwitches(McPherson789A4):
         """
 
         poll_func = functools.partial(self.is_home, toggle_home_switch=False)
-        self.poll_status((True,), poll_func, timeout=timeout)
+        catkit.util.poll_status((True,), poll_func, timeout=timeout)
 
     def await_not_home(self, timeout=DEFAULT_POLL_TIMEOUT):
         """ Wait for device to indicate it is NO LONGER in the home position/region. Poll the device at intervals of
@@ -525,7 +473,7 @@ class McPherson789A4WithLimitSwitches(McPherson789A4):
         """
 
         poll_func = functools.partial(self.is_home, toggle_home_switch=False)
-        self.poll_status((False,), poll_func, timeout=timeout)
+        catkit.util.poll_status((False,), poll_func, timeout=timeout)
 
     def find_edge(self, steps_per_second, timeout=DEFAULT_POLL_TIMEOUT):
         """ Find the upper edge of the home region. This is the actual "home" position.
