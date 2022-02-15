@@ -170,6 +170,8 @@ class Instrument(Service, MutexedNamespace, ABC):
         if not_permitted:
             raise TypeError(_not_permitted_error)
 
+        super().__init__(disable=not run_as_service)
+
         self.run_as_service = run_as_service
         self._context_counter = 0  # Used to count __enter__ & __exit__ paired usage.
         self.log = logging.getLogger()
