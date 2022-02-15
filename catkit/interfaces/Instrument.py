@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 import inspect
 import logging
+import threading
 
 
 from multiprocessing.managers import AcquirerProxy
 
-from catkit.multiprocessing import Mutex, MutexedNamespaceAutoProxy, MutexedNamespace, SharedMemoryManager
+from catkit.multiprocessing import DEFAULT_TIMEOUT, Mutex, MutexedNamespaceAutoProxy, MutexedNamespace, SharedMemoryManager
 
 _not_permitted_error = "Positional args are not permitted. Call with explicit keyword args only.\n"\
                        "E.g., def func(a, b) called as func(1, 2) -> func(a=1, b=2)"
@@ -71,7 +72,76 @@ class InstrumentBaseProxy(AcquirerProxy):
         return self._callmethod("__exit__", args=(exc_type, exc_val, None))
 
 
-class Instrument(MutexedNamespace, ABC):
+class Service:
+
+    def __init__(self, disable=False):
+        self.log = logging.getLogger()
+
+        self.service_thread = None
+        self.exception_handler = None
+
+        self.pause_event = None
+        self.un_pause_event = None
+        self.stop_event = None
+
+        if not disable:
+            self.exception_handler = SharedMemoryManager(...)
+            self.pause_event = self.exception_handler.get_event(...)
+            self.un_pause_event = self.exception_handler.get_event(...)
+            self.stop_event = self.exception_handler.get_event(...)
+
+    def run_service(self):
+        self.service_thread = threading.Thread(target=self.serve, daemon=False)
+        self.service_thread.start()
+        self.log.info(f"Running {self.__class__.__name__} as a service.")
+
+    def stop_service(self, timeout=DEFAULT_TIMEOUT):
+        if self.service_thread and self.service_thread.is_alive():
+            # Set events to stop service loop.
+            self.stop_event.set()
+            self.un_pause_event.set()
+
+            self.log.info(f"Waiting for {self.__class__.__name__} service to stop...")
+            self.service_thread.join(timeout=timeout)
+
+            # Did the service stop or did it timeout?
+            if self.service_thread.is_alive():
+                # TODO: Should service_thread be daemonic? If so, I think there would be enough of a window for comms
+                # to get corrupted, from the forced thread kill, which could cause subsequent closure issues thus
+                # presenting as a device safety concern, e.g., not being able to flatten the boston.
+                TimeoutError(f"{self.__class__.__name__} service failed to stop within {timeout}s.")
+
+    def serve(self):
+        self.initializer()
+        while not self.stop_event.is_set():
+            if self.pause_event.is_set():
+
+                # Pause
+                self.un_pause_event.wait()
+
+                # Reset
+                self.un_pause_event.clear()
+                self.pause_event.clear()
+                # Check stop_event again.
+
+                if self.stop_event.is_set():
+                    break
+
+            self.server_loop()  # NOTE: We could even abstract the stream interaction from this abstract method such
+                                # that anyone writing/adding a new device only has to give the func to acquire/send
+                                # the data.
+                                # Note: a flag might then be needed to disambiguate between devices that push to
+                                # streams (e.g., cams) from those that pull (e.g., DMs).
+
+    def initializer(self, *args, **kwargs):
+        ...
+
+    @abstractmethod
+    def server_loop(self, *args, **kwargs):
+        ...
+
+
+class Instrument(Service, MutexedNamespace, ABC):
     """ This is the abstract base class intended to to be inherited and ultimately implemented
     by all of our hardware classes (actual or emulated/simulated).
     This is not pure and is not intended to be, such that restrictions can be imposed to safely
@@ -96,10 +166,11 @@ class Instrument(MutexedNamespace, ABC):
     # Is an issue otherwise if an  __init__() raises before self.instrument = None is set.
     instrument = None
 
-    def __init__(self, config_id, *not_permitted, **kwargs):
+    def __init__(self, config_id, *not_permitted, run_as_service=False, **kwargs):
         if not_permitted:
             raise TypeError(_not_permitted_error)
 
+        self.run_as_service = run_as_service
         self._context_counter = 0  # Used to count __enter__ & __exit__ paired usage.
         self.log = logging.getLogger()
         self.instrument = None  # Make local, intentionally shadowing class member.
@@ -144,6 +215,9 @@ class Instrument(MutexedNamespace, ABC):
         try:
             self.instrument = self._open()
             self.log.info("Opened connection to '{}'".format(self.config_id))
+
+            if self.run_as_service:
+                self.run_service()
         except Exception:
             #self.__close()
             raise
@@ -167,9 +241,20 @@ class Instrument(MutexedNamespace, ABC):
     def __close(self):
         # __func() can't be overridden without also overriding those that call it.
         try:
+            if self.run_as_service:
+                self.stop_service()
+
             if self.instrument:
-                self._close()
-                self.log.info("Safely closed connection to '{}'".format(self.config_id))
+                try:
+                    self._close()
+                    self.log.info("Safely closed connection to '{}'".format(self.config_id))
+                except Exception:
+                    if not self.run_as_service:
+                        raise
+
+                    # We may have tried closing mid service loop which caused the close to fail.
+                    self.instrument = self._open()
+                    self._close()
         finally:
             self.instrument = None
 
