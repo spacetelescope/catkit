@@ -1,11 +1,8 @@
 import enum
 
-from catkit.hardware.pyvisa_instrument import PyVisaInstrument, CommandEchoError
+from catkit.hardware.pyvisa_instrument import CommandEchoError, DEFAULT_POLL_TIMEOUT, PyVisaInstrument
 import catkit.util
 import pyvisa
-
-
-DEFAULT_POLL_TIMEOUT = 60  # This is not the comms timeout but that allowed for total polling duration (seconds).
 
 
 class ControlCodes(enum.Enum):
@@ -306,15 +303,10 @@ class McPherson747(PyVisaInstrument):
         if wait:
             self.await_stop(timeout=timeout)
 
-    # TODO: This may not make semantic sense for all devices so move to STUF mono.
-    def toggle_position(self, device_number, wait=True, timeout=DEFAULT_POLL_TIMEOUT):
-        current_position = self.get_current_position(device_number)
-
-        if current_position not in (1, 2):
-            raise RuntimeError(f"Expected position of 1|2 but got '{current_position}'")
-
-        destination_position = 1 if current_position == 2 else 2
-        self.set_current_position(device_number, destination_position, wait=wait, timeout=timeout)
+            # Check.
+            current_position = self.get_current_position(device_number)
+            if current_position != position:
+                raise RuntimeError(f"Failed to move to desired position '{position}', still at '{current_position}'")
 
     def is_moving(self, device_number=None):
         """ Bits 16-20. Bit 16 := status for all 4 devices. Bits 17-20 correspond to devices 0-4 respectively.

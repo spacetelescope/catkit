@@ -3,6 +3,9 @@ import pyvisa
 from catkit.interfaces.Instrument import Instrument
 
 
+DEFAULT_POLL_TIMEOUT = 60  # This is not the comms timeout but that allowed for total polling duration (seconds).
+
+
 class CommandEchoError(IOError):
     def __init__(self, cmd, echo):
         msg = f"The device responded with a command different from that sent. Expected: '{cmd}' got '{echo}'"

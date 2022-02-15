@@ -4,15 +4,13 @@ import re
 import time
 import warnings
 
-from catkit.interfaces.Instrument import Instrument
-from catkit.hardware.pyvisa_instrument import PyVisaInstrument, CommandEchoError
+from catkit.hardware.pyvisa_instrument import CommandEchoError, DEFAULT_POLL_TIMEOUT, PyVisaInstrument
 import catkit.util
 import numpy as np
 import pyvisa
 
 
 DEFAULT_POLL = 0.8  # As documented in manual (seconds).
-DEFAULT_POLL_TIMEOUT = 60  # This is not the comms timeout but that allowed for total polling duration (seconds).
 
 
 class ASCIIControlCodes(enum.Enum):
@@ -343,7 +341,7 @@ class McPherson789A4(PyVisaInstrument):
         """
         self.command(ASCIIControlCodes.CONSTANT_VELOCITY_MOVE, steps_per_second)
 
-    def slew(self, steps, steps_per_second=None, reset_speed=True, wait=False):
+    def slew(self, steps, steps_per_second=None, reset_speed=True, wait=False, timeout=DEFAULT_POLL_TIMEOUT):
         """ Move motor by a number of steps at a given speed.
 
         :param: steps: int - The number of steps to move by. + values move "up", - values move "down". NOTE: May not
@@ -355,6 +353,9 @@ class McPherson789A4(PyVisaInstrument):
                                               the device. This value will be persistent. If False allow value to persist
                                               otherwise reset velocity to that prior to calling this func.
         :param wait: bool (optional) - Whether to wait for motion to have stopped before returning from this func.
+        :param timeout: int, float (optional) - Raise TimeoutError if the devices hasn't stopped within timeout
+                                                seconds (only applies when `wait` is True.
+                                                0, None, & negative values => infinite timeout.
 
         :return: int - steps_per_second, actual motor velocity.
         """
@@ -365,15 +366,14 @@ class McPherson789A4(PyVisaInstrument):
         velocity_changed = False
 
         # Set speed.
-        if steps_per_second is not None:
-            if steps_per_second != actual_scan_speed:
+        if steps_per_second is not None and steps_per_second != actual_scan_speed:
                 actual_scan_speed = self.set_slew_speed(steps_per_second)
                 velocity_changed = True
 
         self.command(cmd, steps)
 
         if wait:
-            self.await_stop()
+            self.await_stop(timeout=timeout)
 
         if reset_speed and velocity_changed:
             self.set_slew_speed(initial_scan_speed)
