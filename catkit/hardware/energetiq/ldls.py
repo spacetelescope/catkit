@@ -55,6 +55,15 @@ def get_status():
     resp = resp1 + ';' + resp2 + ';' + resp3 + ';' + resp4 + ';' + resp5 + '\n'
     return resp
 
+
+def get_controller_fault():
+    raise NotImplementedError()
+
+
+def setParams(*args, **kwargs):
+    raise NotImplementedError()
+
+
 def get_laser_status():
     try:
         pinNum = GPIO['laser_state']
@@ -63,7 +72,7 @@ def get_laser_status():
             resp = 'OK: ON\n'
         else:
             resp = 'OK: OFF\n'
-    except:
+    except Exception:
         resp = 'BAD'
     return resp
 
@@ -75,7 +84,7 @@ def get_lamp_status():
             resp = 'OK: ON\n'
         else:
             resp = 'OK: OFF\n'
-    except:
+    except Exception:
         resp = 'BAD'
     return resp
 
@@ -87,7 +96,7 @@ def get_lamp_fault():
             resp = 'OK: NO FAULT\n'
         else:
             resp = 'OK: FAULT\n'
-    except:
+    except Exception:
         resp = 'BAD'
     return resp
 
@@ -99,7 +108,7 @@ def get_interlock_status():
             resp = 'OK: OFF\n'
         else:
             resp = 'OK: ON\n'
-    except:
+    except Exception:
         resp = 'BAD'
     return resp
 
@@ -111,7 +120,7 @@ def get_controller_status():
             resp = 'OK: NO FAULT\n'
         else:
             resp = 'OK: FAULT\n'
-    except:
+    except Exception:
         resp = 'BAD'
     return resp
 
@@ -120,7 +129,7 @@ def set_lamp(state):
         pinNum = GPIO['lamp_operate']
         pi.write(pinNum, state)
         resp = 'OK'
-    except:
+    except Exception:
         resp = 'BAD'
     return resp
 
@@ -129,7 +138,7 @@ def set_interlock(state):
         pinNum = GPIO['interlock']
         pi.write(pinNum, state)
         resp = 'OK'
-    except:
+    except Exception:
         resp = 'BAD'
     return resp
 
@@ -259,5 +268,5 @@ if __name__ == "__main__":
         asyncio.run(main(HOST,PORT))
     except KeyboardInterrupt:
         print('...Closing server...')
-    except:
+    except Exception:
         print('Unknown error')

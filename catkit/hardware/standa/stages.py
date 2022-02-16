@@ -16,7 +16,7 @@ os.chdir(cur_dir)
 ximcDir = (f'{cur_dir}/ximc-2.13.3/ximc')
 ximcPackageDir = os.path.join(ximcDir, "crossplatform", "wrappers", "python")
 sys.path.append(ximcPackageDir)
-from pyximc import *
+from pyximc import *  # noqa: E402
 
 class Stage:
     def __init__(self, lib, deviceID, name, softStops, homeOffset, conversionFactor, units):

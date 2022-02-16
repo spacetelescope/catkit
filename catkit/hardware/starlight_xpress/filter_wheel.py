@@ -277,7 +277,7 @@ async def handle_client(reader, writer):
                     # create a new thread for the command
                     comThread = threading.Thread(target=handle_command, args=(log, writer, dataDec,))
                     comThread.start()
-            except:
+            except Exception:
                 # create a new thread for the command
                 comThread = threading.Thread(target=handle_command, args=(log, writer, dataDec,))
                 comThread.start()
@@ -309,5 +309,5 @@ if __name__ == "__main__":
         asyncio.run(main(HOST,PORT))
     except KeyboardInterrupt:
         print('...Closing server...')
-    except:
+    except Exception:
         print('Unknown error')
