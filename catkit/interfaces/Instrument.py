@@ -128,7 +128,7 @@ class Service:
                 if self.stop_event.is_set():
                     break
 
-            self.server_loop()  # NOTE: We could even abstract the stream interaction from this abstract method such
+            self.service_loop()  # NOTE: We could even abstract the stream interaction from this abstract method such
                                 # that anyone writing/adding a new device only has to give the func to acquire/send
                                 # the data.
                                 # Note: a flag might then be needed to disambiguate between devices that push to
@@ -138,7 +138,7 @@ class Service:
         ...
 
     @abstractmethod
-    def server_loop(self, *args, **kwargs):
+    def service_loop(self, *args, **kwargs):
         ...
 
 
