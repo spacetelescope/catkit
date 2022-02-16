@@ -75,6 +75,7 @@ class InstrumentBaseProxy(AcquirerProxy):
 class Service:
 
     def __init__(self, disable=False):
+        super().__init__()
         self.log = logging.getLogger()
 
         self.service_thread = None
@@ -162,10 +163,6 @@ class Instrument(Service, MutexedNamespace, ABC):
 
     instrument_lib = None
 
-    # Initialize this here such that it always exists for __del__().
-    # Is an issue otherwise if an  __init__() raises before self.instrument = None is set.
-    instrument = None
-
     def __init__(self, config_id, *not_permitted, run_as_service=False, **kwargs):
         if not_permitted:
             raise TypeError(_not_permitted_error)
@@ -243,13 +240,14 @@ class Instrument(Service, MutexedNamespace, ABC):
     def __close(self):
         # __func() can't be overridden without also overriding those that call it.
         try:
-            if self.run_as_service:
+            if getattr(self, "run_as_service", None):
                 self.stop_service()
 
-            if self.instrument:
+            if getattr(self, "instrument", None):
                 try:
                     self._close()
-                    self.log.info("Safely closed connection to '{}'".format(self.config_id))
+                    if getattr(self, "log", None):
+                        self.log.info("Safely closed connection to '{}'".format(self.config_id))
                 except Exception:
                     if not self.run_as_service:
                         raise
