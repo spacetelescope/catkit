@@ -244,17 +244,9 @@ class Instrument(Service, MutexedNamespace, ABC):
                 self.stop_service()
 
             if getattr(self, "instrument", None):
-                try:
-                    self._close()
-                    if getattr(self, "log", None):
-                        self.log.info("Safely closed connection to '{}'".format(self.config_id))
-                except Exception:
-                    if not self.run_as_service:
-                        raise
-
-                    # We may have tried closing mid service loop which caused the close to fail.
-                    self.instrument = self._open()
-                    self._close()
+                self._close()
+                if getattr(self, "log", None):
+                    self.log.info("Safely closed connection to '{}'".format(self.config_id))
         finally:
             self.instrument = None
 
