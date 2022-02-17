@@ -26,7 +26,9 @@ for item in all_files:
 exclude_exceptions_containing = ["zwoas",
                                  "bmc",
                                  "TSP01",
-                                 "test_testbed"]
+                                 "test_testbed",
+                                 "PyIndi",
+                                 "ximc"]
 
 
 @pytest.mark.parametrize("to_import", all_imports)
