@@ -8,6 +8,9 @@ from catkit.interfaces.PowerMeter import PowerMeter
 import catkit.util
 
 
+APP_NAME = "Thorlabs Optical Power Monitor.exe"
+
+
 class LazyLoadLibraryMeta(type):
     # Forward any call to a function to the library. Autoload the library upon first call.
     def __getattr__(cls, name):
@@ -59,6 +62,11 @@ class ThorlabsPM(PowerMeter):
     def initialize(self, serial_number):
         self.serial_number = serial_number
 
+    @staticmethod
+    def raise_if_app_running():
+        if catkit.util.is_process_alive(APP_NAME):
+            raise RuntimeError(f"Close {APP_NAME} and try again.")
+
     def _open(self):
         self.instrument = ctypes.c_void_p(None)
 
@@ -78,7 +86,10 @@ class ThorlabsPM(PowerMeter):
         # use ctypes.pointer() to allow the emulator to modify this parameter
         status = self.instrument_lib.TLPM_init(self.device_name.encode(), True, True, ctypes.pointer(self.instrument))
         if status or self.instrument.value is None:
-            raise OSError("TLPM: Failed to connect - '{}'".format(self.get_error_message(status)))
+            try:
+                self.raise_if_app_running()
+            finally:
+                raise OSError("TLPM: Failed to connect - '{}'".format(self.get_error_message(status)))
 
         return self.instrument
 
