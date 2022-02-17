@@ -2,6 +2,7 @@ import importlib
 import os
 import logging
 import logging.handlers
+import psutil
 import signal
 import time
 from catkit.catkit_types import MetaDataEntry
@@ -318,3 +319,20 @@ def lrc(msg):
     for byte in msg.encode("ascii"):
         lrc ^= byte
     return lrc
+
+
+def is_process_alive(process_id):
+    """ Query processes for `process_id`
+
+    :param process_id: str, int - Process name or PID.
+
+    :return: bool
+    """
+    for p in psutil.process_iter():
+        try:
+            if process_id in (p.name(), p.pid):
+                return True
+        except psutil.NoSuchProcess:
+            # We don't care whether zombie processes (never present on Windows).
+            continue
+    return False

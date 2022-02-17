@@ -37,6 +37,11 @@ except Exception as error:
     raise ImportError("TSP01: Failed to import '{}' library @ '{}'".format(TSP01_REQUIRED_LIB, TSP01_LIB_PATH)) from error
 
 
+APP_NAME = "TSP01GUI"
+if os.name == "nt":
+    APP_NAME = APP_NAME + ".exe"
+
+
 class TSP01(TemperatureHumiditySensor):
     # Don't use this class directly, instead use TSP01RevB.
     instrument_lib = TSP01_LIB
@@ -52,6 +57,11 @@ class TSP01(TemperatureHumiditySensor):
 
         self.sleep_time_reset = 5  # estimated time for the reset of the device to be applied before instantiation (undocumented).
         self.sleep_time_read = 1  # device cannot be read more often than 1 time per second (per documentation)
+
+    @staticmethod
+    def raise_if_app_running():
+        if catkit.util.is_process_alive(APP_NAME):
+            raise RuntimeError(f"Close {APP_NAME} and try again.")
 
     def _open(self):
 
@@ -72,8 +82,11 @@ class TSP01(TemperatureHumiditySensor):
         # int TLTSPB_init(char * device_name, bool id_query, bool reset_device, void ** connection)
         status = self.instrument_lib.TLTSPB_init(self.device_name.encode(), True, True, ctypes.byref(self.instrument))
         if status or self.instrument.value is None:
-            raise OSError("TSP01: Failed to connect - '{}'".format(self.get_error_message(status)))
-        
+            try:
+                self.raise_if_app_running()
+            finally:
+                raise OSError("TSP01: Failed to connect - '{}'".format(self.get_error_message(status)))
+
         return self.instrument
 
     @classmethod
