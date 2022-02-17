@@ -37,7 +37,9 @@ except Exception as error:
     raise ImportError("TSP01: Failed to import '{}' library @ '{}'".format(TSP01_REQUIRED_LIB, TSP01_LIB_PATH)) from error
 
 
-APP_NAME = "TSP01GUI.exe"
+APP_NAME = "TSP01GUI"
+if os.name == "nt":
+    APP_NAME = APP_NAME + ".exe"
 
 
 class TSP01(TemperatureHumiditySensor):

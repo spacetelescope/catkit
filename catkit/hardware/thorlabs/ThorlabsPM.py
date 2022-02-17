@@ -8,7 +8,9 @@ from catkit.interfaces.PowerMeter import PowerMeter
 import catkit.util
 
 
-APP_NAME = "Thorlabs Optical Power Monitor.exe"
+APP_NAME = "Thorlabs Optical Power Monitor"
+if os.name == "nt":
+    APP_NAME = APP_NAME + ".exe"
 
 
 class LazyLoadLibraryMeta(type):
