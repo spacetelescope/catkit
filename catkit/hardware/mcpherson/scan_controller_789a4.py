@@ -352,6 +352,7 @@ class McPherson789A4(PyVisaInstrument):
         :param reset_speed: bool (optional) - To slew at the requested velocity (if given) the velocity must be set on
                                               the device. This value will be persistent. If False allow value to persist
                                               otherwise reset velocity to that prior to calling this func.
+                                              NOTE: Only available if wait is True.
         :param wait: bool (optional) - Whether to wait for motion to have stopped before returning from this func.
         :param timeout: int, float (optional) - Raise TimeoutError if the devices hasn't stopped within timeout
                                                 seconds (only applies when `wait` is True.
@@ -375,8 +376,8 @@ class McPherson789A4(PyVisaInstrument):
         if wait:
             self.await_stop(timeout=timeout)
 
-        if reset_speed and velocity_changed:
-            self.set_slew_speed(initial_scan_speed)
+            if reset_speed and velocity_changed:
+                self.set_slew_speed(initial_scan_speed)
 
         return actual_scan_speed
 
