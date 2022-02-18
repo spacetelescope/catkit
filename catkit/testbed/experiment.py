@@ -94,7 +94,7 @@ class Testbed:
         for test in safety_tests:
             self.safety_tests.append(test())
 
-    def __enter__(self):
+    def start(self):
         try:
             self._setup()
 
@@ -125,9 +125,15 @@ class Testbed:
             finally:
                 raise
 
+    def stop(self):
+        return self._teardown()
+
+    def __enter__(self):
+        return self.start()
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
-            self._teardown()
+            self.stop()
         finally:
             if exc_type:
                 self.log.exception("The testbed encountered the following error(s):")
