@@ -270,7 +270,7 @@ class McPherson789A4(PyVisaInstrument):
         steps_per_second = int(np.abs(steps_per_second))
 
         if self.MIN_SCAN_SPEED < steps_per_second > self.MAX_SCAN_SPEED:
-            raise ValueError(f"{self.MIN_SCAN_SPEED} > SCAN_SPEED < {self.MAX_SCAN_SPEED} NOT {steps_per_second}.")
+            raise ValueError(f"{self.MIN_SCAN_SPEED} > SCAN_SPEED < {self.MAX_SCAN_SPEED} NOT {steps_per_second} (steps/s).")
 
         self.command(ASCIIControlCodes.SCAN_SPEED, steps_per_second)
 
@@ -560,6 +560,6 @@ class McPherson789A4WithLimitSwitches(McPherson789A4):
             # motor beyond the home region which will cause self.find_edge() to raise.
             self.find_edge(steps_per_second=edge_detection_velocity, timeout=timeout)
 
-            print(f"Homing complete. ({time.perf_counter() - t0})s")  # TODO: Should be self.log().
+            print(f"Homing complete. ({time.perf_counter() - t0}s)")  # TODO: Should be self.log().
         finally:
             self.command(ASCIIControlCodes.DISABLE_HOME_SWITCH)

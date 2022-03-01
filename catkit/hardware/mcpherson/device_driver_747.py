@@ -117,18 +117,18 @@ class McPherson747(PyVisaInstrument):
 
         address = AddressSpace(address)
 
-        controller_address = McPherson747.to_ascii_hex_pair(AddressSpace.DEFAULT_ADDRESS.value + AddressSpace.OFFSET.value)
+        controller_address = catkit.util.to_ascii_hex_pair(AddressSpace.DEFAULT_ADDRESS.value + AddressSpace.OFFSET.value)
 
         read_op = ControlCodes.READ.value if read else ControlCodes.WRITE.value
 
-        v_memory_address = McPherson747.to_ascii_hex_pair(address.value + AddressSpace.OFFSET.value)
+        v_memory_address = catkit.util.to_ascii_hex_pair(address.value + AddressSpace.OFFSET.value)
         starting_address_msb = v_memory_address[:2]
         starting_address_lsb = v_memory_address[2:]
 
         n_complete_data_blocks = "00"
         n_partial_data_blocks = "04"
 
-        host_address = McPherson747.to_ascii_hex_pair(AddressSpace.DEFAULT_ADDRESS.value + AddressSpace.OFFSET.value)
+        host_address = catkit.util.to_ascii_hex_pair(AddressSpace.DEFAULT_ADDRESS.value + AddressSpace.OFFSET.value)
 
         # NOTE: The header is sent as an ascii string.
         header = controller_address + read_op + ControlCodes.DTYPE_VMEM.value + starting_address_msb + \
