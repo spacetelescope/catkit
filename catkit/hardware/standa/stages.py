@@ -6,18 +6,18 @@
 # Generic Stage Class
 
 import ctypes
-import logging
 import math
 import os
 import sys
 
 from catkit.interfaces.Instrument import Instrument
+import catkit.util
 
 try:
     library_path = os.environ.get('CATKIT_PYXIMC_LIB_PATH')
     if library_path:
         sys.path.append(library_path)
-    import pyximc
+    import pyximc  # noqa: E402
 except Exception as error:
     pyximc = error
 
@@ -233,3 +233,10 @@ class Stage(Instrument):
         result = self.instrument_lib.lib.command_sstp(self.instrument)
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("Soft stop failed")
+
+    def await_stop(self, *args, **kwargs):
+        """ Wait for device to indicate it has stopped moving.
+
+            See catkit.util.poll_status for API.
+        """
+        return catkit.util.poll_status((False,), self.is_moving, *args, **kwargs)
