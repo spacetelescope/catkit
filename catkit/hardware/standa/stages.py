@@ -13,13 +13,20 @@ import sys
 
 from catkit.interfaces.Instrument import Instrument
 
+try:
+    library_path = os.environ.get('CATKIT_PYXIMC_LIB_PATH')
+    if library_path:
+        sys.path.append(library_path)
+    import pyximc
+except Exception as error:
+    pyximc = error
 
-cur_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-os.chdir(cur_dir)
-ximcDir = (f'{cur_dir}/ximc-2.13.3/ximc')
-ximcPackageDir = os.path.join(ximcDir, "crossplatform", "wrappers", "python")
-sys.path.append(ximcPackageDir)
-import pyximc  # noqa: E402
+# cur_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+# os.chdir(cur_dir)
+# ximcDir = (f'{cur_dir}/ximc-2.13.3/ximc')
+# ximcPackageDir = os.path.join(ximcDir, "crossplatform", "wrappers", "python")
+# sys.path.append(ximcPackageDir)
+# import pyximc  # noqa: E402
 
 
 class Stage(Instrument):
@@ -27,6 +34,9 @@ class Stage(Instrument):
     instrument_lib = pyximc
 
     def initialize(self, deviceID, softStops, homeOffset, conversionFactor, units):
+        if isinstance(self.instrument_lib, Exception):
+            raise self.instrument_lib
+
         self.deviceID = deviceID
         self.softStops = softStops
         self.u_homeOffset, self.homeOffset = math.modf(homeOffset)
@@ -34,7 +44,7 @@ class Stage(Instrument):
         self.units = units
 
     def _open(self):
-        return self.instrument_lib.open_device(self.deviceID)
+        return self.instrument_lib.lib.open_device(self.deviceID)
 
     def _close(self):
         # TODO: Do we not need to close something here?
@@ -63,7 +73,7 @@ class Stage(Instrument):
         hmst.uHomeDelta = int(self.u_homeOffset)
         # hmst.HomeFlags = int(370)
 
-        result = self.instrument_lib.command_homezero(self.instrument)
+        result = self.instrument_lib.lib.command_homezero(self.instrument)
 
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("command_homezero failed")
@@ -71,7 +81,7 @@ class Stage(Instrument):
     def get_home_settings(self):
         hmst = self.instrument_lib.home_settings_t()
         
-        result = self.instrument_lib.get_home_settings(self.instrument, ctypes.byref(hmst))
+        result = self.instrument_lib.lib.get_home_settings(self.instrument, ctypes.byref(hmst))
         
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("get_home_settings() failed")
@@ -96,7 +106,7 @@ class Stage(Instrument):
         # convert the decimal to #/256
         u_pos = u_pos * 256
 
-        result = self.instrument_lib.command_move(self.instrument, int(pos), int(u_pos))
+        result = self.instrument_lib.lib.command_move(self.instrument, int(pos), int(u_pos))
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("command_move() failed")
     
@@ -123,7 +133,7 @@ class Stage(Instrument):
         """
 
         mvst = self.instrument_lib.move_settings_t()
-        result = self.instrument_lib.get_move_settings(self.instrument, ctypes.byref(mvst))
+        result = self.instrument_lib.lib.get_move_settings(self.instrument, ctypes.byref(mvst))
 
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("get_move_settings() failed")
@@ -137,7 +147,7 @@ class Stage(Instrument):
         # prepare move_settings_t struct
         mvst.Speed = int(speed)
         mvst.uSpeed = int(u_speed)
-        result = self.instrument_lib.set_move_settings(self.instrument, ctypes.byref(mvst))
+        result = self.instrument_lib.lib.set_move_settings(self.instrument, ctypes.byref(mvst))
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("set_move_settings() failed")
 
@@ -150,7 +160,7 @@ class Stage(Instrument):
         - mvst.uSpeed   Leftover uSteps
         """
         mvst = self.instrument_lib.move_settings_t()
-        result = self.instrument_lib.get_move_settings(self.instrument, ctypes.byref(mvst))
+        result = self.instrument_lib.lib.get_move_settings(self.instrument, ctypes.byref(mvst))
 
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("get_move_settings() failed")
@@ -164,7 +174,7 @@ class Stage(Instrument):
         :return: str "BUSY" | "IDLE"
         """
         deviceStatus = self.instrument_lib.status_t()
-        result = self.instrument_lib.get_status(self.instrument, ctypes.byref(deviceStatus))
+        result = self.instrument_lib.lib.get_status(self.instrument, ctypes.byref(deviceStatus))
 
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("get_status() failed")
@@ -188,7 +198,7 @@ class Stage(Instrument):
         :return: stagePosition Position of the stage
         """
         stagePositionTmp = self.instrument_lib.get_position_t()
-        result = self.instrument_lib.get_position(self.instrument, ctypes.byref(stagePositionTmp))
+        result = self.instrument_lib.lib.get_position(self.instrument, ctypes.byref(stagePositionTmp))
 
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("get_position() failed")
@@ -205,7 +215,7 @@ class Stage(Instrument):
         :return: stagePosition Position of the stage
         """
         stagePositionTmp = self.instrument_lib.get_position_t()
-        result = self.instrument_lib.get_position(self.instrument, ctypes.byref(stagePositionTmp))
+        result = self.instrument_lib.lib.get_position(self.instrument, ctypes.byref(stagePositionTmp))
 
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("get_position() failed")
@@ -221,6 +231,6 @@ class Stage(Instrument):
         return self.conversionFactor * self.get_enc_position()[1]
 
     def stop(self):
-        result = self.instrument_lib.command_sstp(self.instrument)
+        result = self.instrument_lib.lib.command_sstp(self.instrument)
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("Soft stop failed")
