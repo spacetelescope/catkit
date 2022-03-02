@@ -47,8 +47,7 @@ class Stage(Instrument):
         return self.instrument_lib.lib.open_device(self.deviceID)
 
     def _close(self):
-        # TODO: Do we not need to close something here?
-        ...
+        self.instrument_lib.lib.close_device(ctypes.byref(self.instrument))
 
     def home(self):
         """
