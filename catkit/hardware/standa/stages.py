@@ -35,15 +35,16 @@ class Stage(Instrument):
 
     instrument_lib = pyximc
 
-    def initialize(self, deviceID, softStops, homeOffset, conversionFactor, units):
+    def initialize(self, softStops, homeOffset, conversionFactor, units):
         if isinstance(self.instrument_lib, Exception):
             raise self.instrument_lib
 
-        self.deviceID = deviceID
         self.softStops = softStops
         self.u_homeOffset, self.homeOffset = math.modf(homeOffset)
         self.conversionFactor = conversionFactor
         self.units = units
+
+        self.deviceID = self.get_device_id(self.config_id)
 
     def _open(self):
         return self.instrument_lib.lib.open_device(self.deviceID)
@@ -242,3 +243,37 @@ class Stage(Instrument):
             See catkit.util.poll_status for API.
         """
         return catkit.util.poll_status((False,), self.is_moving, *args, **kwargs)
+
+    def scan_for_devices(self):
+        """
+        Scans for motor controllers on USB
+
+        Returns the list of devices found
+        """
+        probe_flags = self.instrument_lib.EnumerateFlags.ENUMERATE_PROBE
+        devenum = self.instrument_lib.lib.enumerate_devices(probe_flags, None)
+        dev_count = self.instrument_lib.lib.get_device_count(devenum)
+        controller_name = self.instrument_lib.controller_name_t()
+
+        devices_list = []
+        for dev_ind in range(dev_count):
+            enum_name = self.instrument_lib.lib.get_device_name(devenum, dev_ind)
+            result = self.instrument_lib.lib.get_enumerate_device_controller_name(devenum, dev_ind, ctypes.byref(controller_name))
+
+            if result == self.instrument_lib.Result.Ok:
+                devices_list.append(enum_name)
+
+        return devices_list
+
+    def get_device_id(self, id_str):
+        # Get device ID number.
+        device_list = self.scan_for_devices()
+
+        if not device_list:
+            raise RuntimeError("No devices found.")
+
+        for item in device_list:
+            if id_str in repr(item):
+                return item
+
+        raise RuntimeError(f"'{id_str}' not present in device list: '{device_list}'.")
