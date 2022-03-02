@@ -13,6 +13,8 @@ import sys
 from catkit.interfaces.Instrument import Instrument
 import catkit.util
 
+
+# https://files.xisupport.com/Software.en.html
 try:
     library_path = os.environ.get('CATKIT_PYXIMC_LIB_PATH')
     if library_path:
