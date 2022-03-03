@@ -1,4 +1,5 @@
 import enum
+from multiprocess.managers import NamespaceProxy
 import os
 import time
 
@@ -126,5 +127,22 @@ class LDLS(Instrument):
                 if self.controller_fault_detected():
                     raise RuntimeError("Controller fault detected.")
 
+    class Proxy(NamespaceProxy):
+        _exposed_ = ("__enter__", "__exit__", "source_on", "source_off")
+        _method_to_typeid_ = {"__enter__": "LDLSProxy"}
 
-SharedMemoryManager.register("LDLS", callable=LDLS)
+        def __enter__(self):
+            return self._callmethod("__enter__")
+
+        def __exit__(self, *args, **kwargs):
+            return self._callmethod("__exit__", args=args, kwds=kwargs)
+
+        def source_on(self, *args, **kwargs):
+            return self._callmethod("source_on", args=args, kwds=kwargs)
+
+        def source_off(self, *args, **kwargs):
+            return self._callmethod("source_off", args=args, kwds=kwargs)
+
+
+SharedMemoryManager.register("LDLS", callable=LDLS, proxytype=LDLS.Proxy, create_method=True)
+SharedMemoryManager.register("LDLSProxy", callable=LDLS.Proxy, create_method=False)
