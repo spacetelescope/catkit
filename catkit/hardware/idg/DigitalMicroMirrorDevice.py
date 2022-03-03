@@ -57,15 +57,17 @@ class DigitalMicroMirrorDevice(DeformableMirrorController):
             raise ConnectionError(f'The socket is not responding as expected, test message responded with {response}.')
 
     def connect(self):
-        try:
-            self.test()
-        except Exception:
-            pass
-
         # Connection is reset every ~10 seconds
         if self.instrument is None:
             self.instrument = self.instrument_lib.socket(self.address_family, self.instrument_lib.SOCK_STREAM)
-        self.instrument.connect(self.address)
+
+        try:
+            self.instrument.recv(1, socket.MSG_DONTWAIT | socket.MSG_PEEK)  # TODO: check availability on windows.
+        except Exception:
+            # Assume that we're the only one wanting to connect such that we don't have to check EAGAIN|EWOULDBLOCK in
+            # the event that the above read failed because we tried to read whilst something else was and not that the
+            # connection wasn't open.
+            self.instrument.connect(self.address)
 
         self.test()
 
