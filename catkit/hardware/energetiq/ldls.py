@@ -71,10 +71,12 @@ class LDLS(Instrument):
         return bool(self.instrument.read(Pin.controller_fault.value))
 
     def set_lamp(self, state):
+        state = int(state)
         self.instrument.write(Pin.lamp_operate.value, state)
         time.sleep(self.sleep_interval)
 
     def set_interlock(self, state):
+        state = int(state)
         self.instrument.write(Pin.interlock.value, state)
         time.sleep(self.sleep_interval)
 
@@ -86,10 +88,11 @@ class LDLS(Instrument):
                 self.instrument.set_mode(pin.value, self.instrument_lib.OUTPUT)
 
     def source_on(self, wait=True):
-        self.set_interlock(1)
-        self.set_lamp(0)  # 0 := ON
+        self.set_interlock(True)
+        self.set_lamp(True)
 
-        assert self.is_lamp_on()
+        if not self.is_lamp_on() or self.lamp_fault_detected() or self.controller_fault_detected():
+            raise RuntimeError("Fault detected.")
 
         if wait:
             counter = 0
@@ -99,9 +102,15 @@ class LDLS(Instrument):
                 time.sleep(1)
                 counter += 1
 
+            try:
+                raise TimeoutError(f"The laser took longer than {self.laser_timeout} to warm up.")
+            finally:
+                if self.lamp_fault_detected():
+                    raise RuntimeError("Lamp fault detected.")
+
     def source_off(self, wait=True):
-        self.set_lamp(1)  # 1 := OFF
-        self.set_interlock(0)
+        self.set_lamp(False)
+        self.set_interlock(False)
 
         if wait:
             counter = 0
@@ -110,6 +119,12 @@ class LDLS(Instrument):
                     return
                 time.sleep(1)
                 counter += 1
+
+            try:
+                raise TimeoutError(f"The laser took longer than {self.laser_timeout} to turn off.")
+            finally:
+                if self.controller_fault_detected():
+                    raise RuntimeError("Controller fault detected.")
 
 
 SharedMemoryManager.register("LDLS", callable=LDLS)
