@@ -1,4 +1,4 @@
-## -- IMPORTS
+import multiprocess.connection
 import os
 import socket
 
@@ -16,13 +16,7 @@ class DigitalMicroMirrorDevice(DeformableMirrorController):
 
     Parameters
     ----------
-    config_id : str
-        ID to map the controller to device specifics. 
-    address : str
-        Address for the scoket connection. NOTE : this will almost definitely
-        change when the DMD gets a more permanent home?
-    port : int
-        Port number for the socket connection.
+    address : Address for the socket connection.
     start_on_whiteout : bool
         Whether to apply a whiteout to the controller to start. 
     max_diff : int
@@ -38,17 +32,15 @@ class DigitalMicroMirrorDevice(DeformableMirrorController):
 
     instrument_lib = socket
      
-    def initialize(self, config_id='dlp_7000', address='prolix.dynamic-dns.net', port=1000,
-                   start_on_whiteout=True, max_diff=786432, dmd_size=(768, 1024), 
-                   display_type=32, dmd_data_path='.'):
+    def initialize(self, address, shape, display_type, max_diff, start_on_whiteout=True, dmd_data_path='.'):
         """ Initial function for the DMD Controller."""
 
         self.address = address
-        self.port = port
-        
+        self.address_family = socket.AddressFamily[multiprocess.connection.address_type(self.address)]
+
         self.start_on_whiteout = start_on_whiteout
-        self.dmd_size = dmd_size
-        self.max_diff = dmd_size[0]*dmd_size[1] if max_diff is None else max_diff
+        self.dmd_size = shape
+        self.max_diff = shape[0]*shape[1] if max_diff is None else max_diff
         self.display_type = display_type
         self.dmd_data_path = dmd_data_path
         
@@ -57,29 +49,43 @@ class DigitalMicroMirrorDevice(DeformableMirrorController):
                         # add more if any other common shapes pop up? 
         self.current_dmd_shape = None
 
+    def test(self):
+        # Send a test message to make sure this worked
+        self.instrument.sendall(':TEST\n')
+        response = self.instrument.recv(20)
+        if 'INVALID' not in response:
+            raise ConnectionError(f'The socket is not responding as expected, test message responded with {response}.')
+
+    def connect(self):
+        # Connection is reset every ~10 seconds
+        if self.instrument is None:
+            self.instrument = self.instrument_lib.socket(self.address_family, self.instrument_lib.SOCK_STREAM)
+
+        try:
+            self.instrument.recv(1, socket.MSG_DONTWAIT | socket.MSG_PEEK)  # TODO: check availability on windows.
+        except Exception:
+            # Assume that we're the only one wanting to connect such that we don't have to check EAGAIN|EWOULDBLOCK in
+            # the event that the above read failed because we tried to read whilst something else was and not that the
+            # connection wasn't open.
+            self.instrument.connect(self.address)
+
+        self.test()
+
+        return self.instrument
+
     def _open(self):
         """ Opens a connection to the DMD device. The socket connection will
         time out after a few seconds of inactivity, so this is less opening a
         constant connection and more testing our connection method responds as
         expected."""
 
-        # Connection is reset every ~10 seconds
-        instrument = self.instrument_lib.socket(self.instrument_lib.AF_INET, self.instrument_lib.SOCK_STREAM)
-        instrument.connect((self.address, self.port))
-
-        # If we get this far, a connection has been successfully opened.
-        # Set self.instrument so that we can close if anything here subsequently fails.
-        self.instrument = instrument
-
-        # Send a test message to make sure this worked 
-        instrument.sendall(':TEST\n')
-        response = instrument.recv(20)
-        if 'INVALID' not in response:
-            raise ConnectionError(f'The socket is not responding as expected, test message responded with {response}.')
+        self.instrument = self.connect()
         
         # Apply a whiteout to start 
         if self._start_on_whiteout:
             self.apply_whiteout()
+
+        return self.instrument
      
     def _close(self):
         self.instrument.close()
@@ -94,15 +100,14 @@ class DigitalMicroMirrorDevice(DeformableMirrorController):
         sucessfully received it."""
 
         # reinstantiate connection since it times out
-        instrument = self.instrument_lib.socket(self.instrument_lib.AF_INET, self.instrument_lib.SOCK_STREAM)
-        instrument.connect((self.address, self.port))
+        self.connect()
         
         # Check the command message type
         message_type = command[4]
 
         # Send command
-        instrument.sendall(command.encode())
-        response = str(instrument.recv(30))
+        self.instrument.sendall(command.encode())
+        response = str(self.instrument.recv(30))
         
         # Make sure we successfully send the command, and the message type matches
         if 'SUCCESS' in response and message_type in response:
