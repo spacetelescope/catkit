@@ -49,12 +49,26 @@ class DigitalMicroMirrorDevice(DeformableMirrorController):
                         # add more if any other common shapes pop up? 
         self.current_dmd_shape = None
 
+    def test(self):
+        # Send a test message to make sure this worked
+        self.instrument.sendall(':TEST\n')
+        response = self.instrument.recv(20)
+        if 'INVALID' not in response:
+            raise ConnectionError(f'The socket is not responding as expected, test message responded with {response}.')
+
     def connect(self):
-        # TODO: Needs a test or try/catch to account for double connection.
+        try:
+            self.test()
+        except Exception:
+            pass
+
         # Connection is reset every ~10 seconds
         if self.instrument is None:
             self.instrument = self.instrument_lib.socket(self.address_family, self.instrument_lib.SOCK_STREAM)
         self.instrument.connect(self.address)
+
+        self.test()
+
         return self.instrument
 
     def _open(self):
@@ -64,13 +78,6 @@ class DigitalMicroMirrorDevice(DeformableMirrorController):
         expected."""
 
         self.instrument = self.connect()
-
-        # TODO: Move this test to self.connect()?
-        # Send a test message to make sure this worked 
-        self.instrument.sendall(':TEST\n')
-        response = self.instrument.recv(20)
-        if 'INVALID' not in response:
-            raise ConnectionError(f'The socket is not responding as expected, test message responded with {response}.')
         
         # Apply a whiteout to start 
         if self._start_on_whiteout:
