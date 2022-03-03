@@ -1,5 +1,6 @@
 import enum
 import os
+import time
 
 from catkit.interfaces.Instrument import Instrument
 from catkit.multiprocessing import SharedMemoryManager
@@ -15,16 +16,14 @@ class GPIO(enum.IntEnum):
     interlock = 27
 
 
-# TODO: Do all "sets" require a sleep before returning?
-# TODO: Should all writes be checked with a subsequent read? (May need a query/sleep delay?)
-
 class LDLS(Instrument):
 
     instrument_lib = pigpio
 
-    def initialize(self, address=(os.getenv("PIGPIO_ADDR", 'localhost'),
-                                  os.getenv("PIGPIO_PORT", 8888))):
+    def initialize(self, address=(os.getenv("PIGPIO_ADDR", 'localhost'), os.getenv("PIGPIO_PORT", 8888)),
+                   sleep_interval=1):
         self.address = address
+        self.sleep_interval=sleep_interval
 
     def _open(self):
         instrument = pigpio.pi(host=self.address[0], port=self.address[1])
@@ -69,9 +68,11 @@ class LDLS(Instrument):
 
     def set_lamp(self, state):
         self.instrument.write(GPIO.lamp_operate.value, state)
+        time.sleep(self.sleep_interval)
 
     def set_interlock(self, state):
         self.instrument.write(GPIO.interlock.value, state)
+        time.sleep(self.sleep_interval)
 
     def initialize_gpio(self):
         for pin in GPIO:
