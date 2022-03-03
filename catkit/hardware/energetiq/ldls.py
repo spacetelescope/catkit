@@ -21,9 +21,11 @@ class LDLS(Instrument):
     instrument_lib = pigpio
 
     def initialize(self, address=(os.getenv("PIGPIO_ADDR", 'localhost'), os.getenv("PIGPIO_PORT", 8888)),
-                   sleep_interval=1):
+                   sleep_interval=1, laser_timeout=5*60, power_off_on_exit=False):
         self.address = address
         self.sleep_interval=sleep_interval
+        self.laser_timeout = laser_timeout
+        self.power_off_on_exit = power_off_on_exit
 
     def _open(self):
         instrument = pigpio.pi(host=self.address[0], port=self.address[1])
@@ -37,6 +39,8 @@ class LDLS(Instrument):
         return self.instrument
 
     def _close(self):
+        if self.power_off_on_exit:
+            self.source_off(wait=False)
         self.instrument.stop()
 
     def get_status(self):
@@ -80,6 +84,32 @@ class LDLS(Instrument):
                 self.instrument.set_mode(pin.value, self.instrument_lib.INPUT)
             else:
                 self.instrument.set_mode(pin.value, self.instrument_lib.OUTPUT)
+
+    def source_on(self, wait=True):
+        self.set_interlock(1)
+        self.set_lamp(0)  # 0 := ON
+
+        assert self.is_lamp_on()
+
+        if wait:
+            counter = 0
+            while counter < self.laser_timeout:
+                if self.is_laser_on():
+                    return
+                time.sleep(1)
+                counter += 1
+
+    def source_off(self, wait=True):
+        self.set_lamp(1)  # 1 := OFF
+        self.set_interlock(0)
+
+        if wait:
+            counter = 0
+            while counter < self.laser_timeout:
+                if not self.is_laser_on():
+                    return
+                time.sleep(1)
+                counter += 1
 
 
 SharedMemoryManager.register("LDLS", callable=LDLS)
