@@ -61,8 +61,8 @@ class StandardUSBFilterWheel(FilterWheel):
         return filter_position
 
     def set_position(self, new_position):
-        if self.MIN_POSITION < new_position > self.max_position:
-            raise ValueError(f"Filter number must be in the range {self.MIN_POSITION}-{self.max_position}")
+        if new_position < self.MIN_POSITION or new_position > self.max_position:
+            raise ValueError(f"new_position ({new_position}) must be in the range {self.MIN_POSITION}-{self.max_position}.")
 
         report = list(Report.SET_FILTER.value)
         report[0] = new_position
