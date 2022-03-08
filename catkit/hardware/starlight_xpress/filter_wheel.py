@@ -56,18 +56,19 @@ class StandardUSBFilterWheel(FilterWheel):
         filter_position = 0
         while filter_position == 0:  # 0 := in motion.
             self._hid_set_report(Report.GET_FILTER)
-            filter_number = self._read()[0]
+            filter_position = self._read()[0]
             time.sleep(1)
-        return filter_number
+        return filter_position
 
     def set_position(self, new_position):
         if self.MIN_POSITION < new_position > self.max_position:
             raise ValueError(f"Filter number must be in the range {self.MIN_POSITION}-{self.max_position}")
 
+        report = list(Report.SET_FILTER.value)
+        report[0] = new_position
+
         filter_position = 0
-        while filter_position == 0:  # 0 := in motion.
-            report = Report.SET_FILTER.value
-            report[0] = new_position
+        while filter_position != new_position:
             self._hid_set_report(report)
             filter_position = self._read()[0]
             time.sleep(1)
