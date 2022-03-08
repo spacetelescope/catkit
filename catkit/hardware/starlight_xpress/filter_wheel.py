@@ -5,6 +5,8 @@ from catkit.interfaces.FilterWheel import FilterWheel
 import usb
 
 
+# See catkit/hardware/starlight_xpress/docs for details.
+
 class Report(enum.Enum):
     GET_FILTER = (0, 0)
     SET_FILTER = (1, 0)  # NOTE: 1 is a placeholder for the new filter position.
