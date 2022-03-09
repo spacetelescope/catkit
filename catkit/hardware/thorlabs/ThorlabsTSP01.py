@@ -26,15 +26,17 @@ for path in sys.path:
     TSP01_LIB_PATH = glob.glob(os.path.join(path, TSP01_REQUIRED_LIB))
     if TSP01_LIB_PATH:
         break
-if not TSP01_LIB_PATH:
-    raise ImportError("TSP01: Failed to locate '{}' - add path to PYTHONPATH".format(TSP01_REQUIRED_LIB))
 
 # Now load the found library.
 try:
+    if not TSP01_LIB_PATH:
+        raise ImportError("TSP01: Failed to locate '{}' - add path to PYTHONPATH".format(TSP01_REQUIRED_LIB))
+
     TSP01_LIB = ctypes.cdll.LoadLibrary(TSP01_LIB_PATH[0])
 except Exception as error:
-    TSP01_LIB = None
-    raise ImportError("TSP01: Failed to import '{}' library @ '{}'".format(TSP01_REQUIRED_LIB, TSP01_LIB_PATH)) from error
+    exception = ImportError("TSP01: Failed to import '{}' library @ '{}'".format(TSP01_REQUIRED_LIB, TSP01_LIB_PATH))
+    exception.__cause__ = error
+    TSP01_LIB = exception
 
 
 APP_NAME = "TSP01GUI"
@@ -104,27 +106,26 @@ class TSP01(TemperatureHumiditySensor):
     def create(cls, config_id):
         return cls(config_id=config_id, serial_number=CONFIG_INI.get(config_id, "serial_number"))
 
-    @classmethod
-    def find_all(cls):
+    def find_all(self):
         """Find all connected TSP01 devices."""
 
         # First find the total number of connected TSP01 devices.
         device_count = ctypes.c_int(0)
         # int TLTSPB_findRsrc(void * connection, int * device_count)
-        status = cls.instrument_lib.TLTSPB_findRsrc(None, ctypes.byref(device_count))
+        status = self.instrument_lib.TLTSPB_findRsrc(None, ctypes.byref(device_count))
         if status:
-            raise ImportError("TSP01: Failed when trying to find connected devices - '{}'".format(cls.get_error_message(status)))
+            raise ImportError("TSP01: Failed when trying to find connected devices - '{}'".format(self.get_error_message(status)))
 
         # Then get their resource names.
         available_devices = []
         for i in range(device_count.value):
             # Create  a string buffer to contain result.
-            buffer_size = int(cls.macro_definitions["TLTSP_BUFFER_SIZE"])
+            buffer_size = int(self.macro_definitions["TLTSP_BUFFER_SIZE"])
             buffer = ctypes.create_string_buffer(buffer_size)
             # int TLTSPB_getRsrcName(void * connection, int device_index, char * buffer)
-            status = cls.instrument_lib.TLTSPB_getRsrcName(None, i, buffer)
+            status = self.instrument_lib.TLTSPB_getRsrcName(None, i, buffer)
             if status:
-                raise ImportError("TSP01: Failed when trying to find connected devices - '{}'".format(cls.get_error_message(status)))
+                raise ImportError("TSP01: Failed when trying to find connected devices - '{}'".format(self.get_error_message(status)))
             available_devices.append(buffer.value.decode())
 
         return available_devices
