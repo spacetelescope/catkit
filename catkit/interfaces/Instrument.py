@@ -100,6 +100,9 @@ class Instrument(MutexedNamespace, ABC):
         if not_permitted:
             raise TypeError(_not_permitted_error)
 
+        if isinstance(self.instrument_lib, Exception):
+            raise self.instrument_lib
+
         self._context_counter = 0  # Used to count __enter__ & __exit__ paired usage.
         self.log = logging.getLogger()
         self.instrument = None  # Make local, intentionally shadowing class member.
@@ -225,6 +228,9 @@ class SimInstrument(Instrument, ABC):
     def __init__(self, *not_permitted, **kwargs):
         if not_permitted:
             raise TypeError(_not_permitted_error)
+
+        if isinstance(self.instrument_lib, Exception):
+            raise self.instrument_lib
 
         self.instrument_lib = call_with_correct_args(self.instrument_lib, **kwargs)
         # Pass all **kwargs through as ``__init__()`` calls ``initialize()`` as ``call_with_correct_args(self.initialize, **kwargs)``
