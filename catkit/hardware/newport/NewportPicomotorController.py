@@ -20,7 +20,7 @@ from requests.exceptions import HTTPError
 import urllib
 from urllib.parse import urlencode
 
-from catkit.interfaces.MotorController2 import MotorController2
+from catkit.interfaces.MotorController import MotorController
 import catkit.util
 
 ## -- Let's go.
@@ -37,7 +37,7 @@ def http_except(function):
 
     return wrapper
 
-class NewportPicomotorController(MotorController2):
+class NewportPicomotorController(MotorController):
     """ This class handles all the picomotor stufff. """
     
     instrument_lib = urllib.request
@@ -365,3 +365,6 @@ class NewportPicomotorController(MotorController2):
             response = resp.split('response')[1].split('-->')[1].split('\\r')[0]
 
             return response
+
+    def get_position(self, *args, **kwargs):
+        raise NotImplementedError()
