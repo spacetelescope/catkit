@@ -264,10 +264,16 @@ def bit_check(data, bit):
     return mask & 1
 
 
-def bit_set(data, bit):
+def bit_set(data, bit, value=True):
     """ Note: This is NOT in place. """
-    mask = (data << (bit - 1))
-    return mask | data
+    value = bool(value)
+    mask = (1 << (bit - 1))
+    if value:
+        # Set high.
+        return data | mask
+    else:
+        # Set low.
+        return data & ~mask
 
 
 def poll_status(break_states, func, timeout=60, poll_interval=0):
