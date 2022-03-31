@@ -8,6 +8,7 @@
 import ctypes
 import math
 import os
+import platform
 import sys
 
 from catkit.interfaces.Instrument import Instrument
@@ -16,9 +17,25 @@ import catkit.util
 
 # https://files.xisupport.com/Software.en.html
 try:
-    library_path = os.environ.get('CATKIT_PYXIMC_LIB_PATH')
+    ximc_dir = "C:/Users/stuf/Desktop/stuf installs/ximc-2.13.3/ximc/"
+    library_path = os.path.join(ximc_dir, "crossplatform/wrappers/python/") #os.environ.get('CATKIT_PYXIMC_LIB_PATH')
+    print("lib path", library_path, ximc_dir)
     if library_path:
         sys.path.append(library_path)
+
+    # Depending on your version of Windows, add the path to the required DLLs to the environment variable
+    # bindy.dll
+    # libximc.dll
+    # xiwrapper.dll
+    if platform.system() == "Windows":
+        # Determining the directory with dependencies for windows depending on the bit depth.
+        arch_dir = "win64" if "64" in platform.architecture()[0] else "win32"  #
+        libdir = os.path.join(ximc_dir, arch_dir)
+        if sys.version_info >= (3, 8):
+            os.add_dll_directory(libdir)
+        else:
+            os.environ["Path"] = libdir + ";" + os.environ["Path"]  # add dll path into an environment variable
+
     import pyximc  # noqa: E402
 except Exception as error:
     pyximc = error
