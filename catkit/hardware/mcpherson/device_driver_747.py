@@ -47,8 +47,6 @@ class AddressSpace(enum.Enum):
 
 class McPherson747(PyVisaInstrument):
 
-    instrument_lib = pyvisa
-
     BAUD_RATE = 9600
     DATA_BITS = 8
     STOP_BITS = pyvisa.constants.StopBits.one
@@ -68,10 +66,9 @@ class McPherson747(PyVisaInstrument):
 
     def _open(self):
 
-        rm = self.instrument_lib.ResourceManager("@py")
-
+        # rm = self.instrument_lib.ResourceManager("@py")
         # Open connection.
-        self.instrument = rm.open_resource(self.visa_id,
+        self.instrument = self.instrument_lib.open_resource(self.visa_id,
                                            baud_rate=self.BAUD_RATE,
                                            data_bits=self.DATA_BITS,
                                            flow_control=self.FLOW_CONTROL,

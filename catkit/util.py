@@ -285,11 +285,11 @@ def poll_status(break_states, func, timeout=60, poll_interval=0):
     :returns: Returns the last value returned from func().
     """
 
-    timeout = timeout * 1e9  # Convert s -> ns.
+    timeout_ns = timeout * 1e9  # Convert s -> ns.
 
     status = None
     counter = 0
-    while counter < timeout:
+    while counter < timeout_ns:
         t0 = time.perf_counter_ns()
         status = func()
 
@@ -303,11 +303,11 @@ def poll_status(break_states, func, timeout=60, poll_interval=0):
 
         # NOTE: There's no need to sleep between iterations as there is already a query delay effectively doing the
         # same thing.
-        if timeout is not None and timeout > 0:
+        if timeout_ns is not None and timeout_ns > 0:
             counter += t
 
-    if counter >= timeout:
-        raise TimeoutError(f"Motor failed to complete operation within {timeout}s")
+    if counter >= timeout_ns:
+        raise TimeoutError(f"Motor failed to complete operation within {timeout}s, took {counter/1e9}s")
 
     return status
 
