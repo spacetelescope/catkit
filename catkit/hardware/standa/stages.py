@@ -6,6 +6,7 @@
 # Generic Stage Class
 
 import ctypes
+import enum
 import math
 import os
 import platform
@@ -13,6 +14,11 @@ import sys
 
 from catkit.interfaces.Instrument import Instrument
 import catkit.util
+
+
+class Unit(enum.Enum):
+    STEPS = 1
+    REAL = 2
 
 
 # https://files.xisupport.com/Software.en.html
@@ -51,16 +57,17 @@ class Stage(Instrument):
 
     instrument_lib = pyximc
 
-    def initialize(self, softStops, homeOffset, conversionFactor, units):
+    def initialize(self, device_name, softStops, homeOffset, conversionFactor, units):
         if isinstance(self.instrument_lib, Exception):
             raise self.instrument_lib
 
+        self.device_name = device_name
         self.softStops = softStops
         self.u_homeOffset, self.homeOffset = math.modf(homeOffset)
         self.conversionFactor = conversionFactor
         self.units = units
 
-        self.deviceID = self.get_device_id(self.config_id)
+        self.deviceID = self.get_device_id(self.device_name)
 
     def _open(self):
         return self.instrument_lib.lib.open_device(self.deviceID)
@@ -73,7 +80,7 @@ class Stage(Instrument):
         Homes the stage.
         """
 
-        respHmst, hmst = self.get_home_settings()
+        hmst = self.get_home_settings()
 
         # print(f'FastHome=   {hmst.FastHome} \
         #       \nuFastHome=  {hmst.uFastHome} \
@@ -91,10 +98,18 @@ class Stage(Instrument):
         hmst.uHomeDelta = int(self.u_homeOffset)
         # hmst.HomeFlags = int(370)
 
+        self.set_home_settings(hmst)
+
         result = self.instrument_lib.lib.command_homezero(self.instrument)
 
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("command_homezero failed")
+
+    def set_home_settings(self, settings):
+        result = self.instrument_lib.lib.set_home_settings(self.instrument, ctypes.byref(settings))
+
+        if result != self.instrument_lib.Result.Ok:
+            raise RuntimeError("set_home_settings() failed")
 
     def get_home_settings(self):
         hmst = self.instrument_lib.home_settings_t()
@@ -106,12 +121,12 @@ class Stage(Instrument):
 
         return hmst
 
-    def offset_steps(self, distance):
+    def offset_steps(self, distance, wait=True):
         currentPosition = self.get_enc_position()
         newPosition = currentPosition + distance
-        return self.goto_steps(newPosition)
+        return self.goto_steps(newPosition, wait=wait)
 
-    def absolute_move(self, position):
+    def goto_steps(self, position, wait=True):
         """
         Sends a move command for the given steps.
 
@@ -127,12 +142,15 @@ class Stage(Instrument):
         result = self.instrument_lib.lib.command_move(self.instrument, int(pos), int(u_pos))
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("command_move() failed")
-    
-    def offset_real(self, distance):
-        distance = distance / self.conversionFactor
-        return self.offset_steps(distance)
 
-    def relative_move(self, position):
+        if wait:
+            self.await_stop()
+    
+    def offset_real(self, distance, wait=True):
+        distance = distance / self.conversionFactor
+        return self.offset_steps(distance, wait=wait)
+
+    def goto_real(self, position, wait=True):
         """
         Sends a move command for the given real value.
 
@@ -141,8 +159,24 @@ class Stage(Instrument):
         """
         position = position / self.conversionFactor
         self.log.info(f'goto_steps: {position}')
-        return self.goto_steps(position)
-    
+        return self.goto_steps(position, wait=wait)
+
+    def absolute_move(self, position, wait=True, units=Unit.STEPS):
+        if units is Unit.STEPS:
+            return self.goto_steps(position, wait=wait)
+        elif units is Unit.REAL:
+            return self.goto_real(position, wait=wait)
+        else:
+            raise NotImplementedError()
+
+    def relative_move(self, distance, wait=True, units=Unit.STEPS):
+        if units is Unit.STEPS:
+            return self.offset_steps(distance, wait=wait)
+        elif units is Unit.REAL:
+            return self.offset_real(distance, wait=wait)
+        else:
+            raise NotImplementedError()
+
     def set_speed(self, speed):
         """
         Sets the speed in steps/s.
@@ -185,12 +219,8 @@ class Stage(Instrument):
 
         return mvst.Speed, mvst.uSpeed
 
-    def get_move_status(self):
-        """
-        Returns the moving status of the given device
-
-        :return: str "BUSY" | "IDLE"
-        """
+    def is_moving(self):
+        """ Returns the moving status of the given device. """
         deviceStatus = self.instrument_lib.status_t()
         result = self.instrument_lib.lib.get_status(self.instrument, ctypes.byref(deviceStatus))
 
@@ -199,15 +229,7 @@ class Stage(Instrument):
 
         moveComState = deviceStatus.MvCmdSts
 
-        if moveComState == 129:
-            stageStatus = 'BUSY'
-        else:
-            stageStatus = 'IDLE'
-        
-        return stageStatus
-
-    def is_moving(self):
-        return self.get_move_status() == "BUSY"
+        return moveComState == 129
 
     def get_step_position(self):
         """
@@ -246,44 +268,48 @@ class Stage(Instrument):
 
         :return: stagePosition Position of the stage
         """
-        return self.conversionFactor * self.get_enc_position()[1]
+        return self.conversionFactor * self.get_enc_position()
 
     def stop(self):
         result = self.instrument_lib.lib.command_sstp(self.instrument)
         if result != self.instrument_lib.Result.Ok:
             raise RuntimeError("Soft stop failed")
 
-    def await_stop(self, *args, **kwargs):
+    def await_stop(self,  timeout=10*60, poll_interval=1):
         """ Wait for device to indicate it has stopped moving.
 
             See catkit.util.poll_status for API.
-        """
-        return catkit.util.poll_status((False,), self.is_moving, *args, **kwargs)
 
-    def scan_for_devices(self):
+            NOTE: Default timeout is arbitrarily long.
+        """
+        return catkit.util.poll_status((False,), self.is_moving, timeout=timeout, poll_interval=poll_interval)
+
+    @classmethod
+    def scan_for_devices(cls):
         """
         Scans for motor controllers on USB
 
         Returns the list of devices found
         """
-        probe_flags = self.instrument_lib.EnumerateFlags.ENUMERATE_PROBE
-        devenum = self.instrument_lib.lib.enumerate_devices(probe_flags, None)
-        dev_count = self.instrument_lib.lib.get_device_count(devenum)
-        controller_name = self.instrument_lib.controller_name_t()
+        probe_flags = cls.instrument_lib.EnumerateFlags.ENUMERATE_PROBE
+        devenum = cls.instrument_lib.lib.enumerate_devices(probe_flags, None)
+        dev_count = cls.instrument_lib.lib.get_device_count(devenum)
+        controller_name = cls.instrument_lib.controller_name_t()
 
         devices_list = []
         for dev_ind in range(dev_count):
-            enum_name = self.instrument_lib.lib.get_device_name(devenum, dev_ind)
-            result = self.instrument_lib.lib.get_enumerate_device_controller_name(devenum, dev_ind, ctypes.byref(controller_name))
+            enum_name = cls.instrument_lib.lib.get_device_name(devenum, dev_ind)
+            result = cls.instrument_lib.lib.get_enumerate_device_controller_name(devenum, dev_ind, ctypes.byref(controller_name))
 
-            if result == self.instrument_lib.Result.Ok:
+            if result == cls.instrument_lib.Result.Ok:
                 devices_list.append(enum_name)
 
         return devices_list
 
-    def get_device_id(self, id_str):
+    @classmethod
+    def get_device_id(cls, id_str):
         # Get device ID number.
-        device_list = self.scan_for_devices()
+        device_list = cls.scan_for_devices()
 
         if not device_list:
             raise RuntimeError("No devices found.")
