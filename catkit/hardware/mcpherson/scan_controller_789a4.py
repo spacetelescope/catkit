@@ -65,8 +65,6 @@ class McPherson789A4(PyVisaInstrument):
         NOTE: This class has no homing functionality, for that use McPherson789A4WithLimitSwitches.
     """
 
-    instrument_lib = pyvisa
-
     _HAS_LIMIT_SWITCHES = False  # Use McPherson789A4WithLimitSwitches if True.
 
     BAUD_RATE = 9600
@@ -139,10 +137,10 @@ class McPherson789A4(PyVisaInstrument):
             managed.
         """
 
-        rm = self.instrument_lib.ResourceManager('@py')
+        # rm = self.instrument_lib.ResourceManager('@py')
 
         # Open connection.
-        self.instrument = rm.open_resource(self.visa_id,
+        self.instrument = self.instrument_lib.open_resource(self.visa_id,
                                            baud_rate=self.BAUD_RATE,
                                            data_bits=self.DATA_BITS,
                                            flow_control=self.FLOW_CONTROL,
@@ -239,7 +237,10 @@ class McPherson789A4(PyVisaInstrument):
             raise NotImplementedError(f"This model does not support limit switches and the command: '{cmd}'")
 
         message_sent = f"{cmd.value}{data}"
-        resp = self.instrument.query(message_sent)
+        try:
+            resp = self.instrument.query(message_sent)
+        except Exception as error:
+            raise RuntimeError(f"The command: '{cmd}' failed. (data: '{data}')") from error
 
         if cmd is ASCIIControlCodes.READ_PARAMS:
             cmd_resp, resp_data = resp[0], resp[1:]
@@ -360,6 +361,12 @@ class McPherson789A4(PyVisaInstrument):
 
         :return: int - steps_per_second, actual motor velocity.
         """
+
+        if not isinstance(steps, int):
+            raise TypeError(f"steps must be of type int not {type(steps)}.")
+
+        if steps_per_second and not isinstance(steps_per_second, int):
+            raise TypeError(f"steps_per_second must be of type int not {type(steps_per_second)}.")
 
         cmd = ASCIIControlCodes.SCAN_UP if steps >= 0 else ASCIIControlCodes.SCAN_DOWN
 
