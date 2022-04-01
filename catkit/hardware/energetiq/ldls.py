@@ -105,6 +105,9 @@ class LDLS(Instrument):
         if self.controller_fault_detected():
             raise RuntimeError("Toggling lamp failed to remove controller fault.")
 
+        if self.lamp_fault_detected():
+            raise RuntimeError("Toggling lamp failed to remove lamp fault.")
+
     def source_on(self, wait=True):
         """ Turn on the laser and wait for it to excite the lamp. """
 
