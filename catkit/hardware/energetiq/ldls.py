@@ -161,7 +161,7 @@ class LDLS(Instrument):
         if on:
             return self.source_on(wait=True)
         else:
-            return self.source_off(wait=False)
+            return self.source_off(wait=True)
 
     class Proxy(NamespaceProxy):
         _exposed_ = ("__enter__", "__exit__", "source_on", "source_off")
