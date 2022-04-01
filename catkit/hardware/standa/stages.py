@@ -19,7 +19,6 @@ import catkit.util
 try:
     ximc_dir = "C:/Users/stuf/Desktop/stuf installs/ximc-2.13.3/ximc/"
     library_path = os.path.join(ximc_dir, "crossplatform/wrappers/python/") #os.environ.get('CATKIT_PYXIMC_LIB_PATH')
-    print("lib path", library_path, ximc_dir)
     if library_path:
         sys.path.append(library_path)
 

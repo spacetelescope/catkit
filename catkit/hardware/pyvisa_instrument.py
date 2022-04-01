@@ -14,6 +14,8 @@ class CommandEchoError(IOError):
 
 class PyVisaInstrument(Instrument):
 
+    instrument_lib = pyvisa.ResourceManager("@py")
+
     def read_all(self):
         """ Helper func for when read/writes are out of sync - consume all waiting reads until buffer is empty.
         :return list of read data.
