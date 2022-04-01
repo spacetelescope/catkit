@@ -22,7 +22,7 @@ class LDLS(Instrument):
     instrument_lib = pigpio
 
     def initialize(self, address=(os.getenv("PIGPIO_ADDR", 'localhost'), os.getenv("PIGPIO_PORT", 8888)),
-                   sleep_interval=1, laser_timeout=5*60, power_off_on_exit=False):
+                   sleep_interval=2, laser_timeout=5*60, power_off_on_exit=False):
         self.address = address
         self.sleep_interval=sleep_interval
         self.laser_timeout = laser_timeout
@@ -37,6 +37,9 @@ class LDLS(Instrument):
             RuntimeError("Failed to connect.")
 
         self.initialize_all_pins()
+
+        self.remove_fault()
+
         return self.instrument
 
     def _close(self):
@@ -88,17 +91,38 @@ class LDLS(Instrument):
             else:
                 self.instrument.set_mode(pin.value, self.instrument_lib.OUTPUT)
 
+    def remove_fault(self):
+        if not self.controller_fault_detected() and not self.lamp_fault_detected():
+            return
+
+        self.set_interlock(True)
+        assert self.is_interlock_on()
+
+        # Toggle operate to remove ctrl fault.
+        self.set_lamp(True)
+        self.set_lamp(False)
+
+        if self.controller_fault_detected():
+            raise RuntimeError("Toggling lamp failed to remove controller fault.")
+
     def source_on(self, wait=True):
+        """ Turn on the laser and wait for it to excite the lamp. """
+
+        self.remove_fault()
+
         self.set_interlock(True)
         self.set_lamp(True)
+        time.sleep(5)  # It takes a while for the laser to report as on.
 
-        if not self.is_lamp_on() or self.lamp_fault_detected() or self.controller_fault_detected():
+        if not self.is_laser_on() or self.lamp_fault_detected() or self.controller_fault_detected():
             raise RuntimeError("Fault detected.")
 
         if wait:
+            print("Waiting for lamp to emit (this will take a couple of minutes)...")
             counter = 0
             while counter < self.laser_timeout:
-                if self.is_laser_on():
+                if self.is_lamp_on():
+                    print(f"Lamp on. ({counter}s).")
                     return
                 time.sleep(1)
                 counter += 1
@@ -110,13 +134,16 @@ class LDLS(Instrument):
                     raise RuntimeError("Lamp fault detected.")
 
     def source_off(self, wait=True):
+        """ This will instantly turn the laser off which will result in the lamp being off. """
+
+        self.remove_fault()
+
         self.set_lamp(False)
-        self.set_interlock(False)
 
         if wait:
             counter = 0
             while counter < self.laser_timeout:
-                if not self.is_laser_on():
+                if not self.is_lamp_on() and not self.is_lamp_on():
                     return
                 time.sleep(1)
                 counter += 1
@@ -126,6 +153,12 @@ class LDLS(Instrument):
             finally:
                 if self.controller_fault_detected():
                     raise RuntimeError("Controller fault detected.")
+
+    def operate_source(self, on=True):
+        if on:
+            return self.source_on(wait=True)
+        else:
+            return self.source_off(wait=False)
 
     class Proxy(NamespaceProxy):
         _exposed_ = ("__enter__", "__exit__", "source_on", "source_off")
