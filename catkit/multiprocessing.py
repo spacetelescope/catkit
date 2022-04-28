@@ -528,8 +528,10 @@ class MutexedNamespaceSingleton(MutexedNamespace):
                 # Registering classes with the server must happen before it is started.
                 manager = SharedMemoryManager(address=address)
                 try:
+                    print('Do a Ctrl+C ! Probably. If it hangs, at least.')
                     manager.connect()
-                except ConnectionRefusedError:
+                    print("Didn't hang!")
+                except (ConnectionRefusedError, KeyboardInterrupt):
                     # This is ok, the manager (probably) hasn't been started yet.
                     SharedMemoryManager.register(name, callable=NewClass, proxytype=NewClass.Proxy, create_method=True)
                 else:
