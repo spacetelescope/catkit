@@ -528,9 +528,16 @@ class MutexedNamespaceSingleton(MutexedNamespace):
                 # Registering classes with the server must happen before it is started.
                 manager = SharedMemoryManager(address=address)
                 try:
-                    print('Do a Ctrl+C ! Probably. If it hangs, at least.')
+                    # print('A message.')
+                    # a_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    # print(address)
+                    # result_of_check = a_socket.connect_ex(address)
+                    # if result_of_check != 0:
+                    #     raise ConnectionRefusedError
+
                     manager.connect()
-                    print("Didn't hang!")
+
+                    #print("Didn't hang!")
                 except (ConnectionRefusedError, KeyboardInterrupt):
                     # This is ok, the manager (probably) hasn't been started yet.
                     SharedMemoryManager.register(name, callable=NewClass, proxytype=NewClass.Proxy, create_method=True)
@@ -861,5 +868,5 @@ SharedMemoryManager.register("EventProxy", proxytype=EventProxy, create_method=F
 
 
 # Types used for CI testing.
-SHARED_STATE_ADDRESS = ("127.0.0.1", 7000)
+SHARED_STATE_ADDRESS = ("127.0.0.1", 7001)
 SharedState = MutexedNamespaceSingleton.factory(address=SHARED_STATE_ADDRESS, name="SharedState", timeout=2)
