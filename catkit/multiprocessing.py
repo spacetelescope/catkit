@@ -859,5 +859,5 @@ SharedMemoryManager.register("EventProxy", proxytype=EventProxy, create_method=F
 
 
 # Types used for CI testing.
-SHARED_STATE_ADDRESS = ("127.0.0.1", 7000)
+SHARED_STATE_ADDRESS = ("127.0.0.1", 7001)
 SharedState = MutexedNamespaceSingleton.factory(address=SHARED_STATE_ADDRESS, name="SharedState", timeout=2)
