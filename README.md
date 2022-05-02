@@ -1,6 +1,6 @@
 [![DOI](https://zenodo.org/badge/100620945.svg)](https://zenodo.org/badge/latestdoi/100620945)
 
-# ``catkit`` -- The Control and Automation for Testbeds Kit
+# ``catkit`` -- The Control and Automation for Testbeds Kit TEST
 This is a collection of ``python`` hardware controllers. This project started
 from the Makidon Lab as an effort to separate the hardware controllers we use
 for the HiCAT testbed and make something less specific to our experiments. 
