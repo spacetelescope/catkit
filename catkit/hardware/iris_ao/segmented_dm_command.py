@@ -417,6 +417,39 @@ class SegmentedDmCommand(object):
             plt.close()
         else:
             plt.show()
+    
+    def get_wavefront_custom(self):#,figure_name_prefix, out_dir, vmax=0.5e-6*u.meter, save_figure=True):
+        """
+        Plot the deployed mirror state (wavefront error)
+
+        :param figure_name_prefix: str, String to be added to filenames of output figures
+        :param out_dir: str, name of output directory
+        :param vmax: astropy unit quantity, the maximum value to display in the plot (as expected
+                     by Poppy)
+        :param save_figure: bool, If true, save out the figures in the directory specified by
+                            out_dir
+        """
+        display_data = set_to_dm_limits(self.data)
+        # Convert the PTT list from DM to Poppy units
+        converted_list = convert_ptt_units(display_data, tip_factor=1, tilt_factor=-1,
+                                           starting_units=self.dm_command_units,
+                                           ending_units=(u.m, u.rad, u.rad))
+        # We want to round to four significant digits when in DM units (um, mrad, mrad).
+        # Here, we are in SI units (m, rad, rad), so we round to the equivalent, 10 decimals.
+        rounded_list = round_ptt_list(converted_list, decimals=10)
+        for seg, values in zip(self.aperture.segmentlist, rounded_list):
+            self.aperture.set_actuator(seg, values[0], values[1], values[2])
+        
+        #self.aperture.get_opd(wavelength) , .sample?
+        # ax.set_title('WFE')    
+        # self.aperture.display(what='opd', title='',
+        #                       opd_vmax=vmax,ax=ax)
+        # if save_figure:
+        #     plt.savefig(os.path.join(out_dir, f'{figure_name_prefix}wfe_on_dm.png'))
+        #     plt.close()
+        # else:
+        #     plt.show()  
+        # return ax          
 
     @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
     def plot_psf(self, wavelength=640*u.nm, figure_name_prefix=None, rotation_angle=0,  out_dir=None, vmin=1e-8,
