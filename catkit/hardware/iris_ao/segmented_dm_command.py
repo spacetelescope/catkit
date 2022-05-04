@@ -377,19 +377,10 @@ class SegmentedDmCommand(object):
         :param save_figures: bool, If true, save out the figures in the directory specified
                              by out_dir
         """
-        # Grab the units of the DM for the piston, tip, tilt values and check that
-        #  they don't exceed the DM hardware limits
-        display_data = set_to_dm_limits(self.data)
-        # Convert the PTT list from DM to Poppy units
-        converted_list = convert_ptt_units(display_data, tip_factor=1, tilt_factor=-1,
-                                           starting_units=self.dm_command_units,
-                                           ending_units=(u.m, u.rad, u.rad))
-        # We want to round to four significant digits when in DM units (um, mrad, mrad).
-        # Here, we are in SI units (m, rad, rad), so we round to the equivalent, 10 decimals.
-        rounded_list = round_ptt_list(converted_list, decimals=10)
-        for seg, values in zip(self.aperture.segmentlist, rounded_list):
-            self.aperture.set_actuator(seg, values[0], values[1], values[2])
-
+        # update opd on mirror
+        self.get_wavefront_custom()
+        
+        # make figure
         if figure_name_prefix:
             figure_name_prefix = f'{figure_name_prefix}_'
         if display_wavefront:
