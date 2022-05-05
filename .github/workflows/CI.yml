@@ -14,7 +14,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        python-version: [3.7]
+        python-version: [3.9]
     env:
         # http://flake8.pycqa.org/en/latest/user/error-codes.html
         EXCLUDE_DIRS: catkit/hardware/newport/lib,catkit/hardware/boston/sdk
@@ -40,7 +40,7 @@ jobs:
     strategy:
       max-parallel: 2
       matrix:
-        python-version: [3.7]
+        python-version: [3.9]
     env:
       # http://flake8.pycqa.org/en/latest/user/error-codes.html
       EXCLUDE_DIRS: catkit/hardware/newport/lib,catkit/hardware/boston/sdk
@@ -67,7 +67,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        python-version: [3.7]
+        python-version: [3.9]
         os: [ubuntu-latest, windows-latest]
     steps:
     - uses: actions/checkout@v1
@@ -100,7 +100,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        python-version: [3.7]
+        python-version: [3.9]
         os: [ubuntu-latest, windows-latest]
     steps:
     - uses: actions/checkout@v1
