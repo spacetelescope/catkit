@@ -14,7 +14,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        python-version: [3.7]
+        python-version: [3.7.6]
     env:
         # http://flake8.pycqa.org/en/latest/user/error-codes.html
         EXCLUDE_DIRS: catkit/hardware/newport/lib,catkit/hardware/boston/sdk
@@ -23,7 +23,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -40,7 +40,7 @@ jobs:
     strategy:
       max-parallel: 2
       matrix:
-        python-version: [3.7]
+        python-version: [3.7.6]
     env:
       # http://flake8.pycqa.org/en/latest/user/error-codes.html
       EXCLUDE_DIRS: catkit/hardware/newport/lib,catkit/hardware/boston/sdk
@@ -49,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -67,13 +67,13 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        python-version: [3.7]
+        python-version: [3.7.6]
         os: [ubuntu-latest, windows-latest]
     steps:
     - uses: actions/checkout@v1
       with:
           lfs: true
-    - uses: actions/setup-python@v1
+    - uses: actions/setup-python@v2
       with:
           python-version: ${{ matrix.python-version }}
     - uses: conda-incubator/setup-miniconda@v2
@@ -100,13 +100,13 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        python-version: [3.7]
+        python-version: [3.7.6]
         os: [ubuntu-latest, windows-latest]
     steps:
     - uses: actions/checkout@v1
       with:
           lfs: true
-    - uses: actions/setup-python@v1
+    - uses: actions/setup-python@v2
       with:
           python-version: ${{ matrix.python-version }}
     - uses: conda-incubator/setup-miniconda@v2
