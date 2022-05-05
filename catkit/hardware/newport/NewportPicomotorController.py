@@ -15,7 +15,6 @@ import functools
 
 from http.client import IncompleteRead
 import numpy as np
-#from photutils.centroids import centroid_1dg, centroid_2dg
 from requests.exceptions import HTTPError
 import urllib
 from urllib.parse import urlencode
@@ -87,15 +86,6 @@ class NewportPicomotorController(MotorController2):
                          'error_message': 'TB'}
         
         self.calibration = {} if calibration is None else calibration
-        
-        # if centroid_method is None:
-        #     self.centroid_method = centroid_1dg
-        # elif centroid_method == '1d':
-        #     self.centroid_method = centroid_1dg
-        # elif centroid_method == '2d':
-        #     self.centroid_method = centroid_2dg
-        # else:
-        #     raise NotImplementedError('Only 1D an 2D centroiding is available.')
 
 
     def _open(self):
@@ -201,59 +191,6 @@ class NewportPicomotorController(MotorController2):
          
         self.log.info(f'Command sent. Action : {cmd_key}. Axis : {axis}. Value : {value}')
 
-    # This makes our CI fail, hence commenting out the entire method.
-    # def convert_move_to_pixel(self, img_before, img_after, move, axis):
-    #     """ After two images taken some x_move or y_move apart, calculate how
-    #     the picomoter move corresponds to pixel move.
-    #
-    #     Parameters
-    #     ----------
-    #     img_before : np.array
-    #         Image before move.
-    #     img_after : np.array
-    #         Image after move.
-    #     move : int
-    #         How much the picomotor moved.
-    #     axis : int
-    #         What axis the picomotor moved on.
-    #
-    #     Returns
-    #     -------
-    #     r : float
-    #         The scalar distance of the move in pixels.
-    #     theta : float
-    #         The angle from x in radians.
-    #     r_ratio : float
-    #         The ratio of the scalar distance in pixels and the picomotor move.
-    #     delta_theta : float
-    #         The difference between the angle from x and the picomotor axis.
-    #     """
-    #
-    #     x1, y1 = self.centroid_method(img_before)
-    #     x2, y2 = self.centroid_method(img_after)
-    #
-    #     x_move = x1 - x2
-    #     y_move = y1 - y2
-    #
-    #     r = np.sqrt(x_move**2 + y_move**2)
-    #     theta = np.arctan(y_move/x_move)
-    #
-    #     r_ratio = r/move
-    #
-    #     if axis in [1,3]:
-    #         delta_theta = theta - 0
-    #
-    #     elif axis in [2, 4]:
-    #         delta_theta = theta - np.pi/2
-    #
-    #     else:
-    #         raise NotImplementedError('Only axis 1 through 4 are defined.')
-    #
-    #     self.calibration[f'r_ratio_{axis}'] = r_ratio
-    #     self.calibration[f'delta_theta_{axis}'] = delta_theta
-    #
-    #     return r, theta, r_ratio, delta_theta
-    
     @http_except
     def get_status(self, axis):
         """Checks the status of the relative/absolute positions and home 
