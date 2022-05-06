@@ -378,7 +378,7 @@ class SegmentedDmCommand(object):
                              by out_dir
         """
         # update opd on mirror
-        self.get_wavefront_custom()
+        self.apply_current_wavefront()
         
         # make figure
         if figure_name_prefix:
@@ -409,13 +409,13 @@ class SegmentedDmCommand(object):
         else:
             plt.show()
     
-    def get_wavefront_custom(self):
+    def apply_current_wavefront(self):
         """
         Get the deployed mirror state (wavefront error)
         To make plot:
         total_iris = iris_ao.HicatSegmentedDmCommand()
         total_iris.read_initial_command([tuple(row) for row in command_to_plot])
-        total_iris.get_wavefront_custom()
+        total_iris.apply_current_wavefront()
         command = total_iris.aperture.sample(what='opd') 
         image = ax.matshow(command)
         """
