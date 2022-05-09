@@ -11,7 +11,6 @@ import catkit.hardware.iris_ao.util
 from catkit.interfaces.Instrument import SimInstrument
 import catkit.util
 from catkit.multiprocessing import MutexedNamespace
-from packaging.version import Version
 
 
 class PoppyIrisAODM(MutexedNamespace, poppy.dms.HexSegmentedDeformableMirror):
@@ -53,8 +52,7 @@ class PoppyIrisAODM(MutexedNamespace, poppy.dms.HexSegmentedDeformableMirror):
             # The IrisAO hardware component and the poppy hex DM object have flipped
             # x/y coordinate axes, so we need to feed what is called "tilt" on the IrisAO
             # into the "tip" argument from poppy and vice versa.
-            # Furthermore, depending on poppy version we may need to correct a sign inconsistency
-            sign = -1 if Version(poppy.__version__) < Version('1.0') else 1
+            sign = -1
 
             piston = sign * values[0] * u.um
             tip = sign * values[2] * u.mrad
