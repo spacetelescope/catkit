@@ -11,6 +11,7 @@ According to the manual, this should hold for models:
 """
 
 ## -- IMPORTS
+import enum
 import functools
 
 from http.client import IncompleteRead
@@ -19,7 +20,7 @@ from requests.exceptions import HTTPError
 import urllib
 from urllib.parse import urlencode
 
-from catkit.interfaces.MotorController2 import MotorController2
+from catkit.interfaces.MotorController import MotorController
 import catkit.util
 
 ## -- Let's go.
@@ -36,7 +37,17 @@ def http_except(function):
 
     return wrapper
 
-class NewportPicomotorController(MotorController2):
+
+class Command(enum.Enum):
+    home_position = "DH"
+    exact_move = "PA"
+    relative_move = "PR"
+    reset = "RS"
+    relative_move = "PR"
+    error_message = "TB"
+
+
+class NewportPicomotorController(MotorController):
     """ This class handles all the picomotor stufff. """
     
     instrument_lib = urllib.request
@@ -78,12 +89,6 @@ class NewportPicomotorController(MotorController2):
         # If it's an Nth daisy chained controller, we want a 'N>' prefix before each message.
         # Otherwise, we want nothing.
         self.daisy = f'{daisy}>' if int(daisy) > 1 else ''
-        
-        # Initialize some command parameters
-        self.cmd_dict = {'home_position': 'DH', 'exact_move': 'PA', 
-                         'relative_move': 'PR', 'reset': 'RS',
-                         'relative_move': 'PR', 'reset': 'RS',
-                         'error_message': 'TB'}
         
         self.calibration = {} if calibration is None else calibration
 
@@ -244,7 +249,7 @@ class NewportPicomotorController(MotorController2):
             The message to send to the controller site.
         """
         
-        address = self.cmd_dict[cmd_key]
+        address = cmd_key.value if isinstance(cmd_key, Command) else Command[cmd_key].value
 
         if cmd_key == 'reset':
             if axis is not None:
@@ -303,3 +308,6 @@ class NewportPicomotorController(MotorController2):
             response = resp.split('response')[1].split('-->')[1].split('\\r')[0]
 
             return response
+
+    def get_position(self, axis):
+        return self._send_message(self._build_message(Command.exact_move, 'get', axis), 'get')
