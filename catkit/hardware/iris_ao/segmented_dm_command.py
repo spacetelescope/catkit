@@ -377,19 +377,10 @@ class SegmentedDmCommand(object):
         :param save_figures: bool, If true, save out the figures in the directory specified
                              by out_dir
         """
-        # Grab the units of the DM for the piston, tip, tilt values and check that
-        #  they don't exceed the DM hardware limits
-        display_data = set_to_dm_limits(self.data)
-        # Convert the PTT list from DM to Poppy units
-        converted_list = convert_ptt_units(display_data, tip_factor=1, tilt_factor=-1,
-                                           starting_units=self.dm_command_units,
-                                           ending_units=(u.m, u.rad, u.rad))
-        # We want to round to four significant digits when in DM units (um, mrad, mrad).
-        # Here, we are in SI units (m, rad, rad), so we round to the equivalent, 10 decimals.
-        rounded_list = round_ptt_list(converted_list, decimals=10)
-        for seg, values in zip(self.aperture.segmentlist, rounded_list):
-            self.aperture.set_actuator(seg, values[0], values[1], values[2])
-
+        # update opd on mirror
+        self.apply_current_wavefront()
+        
+        # make figure
         if figure_name_prefix:
             figure_name_prefix = f'{figure_name_prefix}_'
         if display_wavefront:
@@ -417,6 +408,28 @@ class SegmentedDmCommand(object):
             plt.close()
         else:
             plt.show()
+    
+    def apply_current_wavefront(self):
+        """
+        Get the deployed mirror state (wavefront error)
+        To make plot:
+        total_iris = iris_ao.HicatSegmentedDmCommand()
+        total_iris.read_initial_command([tuple(row) for row in command_to_plot])
+        total_iris.apply_current_wavefront()
+        command = total_iris.aperture.sample(what='opd') 
+        image = ax.matshow(command)
+        """
+        display_data = set_to_dm_limits(self.data)
+        # Convert the PTT list from DM to Poppy units
+        converted_list = convert_ptt_units(display_data, tip_factor=1, tilt_factor=-1,
+                                           starting_units=self.dm_command_units,
+                                           ending_units=(u.m, u.rad, u.rad))
+        # We want to round to four significant digits when in DM units (um, mrad, mrad).
+        # Here, we are in SI units (m, rad, rad), so we round to the equivalent, 10 decimals.
+        rounded_list = round_ptt_list(converted_list, decimals=10)
+        for seg, values in zip(self.aperture.segmentlist, rounded_list):
+            self.aperture.set_actuator(seg, values[0], values[1], values[2])
+              
 
     @poppy.utils.quantity_input(display_wavelength=u.nm)   # decorator provides a check on input units
     def plot_psf(self, wavelength=640*u.nm, figure_name_prefix=None, rotation_angle=0,  out_dir=None, vmin=1e-8,
